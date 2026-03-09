@@ -316,6 +316,22 @@ h1, h2, h3 { font-weight: 600; }
 .panel-header h2 { font-size: 14px; font-weight: 600; }
 .panel-actions { display: flex; gap: 6px; }
 
+/* Analysis Gauge */
+.analysis-gauge {
+  height: 3px;
+  background: var(--bg-tertiary);
+  display: none;
+  flex-shrink: 0;
+}
+.analysis-gauge.active { display: block; }
+.analysis-gauge-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 0 2px 2px 0;
+  transition: width 1s linear;
+}
+
 /* ===== Meeting Info Bar ===== */
 .meeting-info-bar {
   display: flex;
