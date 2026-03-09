@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting AI Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <h1 class="logo">Meeting AI</h1>
+      <span class="meeting-timer" id="meetingTimer">00:00:00</span>
+      <span class="meeting-status" id="meetingStatus"></span>
+    </div>
+    <div class="header-center">
+      <div class="speaker-bar" id="speakerBar"></div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-icon" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
+        <span class="icon-theme-light">&#9788;</span>
+        <span class="icon-theme-dark">&#9790;</span>
+      </button>
+      <button class="btn btn-icon" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">&#128218;</button>
+      <button class="btn btn-icon" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">&#9881;</button>
+    </div>
+  </header>
+
+  <!-- Mobile Panel Tabs -->
+  <div class="panel-tabs" id="panelTabs">
+    <button class="panel-tab active" data-panel="left" data-i18n="panel.transcript">Transcript</button>
+    <button class="panel-tab" data-panel="center" data-i18n="panel.ai">AI Analysis</button>
+    <button class="panel-tab" data-panel="right" data-i18n="panel.chat">AI Chat</button>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Left Panel: Transcript -->
+    <section class="panel panel-left panel-active" id="panelLeft">
+      <div class="panel-header">
+        <h2 data-i18n="panel.transcript">Transcript</h2>
+        <div class="panel-actions">
+          <button class="btn btn-sm" id="btnHighlights" title="Highlights">&#11088; <span data-i18n="panel.highlights">Highlights</span></button>
+          <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Export</span></button>
+        </div>
+      </div>
+      <!-- Meeting Info Bar -->
+      <div class="meeting-info-bar" id="meetingInfoBar">
+        <input type="text" class="meeting-info-input" id="inputMeetingLocation" data-i18n-placeholder="meeting.location_placeholder" placeholder="Meeting location...">
+        <span class="meeting-info-time" id="meetingInfoTime"></span>
+      </div>
+      <div class="transcript-list" id="transcriptList">
+        <div class="transcript-empty" id="transcriptEmpty">
+          <div class="quick-start-section">
+            <p class="quick-start-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
+            <div class="quick-start-preset">
+              <select class="settings-select" id="selectQuickPreset">
+                <option value="general" data-i18n="settings.preset_general">General</option>
+                <option value="weekly" data-i18n="settings.preset_weekly">Weekly Meeting</option>
+                <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
+                <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+                <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+                <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+              </select>
+            </div>
+            <div class="quick-start-actions">
+              <button class="btn btn-primary" id="btnQuickStart" data-i18n="meeting.quick_start">Quick Start</button>
+              <button class="btn btn-sm" id="btnManualSetup" data-i18n="meeting.manual_setup">Setup & Start</button>
+            </div>
+            <p class="text-muted" data-i18n="transcript.empty_hint">Press Ctrl+R to record manually.</p>
+          </div>
+        </div>
+      </div>
+      <div class="transcript-memo-input" id="transcriptMemoInput">
+        <input type="text" class="memo-input" id="memoInput" data-i18n-placeholder="memo.placeholder" placeholder="Add a memo... (Ctrl+M)" aria-label="Add memo">
+        <button class="btn btn-sm" id="btnAddMemo" data-i18n="memo.add">Add</button>
+      </div>
+    </section>
+
+    <!-- Drag Resizer 1 -->
+    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-label="Resize panels" tabindex="0"></div>
+
+    <!-- Center Panel: AI Analysis -->
+    <section class="panel panel-center" id="panelCenter">
+      <div class="panel-header">
+        <h2 data-i18n="panel.ai">AI Analysis</h2>
+        <div class="panel-actions">
+          <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze</span></button>
+          <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128337; <span data-i18n="panel.analysis_history">History</span></button>
+          <button class="btn btn-sm" id="btnPromptSettings" title="Prompt settings">&#9881; <span data-i18n="panel.prompt_settings">Prompt</span></button>
+        </div>
+      </div>
+      <div class="ai-sections" id="aiSections">
+        <div class="ai-empty" id="aiEmpty">
+          <p data-i18n="ai.empty">AI analysis results will appear here.</p>
+          <p class="text-muted" data-i18n="ai.empty_hint">Analysis runs automatically during recording.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Drag Resizer 2 -->
+    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-label="Resize panels" tabindex="0"></div>
+
+    <!-- Right Panel: AI Chat -->
+    <section class="panel panel-right" id="panelRight">
+      <div class="panel-header">
+        <h2 data-i18n="panel.chat">AI Chat</h2>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-empty" id="chatEmpty">
+          <p data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input-row">
+          <textarea id="chatInput" rows="2" data-i18n-placeholder="chat.placeholder" placeholder="Ask AI about this meeting..."></textarea>
+          <button class="btn btn-primary" id="btnChatSend" data-i18n="chat.send">Send</button>
+        </div>
+        <div class="chat-input-actions">
+          <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
+            &#128206;
+            <input type="file" id="chatFileInput" accept=".txt,.md" hidden>
+          </label>
+          <select class="chat-model-select" id="chatModelSelect">
+            <option value="gemini-2.0-flash">Flash 2.0</option>
+            <option value="gemini-2.0-flash-lite">Flash Lite</option>
+            <option value="gemini-2.5-flash-preview-05-20">Flash 2.5</option>
+            <option value="gemini-2.5-pro-preview-06-05">Pro 2.5</option>
+          </select>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Bottom Bar -->
+  <footer class="bottom-bar">
+    <div class="bottom-center">
+      <button class="btn btn-record" id="btnRecord" title="Start/Stop recording (Ctrl+R)" aria-label="Toggle recording">
+        <span class="record-dot"></span>
+        <span class="record-label">REC</span>
+      </button>
+      <span class="stt-engine-label" id="sttEngineLabel" data-i18n="stt.engine_label">Web Speech</span>
+      <span class="bottom-divider"></span>
+      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo</button>
+      <span class="bottom-divider"></span>
+      <button class="btn btn-sm btn-end-meeting" id="btnEndMeeting" data-i18n="meeting.end" title="End meeting">End Meeting</button>
+    </div>
+  </footer>
+
+  <!-- Settings Panel (Slide-in) -->
+  <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
+    <div class="settings-header">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
+    </div>
+    <div class="settings-body">
+      <!-- Settings Tabs -->
+      <div class="settings-tabs" id="settingsTabs">
+        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
+        <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
+        <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
+        <button class="settings-tab" data-tab="speakers" data-i18n="settings.tab_speakers">Speakers</button>
+        <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Integration</button>
+      </div>
+
+      <!-- General Tab -->
+      <div class="settings-tab-content active" data-tab="general">
+        <section class="settings-section">
+          <h3 data-i18n="settings.language">Language</h3>
+          <div class="settings-row-2col">
+            <label class="settings-label">
+              <span data-i18n="settings.ui_language">UI Language</span>
+              <select class="settings-select" id="selectUiLanguage">
+                <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
+                <option value="en" data-i18n="settings.ui_lang_en">English</option>
+                <option value="ko" data-i18n="settings.ui_lang_ko">Korean</option>
+              </select>
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.ai_language">AI Analysis Language</span>
+              <select class="settings-select" id="selectAiLanguage">
+                <option value="auto" data-i18n="settings.ai_lang_auto">Same as UI</option>
+                <option value="en" data-i18n="settings.ai_lang_en">English</option>
+                <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
+              </select>
+            </label>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.api_keys">API & Model</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.gemini_key">Gemini API Key</span>
+            <input type="password" class="settings-input" id="inputGeminiKey" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
+          </label>
+          <label class="settings-label">
+            <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
+            <select class="settings-select" id="selectGeminiModel">
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+              <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-pro-preview-06-05">Gemini 2.5 Pro</option>
+            </select>
+          </label>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.stt">STT Settings</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.language">Language</span>
+            <select class="settings-select" id="selectLanguage">
+              <option value="ko" data-i18n="settings.lang_ko">Korean</option>
+              <option value="en" data-i18n="settings.lang_en">English</option>
+              <option value="ja" data-i18n="settings.lang_ja">Japanese</option>
+              <option value="zh" data-i18n="settings.lang_zh">Chinese</option>
+            </select>
+          </label>
+        </section>
+      </div>
+
+      <!-- Analysis Tab -->
+      <div class="settings-tab-content" data-tab="analysis">
+        <section class="settings-section">
+          <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
+          <div class="settings-inline-row">
+            <span data-i18n="settings.auto_analysis">Auto Analysis</span>
+            <div class="toggle-wrap">
+              <input type="checkbox" id="checkAutoAnalysis" checked>
+              <span class="toggle-slider"></span>
+            </div>
+            <div class="number-input-wrap">
+              <input type="number" class="settings-number" id="inputAnalysisInterval" min="10" max="300" value="30" step="5">
+              <span class="number-unit">sec</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.token_strategy">Token Strategy</h3>
+          <div class="strategy-cards" id="strategyCards">
+            <label class="strategy-card">
+              <input type="radio" name="tokenStrategy" value="smart" checked>
+              <div class="strategy-card-content">
+                <strong data-i18n="settings.strategy_smart">Smart (Summary + Recent)</strong>
+                <p data-i18n="strategy.smart_desc">Previous summary + recent N minutes. Best for long meetings.</p>
+              </div>
+              <div class="strategy-card-minutes">
+                <input type="number" class="settings-number-sm" data-strategy="smart" min="1" max="30" value="5" step="1">
+                <span>min</span>
+              </div>
+            </label>
+            <label class="strategy-card">
+              <input type="radio" name="tokenStrategy" value="recent">
+              <div class="strategy-card-content">
+                <strong data-i18n="settings.strategy_recent">Recent N minutes</strong>
+                <p data-i18n="strategy.recent_desc">Only the most recent N minutes of transcript.</p>
+              </div>
+              <div class="strategy-card-minutes">
+                <input type="number" class="settings-number-sm" data-strategy="recent" min="1" max="30" value="5" step="1">
+                <span>min</span>
+              </div>
+            </label>
+            <label class="strategy-card">
+              <input type="radio" name="tokenStrategy" value="full">
+              <div class="strategy-card-content">
+                <strong data-i18n="settings.strategy_full">Full Transcript</strong>
+                <p data-i18n="strategy.full_desc">Sends entire transcript. Most accurate but uses more tokens.</p>
+              </div>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <!-- Prompt Tab (NEW) -->
+      <div class="settings-tab-content" data-tab="prompt">
+        <section class="settings-section">
+          <h3 data-i18n="settings.meeting_type">Meeting Type</h3>
+          <select class="settings-select" id="selectMeetingPreset" style="margin-bottom:10px;">
+            <option value="general" data-i18n="settings.preset_general">General</option>
+            <option value="weekly" data-i18n="settings.preset_weekly">Weekly Meeting</option>
+            <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
+            <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+            <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+            <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+            <option value="custom" data-i18n="settings.preset_custom">Custom</option>
+          </select>
+          <div class="preset-prompt-display" id="presetPromptDisplay">
+            <div class="preset-prompt-text" id="presetPromptText"></div>
+            <button class="btn btn-xs preset-prompt-edit-btn" id="btnEditPresetInline" title="Edit">&#9998;</button>
+          </div>
+          <div id="presetPromptEditor" hidden>
+            <textarea class="settings-textarea" id="textPresetPrompt" rows="6" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <button class="btn btn-sm" id="btnSaveAsPreset" data-i18n="preset.save">Save as Preset</button>
+              <button class="btn btn-sm" id="btnResetPresetPrompt" data-i18n="preset.reset">Reset</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.meeting_context">Meeting Context</h3>
+          <div class="context-source-tabs">
+            <button class="context-source-tab active" data-ctx="manual" data-i18n="context.direct">Direct Input</button>
+            <button class="context-source-tab" data-ctx="previous" data-i18n="context.previous">Previous Meeting</button>
+            <button class="context-source-tab" data-ctx="file" data-i18n="context.file">File (.txt/.md)</button>
+          </div>
+          <div class="context-source-content active" data-ctx="manual">
+            <textarea class="settings-textarea" id="textMeetingContext" data-i18n-placeholder="settings.context_placeholder" placeholder="Describe the meeting context, goals, participants..." rows="3"></textarea>
+          </div>
+          <div class="context-source-content" data-ctx="previous">
+            <select class="settings-select" id="selectPreviousMeeting" style="margin-bottom:8px;">
+              <option value="">-- Select a meeting --</option>
+            </select>
+            <div class="previous-meeting-preview" id="previousMeetingPreview"></div>
+          </div>
+          <div class="context-source-content" data-ctx="file">
+            <input type="file" class="settings-input" id="fileContextUpload" accept=".txt,.md">
+            <div class="file-context-preview" id="fileContextPreview"></div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.analysis_prompt">Analysis Prompt</h3>
+          <textarea class="settings-textarea" id="textPrompt" rows="6" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
+          <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.chat_prompt">Chat System Prompt</h3>
+          <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
+          <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
+        </section>
+      </div>
+
+      <!-- Speakers Tab -->
+      <div class="settings-tab-content" data-tab="speakers">
+        <section class="settings-section">
+          <h3 data-i18n="settings.speakers">Speakers</h3>
+          <div id="speakerSettings"></div>
+          <div class="speaker-settings-actions">
+            <button class="btn btn-sm" id="btnAddSpeaker" data-i18n="settings.add_speaker">+ Add Speaker</button>
+            <button class="btn btn-sm" id="btnSaveSpeakerPreset" data-i18n="settings.save_speaker_preset">Save Preset</button>
+            <button class="btn btn-sm" id="btnLoadSpeakerPreset" data-i18n="settings.load_speaker_preset">Load Preset</button>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
+          <p class="text-muted"><span id="typoDictCount">0</span> <span data-i18n="settings.corrections_saved">corrections saved</span></p>
+          <div class="typo-dict-actions">
+            <button class="btn btn-sm" id="btnViewTypoDict" data-i18n="settings.view_dict">View</button>
+            <button class="btn btn-sm btn-danger" id="btnResetTypoDict" data-i18n="settings.reset_dict">Reset</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Integration Tab -->
+      <div class="settings-tab-content" data-tab="integration">
+        <section class="settings-section">
+          <h3 data-i18n="settings.integrations">Integrations</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
+            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
+          </label>
+        </section>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Settings Overlay -->
+  <div class="overlay" id="settingsOverlay"></div>
+
+  <!-- Context Popup -->
+  <div class="context-popup" id="contextPopup" hidden>
+    <button class="context-btn" data-action="changeSpeaker" data-i18n="context.change_speaker">Change Speaker</button>
+    <button class="context-btn" data-action="editText" data-i18n="context.edit_text">Edit Text</button>
+    <button class="context-btn" data-action="bookmark" data-i18n="context.bookmark">Toggle Bookmark</button>
+    <button class="context-btn" data-action="delete" data-i18n="context.delete">Delete</button>
+  </div>
+
+  <!-- Speaker Dropdown -->
+  <div class="speaker-dropdown" id="speakerDropdown" hidden></div>
+
+  <!-- Export Modal -->
+  <div class="modal-overlay" id="exportModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h3 data-i18n="export.title">Export Meeting</h3>
+        <button class="btn btn-icon modal-close" data-close="exportModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <button class="btn btn-block export-btn" data-format="md-full" data-i18n="export.md_full">Markdown - Full Report</button>
+        <button class="btn btn-block export-btn" data-format="md-summary" data-i18n="export.md_summary">Markdown - Summary</button>
+        <button class="btn btn-block export-btn" data-format="md-highlights" data-i18n="export.md_highlights">Markdown - Highlights & Memos</button>
+        <button class="btn btn-block export-btn" data-format="json" data-i18n="export.json">JSON - Full Data</button>
+        <hr>
+        <button class="btn btn-block export-btn" data-format="slack" data-i18n="export.slack">Send to Slack</button>
+        <button class="btn btn-block export-btn" data-format="email" data-i18n="export.email">Send via Email</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-overlay" id="historyModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="history.title">Meeting History</h3>
+        <button class="btn btn-icon modal-close" data-close="historyModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="history-toolbar">
+          <input type="search" class="settings-input" id="historySearch" data-i18n-placeholder="history.search" placeholder="Search meetings...">
+          <div class="history-filters">
+            <select class="settings-select history-filter-select" id="historyFilterType">
+              <option value="" data-i18n="history.filter_all">All Types</option>
+              <option value="general" data-i18n="settings.preset_general">General</option>
+              <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
+              <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
+              <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+              <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+              <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+            </select>
+            <input type="text" class="settings-input history-filter-tag" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
+            <input type="date" class="settings-input history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
+            <input type="date" class="settings-input history-filter-date" id="historyFilterDateTo" data-i18n-title="history.filter_date_to" title="To date">
+          </div>
+        </div>
+        <div class="history-grid" id="historyGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meeting Viewer Modal -->
+  <div class="modal-overlay" id="viewerModal" hidden>
+    <div class="modal modal-fullscreen">
+      <div class="modal-header">
+        <h3 id="viewerTitle" data-i18n="viewer.title">Meeting Details</h3>
+        <button class="btn btn-icon modal-close" data-close="viewerModal">&times;</button>
+      </div>
+      <div class="modal-body viewer-body">
+        <div class="viewer-main">
+          <div class="viewer-meta" id="viewerMeta"></div>
+          <div class="viewer-columns">
+            <div class="viewer-transcript" id="viewerTranscript"></div>
+            <div class="viewer-timeline" id="viewerTimeline"></div>
+            <div class="viewer-analysis" id="viewerAnalysis"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis History Modal -->
+  <div class="modal-overlay" id="analysisHistoryModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="analysis_history.title">Analysis History</h3>
+        <button class="btn btn-icon modal-close" data-close="analysisHistoryModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="analysis-timeline" id="analysisTimeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Highlights Modal -->
+  <div class="modal-overlay" id="highlightsModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="highlights.title">Highlights & Memos</h3>
+        <button class="btn btn-icon modal-close" data-close="highlightsModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="highlights-tabs">
+          <button class="btn btn-sm tab-active" data-tab="all" data-i18n="highlights.all">All</button>
+          <button class="btn btn-sm" data-tab="bookmarks" data-i18n="highlights.bookmarks">Bookmarks</button>
+          <button class="btn btn-sm" data-tab="memos" data-i18n="highlights.memos">Memos</button>
+        </div>
+        <div class="highlights-list" id="highlightsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Speaker Preset Modal -->
+  <div class="modal-overlay" id="speakerPresetModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h3 data-i18n="settings.speaker_presets">Speaker Presets</h3>
+        <button class="btn btn-icon modal-close" data-close="speakerPresetModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="speakerPresetList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Typo Dictionary Modal -->
+  <div class="modal-overlay" id="typoDictModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
+        <button class="btn btn-icon modal-close" data-close="typoDictModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="typoDictList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Modal -->
+  <div class="welcome-modal" id="welcomeModal" hidden>
+    <div class="welcome-modal-content">
+      <h2 class="welcome-modal-title" data-i18n="welcome.title">Meeting AI</h2>
+      <p class="welcome-modal-subtitle" data-i18n="welcome.subtitle">What would you like to do?</p>
+      <div class="welcome-actions">
+        <button class="welcome-action-card" id="welcomeQuickStart">
+          <span class="welcome-action-icon">&#9654;</span>
+          <span class="welcome-action-title" data-i18n="welcome.quick_start">Quick Start</span>
+          <span class="welcome-action-desc" data-i18n="welcome.quick_start_desc">Start recording immediately</span>
+        </button>
+        <button class="welcome-action-card" id="welcomeMeetingPrep">
+          <span class="welcome-action-icon">&#128221;</span>
+          <span class="welcome-action-title" data-i18n="welcome.meeting_prep">Meeting Prep</span>
+          <span class="welcome-action-desc" data-i18n="welcome.meeting_prep_desc">AI-guided setup</span>
+        </button>
+        <button class="welcome-action-card" id="welcomeSearch">
+          <span class="welcome-action-icon">&#128269;</span>
+          <span class="welcome-action-title" data-i18n="welcome.search">Search Meetings</span>
+          <span class="welcome-action-desc" data-i18n="welcome.search_desc">Browse past meetings</span>
+        </button>
+      </div>
+      <button class="welcome-close" id="welcomeClose">ESC to close</button>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Templates -->
+  <template id="tmplTranscriptLine">
+    <div class="transcript-line" data-id="">
+      <span class="transcript-time"></span>
+      <button class="transcript-speaker-badge" title="Click to change speaker"></button>
+      <span class="transcript-text"></span>
+      <div class="transcript-actions">
+        <button class="btn btn-xs" data-action="bookmark" title="Bookmark (Ctrl+B)">&#11088;</button>
+        <button class="btn btn-xs" data-action="edit" title="Edit">&#9998;</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tmplMemoLine">
+    <div class="transcript-line memo-line" data-id="">
+      <span class="transcript-time"></span>
+      <span class="memo-badge">MEMO</span>
+      <span class="transcript-text memo-text"></span>
+      <div class="transcript-actions">
+        <button class="btn btn-xs" data-action="edit-memo" title="Edit">&#9998;</button>
+        <button class="btn btn-xs" data-action="delete-memo" title="Delete">&#10005;</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tmplAiSection">
+    <section class="ai-section" data-section="">
+      <h3 class="ai-section-title">
+        <span class="ai-section-icon"></span>
+        <span class="ai-section-label"></span>
+      </h3>
+      <div class="ai-section-body"></div>
+    </section>
+  </template>
+
+  <template id="tmplSpeakerBadge">
+    <div class="speaker-badge-wrap" data-speaker-id="">
+      <button class="speaker-badge">
+        <span class="speaker-dot"></span>
+        <span class="speaker-name"></span>
+      </button>
+      <input class="speaker-name-edit" type="text" hidden>
+      <button class="speaker-badge-remove btn-xs" title="Remove">&times;</button>
+    </div>
+  </template>
+
+  <template id="tmplHistoryCard">
+    <div class="history-card" data-meeting-id="">
+      <div class="history-card-header">
+        <span class="history-card-title"></span>
+        <span class="history-card-date"></span>
+      </div>
+      <div class="history-card-meta">
+        <span class="history-card-type"></span>
+        <span class="history-card-duration"></span>
+        <span class="history-card-speakers"></span>
+        <span class="history-card-location"></span>
+      </div>
+      <div class="history-card-tags"></div>
+      <div class="history-card-summary"></div>
+      <div class="history-card-actions">
+        <button class="btn btn-xs" data-action="view" data-i18n="history.view">View</button>
+        <button class="btn btn-xs" data-action="export" data-i18n="history.export">Export</button>
+        <button class="btn btn-xs btn-danger" data-action="delete" data-i18n="history.delete">Delete</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tmplToast">
+    <div class="toast">
+      <span class="toast-message"></span>
+      <button class="toast-close">&times;</button>
+    </div>
+  </template>
+
+  <template id="tmplSkeletonSection">
+    <section class="ai-section skeleton-section">
+      <h3 class="ai-section-title">
+        <div class="skeleton-line skeleton-short"></div>
+      </h3>
+      <div class="ai-section-body">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line skeleton-medium"></div>
+        <div class="skeleton-line skeleton-short"></div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tmplChatMessage">
+    <div class="chat-message">
+      <div class="chat-message-content"></div>
+    </div>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

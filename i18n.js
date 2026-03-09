@@ -1,0 +1,686 @@
+// i18n.js - Internationalization module
+
+const translations = {
+  en: {
+    // Header
+    'header.timer': '00:00:00',
+    'header.theme_tooltip': 'Toggle theme (Ctrl+T)',
+    'header.history_tooltip': 'Meeting history',
+    'header.settings_tooltip': 'Settings',
+
+    // Transcript panel
+    'panel.transcript': 'Transcript',
+    'panel.highlights': 'Highlights',
+    'panel.export': 'Export',
+    'transcript.empty': 'Start recording to see the transcript here.',
+    'transcript.empty_hint': 'Press the record button or Ctrl+R to begin.',
+    'transcript.speaker_click': 'Click to change speaker',
+    'transcript.bookmark_tooltip': 'Bookmark (Ctrl+B)',
+    'transcript.edit_tooltip': 'Edit',
+
+    // AI panel
+    'panel.ai': 'AI Analysis',
+    'panel.analyze': 'Analyze',
+    'panel.analysis_history': 'History',
+    'ai.empty': 'AI analysis results will appear here.',
+    'ai.empty_hint': 'Analysis runs automatically during recording.',
+
+    // Bottom bar
+    'record.label': 'REC',
+    'record.stop': 'STOP',
+    'record.status_recording': 'Recording...',
+    'record.status_stopped': 'Stopped',
+    'record.status_ended': 'Meeting ended - Resume or start a new meeting',
+    'stt.engine_label': 'Web Speech',
+    'memo.placeholder': 'Add a memo... (Ctrl+M)',
+    'memo.add': 'Add',
+    'meeting.end': 'End Meeting',
+    'meeting.resume': 'Resume',
+    'meeting.new': 'New Meeting',
+
+    // Settings
+    'settings.title': 'Settings',
+    'settings.api_keys': 'API Keys',
+    'settings.gemini_key': 'Gemini API Key',
+    'settings.gemini_placeholder': 'Enter API key',
+    'settings.stt': 'STT Settings',
+    'settings.language': 'Language',
+    'settings.lang_ko': 'Korean',
+    'settings.lang_en': 'English',
+    'settings.lang_ja': 'Japanese',
+    'settings.lang_zh': 'Chinese',
+    'settings.ai_analysis': 'AI Analysis',
+    'settings.auto_analysis': 'Auto Analysis',
+    'settings.analysis_interval': 'Analysis Interval:',
+    'settings.token_strategy': 'Token Strategy',
+    'settings.strategy_smart': 'Smart (Summary + Recent)',
+    'settings.strategy_recent': 'Recent N minutes',
+    'settings.strategy_full': 'Full Transcript',
+    'settings.recent_minutes': 'Recent Minutes:',
+    'settings.meeting_type': 'Meeting Type',
+    'settings.preset_general': 'General',
+    'settings.preset_weekly': 'Weekly Meeting',
+    'settings.preset_brainstorm': 'Brainstorming',
+    'settings.preset_sales': 'Sales/Client',
+    'settings.preset_1on1': '1-on-1',
+    'settings.preset_kickoff': 'Kickoff',
+    'settings.preset_custom': 'Custom',
+    'settings.meeting_context': 'Meeting Context',
+    'settings.context_placeholder': 'Describe the meeting context, goals, participants...',
+    'settings.analysis_prompt': 'Analysis Prompt',
+    'settings.prompt_placeholder': 'Custom analysis prompt...',
+    'settings.reset_prompt': 'Reset to Default',
+    'settings.chat_prompt': 'Chat System Prompt',
+    'settings.chat_prompt_placeholder': 'Custom chat system prompt...',
+    'settings.reset_chat_prompt': 'Reset to Default',
+    'settings.speakers': 'Speakers',
+    'settings.add_speaker': '+ Add Speaker',
+    'settings.integrations': 'Integrations',
+    'settings.slack_webhook': 'Slack Webhook URL',
+    'settings.ui_language': 'UI Language',
+    'settings.ui_lang_auto': 'Auto (Browser)',
+    'settings.ui_lang_en': 'English',
+    'settings.ui_lang_ko': 'Korean',
+    'settings.ai_language': 'AI Analysis Language',
+    'settings.ai_lang_auto': 'Same as UI',
+    'settings.ai_lang_en': 'English',
+    'settings.ai_lang_ko': 'Korean',
+
+    // Context popup
+    'context.change_speaker': 'Change Speaker',
+    'context.edit_text': 'Edit Text',
+    'context.bookmark': 'Toggle Bookmark',
+    'context.delete': 'Delete',
+
+    // Export modal
+    'export.title': 'Export Meeting',
+    'export.md_full': 'Markdown - Full Report',
+    'export.md_summary': 'Markdown - Summary',
+    'export.md_highlights': 'Markdown - Highlights & Memos',
+    'export.json': 'JSON - Full Data',
+    'export.slack': 'Send to Slack',
+    'export.email': 'Send via Email',
+
+    // History modal
+    'history.title': 'Meeting History',
+    'history.search': 'Search meetings...',
+    'history.view': 'View',
+    'history.export': 'Export',
+    'history.delete': 'Delete',
+    'history.no_meetings': 'No meetings found.',
+    'history.untitled': 'Untitled Meeting',
+    'history.speakers_count': '{n} speakers',
+
+    // Analysis history modal
+    'analysis_history.title': 'Analysis History',
+    'analysis_history.empty': 'No analysis history yet.',
+
+    // Highlights modal
+    'highlights.title': 'Highlights & Memos',
+    'highlights.all': 'All',
+    'highlights.bookmarks': 'Bookmarks',
+    'highlights.memos': 'Memos',
+    'highlights.empty': 'No highlights yet.',
+
+    // Meeting viewer
+    'viewer.title': 'Meeting Details',
+    'viewer.no_analysis': 'No analysis data.',
+
+    // AI cards
+    'card.summary': 'Summary',
+    'card.context': 'Current Context',
+    'card.openQuestions': 'Open Questions',
+    'card.actionItems': 'Action Items',
+    'card.suggestions': 'AI Suggestions',
+    'card.speakerStats': 'Speaker Stats',
+    'card.no_items': 'No items yet.',
+    'card.no_data': 'No data yet.',
+    'card.no_speaker_data': 'No speaker data yet.',
+    'card.speaking_turns': 'Speaking turns',
+    'card.expand': 'Expand',
+    'card.toggle': 'Toggle',
+
+    // Toast / messages
+    'toast.no_api_key': 'Gemini API key not set. Go to Settings.',
+    'toast.no_transcript': 'No transcript to analyze.',
+    'toast.meeting_saved': 'Meeting saved.',
+    'toast.meeting_deleted': 'Meeting deleted.',
+    'toast.storage_high': 'Storage usage is high. Consider deleting old meetings.',
+    'toast.storage_usage': 'Storage usage: {pct}%. Consider cleaning up.',
+    'toast.record_fail': 'Failed to start recording: ',
+    'toast.analysis_fail': 'Analysis failed: ',
+    'toast.slack_sent': 'Sent to Slack!',
+    'toast.slack_fail': 'Failed to send to Slack: ',
+    'toast.slack_no_url': 'Slack webhook URL not set.',
+    'toast.meeting_resumed': 'Meeting resumed.',
+    'confirm.delete_meeting': 'Delete this meeting?',
+
+    // Markdown export
+    'md.meeting_notes': '# Meeting Notes',
+    'md.date': 'Date',
+    'md.duration': 'Duration',
+    'md.participants': 'Participants',
+    'md.transcript': '## Transcript',
+    'md.memos': '## Memos',
+    'md.summary': '## Summary',
+    'md.action_items': '## Action Items',
+    'md.open_questions': '## Open Questions',
+    'md.suggestions': '## Suggestions',
+    'md.meeting_summary': '# Meeting Summary',
+    'md.context': '## Context',
+    'md.highlights_title': '# Highlights & Memos',
+    'md.bookmarks': '## Bookmarks',
+    'md.no_analysis': '# No analysis available',
+
+    // Chat panel
+    'panel.chat': 'AI Chat',
+    'chat.placeholder': 'Ask AI about this meeting...',
+    'chat.send': 'Send',
+    'chat.empty': 'Ask AI about the meeting, add insights, or request analysis.',
+    'chat.error': 'Chat error',
+    'chat.file_attached': 'File attached: {name}',
+    'chat.context_added': 'Context added to analysis.',
+    'chat.memo_added': 'Memo added to transcript.',
+    'chat.rerunning_analysis': 'Re-running analysis with updated context...',
+
+    // Settings tabs
+    'settings.tab_general': 'General',
+    'settings.tab_analysis': 'Analysis',
+    'settings.tab_speakers': 'Speakers',
+    'settings.tab_integration': 'Integration',
+
+    // Strategy descriptions
+    'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
+    'strategy.recent_desc': 'Only the most recent N minutes of transcript. Good balance of context and cost.',
+    'strategy.full_desc': 'Sends entire transcript. Most accurate but uses more tokens.',
+
+    // History filters
+    'history.filter_all': 'All Types',
+    'history.filter_date_from': 'From date',
+    'history.filter_date_to': 'To date',
+
+    // Context sources
+    'context.direct': 'Direct Input',
+    'context.previous': 'Previous Meeting',
+    'context.file': 'File (.txt/.md)',
+
+    // Preset editing
+    'preset.edit': 'Edit prompt',
+    'preset.save': 'Save as Preset',
+    'preset.reset': 'Reset',
+    'preset.name_prompt': 'Enter preset name:',
+
+    // Speakers
+    'speaker.me': 'Me',
+    'speaker.participant': 'Participant {n}',
+    'speaker.unknown': 'Unknown',
+    'speaker.color_tooltip': 'Click to change color',
+
+    // Welcome modal
+    'welcome.title': 'Meeting AI',
+    'welcome.subtitle': 'What would you like to do?',
+    'welcome.quick_start': 'Quick Start',
+    'welcome.quick_start_desc': 'Start recording immediately with default settings',
+    'welcome.meeting_prep': 'Meeting Prep',
+    'welcome.meeting_prep_desc': 'AI-guided setup for your meeting',
+    'welcome.search': 'Search Meetings',
+    'welcome.search_desc': 'Browse and search past meetings',
+
+    // Meeting prep
+    'prep.step_type': 'What kind of meeting is this?',
+    'prep.step_agenda': 'What\'s on the agenda today?',
+    'prep.step_time': 'How long will this meeting be?',
+    'prep.step_attendees': 'Who\'s attending?',
+    'prep.step_prompt': 'Any special instructions for AI analysis?',
+    'prep.step_standby': 'Meeting setup complete!',
+    'prep.type_general': 'General',
+    'prep.type_weekly': 'Weekly',
+    'prep.type_brainstorm': 'Brainstorm',
+    'prep.type_sales': 'Sales/Client',
+    'prep.type_1on1': '1-on-1',
+    'prep.type_kickoff': 'Kickoff',
+    'prep.skip': 'Skip',
+    'prep.use_default': 'Use Default',
+    'prep.edit_prompt': 'Edit',
+    'prep.no_limit': 'No limit',
+    'prep.minutes': '{n} min',
+    'prep.start_meeting': 'Start Meeting',
+    'prep.save_preset': 'Save as Preset',
+    'prep.edit_settings': 'Edit Settings',
+    'prep.add_memo': 'Add Memo',
+    'prep.summary_type': 'Type',
+    'prep.summary_agenda': 'Agenda',
+    'prep.summary_time': 'Time',
+    'prep.summary_attendees': 'Attendees',
+    'prep.summary_prompt': 'AI Prompt',
+    'prep.preset_name': 'Enter preset name:',
+    'prep.preset_saved': 'Preset saved!',
+    'prep.load_preset': 'Load Preset',
+    'prep.or_type': 'Or type your own...',
+    'prep.type_names': 'Type names separated by commas...',
+    'prep.confirm_attendees': 'Confirm',
+
+    // Contacts
+    'contacts.title': 'Contacts',
+    'contacts.search': 'Search contacts...',
+    'contacts.add': 'Add Contact',
+    'contacts.name': 'Name',
+    'contacts.company': 'Company',
+    'contacts.no_contacts': 'No contacts yet.',
+    'contacts.save': 'Save',
+    'contacts.cancel': 'Cancel',
+
+    // Misc
+    'minutes': '{n} minutes',
+    'meeting_title': 'Meeting {date} {time}',
+  },
+
+  ko: {
+    // Header
+    'header.timer': '00:00:00',
+    'header.theme_tooltip': '테마 전환 (Ctrl+T)',
+    'header.history_tooltip': '회의 기록',
+    'header.settings_tooltip': '설정',
+
+    // Transcript panel
+    'panel.transcript': '회의록',
+    'panel.highlights': '하이라이트',
+    'panel.export': '내보내기',
+    'transcript.empty': '녹음을 시작하면 여기에 회의록이 표시됩니다.',
+    'transcript.empty_hint': '녹음 버튼 또는 Ctrl+R을 눌러 시작하세요.',
+    'transcript.speaker_click': '클릭하여 화자 변경',
+    'transcript.bookmark_tooltip': '북마크 (Ctrl+B)',
+    'transcript.edit_tooltip': '편집',
+
+    // AI panel
+    'panel.ai': 'AI 분석',
+    'panel.analyze': '분석',
+    'panel.analysis_history': '기록',
+    'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
+    'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
+
+    // Bottom bar
+    'record.label': 'REC',
+    'record.stop': 'STOP',
+    'record.status_recording': '녹음 중...',
+    'record.status_stopped': '중지됨',
+    'record.status_ended': '회의 종료됨 - 재개하거나 새 회의를 시작하세요',
+    'stt.engine_label': 'Web Speech',
+    'memo.placeholder': '메모 추가... (Ctrl+M)',
+    'memo.add': '추가',
+    'meeting.end': '회의 종료',
+    'meeting.resume': '재개',
+    'meeting.new': '새 회의',
+
+    // Settings
+    'settings.title': '설정',
+    'settings.api_keys': 'API 키',
+    'settings.gemini_key': 'Gemini API 키',
+    'settings.gemini_placeholder': 'API 키 입력',
+    'settings.stt': 'STT 설정',
+    'settings.language': '언어',
+    'settings.lang_ko': '한국어',
+    'settings.lang_en': '영어',
+    'settings.lang_ja': '일본어',
+    'settings.lang_zh': '중국어',
+    'settings.ai_analysis': 'AI 분석',
+    'settings.auto_analysis': '자동 분석',
+    'settings.analysis_interval': '분석 주기:',
+    'settings.token_strategy': '토큰 전략',
+    'settings.strategy_smart': '스마트 (요약 + 최근)',
+    'settings.strategy_recent': '최근 N분',
+    'settings.strategy_full': '전체 회의록',
+    'settings.recent_minutes': '최근 시간(분):',
+    'settings.meeting_type': '회의 유형',
+    'settings.preset_general': '일반',
+    'settings.preset_weekly': '주간 회의',
+    'settings.preset_brainstorm': '브레인스토밍',
+    'settings.preset_sales': '영업/고객',
+    'settings.preset_1on1': '1:1 미팅',
+    'settings.preset_kickoff': '킥오프',
+    'settings.preset_custom': '사용자 정의',
+    'settings.meeting_context': '회의 배경',
+    'settings.context_placeholder': '회의 배경, 목표, 참석자를 설명하세요...',
+    'settings.analysis_prompt': '분석 프롬프트',
+    'settings.prompt_placeholder': '사용자 정의 분석 프롬프트...',
+    'settings.reset_prompt': '기본값으로 초기화',
+    'settings.chat_prompt': '챗 시스템 프롬프트',
+    'settings.chat_prompt_placeholder': '사용자 정의 챗 시스템 프롬프트...',
+    'settings.reset_chat_prompt': '기본값으로 초기화',
+    'settings.speakers': '화자',
+    'settings.add_speaker': '+ 화자 추가',
+    'settings.integrations': '연동',
+    'settings.slack_webhook': 'Slack Webhook URL',
+    'settings.ui_language': 'UI 언어',
+    'settings.ui_lang_auto': '자동 (브라우저)',
+    'settings.ui_lang_en': 'English',
+    'settings.ui_lang_ko': '한국어',
+    'settings.ai_language': 'AI 분석 언어',
+    'settings.ai_lang_auto': 'UI 언어와 동일',
+    'settings.ai_lang_en': 'English',
+    'settings.ai_lang_ko': '한국어',
+
+    // Context popup
+    'context.change_speaker': '화자 변경',
+    'context.edit_text': '텍스트 편집',
+    'context.bookmark': '북마크 토글',
+    'context.delete': '삭제',
+
+    // Export modal
+    'export.title': '회의 내보내기',
+    'export.md_full': 'Markdown - 전체 보고서',
+    'export.md_summary': 'Markdown - 요약',
+    'export.md_highlights': 'Markdown - 하이라이트 & 메모',
+    'export.json': 'JSON - 전체 데이터',
+    'export.slack': 'Slack으로 전송',
+    'export.email': '이메일로 전송',
+
+    // History modal
+    'history.title': '회의 기록',
+    'history.search': '회의 검색...',
+    'history.view': '보기',
+    'history.export': '내보내기',
+    'history.delete': '삭제',
+    'history.no_meetings': '회의 기록이 없습니다.',
+    'history.untitled': '제목 없는 회의',
+    'history.speakers_count': '화자 {n}명',
+
+    // Analysis history modal
+    'analysis_history.title': '분석 기록',
+    'analysis_history.empty': '분석 기록이 없습니다.',
+
+    // Highlights modal
+    'highlights.title': '하이라이트 & 메모',
+    'highlights.all': '전체',
+    'highlights.bookmarks': '북마크',
+    'highlights.memos': '메모',
+    'highlights.empty': '하이라이트가 없습니다.',
+
+    // Meeting viewer
+    'viewer.title': '회의 상세',
+    'viewer.no_analysis': '분석 데이터가 없습니다.',
+
+    // AI cards
+    'card.summary': '요약',
+    'card.context': '현재 맥락',
+    'card.openQuestions': '미해결 질문',
+    'card.actionItems': '실행 항목',
+    'card.suggestions': 'AI 제안',
+    'card.speakerStats': '화자 통계',
+    'card.no_items': '아직 항목이 없습니다.',
+    'card.no_data': '아직 데이터가 없습니다.',
+    'card.no_speaker_data': '화자 데이터가 없습니다.',
+    'card.speaking_turns': '발언 횟수',
+    'card.expand': '확대',
+    'card.toggle': '접기/펼치기',
+
+    // Toast / messages
+    'toast.no_api_key': 'Gemini API 키가 설정되지 않았습니다. 설정으로 이동하세요.',
+    'toast.no_transcript': '분석할 회의록이 없습니다.',
+    'toast.meeting_saved': '회의가 저장되었습니다.',
+    'toast.meeting_deleted': '회의가 삭제되었습니다.',
+    'toast.storage_high': '저장 공간이 부족합니다. 오래된 회의를 삭제해 주세요.',
+    'toast.storage_usage': '저장 공간 사용량: {pct}%. 정리를 권장합니다.',
+    'toast.record_fail': '녹음 시작 실패: ',
+    'toast.analysis_fail': '분석 실패: ',
+    'toast.slack_sent': 'Slack으로 전송 완료!',
+    'toast.slack_fail': 'Slack 전송 실패: ',
+    'toast.slack_no_url': 'Slack webhook URL이 설정되지 않았습니다.',
+    'toast.meeting_resumed': '회의가 재개되었습니다.',
+    'confirm.delete_meeting': '이 회의를 삭제하시겠습니까?',
+
+    // Markdown export
+    'md.meeting_notes': '# 회의록',
+    'md.date': '날짜',
+    'md.duration': '소요 시간',
+    'md.participants': '참석자',
+    'md.transcript': '## 회의 내용',
+    'md.memos': '## 메모',
+    'md.summary': '## 요약',
+    'md.action_items': '## 실행 항목',
+    'md.open_questions': '## 미해결 질문',
+    'md.suggestions': '## 제안',
+    'md.meeting_summary': '# 회의 요약',
+    'md.context': '## 맥락',
+    'md.highlights_title': '# 하이라이트 & 메모',
+    'md.bookmarks': '## 북마크',
+    'md.no_analysis': '# 분석 결과 없음',
+
+    // Chat panel
+    'panel.chat': 'AI 채팅',
+    'chat.placeholder': '회의에 대해 AI에게 질문하세요...',
+    'chat.send': '전송',
+    'chat.empty': '회의에 대해 질문하거나, 인사이트를 추가하거나, 분석을 요청하세요.',
+    'chat.error': '채팅 오류',
+    'chat.file_attached': '파일 첨부됨: {name}',
+    'chat.context_added': '맥락이 분석에 추가되었습니다.',
+    'chat.memo_added': '메모가 회의록에 추가되었습니다.',
+    'chat.rerunning_analysis': '업데이트된 맥락으로 재분석 중...',
+
+    // Settings tabs
+    'settings.tab_general': '일반',
+    'settings.tab_analysis': '분석',
+    'settings.tab_speakers': '화자',
+    'settings.tab_integration': '연동',
+
+    // Strategy descriptions
+    'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
+    'strategy.recent_desc': '최근 N분의 회의록만 사용. 맥락과 비용의 균형.',
+    'strategy.full_desc': '전체 회의록 전송. 가장 정확하지만 토큰 많이 사용.',
+
+    // History filters
+    'history.filter_all': '모든 유형',
+    'history.filter_date_from': '시작일',
+    'history.filter_date_to': '종료일',
+
+    // Context sources
+    'context.direct': '직접 입력',
+    'context.previous': '이전 회의',
+    'context.file': '파일 (.txt/.md)',
+
+    // Preset editing
+    'preset.edit': '프롬프트 편집',
+    'preset.save': '프리셋으로 저장',
+    'preset.reset': '초기화',
+    'preset.name_prompt': '프리셋 이름을 입력하세요:',
+
+    // Speakers
+    'speaker.me': '나',
+    'speaker.participant': '참여자 {n}',
+    'speaker.unknown': '알 수 없음',
+    'speaker.color_tooltip': '클릭하여 색상 변경',
+
+    // Welcome modal
+    'welcome.title': 'Meeting AI',
+    'welcome.subtitle': '무엇을 하시겠습니까?',
+    'welcome.quick_start': '빠른 시작',
+    'welcome.quick_start_desc': '기본 설정으로 바로 녹음 시작',
+    'welcome.meeting_prep': '회의 준비',
+    'welcome.meeting_prep_desc': 'AI 가이드로 회의 설정',
+    'welcome.search': '회의 검색',
+    'welcome.search_desc': '이전 회의 검색 및 조회',
+
+    // Meeting prep
+    'prep.step_type': '어떤 종류의 회의인가요?',
+    'prep.step_agenda': '오늘 안건은 무엇인가요?',
+    'prep.step_time': '회의 시간은 얼마나 되나요?',
+    'prep.step_attendees': '참석자를 선택해주세요',
+    'prep.step_prompt': 'AI 분석에 특별 지시사항이 있나요?',
+    'prep.step_standby': '회의 준비가 완료되었습니다!',
+    'prep.type_general': '일반',
+    'prep.type_weekly': '주간 회의',
+    'prep.type_brainstorm': '브레인스토밍',
+    'prep.type_sales': '영업/고객',
+    'prep.type_1on1': '1:1 미팅',
+    'prep.type_kickoff': '킥오프',
+    'prep.skip': '건너뛰기',
+    'prep.use_default': '기본 사용',
+    'prep.edit_prompt': '수정',
+    'prep.no_limit': '제한 없음',
+    'prep.minutes': '{n}분',
+    'prep.start_meeting': '회의 시작',
+    'prep.save_preset': '프리셋 저장',
+    'prep.edit_settings': '설정 편집',
+    'prep.add_memo': '메모 작성',
+    'prep.summary_type': '유형',
+    'prep.summary_agenda': '안건',
+    'prep.summary_time': '시간',
+    'prep.summary_attendees': '참석자',
+    'prep.summary_prompt': 'AI 프롬프트',
+    'prep.preset_name': '프리셋 이름을 입력하세요:',
+    'prep.preset_saved': '프리셋이 저장되었습니다!',
+    'prep.load_preset': '프리셋 불러오기',
+    'prep.or_type': '또는 직접 입력...',
+    'prep.type_names': '이름을 쉼표로 구분하여 입력...',
+    'prep.confirm_attendees': '확인',
+
+    // Contacts
+    'contacts.title': '연락처',
+    'contacts.search': '연락처 검색...',
+    'contacts.add': '연락처 추가',
+    'contacts.name': '이름',
+    'contacts.company': '소속',
+    'contacts.no_contacts': '연락처가 없습니다.',
+    'contacts.save': '저장',
+    'contacts.cancel': '취소',
+
+    // Misc
+    'minutes': '{n}분',
+    'meeting_title': '회의 {date} {time}',
+  }
+};
+
+// AI-specific prompts per language
+const AI_PROMPTS = {
+  en: `You are an AI meeting assistant. Analyze the meeting transcript and provide structured analysis.
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "summary": "Brief summary of the discussion so far (2-3 sentences)",
+  "context": "Current topic being discussed and the flow of conversation",
+  "openQuestions": ["List of unresolved questions or topics that need follow-up"],
+  "actionItems": ["List of action items with assignee if identifiable"],
+  "suggestions": ["AI suggestions for the meeting (e.g., topics to cover, decisions needed)"],
+  "speakerStats": {"speakerName": count},
+  "speakerMap": [{"line": 0, "speaker": "Name"}, ...]
+}
+
+Rules:
+- Keep summary concise but informative
+- Extract concrete action items with owners when possible
+- Identify questions that were raised but not answered
+- Provide helpful suggestions based on meeting context
+- Count speaking turns per speaker for stats
+- IMPORTANT: Analyze conversation context to identify WHO is speaking each line (speakerMap). Use participant names. Look for clues like: addressing someone by name, different speaking styles, question-answer patterns, role-based language, self-references. "line" is the 0-based index of the transcript line.`,
+
+  ko: `당신은 AI 회의 비서입니다. 회의록을 분석하고 구조화된 분석 결과를 제공하세요.
+
+반드시 아래 형식의 유효한 JSON으로만 응답하세요:
+{
+  "summary": "지금까지의 논의 요약 (2-3문장)",
+  "context": "현재 논의 중인 주제와 대화 흐름",
+  "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 목록"],
+  "actionItems": ["담당자가 식별 가능한 경우 포함한 실행 항목 목록"],
+  "suggestions": ["회의를 위한 AI 제안 (예: 다룰 주제, 필요한 결정 등)"],
+  "speakerStats": {"화자이름": 횟수},
+  "speakerMap": [{"line": 0, "speaker": "이름"}, ...]
+}
+
+규칙:
+- 요약은 간결하되 핵심 내용을 포함
+- 가능한 경우 담당자가 명시된 구체적인 실행 항목 추출
+- 제기되었으나 답변되지 않은 질문 식별
+- 회의 맥락에 기반한 유용한 제안 제공
+- 화자별 발언 횟수 통계
+- 중요: 대화 맥락을 분석하여 각 줄의 화자를 식별(speakerMap). 참가자 이름 사용. 이름 호칭, 말투 차이, 질문-답변 패턴, 역할 기반 언어, 자기 언급 등의 단서 활용. "line"은 0부터 시작하는 회의록 줄 인덱스.`
+};
+
+const AI_PRESET_CONTEXTS = {
+  en: {
+    general: 'General meeting',
+    weekly: 'Weekly team status meeting. Focus on progress updates, blockers, and action items.',
+    brainstorm: 'Brainstorming session. Focus on ideas generated, evaluations, and next steps.',
+    sales: 'Sales/client meeting. Focus on client needs, commitments, and follow-ups.',
+    '1on1': '1-on-1 meeting. Focus on feedback, career development, and personal action items.',
+    kickoff: 'Project kickoff meeting. Focus on goals, roles, timeline, and risks.',
+    custom: '',
+  },
+  ko: {
+    general: '일반 회의',
+    weekly: '주간 팀 상황 회의. 진행 상황 업데이트, 장애 요소, 실행 항목에 집중.',
+    brainstorm: '브레인스토밍 세션. 생성된 아이디어, 평가, 다음 단계에 집중.',
+    sales: '영업/고객 회의. 고객 요구사항, 약속, 후속 조치에 집중.',
+    '1on1': '1:1 미팅. 피드백, 경력 개발, 개인 실행 항목에 집중.',
+    kickoff: '프로젝트 킥오프 회의. 목표, 역할, 일정, 리스크에 집중.',
+    custom: '',
+  }
+};
+
+let currentLang = 'en';
+let currentAiLang = null; // null = same as UI lang
+
+export function detectLanguage() {
+  const nav = navigator.language || navigator.userLanguage || 'en';
+  return nav.startsWith('ko') ? 'ko' : 'en';
+}
+
+export function setLanguage(lang) {
+  currentLang = lang === 'auto' ? detectLanguage() : (lang || 'en');
+  document.documentElement.lang = currentLang;
+  applyTranslations();
+  return currentLang;
+}
+
+export function getLanguage() {
+  return currentLang;
+}
+
+export function setAiLanguage(lang) {
+  currentAiLang = (lang === 'auto' || !lang) ? null : lang;
+}
+
+export function getAiLanguage() {
+  return currentAiLang || currentLang;
+}
+
+export function t(key, params) {
+  const lang = translations[currentLang] || translations.en;
+  let text = lang[key] || translations.en[key] || key;
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replace(`{${k}}`, v);
+    });
+  }
+  return text;
+}
+
+export function getAiPrompt() {
+  const lang = getAiLanguage();
+  return AI_PROMPTS[lang] || AI_PROMPTS.en;
+}
+
+export function getAiPresetContext(preset) {
+  const lang = getAiLanguage();
+  const contexts = AI_PRESET_CONTEXTS[lang] || AI_PRESET_CONTEXTS.en;
+  return contexts[preset] || '';
+}
+
+export function getDateLocale() {
+  return currentLang === 'ko' ? 'ko-KR' : 'en-US';
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    el.title = t(el.getAttribute('data-i18n-title'));
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+  });
+}
