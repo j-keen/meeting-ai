@@ -59,6 +59,9 @@ let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
 let aiTypoCorrectionTimer = null;
+let analysisGaugeTimer = null;
+let analysisGaugeStart = 0;
+let analysisGaugeIntervalMs = 0;
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -150,6 +153,7 @@ function stopRecording() {
   clearInterval(autoSaveInterval);
   clearInterval(autoAnalysisInterval);
   clearInterval(aiTypoCorrectionTimer);
+  stopAnalysisGauge();
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -161,11 +165,50 @@ function stopRecording() {
 
 function startAutoAnalysis() {
   clearInterval(autoAnalysisInterval);
+  stopAnalysisGauge();
   if (!state.settings.autoAnalysis) return;
   const intervalMs = (state.settings.analysisInterval || 30) * 1000;
   autoAnalysisInterval = setInterval(() => {
     if (state.isRecording && state.transcript.length > 0) runAnalysis();
   }, intervalMs);
+  startAnalysisGauge(intervalMs);
+}
+
+function startAnalysisGauge(intervalMs) {
+  stopAnalysisGauge();
+  analysisGaugeIntervalMs = intervalMs;
+  analysisGaugeStart = Date.now();
+  const gauge = $('#analysisGauge');
+  const fill = $('#analysisGaugeFill');
+  if (!gauge || !fill) return;
+  fill.style.transition = 'none';
+  fill.style.width = '0%';
+  gauge.classList.add('active');
+  requestAnimationFrame(() => {
+    fill.style.transition = `width ${intervalMs / 1000}s linear`;
+    fill.style.width = '100%';
+  });
+  analysisGaugeTimer = setTimeout(() => {
+    // cycle resets handled by resetAnalysisGauge
+  }, intervalMs);
+}
+
+function resetAnalysisGauge() {
+  if (!state.settings.autoAnalysis || !state.isRecording) return;
+  const intervalMs = (state.settings.analysisInterval || 30) * 1000;
+  startAnalysisGauge(intervalMs);
+}
+
+function stopAnalysisGauge() {
+  clearTimeout(analysisGaugeTimer);
+  analysisGaugeTimer = null;
+  const gauge = $('#analysisGauge');
+  const fill = $('#analysisGaugeFill');
+  if (gauge) gauge.classList.remove('active');
+  if (fill) {
+    fill.style.transition = 'none';
+    fill.style.width = '0%';
+  }
 }
 
 // Periodic AI typo correction (hybrid approach)
@@ -193,6 +236,7 @@ function startAiTypoCorrection() {
 }
 
 async function runAnalysis() {
+  resetAnalysisGauge();
   if (isAnalyzing) return;
   if (!state.settings.geminiKey) {
     showToast(t('toast.no_api_key'), 'warning');
