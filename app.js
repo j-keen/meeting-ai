@@ -58,6 +58,7 @@ let timerInterval = null;
 let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
+let isAnalysisPaused = false;
 let aiTypoCorrectionTimer = null;
 let countdownTimer = null;
 let countdownEnd = 0;
@@ -129,6 +130,7 @@ function startRecording() {
     autoSaveInterval = setInterval(() => autoSave(), 30000);
     startAutoAnalysis();
     startAiTypoCorrection();
+    updatePauseButtonVisibility(true);
 
     const btn = $('#btnRecord');
     btn.classList.add('recording');
@@ -156,6 +158,8 @@ function stopRecording() {
   clearInterval(autoAnalysisInterval);
   clearInterval(aiTypoCorrectionTimer);
   stopAnalysisCountdown();
+  isAnalysisPaused = false;
+  updatePauseButtonVisibility(false);
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -182,7 +186,7 @@ function startAnalysisCountdown(intervalMs) {
   if (!el) return;
   countdownIntervalMs = intervalMs;
   countdownEnd = Date.now() + intervalMs;
-  el.classList.remove('analyzing');
+  el.classList.remove('analyzing', 'paused');
   updateCountdownText(el);
   countdownTimer = setInterval(() => updateCountdownText(el), 1000);
 }
@@ -198,7 +202,7 @@ function stopAnalysisCountdown() {
   const el = $('#analysisCountdown');
   if (el) {
     el.textContent = '';
-    el.classList.remove('analyzing');
+    el.classList.remove('analyzing', 'paused');
   }
 }
 
@@ -214,12 +218,53 @@ function showAnalyzingState() {
 function hideAnalyzingState() {
   const el = $('#analysisCountdown');
   if (el) el.classList.remove('analyzing');
+  if (isAnalysisPaused) {
+    showPausedState();
+    return;
+  }
   if (state.settings.autoAnalysis && state.isRecording) {
     const intervalMs = (state.settings.analysisInterval || 30) * 1000;
     startAnalysisCountdown(intervalMs);
   } else {
     if (el) el.textContent = '';
   }
+}
+
+function toggleAnalysisPause() {
+  isAnalysisPaused = !isAnalysisPaused;
+  const btn = $('#btnPauseAnalysis');
+  if (isAnalysisPaused) {
+    clearInterval(autoAnalysisInterval);
+    stopAnalysisCountdown();
+    showPausedState();
+    if (btn) {
+      btn.innerHTML = '&#9654; <span data-i18n="panel.resume_analysis">' + t('panel.resume_analysis') + '</span>';
+    }
+  } else {
+    startAutoAnalysis();
+    if (btn) {
+      btn.innerHTML = '&#9208; <span data-i18n="panel.pause_analysis">' + t('panel.pause_analysis') + '</span>';
+    }
+  }
+}
+
+function updatePauseButtonVisibility(show) {
+  const btn = $('#btnPauseAnalysis');
+  if (!btn) return;
+  btn.style.display = show ? '' : 'none';
+  if (!show) {
+    btn.innerHTML = '&#9208; <span data-i18n="panel.pause_analysis">' + t('panel.pause_analysis') + '</span>';
+  }
+}
+
+function showPausedState() {
+  const el = $('#analysisCountdown');
+  if (!el) return;
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  el.textContent = t('analysis.paused');
+  el.classList.add('paused');
+  el.classList.remove('analyzing');
 }
 
 // Periodic AI typo correction (hybrid approach)
@@ -612,6 +657,9 @@ function init() {
 
   // End meeting (with confirmation)
   $('#btnEndMeeting').addEventListener('click', () => endMeeting());
+
+  // Pause/resume analysis
+  $('#btnPauseAnalysis').addEventListener('click', () => toggleAnalysisPause());
 
   // Analyze now
   $('#btnAnalyzeNow').addEventListener('click', () => runAnalysis());

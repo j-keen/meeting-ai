@@ -19,8 +19,9 @@ const translations = {
 
     // AI panel
     'panel.ai': 'AI Analysis',
-    'panel.analyze': 'Analyze',
+    'panel.analyze': 'Analyze Now',
     'panel.analysis_history': 'History',
+    'panel.prompt_settings': 'AI Settings',
     'ai.empty': 'AI analysis results will appear here.',
     'ai.empty_hint': 'Analysis runs automatically during recording.',
 
@@ -266,6 +267,9 @@ const translations = {
     // Analysis countdown
     'analysis.countdown': '⟳ {n}s',
     'analysis.analyzing': 'Analyzing...',
+    'analysis.paused': '⏸ Paused',
+    'panel.pause_analysis': 'Pause',
+    'panel.resume_analysis': 'Resume',
 
     // Misc
     'minutes': '{n} minutes',
@@ -290,8 +294,9 @@ const translations = {
 
     // AI panel
     'panel.ai': 'AI 분석',
-    'panel.analyze': '분석',
-    'panel.analysis_history': '기록',
+    'panel.analyze': '즉시 분석',
+    'panel.analysis_history': '분석 내역',
+    'panel.prompt_settings': 'AI 설정',
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
 
@@ -537,6 +542,9 @@ const translations = {
     // Analysis countdown
     'analysis.countdown': '⟳ {n}초',
     'analysis.analyzing': '분석 중...',
+    'analysis.paused': '⏸ 일시정지',
+    'panel.pause_analysis': '일시정지',
+    'panel.resume_analysis': '재개',
 
     // Misc
     'minutes': '{n}분',

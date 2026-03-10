@@ -239,6 +239,9 @@ h1, h2, h3 { font-weight: 600; }
   color: var(--accent);
   animation: pulse-text 1.5s ease-in-out infinite;
 }
+.analysis-countdown.paused {
+  color: var(--warning);
+}
 @keyframes pulse-text {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
