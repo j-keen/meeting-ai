@@ -967,12 +967,6 @@ h1, h2, h3 { font-weight: 600; }
 .toggle-wrap input:checked + .toggle-slider { background: var(--accent); }
 .toggle-wrap input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-/* STT Engine hint & predownload */
-.stt-engine-hint { margin-top: -4px; margin-bottom: 8px; }
-.stt-predownload-btn { margin-bottom: 12px; }
-.stt-predownload-btn.downloading { color: var(--accent); pointer-events: none; }
-.stt-predownload-btn.done { color: var(--success); }
-
 .typo-dict-actions {
   display: flex;
   gap: 6px;

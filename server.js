@@ -19,45 +19,6 @@ const MIME = {
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
-  // Proxy: /proxy/vosk-model?url=<encoded-url>
-  if (url.pathname === '/proxy/vosk-model') {
-    const modelUrl = url.searchParams.get('url');
-    if (!modelUrl || !modelUrl.startsWith('https://alphacephei.com/')) {
-      res.writeHead(400);
-      res.end('Invalid model URL');
-      return;
-    }
-    try {
-      const upstream = await fetch(modelUrl);
-      if (!upstream.ok) {
-        res.writeHead(upstream.status);
-        res.end(`Upstream error: ${upstream.status}`);
-        return;
-      }
-      const contentLength = upstream.headers.get('content-length');
-      const headers = {
-        'Content-Type': 'application/octet-stream',
-        'Access-Control-Allow-Origin': '*',
-      };
-      if (contentLength) headers['Content-Length'] = contentLength;
-      res.writeHead(200, headers);
-      // Stream the response body
-      const reader = upstream.body.getReader();
-      const pump = async () => {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) { res.end(); return; }
-          res.write(Buffer.from(value));
-        }
-      };
-      await pump();
-    } catch (err) {
-      res.writeHead(502);
-      res.end(`Proxy error: ${err.message}`);
-    }
-    return;
-  }
-
   // Static files
   let filePath = join(__dirname, url.pathname === '/' ? 'index.html' : url.pathname);
   try {

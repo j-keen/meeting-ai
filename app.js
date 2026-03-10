@@ -92,9 +92,8 @@ async function startRecording() {
   stt = createSTT();
 
   try {
-    await stt.start({
+    stt.start({
       language: state.settings.language || 'ko',
-      sttEngine: state.settings.sttEngine || 'auto',
       onInterim: (text) => {
         showInterim(text);
       },
@@ -114,20 +113,6 @@ async function startRecording() {
       },
       onError: (err) => {
         showToast(err, 'error');
-      },
-      onEngineReady: (name) => {
-        const label = $('#sttEngineLabel');
-        if (label) {
-          label.textContent = name === 'vosk' ? t('stt.vosk_label') : t('stt.engine_label');
-          label.classList.remove('downloading');
-        }
-      },
-      onModelProgress: (pct) => {
-        const label = $('#sttEngineLabel');
-        if (label) {
-          label.textContent = t('stt.downloading', { pct });
-          label.classList.add('downloading');
-        }
       },
     });
 
