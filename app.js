@@ -1356,6 +1356,9 @@ function loadDemoData2() {
   // First load base demo transcript
   loadDemoData();
 
+  // Clear any analysis from auto-trigger or previous demo
+  state.analysisHistory = [];
+
   const now = Date.now();
   const base = now - 55 * 60000;
 
