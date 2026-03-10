@@ -255,6 +255,18 @@ const translations = {
     'contacts.save': 'Save',
     'contacts.cancel': 'Cancel',
 
+    // Meeting quick start
+    'meeting.quick_start_title': 'Start a new meeting',
+    'meeting.quick_start': 'Quick Start',
+    'meeting.manual_setup': 'Setup & Start',
+    'toast.recording_started': 'Recording started. Speak to transcribe.',
+    'transcript.waiting': 'Listening for speech...',
+    'transcript.waiting_hint': 'Speak and it will be transcribed automatically.',
+
+    // Analysis countdown
+    'analysis.countdown': '⟳ {n}s',
+    'analysis.analyzing': 'Analyzing...',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -514,6 +526,18 @@ const translations = {
     'contacts.save': '저장',
     'contacts.cancel': '취소',
 
+    // Meeting quick start
+    'meeting.quick_start_title': '새 회의 시작',
+    'meeting.quick_start': '빠른 시작',
+    'meeting.manual_setup': '설정 후 시작',
+    'toast.recording_started': '녹음이 시작되었습니다. 말씀하시면 자동으로 기록됩니다.',
+    'transcript.waiting': '음성을 인식하고 있습니다...',
+    'transcript.waiting_hint': '말씀하시면 자동으로 기록됩니다.',
+
+    // Analysis countdown
+    'analysis.countdown': '⟳ {n}초',
+    'analysis.analyzing': '분석 중...',
+
     // Misc
     'minutes': '{n}분',
     'meeting_title': '회의 {date} {time}',
@@ -522,7 +546,7 @@ const translations = {
 
 // AI-specific prompts per language
 const AI_PROMPTS = {
-  en: `You are an AI meeting assistant. Analyze the meeting transcript and provide structured analysis.
+  en: `You are an AI meeting assistant. You MUST respond ONLY in English regardless of the transcript language. Analyze the meeting transcript and provide structured analysis.
 
 Respond ONLY with valid JSON in this exact format:
 {
@@ -538,9 +562,9 @@ Rules:
 - Extract concrete action items with owners when possible
 - Identify questions that were raised but not answered
 - Provide helpful suggestions based on meeting context
-- IMPORTANT: All analysis output (summary, context, openQuestions, actionItems, suggestions) MUST be written in English.`,
+- CRITICAL: All analysis output (summary, context, openQuestions, actionItems, suggestions) MUST be written in English, REGARDLESS of the transcript language. Even if the transcript is in Japanese, Korean, or any other language, your response MUST be entirely in English.`,
 
-  ko: `당신은 AI 회의 비서입니다. 회의록을 분석하고 구조화된 분석 결과를 제공하세요.
+  ko: `당신은 AI 회의 비서입니다. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요. 회의록을 분석하고 구조화된 분석 결과를 제공하세요.
 
 반드시 아래 형식의 유효한 JSON으로만 응답하세요:
 {
@@ -556,7 +580,7 @@ Rules:
 - 가능한 경우 담당자가 명시된 구체적인 실행 항목 추출
 - 제기되었으나 답변되지 않은 질문 식별
 - 회의 맥락에 기반한 유용한 제안 제공
-- 중요: 모든 분석 결과(summary, context, openQuestions, actionItems, suggestions)를 반드시 한국어로 작성하세요.`
+- 중요: 회의록이 일본어, 영어 등 다른 언어여도 모든 분석 결과(summary, context, openQuestions, actionItems, suggestions)를 반드시 한국어로 작성하세요. 절대 다른 언어로 응답하지 마세요.`
 };
 
 const AI_PRESET_CONTEXTS = {

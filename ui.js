@@ -766,6 +766,26 @@ export function initKeyboardShortcuts() {
   });
 }
 
+// ===== Transcript Waiting State =====
+export function showTranscriptWaiting() {
+  const quickStart = $('#quickStartSection');
+  const waiting = $('#transcriptWaiting');
+  if (quickStart) quickStart.style.display = 'none';
+  if (waiting) waiting.style.display = '';
+}
+
+export function hideTranscriptWaiting() {
+  const waiting = $('#transcriptWaiting');
+  if (waiting) waiting.style.display = 'none';
+}
+
+export function resetTranscriptEmpty() {
+  const quickStart = $('#quickStartSection');
+  const waiting = $('#transcriptWaiting');
+  if (quickStart) quickStart.style.display = '';
+  if (waiting) waiting.style.display = 'none';
+}
+
 // Update meeting info bar time display
 export function updateMeetingInfoTime() {
   const el = $('#meetingInfoTime');

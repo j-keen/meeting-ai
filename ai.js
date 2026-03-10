@@ -98,6 +98,12 @@ export async function analyzeTranscript({
   messageParts.push('Transcript:');
   messageParts.push(transcriptText);
 
+  const lang = getAiLanguage();
+  const langReminder = lang === 'ko'
+    ? '\n\n[IMPORTANT] 위 회의록이 어떤 언어이든, 분석 결과는 반드시 한국어로 작성하세요.'
+    : '\n\n[IMPORTANT] Regardless of the transcript language, respond ONLY in English.';
+  messageParts.push(langReminder);
+
   const userMessage = messageParts.join('\n');
 
   const body = {

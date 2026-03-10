@@ -53,7 +53,7 @@
       </div>
       <div class="transcript-list" id="transcriptList">
         <div class="transcript-empty" id="transcriptEmpty">
-          <div class="quick-start-section">
+          <div class="quick-start-section" id="quickStartSection">
             <p class="quick-start-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
             <div class="quick-start-preset">
               <select class="settings-select" id="selectQuickPreset">
@@ -71,6 +71,11 @@
             </div>
             <p class="text-muted" data-i18n="transcript.empty_hint">Press Ctrl+R to record manually.</p>
           </div>
+          <div class="transcript-waiting" id="transcriptWaiting" style="display:none">
+            <div class="waiting-indicator"></div>
+            <p class="waiting-text" data-i18n="transcript.waiting">Listening for speech...</p>
+            <p class="waiting-hint text-muted" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
+          </div>
         </div>
       </div>
       <div class="transcript-memo-input" id="transcriptMemoInput">
@@ -86,13 +91,13 @@
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
         <h2 data-i18n="panel.ai">AI Analysis</h2>
+        <span class="analysis-countdown" id="analysisCountdown"></span>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128337; <span data-i18n="panel.analysis_history">History</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="Prompt settings">&#9881; <span data-i18n="panel.prompt_settings">Prompt</span></button>
         </div>
       </div>
-      <div class="analysis-gauge" id="analysisGauge"><div class="analysis-gauge-fill" id="analysisGaugeFill"></div></div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
           <p data-i18n="ai.empty">AI analysis results will appear here.</p>

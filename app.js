@@ -15,6 +15,7 @@ import {
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
   refreshTypoDict, applyTypoCorrections,
   updateMeetingInfoTime,
+  showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
 } from './ui.js';
 import { initSettings, closeSettings, updateTypoDictCount } from './settings.js';
 import { initChat } from './chat.js';
@@ -58,9 +59,9 @@ let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
 let aiTypoCorrectionTimer = null;
-let analysisGaugeTimer = null;
-let analysisGaugeStart = 0;
-let analysisGaugeIntervalMs = 0;
+let countdownTimer = null;
+let countdownEnd = 0;
+let countdownIntervalMs = 0;
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -134,6 +135,9 @@ function startRecording() {
     btn.querySelector('.record-label').textContent = t('record.stop');
     $('#meetingStatus').textContent = t('record.status_recording');
 
+    showTranscriptWaiting();
+    showToast(t('toast.recording_started'), 'success');
+
   } catch (err) {
     showToast(t('toast.record_fail') + err.message, 'error');
   }
@@ -151,7 +155,7 @@ function stopRecording() {
   clearInterval(autoSaveInterval);
   clearInterval(autoAnalysisInterval);
   clearInterval(aiTypoCorrectionTimer);
-  stopAnalysisGauge();
+  stopAnalysisCountdown();
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -163,49 +167,58 @@ function stopRecording() {
 
 function startAutoAnalysis() {
   clearInterval(autoAnalysisInterval);
-  stopAnalysisGauge();
+  stopAnalysisCountdown();
   if (!state.settings.autoAnalysis) return;
   const intervalMs = (state.settings.analysisInterval || 30) * 1000;
   autoAnalysisInterval = setInterval(() => {
     if (state.isRecording && state.transcript.length > 0) runAnalysis();
   }, intervalMs);
-  startAnalysisGauge(intervalMs);
+  startAnalysisCountdown(intervalMs);
 }
 
-function startAnalysisGauge(intervalMs) {
-  stopAnalysisGauge();
-  analysisGaugeIntervalMs = intervalMs;
-  analysisGaugeStart = Date.now();
-  const gauge = $('#analysisGauge');
-  const fill = $('#analysisGaugeFill');
-  if (!gauge || !fill) return;
-  fill.style.transition = 'none';
-  fill.style.width = '0%';
-  gauge.classList.add('active');
-  requestAnimationFrame(() => {
-    fill.style.transition = `width ${intervalMs / 1000}s linear`;
-    fill.style.width = '100%';
-  });
-  analysisGaugeTimer = setTimeout(() => {
-    // cycle resets handled by resetAnalysisGauge
-  }, intervalMs);
+function startAnalysisCountdown(intervalMs) {
+  stopAnalysisCountdown();
+  const el = $('#analysisCountdown');
+  if (!el) return;
+  countdownIntervalMs = intervalMs;
+  countdownEnd = Date.now() + intervalMs;
+  el.classList.remove('analyzing');
+  updateCountdownText(el);
+  countdownTimer = setInterval(() => updateCountdownText(el), 1000);
 }
 
-function resetAnalysisGauge() {
-  if (!state.settings.autoAnalysis || !state.isRecording) return;
-  const intervalMs = (state.settings.analysisInterval || 30) * 1000;
-  startAnalysisGauge(intervalMs);
+function updateCountdownText(el) {
+  const remaining = Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000));
+  el.textContent = t('analysis.countdown', { n: remaining });
 }
 
-function stopAnalysisGauge() {
-  clearTimeout(analysisGaugeTimer);
-  analysisGaugeTimer = null;
-  const gauge = $('#analysisGauge');
-  const fill = $('#analysisGaugeFill');
-  if (gauge) gauge.classList.remove('active');
-  if (fill) {
-    fill.style.transition = 'none';
-    fill.style.width = '0%';
+function stopAnalysisCountdown() {
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  const el = $('#analysisCountdown');
+  if (el) {
+    el.textContent = '';
+    el.classList.remove('analyzing');
+  }
+}
+
+function showAnalyzingState() {
+  const el = $('#analysisCountdown');
+  if (!el) return;
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  el.textContent = t('analysis.analyzing');
+  el.classList.add('analyzing');
+}
+
+function hideAnalyzingState() {
+  const el = $('#analysisCountdown');
+  if (el) el.classList.remove('analyzing');
+  if (state.settings.autoAnalysis && state.isRecording) {
+    const intervalMs = (state.settings.analysisInterval || 30) * 1000;
+    startAnalysisCountdown(intervalMs);
+  } else {
+    if (el) el.textContent = '';
   }
 }
 
@@ -234,7 +247,8 @@ function startAiTypoCorrection() {
 }
 
 async function runAnalysis() {
-  resetAnalysisGauge();
+  stopAnalysisCountdown();
+  showAnalyzingState();
   if (isAnalyzing) return;
   if (!state.settings.geminiKey) {
     showToast(t('toast.no_api_key'), 'warning');
@@ -293,6 +307,7 @@ async function runAnalysis() {
     });
   } finally {
     isAnalyzing = false;
+    hideAnalyzingState();
   }
 }
 
@@ -388,6 +403,7 @@ function resetMeeting() {
   state.tags = [];
   $('#transcriptList').innerHTML = '';
   $('#transcriptEmpty').style.display = '';
+  resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';
   $('#aiEmpty').style.display = '';
   $('#chatMessages').innerHTML = '';
