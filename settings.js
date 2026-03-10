@@ -33,11 +33,11 @@ function markDirty() {
 
 function updateDirtyUI() {
   const saveBtn = $('#btnSettingsSave');
-  const unsavedText = $('#settingsUnsavedText');
+  const dot = $('#settingsUnsavedDot');
   if (saveBtn) saveBtn.disabled = !isDirty;
-  if (unsavedText) {
-    if (isDirty) unsavedText.classList.add('visible');
-    else unsavedText.classList.remove('visible');
+  if (dot) {
+    if (isDirty) dot.classList.add('visible');
+    else dot.classList.remove('visible');
   }
 }
 
@@ -62,10 +62,26 @@ export function initSettings() {
   $('#btnSettingsClose').addEventListener('click', () => tryCloseSettings());
   overlay.addEventListener('click', () => tryCloseSettings());
 
-  // Footer buttons
+  // Header save button
   $('#btnSettingsSave').addEventListener('click', () => saveAllSettings());
-  $('#btnSettingsCancel').addEventListener('click', () => tryCloseSettings());
+
+  // Footer reset button
   $('#btnSettingsReset').addEventListener('click', () => resetAllSettings());
+
+  // Unsaved modal buttons
+  $('#btnUnsavedSave').addEventListener('click', () => {
+    $('#settingsUnsavedModal').hidden = true;
+    saveAllSettings();
+    closeSettings();
+  });
+  $('#btnUnsavedDiscard').addEventListener('click', () => {
+    $('#settingsUnsavedModal').hidden = true;
+    revertSettings();
+    closeSettings();
+  });
+  $('#btnUnsavedCancel').addEventListener('click', () => {
+    $('#settingsUnsavedModal').hidden = true;
+  });
 
   // Highlight changed fields via event delegation
   panel.addEventListener('change', (e) => highlightField(e.target));
@@ -367,6 +383,20 @@ function saveAllSettings() {
   });
   saveApiKey('gemini', s.geminiKey);
   snapshotSettings();
+
+  // Check animation on save button
+  const saveBtn = $('#btnSettingsSave');
+  if (saveBtn) {
+    const origText = saveBtn.textContent;
+    saveBtn.textContent = '\u2713';
+    saveBtn.classList.add('saved');
+    saveBtn.disabled = true;
+    setTimeout(() => {
+      saveBtn.textContent = origText;
+      saveBtn.classList.remove('saved');
+    }, 1200);
+  }
+
   emit('toast', { message: t('settings.saved'), type: 'success' });
 }
 
@@ -793,8 +823,8 @@ export function openSettings() {
 
 export function tryCloseSettings() {
   if (isDirty) {
-    if (!confirm(t('settings.unsaved_warning'))) return;
-    revertSettings();
+    $('#settingsUnsavedModal').hidden = false;
+    return;
   }
   closeSettings();
 }

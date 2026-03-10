@@ -900,6 +900,37 @@ h1, h2, h3 { font-weight: 600; }
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-header-save {
+  min-width: 64px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+.settings-header-save:not(:disabled) {
+  animation: settings-save-pulse 2s ease-in-out infinite;
+}
+.settings-header-save.saved {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  pointer-events: none;
+  animation: none !important;
+}
+.settings-unsaved-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--warning);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+.settings-unsaved-dot.visible {
+  opacity: 1;
+}
 .settings-body {
   flex: 1;
   overflow-y: auto;
@@ -913,16 +944,11 @@ h1, h2, h3 { font-weight: 600; }
 .settings-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 10px 16px;
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
   background: var(--bg-secondary);
-}
-.settings-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .settings-footer-reset {
   color: var(--danger) !important;
@@ -933,23 +959,25 @@ h1, h2, h3 { font-weight: 600; }
 .settings-footer-reset:hover {
   background: var(--danger-bg) !important;
 }
-.settings-unsaved-text {
-  font-size: 11px;
-  color: var(--warning);
-  font-weight: 500;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  pointer-events: none;
-}
-.settings-unsaved-text.visible {
-  opacity: 1;
-}
-#btnSettingsSave:not(:disabled) {
-  animation: settings-save-pulse 2s ease-in-out infinite;
-}
 @keyframes settings-save-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(79, 110, 247, 0.4); }
   50% { box-shadow: 0 0 0 4px rgba(79, 110, 247, 0); }
+}
+
+/* Unsaved Settings Modal */
+.settings-unsaved-modal {
+  max-width: 380px;
+}
+.settings-unsaved-modal-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+.settings-unsaved-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* Settings Changed Highlight */

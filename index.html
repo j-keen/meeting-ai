@@ -179,7 +179,11 @@
   <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
     <div class="settings-header">
       <h2 data-i18n="settings.title">Settings</h2>
-      <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
+      <div class="settings-header-actions">
+        <span class="settings-unsaved-dot" id="settingsUnsavedDot"></span>
+        <button class="btn btn-sm btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
+        <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
+      </div>
     </div>
     <div class="settings-body">
       <!-- Settings Tabs -->
@@ -417,16 +421,27 @@
     </div>
     <div class="settings-footer" id="settingsFooter">
       <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
-      <div class="settings-footer-right">
-        <span class="settings-unsaved-text" id="settingsUnsavedText" data-i18n="settings.unsaved_changes">Unsaved changes</span>
-        <button class="btn btn-sm" id="btnSettingsCancel" data-i18n="settings.close">Close</button>
-        <button class="btn btn-sm btn-primary" id="btnSettingsSave" data-i18n="settings.save_settings" disabled>Save</button>
-      </div>
     </div>
   </aside>
 
   <!-- Settings Overlay -->
   <div class="overlay" id="settingsOverlay"></div>
+
+  <!-- Unsaved Settings Modal -->
+  <div class="modal-overlay" id="settingsUnsavedModal" hidden>
+    <div class="modal settings-unsaved-modal">
+      <div class="modal-body" style="padding:24px;">
+        <p class="settings-unsaved-modal-text" data-i18n="settings.unsaved_modal_text">You have unsaved changes. What would you like to do?</p>
+        <div class="settings-unsaved-modal-actions">
+          <button class="btn btn-sm" id="btnUnsavedDiscard" data-i18n="settings.discard">Don't Save</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm" id="btnUnsavedCancel" data-i18n="settings.cancel">Cancel</button>
+            <button class="btn btn-sm btn-primary" id="btnUnsavedSave" data-i18n="settings.save_and_close">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Context Popup -->
   <div class="context-popup" id="contextPopup" hidden>

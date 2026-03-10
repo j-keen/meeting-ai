@@ -321,12 +321,15 @@ const translations = {
     'settings.chat_preset_placeholder': 'Enter preset question...',
     'settings.reset_defaults': 'Reset Defaults',
 
-    // Settings footer
+    // Settings footer & modal
     'settings.save_settings': 'Save',
     'settings.close': 'Close',
     'settings.reset_all': 'Reset All',
     'settings.unsaved_changes': 'Unsaved changes',
-    'settings.unsaved_warning': 'You have unsaved changes. Discard them?',
+    'settings.unsaved_modal_text': 'You have unsaved changes. What would you like to do?',
+    'settings.save_and_close': 'Save',
+    'settings.discard': "Don't Save",
+    'settings.cancel': 'Cancel',
     'settings.saved': 'Settings saved.',
     'settings.reset_confirm': 'Reset all settings to defaults? This cannot be undone.',
     'settings.reset_done': 'All settings reset to defaults.',
@@ -656,12 +659,15 @@ const translations = {
     'settings.chat_preset_placeholder': '프리셋 질문 입력...',
     'settings.reset_defaults': '기본값 복원',
 
-    // Settings footer
+    // Settings footer & modal
     'settings.save_settings': '저장',
     'settings.close': '닫기',
     'settings.reset_all': '전체 초기화',
     'settings.unsaved_changes': '저장되지 않은 변경사항',
-    'settings.unsaved_warning': '저장되지 않은 변경사항이 있습니다. 취소하시겠습니까?',
+    'settings.unsaved_modal_text': '저장되지 않은 변경사항이 있습니다. 어떻게 하시겠습니까?',
+    'settings.save_and_close': '저장',
+    'settings.discard': '저장 안 함',
+    'settings.cancel': '취소',
     'settings.saved': '설정이 저장되었습니다.',
     'settings.reset_confirm': '모든 설정을 기본값으로 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     'settings.reset_done': '모든 설정이 기본값으로 초기화되었습니다.',

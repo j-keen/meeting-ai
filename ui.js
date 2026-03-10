@@ -784,7 +784,12 @@ export function toggleTheme() {
 export function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => m.hidden = true);
+      // If any modal is open, close it first and stop
+      const openModals = document.querySelectorAll('.modal-overlay:not([hidden])');
+      if (openModals.length > 0) {
+        openModals.forEach(m => m.hidden = true);
+        return;
+      }
       $('#contextPopup').hidden = true;
       const settingsPanel = $('#settingsPanel');
       if (settingsPanel.classList.contains('open')) emit('settings:close');
