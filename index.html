@@ -172,6 +172,11 @@
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo</button>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm btn-end-meeting" id="btnEndMeeting" data-i18n="meeting.end" title="End meeting">End Meeting</button>
+      <span class="bottom-divider privacy-divider" id="privacyDivider" style="display:none"></span>
+      <span class="privacy-badge" id="privacyBadge" style="display:none" title="All data stays local. AI analysis via Vertex AI (not used for training).">
+        <span class="privacy-icon">&#128274;</span>
+        <span class="privacy-label">Private</span>
+      </span>
     </div>
   </footer>
 
@@ -223,7 +228,7 @@
           <label class="settings-label">
             <span data-i18n="settings.gemini_key">Gemini API Key</span>
             <input type="password" class="settings-input" id="inputGeminiKey" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
-            <span class="proxy-hint" id="proxyAvailableHint" style="display:none; color:var(--success, #22c55e); font-size:12px; margin-top:4px;">Cloud AI available — works without API key</span>
+            <span class="proxy-hint" id="proxyAvailableHint" style="display:none; color:var(--success, #22c55e); font-size:12px; margin-top:4px;">&#128274; Cloud AI active — API key not required. Your data is never used for AI training.</span>
           </label>
           <label class="settings-label">
             <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>

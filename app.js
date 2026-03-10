@@ -842,6 +842,10 @@ function refreshHistoryGridDebounced() {
 function updateProxyHint(available) {
   const hint = $('#proxyAvailableHint');
   if (hint) hint.style.display = available ? '' : 'none';
+  const badge = $('#privacyBadge');
+  const divider = $('#privacyDivider');
+  if (badge) badge.style.display = available ? '' : 'none';
+  if (divider) divider.style.display = available ? '' : 'none';
 }
 
 // ===== Init =====
