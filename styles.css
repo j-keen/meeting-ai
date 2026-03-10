@@ -663,15 +663,7 @@ h1, h2, h3 { font-weight: 600; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
-.stt-engine-label { font-size: 11px; color: var(--text-muted); transition: color var(--transition-fast); }
-.stt-engine-label.downloading {
-  color: var(--accent);
-  animation: stt-pulse 1.5s ease-in-out infinite;
-}
-@keyframes stt-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
+.stt-engine-label { font-size: 11px; color: var(--text-muted); }
 
 /* ===== Settings Panel ===== */
 .settings-panel {

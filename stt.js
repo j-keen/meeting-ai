@@ -69,7 +69,6 @@ export function createSTT() {
 
   return {
     get isRunning() { return isRunning; },
-    get engineName() { return currentEngine?.name || 'none'; },
 
     start({ language, onInterim, onFinal, onError }) {
       if (isRunning) return;

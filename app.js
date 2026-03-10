@@ -83,7 +83,7 @@ function getElapsedTimeStr() {
   return t('minutes', { n: mins });
 }
 
-async function startRecording() {
+function startRecording() {
   if (state.isRecording) return;
 
   // Load typo dictionary
@@ -157,13 +157,6 @@ function stopRecording() {
   btn.classList.remove('recording');
   btn.querySelector('.record-label').textContent = t('record.label');
   $('#meetingStatus').textContent = t('record.status_stopped');
-
-  // Reset STT engine label
-  const sttLabel = $('#sttEngineLabel');
-  if (sttLabel) {
-    sttLabel.textContent = t('stt.engine_label');
-    sttLabel.classList.remove('downloading');
-  }
 
   autoSave();
 }
