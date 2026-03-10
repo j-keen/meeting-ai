@@ -1,4 +1,4 @@
-// settings.js - Settings panel management
+// settings.js - Settings panel management (manual save)
 
 import { state, emit } from './app.js';
 import {
@@ -15,14 +15,44 @@ import { t, setLanguage, setAiLanguage } from './i18n.js';
 
 const $ = (sel) => document.querySelector(sel);
 
+// ===== Dirty state tracking =====
+let settingsSnapshot = null;
+let isDirty = false;
+
+function snapshotSettings() {
+  settingsSnapshot = JSON.parse(JSON.stringify(state.settings));
+  isDirty = false;
+  updateDirtyUI();
+}
+
+function markDirty() {
+  isDirty = true;
+  updateDirtyUI();
+}
+
+function updateDirtyUI() {
+  const saveBtn = $('#btnSettingsSave');
+  const unsavedText = $('#settingsUnsavedText');
+  if (saveBtn) saveBtn.disabled = !isDirty;
+  if (unsavedText) {
+    if (isDirty) unsavedText.classList.add('visible');
+    else unsavedText.classList.remove('visible');
+  }
+}
+
 export function initSettings() {
   const panel = $('#settingsPanel');
   const overlay = $('#settingsOverlay');
 
   // Open/close
   $('#btnSettings').addEventListener('click', () => openSettings());
-  $('#btnSettingsClose').addEventListener('click', () => closeSettings());
-  overlay.addEventListener('click', () => closeSettings());
+  $('#btnSettingsClose').addEventListener('click', () => tryCloseSettings());
+  overlay.addEventListener('click', () => tryCloseSettings());
+
+  // Footer buttons
+  $('#btnSettingsSave').addEventListener('click', () => saveAllSettings());
+  $('#btnSettingsCancel').addEventListener('click', () => tryCloseSettings());
+  $('#btnSettingsReset').addEventListener('click', () => resetAllSettings());
 
   // Load saved values
   loadSavedSettings();
@@ -41,54 +71,54 @@ export function initSettings() {
   // UI Language
   $('#selectUiLanguage').addEventListener('change', (e) => {
     state.settings.uiLanguage = e.target.value;
-    saveSetting('uiLanguage', e.target.value);
     setLanguage(e.target.value);
     emit('language:change');
+    markDirty();
   });
 
   // AI Language
   $('#selectAiLanguage').addEventListener('change', (e) => {
     state.settings.aiLanguage = e.target.value;
-    saveSetting('aiLanguage', e.target.value);
     setAiLanguage(e.target.value);
+    markDirty();
   });
 
   // API keys
   $('#inputGeminiKey').addEventListener('change', (e) => {
-    saveApiKey('gemini', e.target.value);
     state.settings.geminiKey = e.target.value;
+    markDirty();
   });
 
   // Gemini Model (Analysis)
   $('#selectGeminiModel').addEventListener('change', (e) => {
     state.settings.geminiModel = e.target.value;
-    saveSetting('geminiModel', e.target.value);
+    markDirty();
   });
 
   // STT language
   $('#selectLanguage').addEventListener('change', (e) => {
     state.settings.language = e.target.value;
-    saveSetting('language', e.target.value);
+    markDirty();
   });
 
   // Auto Analysis toggle
   $('#checkAutoAnalysis').addEventListener('change', (e) => {
     state.settings.autoAnalysis = e.target.checked;
-    saveSetting('autoAnalysis', e.target.checked);
+    markDirty();
   });
 
   // Analysis Interval (number input)
   $('#inputAnalysisInterval').addEventListener('change', (e) => {
     const val = parseInt(e.target.value) || 30;
     state.settings.analysisInterval = val;
-    saveSetting('analysisInterval', val);
+    markDirty();
   });
 
   // Token strategy (radio cards)
   document.querySelectorAll('input[name="tokenStrategy"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
       state.settings.tokenStrategy = e.target.value;
-      saveSetting('tokenStrategy', e.target.value);
+      markDirty();
     });
   });
 
@@ -97,7 +127,7 @@ export function initSettings() {
     input.addEventListener('change', (e) => {
       const val = parseInt(e.target.value) || 5;
       state.settings.recentMinutes = val;
-      saveSetting('recentMinutes', val);
+      markDirty();
       // Sync both inputs
       document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(inp => {
         inp.value = val;
@@ -108,13 +138,12 @@ export function initSettings() {
   // Meeting preset (in Prompt tab)
   $('#selectMeetingPreset').addEventListener('change', (e) => {
     state.settings.meetingPreset = e.target.value;
-    saveSetting('meetingPreset', e.target.value);
+    markDirty();
     updatePresetPromptDisplay();
     if (e.target.value !== 'custom') {
       const ctx = getPresetContext(e.target.value);
       $('#textMeetingContext').value = ctx;
       state.settings.meetingContext = ctx;
-      saveSetting('meetingContext', ctx);
     }
     // Sync quick start selector
     const qs = $('#selectQuickPreset');
@@ -143,11 +172,10 @@ export function initSettings() {
     const promptText = $('#textPresetPrompt').value;
     if (!state.settings.customPresets) state.settings.customPresets = {};
     state.settings.customPresets[name] = promptText;
-    saveSetting('customPresets', state.settings.customPresets);
+    markDirty();
     addPresetOption(name);
     $('#selectMeetingPreset').value = name;
     state.settings.meetingPreset = name;
-    saveSetting('meetingPreset', name);
     presetEditor.hidden = true;
     updatePresetPromptDisplay();
   });
@@ -158,7 +186,7 @@ export function initSettings() {
     $('#textPresetPrompt').value = defaultCtx;
     if (state.settings.customPresets?.[currentPreset]) {
       delete state.settings.customPresets[currentPreset];
-      saveSetting('customPresets', state.settings.customPresets);
+      markDirty();
     }
     updatePresetPromptDisplay();
   });
@@ -178,7 +206,7 @@ export function initSettings() {
   // Meeting context (manual)
   $('#textMeetingContext').addEventListener('change', (e) => {
     state.settings.meetingContext = e.target.value;
-    saveSetting('meetingContext', e.target.value);
+    markDirty();
   });
 
   // Previous meeting context
@@ -193,7 +221,7 @@ export function initSettings() {
       preview.textContent = summary;
       state.settings.meetingContext = `[Previous Meeting: ${meeting.title || 'Untitled'}]\n${summary}`;
       $('#textMeetingContext').value = state.settings.meetingContext;
-      saveSetting('meetingContext', state.settings.meetingContext);
+      markDirty();
     }
   });
 
@@ -207,7 +235,7 @@ export function initSettings() {
       $('#fileContextPreview').textContent = text.slice(0, 500) + (text.length > 500 ? '...' : '');
       state.settings.meetingContext = text;
       $('#textMeetingContext').value = text;
-      saveSetting('meetingContext', text);
+      markDirty();
     };
     reader.readAsText(file);
   });
@@ -215,27 +243,27 @@ export function initSettings() {
   // Prompt
   $('#textPrompt').addEventListener('change', (e) => {
     state.settings.customPrompt = e.target.value;
-    saveSetting('customPrompt', e.target.value);
+    markDirty();
   });
   $('#btnResetPrompt').addEventListener('click', () => {
     const def = getDefaultPrompt();
     $('#textPrompt').value = def;
     state.settings.customPrompt = def;
-    saveSetting('customPrompt', def);
+    markDirty();
   });
 
   // Chat System Prompt
   $('#textChatPrompt').addEventListener('change', (e) => {
     state.settings.chatSystemPrompt = e.target.value;
-    saveSetting('chatSystemPrompt', e.target.value);
+    markDirty();
   });
   $('#btnResetChatPrompt').addEventListener('click', () => {
     $('#textChatPrompt').value = '';
     state.settings.chatSystemPrompt = '';
-    saveSetting('chatSystemPrompt', '');
+    markDirty();
   });
 
-  // Typo Dictionary
+  // Typo Dictionary (immediate save - CRUD operation, not settings)
   updateTypoDictCount();
   $('#btnResetTypoDict').addEventListener('click', () => {
     if (confirm(t('confirm.reset_typo_dict') || 'Reset typo dictionary?')) {
@@ -253,7 +281,7 @@ export function initSettings() {
   // Slack webhook
   $('#inputSlackWebhook').addEventListener('change', (e) => {
     state.settings.slackWebhook = e.target.value;
-    saveSetting('slackWebhook', e.target.value);
+    markDirty();
   });
 
   // Prompt settings shortcut (from AI panel header)
@@ -274,16 +302,139 @@ export function initSettings() {
     chatModelSelect.value = state.settings.chatModel || 'gemini-2.5-flash';
     chatModelSelect.addEventListener('change', (e) => {
       state.settings.chatModel = e.target.value;
-      saveSetting('chatModel', e.target.value);
+      markDirty();
     });
   }
 
   // ===== Chat Presets =====
   initChatPresets();
 
-  // ===== Data Tab =====
+  // ===== Data Tab (immediate save - CRUD operations) =====
   initDataTab();
 }
+
+// ===== Save / Revert / Reset =====
+
+function saveAllSettings() {
+  const s = state.settings;
+  saveSettings({
+    uiLanguage: s.uiLanguage,
+    aiLanguage: s.aiLanguage,
+    geminiModel: s.geminiModel,
+    chatModel: s.chatModel,
+    language: s.language,
+    autoAnalysis: s.autoAnalysis,
+    analysisInterval: s.analysisInterval,
+    tokenStrategy: s.tokenStrategy,
+    recentMinutes: s.recentMinutes,
+    meetingPreset: s.meetingPreset,
+    meetingContext: s.meetingContext,
+    customPrompt: s.customPrompt,
+    chatSystemPrompt: s.chatSystemPrompt,
+    slackWebhook: s.slackWebhook,
+    customPresets: s.customPresets,
+    chatPresets: s.chatPresets,
+  });
+  saveApiKey('gemini', s.geminiKey);
+  snapshotSettings();
+  emit('toast', { message: t('settings.saved'), type: 'success' });
+}
+
+function revertSettings() {
+  if (!settingsSnapshot) return;
+  const langChanged = state.settings.uiLanguage !== settingsSnapshot.uiLanguage;
+  const aiLangChanged = state.settings.aiLanguage !== settingsSnapshot.aiLanguage;
+
+  // Restore state from snapshot
+  Object.assign(state.settings, JSON.parse(JSON.stringify(settingsSnapshot)));
+
+  // Re-apply form inputs
+  applySettingsToForm();
+
+  // Re-apply side effects if changed
+  if (langChanged) {
+    setLanguage(state.settings.uiLanguage);
+    emit('language:change');
+  }
+  if (aiLangChanged) {
+    setAiLanguage(state.settings.aiLanguage);
+  }
+
+  isDirty = false;
+  updateDirtyUI();
+}
+
+function resetAllSettings() {
+  if (!confirm(t('settings.reset_confirm'))) return;
+
+  const s = state.settings;
+  s.uiLanguage = 'auto';
+  s.aiLanguage = 'auto';
+  s.geminiKey = '';
+  s.geminiModel = 'gemini-2.5-flash';
+  s.chatModel = 'gemini-2.5-flash';
+  s.language = 'ko';
+  s.autoAnalysis = true;
+  s.analysisInterval = 30;
+  s.tokenStrategy = 'smart';
+  s.recentMinutes = 5;
+  s.meetingPreset = 'general';
+  s.meetingContext = '';
+  s.customPrompt = getDefaultPrompt();
+  s.chatSystemPrompt = '';
+  s.slackWebhook = '';
+  s.customPresets = {};
+  s.chatPresets = null;
+
+  // Apply to form
+  applySettingsToForm();
+
+  // Apply side effects
+  setLanguage('auto');
+  setAiLanguage('auto');
+  emit('language:change');
+
+  markDirty();
+  emit('toast', { message: t('settings.reset_done'), type: 'success' });
+}
+
+function applySettingsToForm() {
+  const s = state.settings;
+  $('#selectUiLanguage').value = s.uiLanguage;
+  $('#selectAiLanguage').value = s.aiLanguage;
+  $('#inputGeminiKey').value = s.geminiKey || '';
+  $('#selectGeminiModel').value = s.geminiModel;
+  $('#selectLanguage').value = s.language;
+  $('#checkAutoAnalysis').checked = s.autoAnalysis;
+  $('#inputAnalysisInterval').value = s.analysisInterval;
+
+  const strategyRadio = document.querySelector(`input[name="tokenStrategy"][value="${s.tokenStrategy}"]`);
+  if (strategyRadio) strategyRadio.checked = true;
+
+  document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(inp => {
+    inp.value = s.recentMinutes;
+  });
+
+  const select = $('#selectMeetingPreset');
+  Object.keys(s.customPresets || {}).forEach(name => addPresetOption(name));
+  select.value = s.meetingPreset;
+
+  const qs = $('#selectQuickPreset');
+  if (qs) qs.value = s.meetingPreset;
+
+  $('#textMeetingContext').value = s.meetingContext;
+  $('#textPrompt').value = s.customPrompt;
+  $('#textChatPrompt').value = s.chatSystemPrompt;
+  $('#inputSlackWebhook').value = s.slackWebhook;
+
+  const chatModelSelect = $('#chatModelSelect');
+  if (chatModelSelect) chatModelSelect.value = s.chatModel;
+
+  renderChatPresets();
+  updatePresetPromptDisplay();
+}
+
+// ===== Helpers =====
 
 function addPresetOption(name) {
   const select = $('#selectMeetingPreset');
@@ -338,52 +489,10 @@ function loadSavedSettings() {
   s.customPresets = saved.customPresets || {};
   s.chatPresets = saved.chatPresets || null;
 
-  // Apply to inputs
-  $('#selectUiLanguage').value = s.uiLanguage;
-  $('#selectAiLanguage').value = s.aiLanguage;
-  $('#inputGeminiKey').value = s.geminiKey;
-  $('#selectGeminiModel').value = s.geminiModel;
-  $('#selectLanguage').value = s.language;
-  $('#checkAutoAnalysis').checked = s.autoAnalysis;
-  $('#inputAnalysisInterval').value = s.analysisInterval;
-
-  // Set token strategy radio
-  const strategyRadio = document.querySelector(`input[name="tokenStrategy"][value="${s.tokenStrategy}"]`);
-  if (strategyRadio) strategyRadio.checked = true;
-
-  // Set recent minutes in strategy card inputs
-  document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(inp => {
-    inp.value = s.recentMinutes;
-  });
-
-  // Load custom presets into select
-  const select = $('#selectMeetingPreset');
-  Object.keys(s.customPresets).forEach(name => {
-    addPresetOption(name);
-  });
-  select.value = s.meetingPreset;
-
-  // Sync quick start preset
-  const qs = $('#selectQuickPreset');
-  if (qs) qs.value = s.meetingPreset;
-
-  $('#textMeetingContext').value = s.meetingContext;
-  $('#textPrompt').value = s.customPrompt;
-  $('#textChatPrompt').value = s.chatSystemPrompt;
-  $('#inputSlackWebhook').value = s.slackWebhook;
-
-  // Chat model
-  const chatModelSelect = $('#chatModelSelect');
-  if (chatModelSelect) chatModelSelect.value = s.chatModel;
+  applySettingsToForm();
 
   // Apply theme
   document.documentElement.setAttribute('data-theme', s.theme);
-}
-
-function saveSetting(key, value) {
-  const obj = {};
-  obj[key] = value;
-  saveSettings(obj);
 }
 
 export function updateTypoDictCount() {
@@ -453,14 +562,14 @@ function initChatPresets() {
     if (!text) return;
     if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
     state.settings.chatPresets.push(text);
-    saveSetting('chatPresets', state.settings.chatPresets);
+    markDirty();
     input.value = '';
     renderChatPresets();
   });
 
   $('#btnResetChatPresets')?.addEventListener('click', () => {
     state.settings.chatPresets = getDefaultChatPresets();
-    saveSetting('chatPresets', state.settings.chatPresets);
+    markDirty();
     renderChatPresets();
   });
 }
@@ -490,7 +599,7 @@ function renderChatPresets() {
       if (newText && newText !== text) {
         if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
         state.settings.chatPresets[idx] = newText;
-        saveSetting('chatPresets', state.settings.chatPresets);
+        markDirty();
       } else if (!newText) {
         span.textContent = text;
       }
@@ -506,7 +615,7 @@ function renderChatPresets() {
     delBtn.addEventListener('click', () => {
       if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
       state.settings.chatPresets.splice(idx, 1);
-      saveSetting('chatPresets', state.settings.chatPresets);
+      markDirty();
       renderChatPresets();
     });
 
@@ -644,10 +753,21 @@ export function openSettings() {
   $('#settingsPanel').setAttribute('aria-hidden', 'false');
   updateTypoDictCount();
   updatePresetPromptDisplay();
+  snapshotSettings();
+}
+
+export function tryCloseSettings() {
+  if (isDirty) {
+    if (!confirm(t('settings.unsaved_warning'))) return;
+    revertSettings();
+  }
+  closeSettings();
 }
 
 export function closeSettings() {
   $('#settingsPanel').classList.remove('open');
   $('#settingsOverlay').classList.remove('visible');
   $('#settingsPanel').setAttribute('aria-hidden', 'true');
+  isDirty = false;
+  updateDirtyUI();
 }

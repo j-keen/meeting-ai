@@ -19,7 +19,7 @@ import {
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
 } from './ui.js';
-import { initSettings, closeSettings, updateTypoDictCount } from './settings.js';
+import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
@@ -331,8 +331,17 @@ async function runAnalysis() {
   showAnalysisSkeletons();
 
   try {
-    const previousSummary = state.analysisHistory.length > 0
-      ? state.analysisHistory[state.analysisHistory.length - 1].summary
+    const lastAnalysis = state.analysisHistory.length > 0
+      ? state.analysisHistory[state.analysisHistory.length - 1]
+      : null;
+
+    const previousSummary = lastAnalysis
+      ? [
+          lastAnalysis.summary,
+          lastAnalysis.context ? `\n[대화 흐름] ${lastAnalysis.context}` : '',
+          lastAnalysis.actionItems?.length ? `\n[실행 항목] ${lastAnalysis.actionItems.join(' / ')}` : '',
+          lastAnalysis.openQuestions?.length ? `\n[미해결 질문] ${lastAnalysis.openQuestions.join(' / ')}` : '',
+        ].filter(Boolean).join('')
       : null;
 
     const result = await analyzeTranscript({
@@ -1068,7 +1077,7 @@ function init() {
   });
 
   // Settings close
-  on('settings:close', closeSettings);
+  on('settings:close', tryCloseSettings);
 
   // Meeting view/delete/export
   on('meeting:view', ({ id }) => {
@@ -1193,39 +1202,101 @@ function closeWelcomeModal() {
 // ===== Demo Data =====
 function loadDemoData() {
   const now = Date.now();
-  state.meetingStartTime = now - 25 * 60000;
+  state.meetingStartTime = now - 55 * 60000;
   state.meetingId = generateId();
   state.meetingLocation = 'Conference Room A';
-  state.meetingTitle = '주간 스프린트 리뷰';
+  state.meetingTitle = '주간 스프린트 리뷰 & 기술 전략 회의';
 
   const script = [
-    { offset: 0, text: '자, 그럼 이번 주간 회의 시작하겠습니다. 지난주 스프린트 리뷰부터 해볼까요?' },
-    { offset: 15, text: '네, 지난주에 사용자 인증 모듈 리팩토링 완료했고요, 테스트 커버리지 85%까지 올렸습니다.' },
-    { offset: 35, text: '좋습니다. 목표가 80%였으니까 초과 달성이네요. 성능 이슈는 해결됐나요?' },
-    { offset: 50, text: '토큰 갱신 부분에서 레이스 컨디션이 있었는데, 뮤텍스 패턴으로 해결했습니다. 응답 시간 200ms에서 50ms로 줄었어요.' },
-    { offset: 70, text: '저는 새 대시보드 UI 디자인 완료했습니다. Figma에 올려놨는데 리뷰 부탁드려요.' },
-    { offset: 85, text: '오, 대시보드 기대되네요. 이번주 중으로 리뷰하겠습니다. 모바일 반응형도 포함인가요?' },
-    { offset: 100, text: '네, 모바일 브레이크포인트 3개로 잡았고요. 태블릿은 그리드 2열, 모바일은 1열 레이아웃입니다.' },
-    { offset: 120, text: '프론트엔드 구현할 때 디자인 토큰 사용하면 좋을 것 같은데, 색상 변수 정리되어 있나요?' },
-    { offset: 135, text: '네, 디자인 시스템에 시맨틱 컬러 토큰 12개 정의해놨어요. JSON으로 export 가능합니다.' },
-    { offset: 155, text: '좋아요. 그러면 이번 주 목표 정리해봅시다. 개발팀은 대시보드 API 엔드포인트 구현, 맞죠?' },
-    { offset: 170, text: '네, REST API 5개 엔드포인트랑 WebSocket 실시간 알림 기능까지 이번주 목표입니다.' },
-    { offset: 190, text: '일정이 빡빡한데 괜찮을까요? WebSocket은 다음 주로 넘겨도 될 것 같은데.' },
-    { offset: 210, text: '음... 솔직히 WebSocket은 좀 여유가 없을 수 있어요. 다음 주로 넘기는 게 나을 것 같습니다.' },
-    { offset: 225, text: '그러면 저는 이번주에 컴포넌트 라이브러리 문서화 작업 진행할게요. Storybook으로요.' },
-    { offset: 240, text: '좋습니다. 그리고 한 가지 더, 다음 달 클라이언트 데모가 있어서 준비해야 합니다.' },
-    { offset: 260, text: '데모 범위가 어디까지인가요? 전체 플로우인지, 핵심 기능만인지?' },
-    { offset: 275, text: '핵심 기능 위주로요. 로그인, 대시보드, 보고서 생성 이 세 가지면 충분합니다.' },
-    { offset: 290, text: '대시보드 애니메이션 효과 넣으면 데모에서 임팩트가 좋을 것 같은데, 개발 공수가 어떤가요?' },
-    { offset: 310, text: 'Framer Motion 쓰면 하루 정도면 가능합니다. 차트 진입 애니메이션이랑 숫자 카운트업 정도?' },
-    { offset: 325, text: '좋아요, 그건 데모 전 주에 넣는 걸로 합시다. 다른 이슈 있나요?' },
-    { offset: 340, text: '아, 접근성 관련해서 WCAG 2.1 AA 기준 맞추려면 컬러 대비 일부 수정이 필요해요.' },
-    { offset: 355, text: '중요한 포인트네요. 이번 스프린트에 접근성 태스크도 추가합시다.' },
-    { offset: 370, text: '그리고 CI/CD 파이프라인에 접근성 자동 체크 넣으면 좋겠는데, axe-core 같은 거요.' },
-    { offset: 390, text: '동의합니다. 그럼 정리하면: API 엔드포인트 구현, 컴포넌트 문서화, 접근성 수정, 데모 준비. 다들 오케이?' },
-    { offset: 405, text: '네, 오케이입니다.' },
-    { offset: 410, text: '저도 좋습니다!' },
-    { offset: 420, text: '좋아요, 수고하셨습니다. 다음 주 같은 시간에 봐요!' },
+    // === Part 1: 스프린트 리뷰 (0~7분) ===
+    { offset: 0, text: '자, 그럼 이번 주간 회의 시작하겠습니다. 오늘 안건이 좀 많아요. 스프린트 리뷰, 기술 부채 논의, 클라이언트 데모 준비, 그리고 채용 관련 업데이트까지.' },
+    { offset: 20, text: '네, 지난주에 사용자 인증 모듈 리팩토링 완료했고요, 테스트 커버리지 85%까지 올렸습니다. 단위 테스트 42개, 통합 테스트 15개 추가했어요.' },
+    { offset: 45, text: '좋습니다. 목표가 80%였으니까 초과 달성이네요. 성능 이슈는 해결됐나요?' },
+    { offset: 60, text: '토큰 갱신 부분에서 레이스 컨디션이 있었는데, 뮤텍스 패턴으로 해결했습니다. 응답 시간 200ms에서 50ms로 줄었어요. P99 기준으로도 120ms 이하입니다.' },
+    { offset: 85, text: '그거 Sentry에서 에러 얼마나 줄었어요? 지난달에 인증 관련 에러가 하루 평균 340건이었는데.' },
+    { offset: 100, text: '이번 주 기준 하루 평균 12건으로 떨어졌습니다. 대부분 네트워크 타임아웃이라 서버 쪽 이슈는 아니에요.' },
+    { offset: 120, text: '대단하네요. 340건에서 12건이면 96% 감소죠. 이거 다음 주 경영진 보고에 꼭 넣읍시다.' },
+
+    // === Part 2: 대시보드 UI 진행상황 (7~14분) ===
+    { offset: 145, text: '저는 새 대시보드 UI 디자인 완료했습니다. Figma에 올려놨는데 리뷰 부탁드려요. 총 화면 8개, 컴포넌트 34개입니다.' },
+    { offset: 165, text: '오, 대시보드 기대되네요. 이번주 중으로 리뷰하겠습니다. 모바일 반응형도 포함인가요?' },
+    { offset: 180, text: '네, 모바일 브레이크포인트 3개로 잡았고요. 태블릿은 그리드 2열, 모바일은 1열 레이아웃입니다. 768px, 1024px, 1440px 기준이에요.' },
+    { offset: 200, text: '프론트엔드 구현할 때 디자인 토큰 사용하면 좋을 것 같은데, 색상 변수 정리되어 있나요?' },
+    { offset: 220, text: '네, 디자인 시스템에 시맨틱 컬러 토큰 12개 정의해놨어요. JSON으로 export 가능합니다. primary, secondary, accent 각각 4단계씩이에요.' },
+    { offset: 240, text: '다크 모드는 어떻게 처리했어요? 기존 앱은 다크 모드가 좀 깨져서 문의가 많았거든요.' },
+    { offset: 258, text: '이번에 HSL 기반으로 완전히 새로 잡았어요. 라이트/다크 모드별 토큰을 분리해서, CSS 변수 하나로 전환됩니다. 테스트해보니 깨지는 부분 없었어요.' },
+
+    // === Part 3: 기술 부채 논의 (14~22분) ===
+    { offset: 280, text: '좋아요. 그럼 다음 안건, 기술 부채 얘기 좀 합시다. 현재 SonarQube 기준 코드 스멜 287개, 보안 취약점 3개 잡히고 있어요.' },
+    { offset: 305, text: '보안 취약점 3개는 뭔가요? 심각도가 어떻게 되나요?' },
+    { offset: 320, text: '하나는 SQL 인젝션 가능성인데 이건 ORM 사용해서 실제로는 문제 없어요. 나머지 둘은 의존성 라이브러리 CVE인데, lodash 4.17.19 버전이랑 axios 0.21.1 버전이에요.' },
+    { offset: 350, text: 'lodash는 4.17.21로 올리면 되고, axios는 1.x로 메이저 업그레이드 해야 하는데 API 호출 패턴이 좀 바뀌어요.' },
+    { offset: 370, text: 'axios 업그레이드하면 인터셉터 코드 전부 수정해야 되지 않나요? 영향 범위가 클 것 같은데.' },
+    { offset: 390, text: '맞아요. API 서비스 레이어 파일이 23개인데, 그 중 인터셉터 사용하는 게 8개예요. 하루 반 정도 공수 필요합니다.' },
+    { offset: 410, text: '그러면 이번 스프린트에 lodash만 먼저 올리고, axios는 다음 스프린트에 별도 태스크로 잡읍시다. 동의하시나요?' },
+    { offset: 430, text: '네, 그게 안전할 것 같아요. axios 업그레이드는 별도 브랜치에서 충분히 테스트하고 머지하는 게 좋겠습니다.' },
+    { offset: 445, text: '코드 스멜 287개는 어떡하죠? 전부 잡기엔 현실적으로 힘들잖아요.' },
+    { offset: 460, text: '우선순위를 매기면 좋겠어요. critical이 12개, major가 45개인데, critical 12개는 이번 달 안에 처리하고, major는 분기 목표로 잡으면 어떨까요?' },
+    { offset: 480, text: '좋습니다. critical 12개 담당자 배분하죠. 인증 관련 4개는 민수 씨, API 관련 5개는 지영 씨, 프론트 3개는 현우 씨 가능한가요?' },
+    { offset: 500, text: '네, 가능합니다.' },
+    { offset: 505, text: '저도 괜찮아요. 이번 주 내로 시작하겠습니다.' },
+    { offset: 510, text: '프론트 3개 확인해봤는데 XSS 관련이라 빠르게 처리 가능합니다.' },
+
+    // === Part 4: 클라이언트 데모 준비 (22~32분) ===
+    { offset: 530, text: '좋습니다. 다음 안건, 다음 달 15일 클라이언트 데모 준비입니다. A사 김 부장님 외 3명 참석 예정이에요.' },
+    { offset: 555, text: '데모 범위가 어디까지인가요? 전체 플로우인지, 핵심 기능만인지?' },
+    { offset: 570, text: '핵심 기능 위주로요. 로그인, 대시보드, 보고서 생성 이 세 가지면 충분합니다. A사가 특히 보고서 커스터마이징에 관심이 많아요.' },
+    { offset: 595, text: '보고서 커스터마이징이면 드래그 앤 드롭으로 위젯 배치하는 기능이죠? 그건 아직 베타인데 데모해도 괜찮을까요?' },
+    { offset: 615, text: '베타여도 코어 기능은 안정적이에요. 엣지 케이스만 피하면 됩니다. 데모 시나리오를 미리 짜서 연습하면 충분해요.' },
+    { offset: 635, text: '데모 시나리오 초안은 제가 이번 주 금요일까지 만들어서 공유하겠습니다.' },
+    { offset: 650, text: '대시보드 애니메이션 효과 넣으면 데모에서 임팩트가 좋을 것 같은데, 개발 공수가 어떤가요?' },
+    { offset: 670, text: 'Framer Motion 쓰면 하루 정도면 가능합니다. 차트 진입 애니메이션이랑 숫자 카운트업 정도? 로딩 스켈레톤도 넣으면 이틀이에요.' },
+    { offset: 695, text: '좋아요, 그건 데모 전 주에 넣는 걸로 합시다. 로딩 스켈레톤까지 포함해주세요.' },
+    { offset: 710, text: '데모 환경은 어디서 돌리나요? 프로덕션은 위험하고, 스테이징에 샘플 데이터 넣어야 할 것 같은데.' },
+    { offset: 730, text: '스테이징에 별도 데모 테넌트를 만들어서, 실제감 있는 더미 데이터 500건 정도 넣어놓죠. 이건 제가 처리하겠습니다.' },
+    { offset: 750, text: 'A사 산업 맞는 데이터로 넣으면 좋겠어요. 제조업 관련 KPI 데이터로요.' },
+    { offset: 765, text: '좋은 생각이에요. 제조업 KPI 템플릿 있으니까 그걸로 커스텀하겠습니다.' },
+
+    // === Part 5: 접근성 & CI/CD (32~40분) ===
+    { offset: 790, text: '다음, 접근성 관련 업데이트. WCAG 2.1 AA 기준 맞추려면 컬러 대비 일부 수정이 필요해요. 현재 대비율 3.2:1인 곳이 5군데 있는데, 4.5:1로 올려야 합니다.' },
+    { offset: 815, text: '컬러만의 문제인가요, 아니면 스크린 리더 대응도 필요한가요?' },
+    { offset: 830, text: '스크린 리더도 이슈가 좀 있어요. aria-label 누락이 차트 컴포넌트에 14개, 폼 필드에 8개 있습니다. 총 22개 수정 필요해요.' },
+    { offset: 855, text: '중요한 포인트네요. 이번 스프린트에 접근성 태스크도 추가합시다. 법적 이슈도 될 수 있으니까 우선순위 높게 잡아요.' },
+    { offset: 875, text: '그리고 CI/CD 파이프라인에 접근성 자동 체크 넣으면 좋겠는데, axe-core 같은 거요. PR마다 자동으로 돌리면 다시는 빠지지 않을 거예요.' },
+    { offset: 900, text: 'GitHub Actions에 axe-core 스텝 추가하는 건 제가 해볼게요. Lighthouse CI도 같이 넣으면 성능까지 한번에 체크 가능합니다.' },
+    { offset: 920, text: '좋아요. 근데 CI 시간이 너무 길어지면 안 되는데, 현재 파이프라인이 몇 분이에요?' },
+    { offset: 935, text: '현재 빌드 + 테스트가 평균 4분 30초에요. axe-core 추가하면 1분 정도 늘어날 거예요.' },
+    { offset: 950, text: '5분 30초면 괜찮네요. 10분 넘어가기 전까지는 수용 가능합니다.' },
+
+    // === Part 6: 채용 & 팀 확장 (40~48분) ===
+    { offset: 975, text: '마지막 안건, 채용 업데이트입니다. 시니어 프론트엔드 개발자 포지션에 지원자 12명 들어왔어요. 서류 통과가 5명이고, 이번 주에 코딩 테스트 진행합니다.' },
+    { offset: 1000, text: '코딩 테스트 문제는 어떤 걸로 하나요? 지난번에 알고리즘 위주였는데 실무형으로 바꾸는 건 어떨까요?' },
+    { offset: 1020, text: '맞아요. 이번에는 React 컴포넌트 구현 과제로 준비했어요. 실시간 데이터 테이블 구현인데, 페이지네이션, 정렬, 필터링 포함이에요.' },
+    { offset: 1045, text: '좋네요. 우리 프로젝트랑 직접 관련 있는 과제라서 평가하기도 좋을 것 같아요. 제한 시간은요?' },
+    { offset: 1060, text: '3시간으로 잡았습니다. 코드 품질, 타입스크립트 활용, 테스트 작성 여부도 평가 기준에 넣었어요.' },
+    { offset: 1080, text: '면접관은 누구누구 참여하나요?' },
+    { offset: 1090, text: '1차 기술 면접은 저랑 현우 씨가 하고, 2차 컬처핏은 팀장님이 직접 하시는 걸로 하죠.' },
+    { offset: 1110, text: '네, 그렇게 하겠습니다. 채용 일정은 이번 달 말까지 최종 결정하는 걸로.' },
+    { offset: 1130, text: '그리고 주니어 백엔드 개발자도 한 명 더 필요한 것 같아요. API 엔드포인트 작업량이 계속 늘고 있어서요.' },
+    { offset: 1150, text: '그건 다음 분기 인원 계획에 넣겠습니다. 지금은 시니어 프론트엔드 채용에 집중합시다.' },
+
+    // === Part 7: 마무리 (48~55분) ===
+    { offset: 1175, text: '자, 그럼 오늘 회의 정리하겠습니다. 이번 스프린트 목표를 정리하면요.' },
+    { offset: 1195, text: '첫째, REST API 5개 엔드포인트 구현. WebSocket은 다음 스프린트로 연기.' },
+    { offset: 1210, text: '둘째, 컴포넌트 라이브러리 Storybook 문서화. 셋째, 접근성 수정 22건 및 컬러 대비 5건.' },
+    { offset: 1230, text: '넷째, lodash 버전 업그레이드. axios는 다음 스프린트.' },
+    { offset: 1245, text: '다섯째, SonarQube critical 코드 스멜 12개 처리. 민수 씨 4개, 지영 씨 5개, 현우 씨 3개.' },
+    { offset: 1260, text: '여섯째, 클라이언트 데모 시나리오 금요일까지 초안 작성. 스테이징 데모 테넌트 준비.' },
+    { offset: 1280, text: '일곱째, CI/CD에 axe-core + Lighthouse CI 추가.' },
+    { offset: 1295, text: '여덟째, 시니어 프론트엔드 코딩 테스트 이번 주 진행.' },
+    { offset: 1310, text: '혹시 빠진 거 있나요?' },
+    { offset: 1320, text: '아, 대시보드 Figma 디자인 리뷰도 이번 주 내로 해주셔야 해요.' },
+    { offset: 1335, text: '맞다. 아홉째, 대시보드 Figma 디자인 리뷰. 수요일까지 코멘트 남겨주세요.' },
+    { offset: 1350, text: '경영진 보고에 인증 모듈 성과 수치도 넣기로 했잖아요.' },
+    { offset: 1365, text: '맞습니다. 열째, 경영진 보고 자료에 인증 모듈 개선 성과 포함. 에러 96% 감소, 응답 시간 75% 단축.' },
+    { offset: 1385, text: '다들 오케이? 질문 있으면 슬랙 채널에 남겨주세요.' },
+    { offset: 1395, text: '네, 오케이입니다!' },
+    { offset: 1400, text: '수고하셨습니다. 다음 주 같은 시간에 봐요!' },
   ];
 
   script.forEach((item, idx) => {
@@ -1233,25 +1304,34 @@ function loadDemoData() {
       id: generateId() + idx,
       text: item.text,
       timestamp: state.meetingStartTime + item.offset * 1000,
-      bookmarked: idx === 3 || idx === 14,
+      bookmarked: idx === 3 || idx === 6 || idx === 29 || idx === 55,
     };
     state.transcript.push(line);
     addTranscriptLine(line);
   });
 
-  const memo1 = { id: generateId() + 'm1', text: 'WebSocket은 다음 주로 이동 결정', timestamp: state.meetingStartTime + 215 * 1000 };
-  const memo2 = { id: generateId() + 'm2', text: '클라이언트 데모: 로그인 + 대시보드 + 보고서', timestamp: state.meetingStartTime + 280 * 1000 };
-  state.memos.push(memo1, memo2);
-  addMemoLine(memo1);
-  addMemoLine(memo2);
+  const memos = [
+    { text: '인증 모듈 성과: 에러 340→12건/일 (96%↓), 응답 200→50ms (75%↓)', offset: 125 },
+    { text: 'WebSocket은 다음 스프린트로 연기', offset: 435 },
+    { text: '클라이언트 데모: 4/15, A사 김 부장 외 3명, 핵심 기능 위주', offset: 575 },
+    { text: 'axios 1.x 업그레이드 다음 스프린트 별도 태스크', offset: 415 },
+    { text: 'critical 코드 스멜: 민수(인증 4), 지영(API 5), 현우(프론트 3)', offset: 485 },
+    { text: '시니어 프론트엔드 채용: 서류통과 5명, 이번 주 코딩 테스트', offset: 1065 },
+  ];
 
-  state.tags = ['weekly', 'sprint-review', 'dashboard'];
+  memos.forEach((m, i) => {
+    const memo = { id: generateId() + 'm' + i, text: m.text, timestamp: state.meetingStartTime + m.offset * 1000 };
+    state.memos.push(memo);
+    addMemoLine(memo);
+  });
+
+  state.tags = ['weekly', 'sprint-review', 'dashboard', 'tech-debt', 'hiring'];
 
   updateTimer();
   timerInterval = setInterval(updateTimer, 1000);
 
   $('#meetingStatus').textContent = 'Demo Mode';
-  showToast('Demo data loaded - 27 transcript lines', 'success');
+  showToast('Demo data loaded - 65 transcript lines', 'success');
 }
 
 window.__loadDemo = loadDemoData;

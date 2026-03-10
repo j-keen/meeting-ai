@@ -69,8 +69,11 @@
           </div>
           <div class="transcript-waiting" id="transcriptWaiting" style="display:none">
             <div class="waiting-indicator"></div>
-            <p class="waiting-text" data-i18n="transcript.waiting">Listening for speech...</p>
-            <p class="waiting-hint text-muted" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
+            <div class="waiting-content">
+              <span class="waiting-dot-label">REC</span>
+              <p class="waiting-text" data-i18n="transcript.waiting">Listening for speech...</p>
+              <p class="waiting-hint text-muted" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -95,7 +98,7 @@
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-          <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128203; <span data-i18n="panel.analysis_history">History</span></button>
+          <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">🕐 <span data-i18n="panel.analysis_history">History</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
         </div>
       </div>
@@ -105,8 +108,11 @@
           <p class="text-muted" data-i18n="ai.empty_hint">Analysis runs automatically during recording.</p>
           <div class="panel-waiting" id="aiWaiting" style="display:none">
             <div class="waiting-dot waiting-dot-accent"></div>
-            <p class="waiting-text" id="aiWaitingHint"></p>
-            <p class="waiting-hint text-muted" data-i18n="ai.waiting">Please wait...</p>
+            <div class="waiting-content">
+              <span class="waiting-dot-label">AI</span>
+              <p class="waiting-text" id="aiWaitingHint"></p>
+              <p class="waiting-hint text-muted" data-i18n="ai.waiting">Please wait...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -125,9 +131,12 @@
           <p data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
           <div class="panel-waiting" id="chatWaiting" style="display:none">
             <div class="waiting-dot waiting-dot-success"></div>
-            <p class="waiting-text" data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
-            <p class="waiting-hint text-muted" data-i18n="chat.waiting_hint">Ask questions about the meeting in progress.</p>
-            <div class="chat-suggestions" id="chatSuggestions"></div>
+            <div class="waiting-content">
+              <span class="waiting-dot-label">CHAT</span>
+              <p class="waiting-text" data-i18n="chat.waiting_hint">Ask questions about the meeting in progress.</p>
+              <p class="waiting-hint text-muted" data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
+              <div class="chat-suggestions" id="chatSuggestions"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -404,6 +413,14 @@
             <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
           </div>
         </section>
+      </div>
+    </div>
+    <div class="settings-footer" id="settingsFooter">
+      <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
+      <div class="settings-footer-right">
+        <span class="settings-unsaved-text" id="settingsUnsavedText" data-i18n="settings.unsaved_changes">Unsaved changes</span>
+        <button class="btn btn-sm" id="btnSettingsCancel" data-i18n="settings.close">Close</button>
+        <button class="btn btn-sm btn-primary" id="btnSettingsSave" data-i18n="settings.save_settings" disabled>Save</button>
       </div>
     </div>
   </aside>

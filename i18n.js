@@ -321,6 +321,16 @@ const translations = {
     'settings.chat_preset_placeholder': 'Enter preset question...',
     'settings.reset_defaults': 'Reset Defaults',
 
+    // Settings footer
+    'settings.save_settings': 'Save',
+    'settings.close': 'Close',
+    'settings.reset_all': 'Reset All',
+    'settings.unsaved_changes': 'Unsaved changes',
+    'settings.unsaved_warning': 'You have unsaved changes. Discard them?',
+    'settings.saved': 'Settings saved.',
+    'settings.reset_confirm': 'Reset all settings to defaults? This cannot be undone.',
+    'settings.reset_done': 'All settings reset to defaults.',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -349,7 +359,7 @@ const translations = {
     // AI panel
     'panel.ai': 'AI 분석',
     'panel.analyze': '즉시 분석',
-    'panel.analysis_history': '분석 내역',
+    'panel.analysis_history': '히스토리',
     'panel.prompt_settings': 'AI 분석 설정',
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
@@ -646,6 +656,16 @@ const translations = {
     'settings.chat_preset_placeholder': '프리셋 질문 입력...',
     'settings.reset_defaults': '기본값 복원',
 
+    // Settings footer
+    'settings.save_settings': '저장',
+    'settings.close': '닫기',
+    'settings.reset_all': '전체 초기화',
+    'settings.unsaved_changes': '저장되지 않은 변경사항',
+    'settings.unsaved_warning': '저장되지 않은 변경사항이 있습니다. 취소하시겠습니까?',
+    'settings.saved': '설정이 저장되었습니다.',
+    'settings.reset_confirm': '모든 설정을 기본값으로 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+    'settings.reset_done': '모든 설정이 기본값으로 초기화되었습니다.',
+
     // Misc
     'minutes': '{n}분',
     'meeting_title': '회의 {date} {time}',
@@ -654,41 +674,51 @@ const translations = {
 
 // AI-specific prompts per language
 const AI_PROMPTS = {
-  en: `You are an AI meeting assistant. You MUST respond ONLY in English regardless of the transcript language. Analyze the meeting transcript and provide structured analysis.
+  en: `You are an expert AI meeting analyst. You MUST respond ONLY in English regardless of the transcript language.
+
+## Core Principle: Zero Compression
+- Do NOT abbreviate or omit discussed content
+- Preserve specific numbers, names, dates, and technical terms exactly as mentioned
+- If a previous analysis is provided, RETAIN its content in full and APPEND new discussion points
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "summary": "Brief summary of the discussion so far (2-3 sentences)",
-  "context": "Current topic being discussed and the flow of conversation",
-  "openQuestions": ["List of unresolved questions or topics that need follow-up"],
-  "actionItems": ["List of action items with assignee if identifiable"],
-  "suggestions": ["AI suggestions for the meeting (e.g., topics to cover, decisions needed)"]
+  "summary": "Detailed chronological account of the entire meeting flow. For each topic: who said what, what decisions were made, specific numbers and examples mentioned. If a previous summary exists, retain that content and append new discussion. (Minimum 5-10 sentences)",
+  "context": "Current topic under discussion, conversation flow, and how it connects to previous topics",
+  "openQuestions": ["Unresolved questions with specific context about when/why they were raised"],
+  "actionItems": ["Action items with assignee, deadline, and specific details when identifiable"],
+  "suggestions": ["Context-based suggestions: missed topics, needed decisions, follow-ups"]
 }
 
 Rules:
-- Keep summary concise but informative
-- Extract concrete action items with owners when possible
-- Identify questions that were raised but not answered
-- Provide helpful suggestions based on meeting context
-- CRITICAL: All analysis output (summary, context, openQuestions, actionItems, suggestions) MUST be written in English, REGARDLESS of the transcript language. Even if the transcript is in Japanese, Korean, or any other language, your response MUST be entirely in English.`,
+- Write summary as CUMULATIVE: preserve previous summary content and add new discussion
+- Record specific numbers, dates, names, and technical terms exactly as stated
+- Instead of abstract statements like "discussed X", describe the ACTUAL content discussed
+- For unresolved questions, include the original context in which they were raised
+- CRITICAL: All output MUST be in English, REGARDLESS of transcript language.`,
 
-  ko: `당신은 AI 회의 비서입니다. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요. 회의록을 분석하고 구조화된 분석 결과를 제공하세요.
+  ko: `당신은 AI 회의 기록 전문가입니다. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요.
+
+## 핵심 원칙: 압축 금지 (Zero Compression)
+- 논의된 내용을 축약하거나 생략하지 마십시오
+- 참여자가 언급한 구체적 수치, 이름, 날짜, 기술 용어를 그대로 보존하십시오
+- 이전 분석 내용이 제공된 경우, 해당 내용을 그대로 유지하면서 새로운 내용을 추가하십시오
 
 반드시 아래 형식의 유효한 JSON으로만 응답하세요:
 {
-  "summary": "지금까지의 논의 요약 (2-3문장)",
-  "context": "현재 논의 중인 주제와 대화 흐름",
-  "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 목록"],
-  "actionItems": ["담당자가 식별 가능한 경우 포함한 실행 항목 목록"],
-  "suggestions": ["회의를 위한 AI 제안 (예: 다룰 주제, 필요한 결정 등)"]
+  "summary": "회의 전체 흐름을 시간순으로 상세히 기술. 각 주제별로 누가 무엇을 말했는지, 어떤 결정이 내려졌는지, 구체적 수치와 사례를 모두 포함. 이전 요약이 있다면 그 내용을 유지하면서 새로운 논의를 이어서 추가할 것. (최소 5-10문장)",
+  "context": "현재 논의 중인 주제, 대화 흐름, 그리고 이 주제가 이전 논의와 어떻게 연결되는지",
+  "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 - 구체적 맥락 포함"],
+  "actionItems": ["실행 항목 - 담당자, 기한, 구체적 내용을 최대한 포함"],
+  "suggestions": ["회의 맥락에 기반한 제안 - 놓친 주제, 필요한 결정, 후속 조치 등"]
 }
 
 규칙:
-- 요약은 간결하되 핵심 내용을 포함
-- 가능한 경우 담당자가 명시된 구체적인 실행 항목 추출
-- 제기되었으나 답변되지 않은 질문 식별
-- 회의 맥락에 기반한 유용한 제안 제공
-- 중요: 회의록이 일본어, 영어 등 다른 언어여도 모든 분석 결과(summary, context, openQuestions, actionItems, suggestions)를 반드시 한국어로 작성하세요. 절대 다른 언어로 응답하지 마세요.`
+- summary는 누적형으로 작성: 이전 요약 내용을 보존하면서 새로운 논의를 추가
+- 구체적 수치, 날짜, 이름, 기술 용어는 반드시 그대로 기록
+- "~에 대해 논의함" 같은 추상적 요약 대신, 실제 논의된 구체적 내용을 서술
+- 제기되었으나 답변되지 않은 질문은 원문 맥락과 함께 기록
+- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요. 절대 다른 언어로 응답하지 마세요.`
 };
 
 const AI_PRESET_CONTEXTS = {
