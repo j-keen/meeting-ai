@@ -16,7 +16,7 @@ import {
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
   refreshTypoDict, applyTypoCorrections,
   showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
-  showAiWaiting, hideAiWaiting, resetAiEmpty, startAiWaitingRing, resetAiWaitingRing,
+  showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
 } from './ui.js';
 import { initSettings, closeSettings, updateTypoDictCount } from './settings.js';
@@ -214,9 +214,6 @@ function startAnalysisCountdown(intervalMs) {
   if (icon) icon.textContent = '⏸';
   updateCountdownText();
   countdownTimer = setInterval(() => updateCountdownText(), 1000);
-  // Animate the SVG ring in AI waiting state
-  resetAiWaitingRing();
-  startAiWaitingRing(intervalMs);
 }
 
 function updateCountdownText() {

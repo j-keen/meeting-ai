@@ -278,6 +278,9 @@ export function initSettings() {
     });
   }
 
+  // ===== Chat Presets =====
+  initChatPresets();
+
   // ===== Data Tab =====
   initDataTab();
 }
@@ -333,6 +336,7 @@ function loadSavedSettings() {
   s.uiLanguage = saved.uiLanguage || 'auto';
   s.aiLanguage = saved.aiLanguage || 'auto';
   s.customPresets = saved.customPresets || {};
+  s.chatPresets = saved.chatPresets || null;
 
   // Apply to inputs
   $('#selectUiLanguage').value = s.uiLanguage;
@@ -427,6 +431,86 @@ function renderTypoDictModal() {
         renderTypoDictModal();
       });
     });
+    list.appendChild(item);
+  });
+}
+
+// ===== Chat Presets =====
+function getDefaultChatPresets() {
+  return [
+    t('chat.suggestion_1'),
+    t('chat.suggestion_2'),
+    t('chat.suggestion_3'),
+  ];
+}
+
+function initChatPresets() {
+  renderChatPresets();
+
+  $('#btnAddChatPreset')?.addEventListener('click', () => {
+    const input = $('#inputNewChatPreset');
+    const text = input?.value.trim();
+    if (!text) return;
+    if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
+    state.settings.chatPresets.push(text);
+    saveSetting('chatPresets', state.settings.chatPresets);
+    input.value = '';
+    renderChatPresets();
+  });
+
+  $('#btnResetChatPresets')?.addEventListener('click', () => {
+    state.settings.chatPresets = getDefaultChatPresets();
+    saveSetting('chatPresets', state.settings.chatPresets);
+    renderChatPresets();
+  });
+}
+
+function renderChatPresets() {
+  const list = $('#chatPresetsList');
+  if (!list) return;
+  const presets = state.settings.chatPresets || getDefaultChatPresets();
+  list.innerHTML = '';
+  presets.forEach((text, idx) => {
+    const item = document.createElement('div');
+    item.className = 'chat-preset-item';
+
+    const span = document.createElement('span');
+    span.className = 'preset-text';
+    span.textContent = text;
+    span.contentEditable = false;
+
+    // Edit on click
+    span.addEventListener('click', () => {
+      span.contentEditable = true;
+      span.focus();
+    });
+    span.addEventListener('blur', () => {
+      span.contentEditable = false;
+      const newText = span.textContent.trim();
+      if (newText && newText !== text) {
+        if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
+        state.settings.chatPresets[idx] = newText;
+        saveSetting('chatPresets', state.settings.chatPresets);
+      } else if (!newText) {
+        span.textContent = text;
+      }
+    });
+    span.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); span.blur(); }
+      if (e.key === 'Escape') { span.textContent = text; span.blur(); }
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.textContent = '\u00d7';
+    delBtn.addEventListener('click', () => {
+      if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
+      state.settings.chatPresets.splice(idx, 1);
+      saveSetting('chatPresets', state.settings.chatPresets);
+      renderChatPresets();
+    });
+
+    item.append(span, delBtn);
     list.appendChild(item);
   });
 }

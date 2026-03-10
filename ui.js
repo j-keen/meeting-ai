@@ -850,27 +850,6 @@ export function resetAiEmpty() {
   hideAiWaiting();
 }
 
-// Animate the SVG ring over the given duration (ms)
-export function startAiWaitingRing(durationMs) {
-  const ring = $('#aiWaitingRing');
-  if (!ring) return;
-  // Reset to full offset (empty ring)
-  ring.style.transition = 'none';
-  ring.style.strokeDashoffset = '97.4';
-  // Force reflow
-  ring.getBoundingClientRect();
-  // Animate to 0 (full ring)
-  ring.style.transition = `stroke-dashoffset ${durationMs}ms linear`;
-  ring.style.strokeDashoffset = '0';
-}
-
-export function resetAiWaitingRing() {
-  const ring = $('#aiWaitingRing');
-  if (!ring) return;
-  ring.style.transition = 'none';
-  ring.style.strokeDashoffset = '97.4';
-}
-
 // ===== Chat Waiting State =====
 export function showChatWaiting() {
   const chatEmpty = $('#chatEmpty');
@@ -885,21 +864,21 @@ export function showChatWaiting() {
   const container = $('#chatSuggestions');
   if (container) {
     container.innerHTML = '';
-    const suggestions = [
+    const defaultPresets = [
       t('chat.suggestion_1'),
       t('chat.suggestion_2'),
       t('chat.suggestion_3'),
     ];
+    const suggestions = state.settings.chatPresets || defaultPresets;
     suggestions.forEach(text => {
       const chip = document.createElement('button');
       chip.className = 'chat-suggestion-chip';
       chip.textContent = text;
       chip.addEventListener('click', () => {
         const input = $('#chatInput');
-        if (input) {
-          input.value = text;
-          input.focus();
-        }
+        if (input) input.value = text;
+        const sendBtn = $('#btnChatSend');
+        if (sendBtn) sendBtn.click();
       });
       container.appendChild(chip);
     });

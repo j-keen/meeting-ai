@@ -25,10 +25,10 @@ const translations = {
     'panel.ai': 'AI Analysis',
     'panel.analyze': 'Analyze Now',
     'panel.analysis_history': 'History',
-    'panel.prompt_settings': 'AI Settings',
+    'panel.prompt_settings': 'AI Analysis Settings',
     'ai.empty': 'AI analysis results will appear here.',
     'ai.empty_hint': 'Analysis runs automatically during recording.',
-    'ai.waiting': 'Press Analyze Now or wait for auto-analysis.',
+    'ai.waiting': 'Please wait...',
     'ai.waiting_hint': 'Auto-analyzes every {n}s during recording.',
 
     // Bottom bar
@@ -316,6 +316,11 @@ const translations = {
     // Meeting title placeholder
     'meeting.title_placeholder': 'Meeting title...',
 
+    // Chat presets
+    'settings.chat_presets': 'Chat Preset Questions',
+    'settings.chat_preset_placeholder': 'Enter preset question...',
+    'settings.reset_defaults': 'Reset Defaults',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -345,10 +350,10 @@ const translations = {
     'panel.ai': 'AI 분석',
     'panel.analyze': '즉시 분석',
     'panel.analysis_history': '분석 내역',
-    'panel.prompt_settings': 'AI 설정',
+    'panel.prompt_settings': 'AI 분석 설정',
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
-    'ai.waiting': '즉시 분석을 누르거나 자동 분석을 기다려주세요.',
+    'ai.waiting': '잠시만 기다려주세요...',
     'ai.waiting_hint': '녹음 중 {n}초마다 자동으로 분석됩니다.',
 
     // Bottom bar
@@ -635,6 +640,11 @@ const translations = {
 
     // Meeting title placeholder
     'meeting.title_placeholder': '회의 제목...',
+
+    // Chat presets
+    'settings.chat_presets': '채팅 프리셋 질문',
+    'settings.chat_preset_placeholder': '프리셋 질문 입력...',
+    'settings.reset_defaults': '기본값 복원',
 
     // Misc
     'minutes': '{n}분',

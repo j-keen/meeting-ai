@@ -96,7 +96,7 @@
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128203; <span data-i18n="panel.analysis_history">History</span></button>
-          <button class="btn btn-sm" id="btnPromptSettings" title="AI Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Settings</span></button>
+          <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
         </div>
       </div>
       <div class="ai-sections" id="aiSections">
@@ -104,15 +104,9 @@
           <p data-i18n="ai.empty">AI analysis results will appear here.</p>
           <p class="text-muted" data-i18n="ai.empty_hint">Analysis runs automatically during recording.</p>
           <div class="panel-waiting" id="aiWaiting" style="display:none">
-            <div class="waiting-ring-wrap">
-              <svg class="waiting-ring" viewBox="0 0 36 36">
-                <circle class="waiting-ring-bg" cx="18" cy="18" r="15.5" />
-                <circle class="waiting-ring-fill" id="aiWaitingRing" cx="18" cy="18" r="15.5" />
-              </svg>
-              <div class="waiting-dot waiting-dot-accent"></div>
-            </div>
-            <p class="waiting-text" data-i18n="ai.waiting">Press Analyze Now or wait for auto-analysis.</p>
-            <p class="waiting-hint text-muted" id="aiWaitingHint"></p>
+            <div class="waiting-dot waiting-dot-accent"></div>
+            <p class="waiting-text" id="aiWaitingHint"></p>
+            <p class="waiting-hint text-muted" data-i18n="ai.waiting">Please wait...</p>
           </div>
         </div>
       </div>
@@ -351,6 +345,16 @@
           <h3 data-i18n="settings.chat_prompt">Chat System Prompt</h3>
           <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
+          <div class="chat-presets-list" id="chatPresetsList"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
+            <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
+          </div>
+          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
         </section>
       </div>
 
