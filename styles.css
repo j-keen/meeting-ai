@@ -139,6 +139,17 @@ h1, h2, h3 { font-weight: 600; }
   transition: color 0.15s, background 0.15s;
 }
 .btn-text:hover { color: var(--text-primary); background: var(--bg-hover); }
+.header-right .btn-text {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 5px 12px;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+.header-right .btn-text:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
 .btn-block { display: flex; width: 100%; justify-content: center; margin-bottom: 8px; }
 .btn-danger { color: var(--danger); }
 .btn-danger:hover { background: var(--danger-bg); }
@@ -513,6 +524,7 @@ h1, h2, h3 { font-weight: 600; }
   flex: 1;
   line-height: 1.5;
   word-break: break-word;
+  cursor: default;
 }
 .transcript-actions {
   opacity: 0;

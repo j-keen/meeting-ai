@@ -158,6 +158,11 @@ export function addTranscriptLine(line, corrections) {
     editTranscriptLine(line.id);
   });
 
+  textEl.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    editTranscriptLine(line.id);
+  });
+
   el.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     showContextPopup(e, line.id);
@@ -200,6 +205,11 @@ export function addMemoLine(memo) {
   el.dataset.id = memo.id;
   el.querySelector('.transcript-time').textContent = formatTime(memo.timestamp);
   el.querySelector('.transcript-text').textContent = memo.text;
+
+  el.querySelector('.transcript-text').addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    editMemoLine(memo.id);
+  });
 
   // Memo edit/delete buttons
   const editBtn = el.querySelector('[data-action="edit-memo"]');
