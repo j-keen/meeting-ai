@@ -445,15 +445,120 @@ export function renderAnalysisHistory() {
   }
   state.analysisHistory.forEach((analysis, idx) => {
     const item = document.createElement('div');
-    item.className = 'analysis-timeline-item';
-    const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale());
+    item.className = 'analysis-history-item' + (analysis.bookmarked ? ' bookmarked' : '');
+    const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+    const flowText = analysis.flow || (analysis.summary || '').slice(0, 60) + ((analysis.summary || '').length > 60 ? '...' : '');
+
     item.innerHTML = `
-      <div class="analysis-timeline-time">#${idx + 1} - ${time}</div>
-      <div><strong>${t('card.summary')}:</strong> ${analysis.summary || 'N/A'}</div>
-      ${analysis.actionItems?.length ? `<div><strong>${t('card.actionItems')}:</strong><ul>${analysis.actionItems.map(i => `<li>${i}</li>`).join('')}</ul></div>` : ''}
+      <div class="analysis-history-row">
+        <button class="analysis-history-bookmark" title="Bookmark">${analysis.bookmarked ? '★' : '☆'}</button>
+        <div class="analysis-history-info" title="${t('analysis_history.view_detail')}">
+          <span class="analysis-history-num">#${idx + 1}</span>
+          <span class="analysis-history-time">${time}</span>
+          <span class="analysis-history-flow">${flowText}</span>
+        </div>
+      </div>
+      <div class="analysis-history-memo-area">
+        ${analysis.memo
+          ? `<span class="analysis-history-memo">${analysis.memo}</span>`
+          : `<button class="analysis-history-memo-add">${t('analysis_history.add_memo')}</button>`
+        }
+      </div>
     `;
+
+    // Bookmark toggle
+    item.querySelector('.analysis-history-bookmark').addEventListener('click', (e) => {
+      e.stopPropagation();
+      analysis.bookmarked = !analysis.bookmarked;
+      renderAnalysisHistory();
+      // saved via periodic autoSave
+    });
+
+    // Click row → open detail modal
+    item.querySelector('.analysis-history-info').addEventListener('click', () => {
+      openAnalysisDetail(analysis, idx);
+    });
+
+    // Memo add/edit
+    const memoArea = item.querySelector('.analysis-history-memo-area');
+    const memoBtn = memoArea.querySelector('.analysis-history-memo-add');
+    const memoSpan = memoArea.querySelector('.analysis-history-memo');
+
+    if (memoBtn) {
+      memoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showMemoInput(memoArea, analysis, idx);
+      });
+    }
+    if (memoSpan) {
+      memoSpan.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showMemoInput(memoArea, analysis, idx);
+      });
+    }
+
     timeline.appendChild(item);
   });
+}
+
+function showMemoInput(container, analysis, idx) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'analysis-history-memo-input';
+  input.placeholder = t('analysis_history.memo_placeholder');
+  input.value = analysis.memo || '';
+  container.innerHTML = '';
+  container.appendChild(input);
+  input.focus();
+
+  const save = () => {
+    analysis.memo = input.value.trim();
+    renderAnalysisHistory();
+    // saved via periodic autoSave
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { renderAnalysisHistory(); }
+  });
+}
+
+function openAnalysisDetail(analysis, idx) {
+  const modal = $('#analysisDetailModal');
+  const title = $('#analysisDetailTitle');
+  const container = $('#analysisDetailSections');
+  const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+  title.textContent = `#${idx + 1} — ${time}`;
+  container.innerHTML = '';
+
+  getSectionConfig().forEach(({ key, icon, title: sectionTitle }) => {
+    const tmpl = $('#tmplAiSection');
+    const section = tmpl.content.cloneNode(true).querySelector('.ai-section');
+    section.dataset.section = key;
+    section.querySelector('.ai-section-icon').textContent = icon;
+    section.querySelector('.ai-section-label').textContent = sectionTitle;
+    const body = section.querySelector('.ai-section-body');
+
+    if (Array.isArray(analysis[key])) {
+      if (analysis[key].length === 0) {
+        body.textContent = t('card.no_items');
+      } else {
+        const ul = document.createElement('ul');
+        analysis[key].forEach(item => {
+          const li = document.createElement('li');
+          li.textContent = item;
+          ul.appendChild(li);
+        });
+        body.appendChild(ul);
+      }
+    } else {
+      body.textContent = analysis[key] || t('card.no_data');
+    }
+
+    container.appendChild(section);
+  });
+
+  modal.hidden = false;
 }
 
 // ===== History (with tags) =====

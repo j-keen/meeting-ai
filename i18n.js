@@ -116,6 +116,10 @@ const translations = {
     // Analysis history modal
     'analysis_history.title': 'Analysis History',
     'analysis_history.empty': 'No analysis history yet.',
+    'analysis_history.initial': 'Initial Analysis',
+    'analysis_history.add_memo': 'Add memo...',
+    'analysis_history.memo_placeholder': 'Write a memo for this analysis...',
+    'analysis_history.view_detail': 'View Details',
 
     // Highlights modal
     'highlights.title': 'Highlights & Memos',
@@ -454,6 +458,10 @@ const translations = {
     // Analysis history modal
     'analysis_history.title': '분석 기록',
     'analysis_history.empty': '분석 기록이 없습니다.',
+    'analysis_history.initial': '초기 분석',
+    'analysis_history.add_memo': '메모 추가...',
+    'analysis_history.memo_placeholder': '이 분석에 대한 메모를 작성하세요...',
+    'analysis_history.view_detail': '상세 보기',
 
     // Highlights modal
     'highlights.title': '하이라이트 & 메모',
@@ -689,6 +697,7 @@ const AI_PROMPTS = {
 
 Respond ONLY with valid JSON in this exact format:
 {
+  "flow": "One-line summary (max 60 chars) of the current meeting flow/direction. e.g. 'Budget review → timeline adjustment, assignees confirmed'",
   "summary": "Detailed chronological account of the entire meeting flow. For each topic: who said what, what decisions were made, specific numbers and examples mentioned. If a previous summary exists, retain that content and append new discussion. (Minimum 5-10 sentences)",
   "context": "Current topic under discussion, conversation flow, and how it connects to previous topics",
   "openQuestions": ["Unresolved questions with specific context about when/why they were raised"],
@@ -712,6 +721,7 @@ Rules:
 
 반드시 아래 형식의 유효한 JSON으로만 응답하세요:
 {
+  "flow": "현재 회의 흐름을 한 줄로 요약 (최대 60자). 예: '예산 논의 → 일정 조정, 담당자 배정 완료'",
   "summary": "회의 전체 흐름을 시간순으로 상세히 기술. 각 주제별로 누가 무엇을 말했는지, 어떤 결정이 내려졌는지, 구체적 수치와 사례를 모두 포함. 이전 요약이 있다면 그 내용을 유지하면서 새로운 논의를 이어서 추가할 것. (최소 5-10문장)",
   "context": "현재 논의 중인 주제, 대화 흐름, 그리고 이 주제가 이전 논의와 어떻게 연결되는지",
   "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 - 구체적 맥락 포함"],

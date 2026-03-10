@@ -2,6 +2,7 @@
 
 import { createSTT } from './stt.js';
 import { analyzeTranscript, getDefaultPrompt, generateTags, correctTypos, generateMeetingTitle } from './ai.js';
+import { checkProxyAvailable, isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
@@ -294,7 +295,7 @@ function showPausedState() {
 function startAiTypoCorrection() {
   clearInterval(aiTypoCorrectionTimer);
   aiTypoCorrectionTimer = setInterval(async () => {
-    if (!state.settings.geminiKey || state.transcript.length < 5) return;
+    if ((!state.settings.geminiKey && !isProxyAvailable()) || state.transcript.length < 5) return;
     const recentText = state.transcript.slice(-10).map(l => l.text).join('\n');
     const currentDict = loadTypoDict();
     try {
@@ -318,7 +319,7 @@ async function runAnalysis() {
   stopAnalysisCountdown();
   showAnalyzingState();
   if (isAnalyzing) return;
-  if (!state.settings.geminiKey) {
+  if (!state.settings.geminiKey && !isProxyAvailable()) {
     showToast(t('toast.no_api_key'), 'warning');
     return;
   }
@@ -450,7 +451,7 @@ function showEndMeetingModal() {
   // AI title/tag generation
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
-  if (state.settings.geminiKey && state.transcript.length > 0) {
+  if ((state.settings.geminiKey || isProxyAvailable()) && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
     suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.generating');
     chipsEl.innerHTML = '';
@@ -838,6 +839,11 @@ function refreshHistoryGridDebounced() {
   historySearchTimer = setTimeout(refreshHistoryGrid, 250);
 }
 
+function updateProxyHint(available) {
+  const hint = $('#proxyAvailableHint');
+  if (hint) hint.style.display = available ? '' : 'none';
+}
+
 // ===== Init =====
 function init() {
   const savedSettings = loadSettings();
@@ -852,6 +858,11 @@ function init() {
   initKeyboardShortcuts();
   initChat();
   refreshTypoDict();
+
+  // Check if Vertex AI proxy is available (for keyless operation)
+  checkProxyAvailable().then(available => {
+    if (available) updateProxyHint(true);
+  });
 
   // ===== Welcome Modal =====
   showWelcomeModal();

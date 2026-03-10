@@ -1494,17 +1494,106 @@ h1, h2, h3 { font-weight: 600; }
 }
 
 /* ===== Analysis Timeline ===== */
-.analysis-timeline { display: flex; flex-direction: column; gap: 12px; }
-.analysis-timeline-item {
+.analysis-timeline { display: flex; flex-direction: column; gap: 6px; }
+
+.analysis-history-item {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 8px 12px;
+  transition: background 0.15s;
 }
-.analysis-timeline-time {
+.analysis-history-item:hover { background: var(--bg-hover); }
+.analysis-history-item.bookmarked {
+  border-left: 3px solid var(--accent);
+}
+
+.analysis-history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analysis-history-bookmark {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.analysis-history-item.bookmarked .analysis-history-bookmark {
+  color: #f5a623;
+}
+
+.analysis-history-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.analysis-history-num {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.analysis-history-time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.analysis-history-flow {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.analysis-history-memo-area {
+  margin-top: 4px;
+  padding-left: 28px;
+}
+
+.analysis-history-memo {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-style: italic;
+}
+.analysis-history-memo:hover { color: var(--text-primary); }
+
+.analysis-history-memo-add {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.analysis-history-item:hover .analysis-history-memo-add { opacity: 1; }
+
+.analysis-history-memo-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-style: italic;
 }
 
 /* ===== Toast ===== */

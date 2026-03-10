@@ -223,6 +223,7 @@
           <label class="settings-label">
             <span data-i18n="settings.gemini_key">Gemini API Key</span>
             <input type="password" class="settings-input" id="inputGeminiKey" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
+            <span class="proxy-hint" id="proxyAvailableHint" style="display:none; color:var(--success, #22c55e); font-size:12px; margin-top:4px;">Cloud AI available — works without API key</span>
           </label>
           <label class="settings-label">
             <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
@@ -537,6 +538,19 @@
       </div>
       <div class="modal-body">
         <div class="analysis-timeline" id="analysisTimeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Detail Modal (read-only) -->
+  <div class="modal-overlay" id="analysisDetailModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="analysisDetailTitle">Analysis #1</h3>
+        <button class="btn btn-icon modal-close" data-close="analysisDetailModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="ai-sections" id="analysisDetailSections"></div>
       </div>
     </div>
   </div>

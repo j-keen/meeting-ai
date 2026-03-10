@@ -1,12 +1,7 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t } from './i18n.js';
-
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-function getGeminiUrl(model) {
-  return `${GEMINI_BASE}/${model}:generateContent`;
-}
+import { callGemini, isProxyAvailable } from './gemini-api.js';
 
 export function getDefaultPrompt() {
   return getAiPrompt();
@@ -76,7 +71,7 @@ export async function analyzeTranscript({
   userInsights = [],
   model = 'gemini-2.5-flash',
 }) {
-  if (!apiKey) throw new Error('Gemini API key not set');
+  if (!apiKey && !isProxyAvailable()) throw new Error('Gemini API key not set');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
 
   const contextText = meetingContext || getPresetContext(meetingPreset || 'general');
@@ -116,27 +111,15 @@ export async function analyzeTranscript({
     }
   };
 
-  const url = `${getGeminiUrl(model)}?key=${apiKey}`;
-
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 200)}`);
-      }
-
-      const data = await res.json();
+      const data = await callGemini(model, body, apiKey);
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const parsed = parseGeminiResponse(rawText);
 
       return {
+        flow: parsed.flow || '',
         summary: parsed.summary || '',
         context: parsed.context || '',
         openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
@@ -155,7 +138,7 @@ export async function analyzeTranscript({
 
 // Auto-generate tags from analysis
 export async function generateTags({ apiKey, summary, transcript, model = 'gemini-2.5-flash' }) {
-  if (!apiKey || !summary) return [];
+  if ((!apiKey && !isProxyAvailable()) || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
   const lang = getAiLanguage();
@@ -169,18 +152,11 @@ Summary: ${summary}
 Transcript excerpt: ${transcriptSnippet}`;
 
   try {
-    const url = `${getGeminiUrl(model)}?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
-      }),
-    });
+    const data = await callGemini(model, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
+    }, apiKey);
 
-    if (!res.ok) return [];
-    const data = await res.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean).slice(0, 5);
@@ -192,7 +168,7 @@ Transcript excerpt: ${transcriptSnippet}`;
 
 // AI-powered meeting title generation
 export async function generateMeetingTitle({ apiKey, transcript, existingTitle }) {
-  if (!apiKey || !transcript || transcript.length === 0) return null;
+  if ((!apiKey && !isProxyAvailable()) || !transcript || transcript.length === 0) return null;
 
   const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
   const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
@@ -217,18 +193,10 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const url = `${getGeminiUrl('gemini-2.5-flash-lite')}?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
-      }),
-    });
-
-    if (!res.ok) return null;
-    const data = await res.json();
+    const data = await callGemini('gemini-2.5-flash-lite', {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
+    }, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = parseGeminiResponse(rawText);
     return {
@@ -243,7 +211,7 @@ Return ONLY valid JSON:
 
 // AI-powered typo correction
 export async function correctTypos({ apiKey, corrections, recentText, model = 'gemini-2.5-flash' }) {
-  if (!apiKey || !recentText) return {};
+  if ((!apiKey && !isProxyAvailable()) || !recentText) return {};
 
   const existingDict = Object.entries(corrections || {}).map(([k, v]) => `"${k}" -> "${v}"`).join(', ');
   const lang = getAiLanguage();
@@ -257,18 +225,10 @@ ${recentText}
 Find any obvious typos, misheard words, or STT errors. Return a JSON object where keys are the wrong words and values are the corrected words. Only include clear mistakes. Return empty object {} if no corrections needed.`;
 
   try {
-    const url = `${getGeminiUrl(model)}?key=${apiKey}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-      }),
-    });
-
-    if (!res.ok) return {};
-    const data = await res.json();
+    const data = await callGemini(model, {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
+    }, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;

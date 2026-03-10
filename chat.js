@@ -2,14 +2,9 @@
 
 import { state, emit } from './app.js';
 import { getAiLanguage, t } from './i18n.js';
+import { callGemini, isProxyAvailable } from './gemini-api.js';
 
 const $ = (sel) => document.querySelector(sel);
-
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-function getGeminiUrl(model) {
-  return `${GEMINI_BASE}/${model}:generateContent`;
-}
 
 const FUNCTION_DECLARATIONS = [
   {
@@ -160,7 +155,7 @@ function getChatModel() {
 }
 
 async function sendChatMessage(userText) {
-  if (!state.settings.geminiKey) {
+  if (!state.settings.geminiKey && !isProxyAvailable()) {
     renderSystemMessage(t('toast.no_api_key'));
     return;
   }
@@ -170,25 +165,13 @@ async function sendChatMessage(userText) {
   const contents = buildContents(systemPrompt, userText);
 
   try {
-    const url = `${getGeminiUrl(model)}?key=${state.settings.geminiKey}`;
     const body = {
       contents,
       tools: [{ function_declarations: FUNCTION_DECLARATIONS }],
       generationConfig: { temperature: 0.5 }
     };
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`API error (${res.status}): ${errText.slice(0, 200)}`);
-    }
-
-    const data = await res.json();
+    const data = await callGemini(model, body, state.settings.geminiKey);
     const candidate = data.candidates?.[0];
     if (!candidate) throw new Error('No response from AI');
 
