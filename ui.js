@@ -448,7 +448,7 @@ export function renderAnalysisHistory() {
 }
 
 // ===== History (with tags) =====
-export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', dateFrom = '', dateTo = '' } = {}) {
+export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterCategory = '', filterRating = '', dateFrom = '', dateTo = '' } = {}) {
   const grid = $('#historyGrid');
   grid.innerHTML = '';
   let filtered = meetings;
@@ -473,6 +473,13 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     const tag = filterTag.toLowerCase();
     filtered = filtered.filter(m => m.tags?.some(t => t.toLowerCase().includes(tag)));
   }
+  if (filterCategory) {
+    filtered = filtered.filter(m => m.categories?.includes(filterCategory));
+  }
+  if (filterRating) {
+    const minRating = parseInt(filterRating);
+    filtered = filtered.filter(m => (m.starRating || 0) >= minRating);
+  }
   if (dateFrom) {
     const from = new Date(dateFrom).getTime();
     filtered = filtered.filter(m => (m.createdAt || 0) >= from);
@@ -496,6 +503,35 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_general');
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
+
+    // Star rating in meta
+    if (meeting.starRating) {
+      const ratingEl = document.createElement('span');
+      ratingEl.className = 'history-card-rating';
+      ratingEl.textContent = '\u2605'.repeat(meeting.starRating);
+      card.querySelector('.history-card-meta').appendChild(ratingEl);
+    }
+
+    // Participants count
+    if (meeting.participants && meeting.participants.length > 0) {
+      const pEl = document.createElement('span');
+      pEl.className = 'history-card-participants-count';
+      pEl.textContent = `\u{1F465} ${meeting.participants.length}`;
+      card.querySelector('.history-card-meta').appendChild(pEl);
+    }
+
+    // Categories
+    if (meeting.categories && meeting.categories.length > 0) {
+      const catContainer = document.createElement('div');
+      catContainer.className = 'history-card-categories';
+      meeting.categories.forEach(cat => {
+        const catEl = document.createElement('span');
+        catEl.className = 'history-card-category';
+        catEl.textContent = cat;
+        catContainer.appendChild(catEl);
+      });
+      card.querySelector('.history-card-meta').after(catContainer);
+    }
 
     // Tags
     const tagsContainer = card.querySelector('.history-card-tags');
@@ -786,10 +822,96 @@ export function resetTranscriptEmpty() {
   if (waiting) waiting.style.display = 'none';
 }
 
-// Update meeting info bar time display
-export function updateMeetingInfoTime() {
-  const el = $('#meetingInfoTime');
-  if (el && state.meetingStartTime) {
-    el.textContent = new Date(state.meetingStartTime).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+// ===== AI Analysis Waiting State =====
+export function showAiWaiting(intervalSec) {
+  const aiEmpty = $('#aiEmpty');
+  if (!aiEmpty) return;
+  // Hide existing empty text
+  const texts = aiEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = 'none');
+  const waiting = $('#aiWaiting');
+  if (waiting) {
+    waiting.style.display = '';
+    const hint = $('#aiWaitingHint');
+    if (hint) hint.textContent = t('ai.waiting_hint', { n: intervalSec });
   }
 }
+
+export function hideAiWaiting() {
+  const waiting = $('#aiWaiting');
+  if (waiting) waiting.style.display = 'none';
+}
+
+export function resetAiEmpty() {
+  const aiEmpty = $('#aiEmpty');
+  if (!aiEmpty) return;
+  const texts = aiEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = '');
+  hideAiWaiting();
+}
+
+// Animate the SVG ring over the given duration (ms)
+export function startAiWaitingRing(durationMs) {
+  const ring = $('#aiWaitingRing');
+  if (!ring) return;
+  // Reset to full offset (empty ring)
+  ring.style.transition = 'none';
+  ring.style.strokeDashoffset = '97.4';
+  // Force reflow
+  ring.getBoundingClientRect();
+  // Animate to 0 (full ring)
+  ring.style.transition = `stroke-dashoffset ${durationMs}ms linear`;
+  ring.style.strokeDashoffset = '0';
+}
+
+export function resetAiWaitingRing() {
+  const ring = $('#aiWaitingRing');
+  if (!ring) return;
+  ring.style.transition = 'none';
+  ring.style.strokeDashoffset = '97.4';
+}
+
+// ===== Chat Waiting State =====
+export function showChatWaiting() {
+  const chatEmpty = $('#chatEmpty');
+  if (!chatEmpty) return;
+  // Hide existing empty text
+  const texts = chatEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = 'none');
+  const waiting = $('#chatWaiting');
+  if (waiting) waiting.style.display = '';
+
+  // Render suggestion chips
+  const container = $('#chatSuggestions');
+  if (container) {
+    container.innerHTML = '';
+    const suggestions = [
+      t('chat.suggestion_1'),
+      t('chat.suggestion_2'),
+      t('chat.suggestion_3'),
+    ];
+    suggestions.forEach(text => {
+      const chip = document.createElement('button');
+      chip.className = 'chat-suggestion-chip';
+      chip.textContent = text;
+      chip.addEventListener('click', () => {
+        const input = $('#chatInput');
+        if (input) {
+          input.value = text;
+          input.focus();
+        }
+      });
+      container.appendChild(chip);
+    });
+  }
+}
+
+export function resetChatEmpty() {
+  const chatEmpty = $('#chatEmpty');
+  if (!chatEmpty) return;
+  const texts = chatEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = '');
+  const waiting = $('#chatWaiting');
+  if (waiting) waiting.style.display = 'none';
+}
+

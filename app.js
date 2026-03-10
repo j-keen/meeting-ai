@@ -1,11 +1,12 @@
 // app.js - State management, pub/sub, initialization
 
 import { createSTT } from './stt.js';
-import { analyzeTranscript, getDefaultPrompt, generateTags, correctTypos } from './ai.js';
+import { analyzeTranscript, getDefaultPrompt, generateTags, correctTypos, generateMeetingTitle } from './ai.js';
 import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   loadTypoDict, saveTypoDict, addTypoCorrection,
+  loadContacts, addContact, loadLocations, addLocation, loadCategories,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
@@ -14,8 +15,9 @@ import {
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
   refreshTypoDict, applyTypoCorrections,
-  updateMeetingInfoTime,
   showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
+  showAiWaiting, hideAiWaiting, resetAiEmpty, startAiWaitingRing, resetAiWaitingRing,
+  showChatWaiting, resetChatEmpty,
 } from './ui.js';
 import { initSettings, closeSettings, updateTypoDictCount } from './settings.js';
 import { initChat } from './chat.js';
@@ -48,6 +50,10 @@ export const state = {
   userInsights: [],
   tags: [],
   meetingEnded: false,
+  meetingTitle: '',
+  starRating: 3,
+  categories: [],
+  participants: [],
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -122,8 +128,12 @@ function startRecording() {
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
       state.meetingId = generateId();
-      state.meetingLocation = $('#inputMeetingLocation')?.value || '';
-      updateMeetingInfoTime();
+    }
+    // Show meeting title input in header
+    const titleInput = $('#meetingTitleInput');
+    if (titleInput) {
+      titleInput.hidden = false;
+      titleInput.value = state.meetingTitle;
     }
 
     timerInterval = setInterval(updateTimer, 1000);
@@ -138,6 +148,8 @@ function startRecording() {
     $('#meetingStatus').textContent = t('record.status_recording');
 
     showTranscriptWaiting();
+    showAiWaiting(state.settings.analysisInterval || 30);
+    showChatWaiting();
     showToast(t('toast.recording_started'), 'success');
 
   } catch (err) {
@@ -182,42 +194,55 @@ function startAutoAnalysis() {
 
 function startAnalysisCountdown(intervalMs) {
   stopAnalysisCountdown();
-  const el = $('#analysisCountdown');
-  if (!el) return;
+  const chip = $('#analysisChip');
+  if (!chip) return;
   countdownIntervalMs = intervalMs;
   countdownEnd = Date.now() + intervalMs;
-  el.classList.remove('analyzing', 'paused');
-  updateCountdownText(el);
-  countdownTimer = setInterval(() => updateCountdownText(el), 1000);
+  chip.className = 'analysis-chip counting';
+  updateCountdownText();
+  countdownTimer = setInterval(() => updateCountdownText(), 1000);
+  // Animate the SVG ring in AI waiting state
+  resetAiWaitingRing();
+  startAiWaitingRing(intervalMs);
 }
 
-function updateCountdownText(el) {
+function updateCountdownText() {
+  const icon = $('#analysisChipIcon');
+  const text = $('#analysisChipText');
+  if (!icon || !text) return;
   const remaining = Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000));
-  el.textContent = t('analysis.countdown', { n: remaining });
+  icon.textContent = '⏸';
+  text.textContent = t('analysis.countdown', { n: remaining });
 }
 
 function stopAnalysisCountdown() {
   clearInterval(countdownTimer);
   countdownTimer = null;
-  const el = $('#analysisCountdown');
-  if (el) {
-    el.textContent = '';
-    el.classList.remove('analyzing', 'paused');
+  const chip = $('#analysisChip');
+  if (chip) {
+    chip.className = 'analysis-chip';
+    const icon = $('#analysisChipIcon');
+    const text = $('#analysisChipText');
+    if (icon) icon.textContent = '';
+    if (text) text.textContent = '';
   }
 }
 
 function showAnalyzingState() {
-  const el = $('#analysisCountdown');
-  if (!el) return;
+  const chip = $('#analysisChip');
+  if (!chip) return;
   clearInterval(countdownTimer);
   countdownTimer = null;
-  el.textContent = t('analysis.analyzing');
-  el.classList.add('analyzing');
+  chip.className = 'analysis-chip analyzing';
+  const icon = $('#analysisChipIcon');
+  const text = $('#analysisChipText');
+  if (icon) icon.textContent = '⏳';
+  if (text) text.textContent = t('analysis.analyzing');
 }
 
 function hideAnalyzingState() {
-  const el = $('#analysisCountdown');
-  if (el) el.classList.remove('analyzing');
+  const chip = $('#analysisChip');
+  if (chip) chip.classList.remove('analyzing');
   if (isAnalysisPaused) {
     showPausedState();
     return;
@@ -226,45 +251,41 @@ function hideAnalyzingState() {
     const intervalMs = (state.settings.analysisInterval || 30) * 1000;
     startAnalysisCountdown(intervalMs);
   } else {
-    if (el) el.textContent = '';
+    stopAnalysisCountdown();
   }
 }
 
 function toggleAnalysisPause() {
   isAnalysisPaused = !isAnalysisPaused;
-  const btn = $('#btnPauseAnalysis');
   if (isAnalysisPaused) {
     clearInterval(autoAnalysisInterval);
     stopAnalysisCountdown();
     showPausedState();
-    if (btn) {
-      btn.innerHTML = '&#9654; <span data-i18n="panel.resume_analysis">' + t('panel.resume_analysis') + '</span>';
-    }
   } else {
     startAutoAnalysis();
-    if (btn) {
-      btn.innerHTML = '&#9208; <span data-i18n="panel.pause_analysis">' + t('panel.pause_analysis') + '</span>';
-    }
   }
 }
 
 function updatePauseButtonVisibility(show) {
-  const btn = $('#btnPauseAnalysis');
-  if (!btn) return;
-  btn.style.display = show ? '' : 'none';
+  const chip = $('#analysisChip');
+  if (!chip) return;
+  chip.style.display = show ? '' : 'none';
   if (!show) {
-    btn.innerHTML = '&#9208; <span data-i18n="panel.pause_analysis">' + t('panel.pause_analysis') + '</span>';
+    isAnalysisPaused = false;
+    stopAnalysisCountdown();
   }
 }
 
 function showPausedState() {
-  const el = $('#analysisCountdown');
-  if (!el) return;
+  const chip = $('#analysisChip');
+  if (!chip) return;
   clearInterval(countdownTimer);
   countdownTimer = null;
-  el.textContent = t('analysis.paused');
-  el.classList.add('paused');
-  el.classList.remove('analyzing');
+  chip.className = 'analysis-chip paused';
+  const icon = $('#analysisChipIcon');
+  const text = $('#analysisChipText');
+  if (icon) icon.textContent = '▶';
+  if (text) text.textContent = t('analysis.paused');
 }
 
 // Periodic AI typo correction (hybrid approach)
@@ -358,13 +379,14 @@ async function runAnalysis() {
 
 function autoSave() {
   if (!state.meetingId) return;
+  const defaultTitle = t('meeting_title', { date: new Date(state.meetingStartTime).toLocaleDateString(getDateLocale()), time: new Date(state.meetingStartTime).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' }) });
   const meeting = {
     id: state.meetingId,
-    title: t('meeting_title', { date: new Date(state.meetingStartTime).toLocaleDateString(getDateLocale()), time: new Date(state.meetingStartTime).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' }) }),
+    title: state.meetingTitle || defaultTitle,
     startTime: state.meetingStartTime,
     duration: getElapsedTimeStr(),
     preset: state.settings.meetingPreset || 'general',
-    location: state.meetingLocation || $('#inputMeetingLocation')?.value || '',
+    location: state.meetingLocation || '',
     meetingContext: state.settings.meetingContext || '',
     transcript: state.transcript,
     memos: state.memos,
@@ -372,6 +394,9 @@ function autoSave() {
     chatHistory: state.chatHistory,
     userInsights: state.userInsights,
     tags: state.tags,
+    starRating: state.starRating,
+    categories: state.categories,
+    participants: state.participants,
   };
   const result = saveMeeting(meeting);
   if (result.warning === 'storage_high') {
@@ -380,17 +405,174 @@ function autoSave() {
 }
 
 function endMeeting() {
-  // Confirmation to prevent accidental end
-  if (state.isRecording || state.transcript.length > 0) {
-    if (!confirm(t('confirm.end_meeting') || 'End this meeting? Data will be saved.')) return;
-  }
   stopRecording();
-  // Save location
-  state.meetingLocation = $('#inputMeetingLocation')?.value || '';
+  state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
+  showEndMeetingModal();
+}
+
+function showEndMeetingModal() {
+  const modal = $('#endMeetingModal');
+  modal.hidden = false;
+
+  const defaultTitle = t('meeting_title', {
+    date: new Date(state.meetingStartTime || Date.now()).toLocaleDateString(getDateLocale()),
+    time: new Date(state.meetingStartTime || Date.now()).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
+  });
+  const titleInput = $('#endMeetingTitle');
+  titleInput.value = state.meetingTitle || defaultTitle;
+
+  renderEndMeetingTags();
+  renderEndMeetingCategories();
+  updateStarRating(state.starRating);
+  renderEndMeetingParticipants();
+
+  const locationInput = $('#endMeetingLocation');
+  locationInput.value = state.meetingLocation || '';
+  const datalist = $('#locationDatalist');
+  datalist.innerHTML = '';
+  loadLocations().forEach(loc => {
+    const opt = document.createElement('option');
+    opt.value = loc;
+    datalist.appendChild(opt);
+  });
+
+  // AI title/tag generation
+  const suggestionsEl = $('#aiTitleSuggestions');
+  const chipsEl = $('#aiTitleChips');
+  if (state.settings.geminiKey && state.transcript.length > 0) {
+    suggestionsEl.hidden = false;
+    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.generating');
+    chipsEl.innerHTML = '';
+
+    generateMeetingTitle({
+      apiKey: state.settings.geminiKey,
+      transcript: state.transcript,
+      existingTitle: state.meetingTitle,
+    }).then(result => {
+      if (!result) { suggestionsEl.hidden = true; return; }
+      suggestionsEl.querySelector('.ai-suggestions-label').textContent = '';
+
+      const allTitles = [result.title, ...(result.alternatives || [])].filter(Boolean);
+      chipsEl.innerHTML = '';
+      allTitles.forEach(title => {
+        const chip = document.createElement('button');
+        chip.className = 'ai-title-chip';
+        chip.textContent = title;
+        chip.addEventListener('click', () => { titleInput.value = title; });
+        chipsEl.appendChild(chip);
+      });
+
+      if (result.tags && result.tags.length > 0) {
+        result.tags.forEach(tag => {
+          if (!state.tags.includes(tag)) state.tags.push(tag);
+        });
+        renderEndMeetingTags();
+      }
+    });
+  } else {
+    suggestionsEl.hidden = true;
+  }
+}
+
+function renderEndMeetingTags() {
+  const container = $('#endMeetingTags');
+  container.innerHTML = '';
+  state.tags.forEach(tag => {
+    const el = document.createElement('span');
+    el.className = 'end-meeting-tag';
+    el.innerHTML = `${tag}<button class="end-meeting-tag-remove">&times;</button>`;
+    el.querySelector('.end-meeting-tag-remove').addEventListener('click', () => {
+      state.tags = state.tags.filter(t2 => t2 !== tag);
+      renderEndMeetingTags();
+    });
+    container.appendChild(el);
+  });
+}
+
+function renderEndMeetingCategories() {
+  const container = $('#endMeetingCategories');
+  container.innerHTML = '';
+  loadCategories().forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'end-meeting-category-btn';
+    if (state.categories.includes(cat)) btn.classList.add('selected');
+    btn.textContent = cat;
+    btn.addEventListener('click', () => {
+      if (state.categories.includes(cat)) {
+        state.categories = state.categories.filter(c => c !== cat);
+        btn.classList.remove('selected');
+      } else {
+        state.categories.push(cat);
+        btn.classList.add('selected');
+      }
+    });
+    container.appendChild(btn);
+  });
+}
+
+function updateStarRating(rating) {
+  state.starRating = rating;
+  document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.star) <= rating);
+  });
+}
+
+function renderEndMeetingParticipants() {
+  const selectedContainer = $('#endMeetingParticipantsSelected');
+  const listContainer = $('#endMeetingParticipantsList');
+
+  selectedContainer.innerHTML = '';
+  state.participants.forEach(p => {
+    const badge = document.createElement('span');
+    badge.className = 'contact-badge';
+    badge.innerHTML = `${p.name || p}<button class="contact-badge-remove">&times;</button>`;
+    badge.querySelector('.contact-badge-remove').addEventListener('click', () => {
+      state.participants = state.participants.filter(pp => pp !== p);
+      renderEndMeetingParticipants();
+    });
+    selectedContainer.appendChild(badge);
+  });
+
+  const contacts = loadContacts();
+  listContainer.innerHTML = '';
+  if (contacts.length === 0 && state.participants.length === 0) {
+    listContainer.innerHTML = `<p class="text-muted" style="font-size:11px;">${t('end_meeting.no_participants')}</p>`;
+  } else {
+    contacts.forEach(contact => {
+      if (state.participants.some(p => (p.id || p) === contact.id)) return;
+      const card = document.createElement('div');
+      card.className = 'contact-card';
+      card.innerHTML = `<span class="contact-card-name">${contact.name}</span><span class="contact-card-company">${contact.company || ''}</span>`;
+      card.addEventListener('click', () => {
+        state.participants.push({ id: contact.id, name: contact.name });
+        renderEndMeetingParticipants();
+      });
+      listContainer.appendChild(card);
+    });
+  }
+}
+
+function finalizeEndMeeting() {
+  state.meetingTitle = $('#endMeetingTitle').value.trim();
+  state.meetingLocation = $('#endMeetingLocation').value.trim();
+  if (state.meetingLocation) addLocation(state.meetingLocation);
+
   autoSave();
   state.meetingEnded = true;
+  $('#endMeetingModal').hidden = true;
+  showPostEndButtons();
 
-  // Replace End Meeting button with Resume + New Meeting buttons
+  $('#meetingStatus').textContent = t('record.status_ended');
+  const titleInput = $('#meetingTitleInput');
+  if (titleInput) titleInput.hidden = true;
+  showToast(t('toast.meeting_saved'), 'success');
+}
+
+function cancelEndMeeting() {
+  $('#endMeetingModal').hidden = true;
+}
+
+function showPostEndButtons() {
   const endBtn = $('#btnEndMeeting');
   const btnResume = document.createElement('button');
   btnResume.className = 'btn btn-sm';
@@ -413,9 +595,6 @@ function endMeeting() {
     resetMeeting();
     restoreEndButton();
   });
-
-  $('#meetingStatus').textContent = t('record.status_ended');
-  showToast(t('toast.meeting_saved'), 'success');
 }
 
 function resumeMeeting() {
@@ -439,6 +618,10 @@ function resetMeeting() {
   state.meetingStartTime = null;
   state.meetingId = null;
   state.meetingLocation = '';
+  state.meetingTitle = '';
+  state.starRating = 3;
+  state.categories = [];
+  state.participants = [];
   state.transcript = [];
   state.memos = [];
   state.analysisHistory = [];
@@ -451,12 +634,14 @@ function resetMeeting() {
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';
   $('#aiEmpty').style.display = '';
+  resetAiEmpty();
   $('#chatMessages').innerHTML = '';
   $('#chatEmpty').style.display = '';
+  resetChatEmpty();
   $('#meetingTimer').textContent = '00:00:00';
   $('#meetingStatus').textContent = '';
-  $('#inputMeetingLocation').value = '';
-  $('#meetingInfoTime').textContent = '';
+  const headerTitleInput = $('#meetingTitleInput');
+  if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }
 }
 
 // ===== Export =====
@@ -615,6 +800,8 @@ function getHistoryFilters() {
     searchTerm: $('#historySearch')?.value || '',
     filterType: $('#historyFilterType')?.value || '',
     filterTag: $('#historyFilterTag')?.value || '',
+    filterCategory: $('#historyFilterCategory')?.value || '',
+    filterRating: $('#historyFilterRating')?.value || '',
     dateFrom: $('#historyFilterDateFrom')?.value || '',
     dateTo: $('#historyFilterDateTo')?.value || '',
   };
@@ -639,10 +826,6 @@ function init() {
   initChat();
   refreshTypoDict();
 
-  // Set meeting info time
-  const infoTime = $('#meetingInfoTime');
-  if (infoTime) infoTime.textContent = new Date().toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-
   // ===== Welcome Modal =====
   showWelcomeModal();
 
@@ -658,8 +841,8 @@ function init() {
   // End meeting (with confirmation)
   $('#btnEndMeeting').addEventListener('click', () => endMeeting());
 
-  // Pause/resume analysis
-  $('#btnPauseAnalysis').addEventListener('click', () => toggleAnalysisPause());
+  // Pause/resume analysis (chip toggle)
+  $('#analysisChip').addEventListener('click', () => toggleAnalysisPause());
 
   // Analyze now
   $('#btnAnalyzeNow').addEventListener('click', () => runAnalysis());
@@ -709,9 +892,42 @@ function init() {
     $('#selectMeetingPreset').value = preset;
   });
 
-  // Meeting location save on change
-  $('#inputMeetingLocation')?.addEventListener('change', (e) => {
-    state.meetingLocation = e.target.value;
+  // Meeting title input binding
+  $('#meetingTitleInput')?.addEventListener('input', (e) => {
+    state.meetingTitle = e.target.value;
+  });
+
+  // End Meeting Modal events
+  $('#btnEndMeetingSave').addEventListener('click', () => finalizeEndMeeting());
+  $('#btnEndMeetingCancel').addEventListener('click', () => cancelEndMeeting());
+
+  // Star rating clicks
+  document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {
+    btn.addEventListener('click', () => updateStarRating(parseInt(btn.dataset.star)));
+  });
+
+  // Tag input (Enter to add)
+  $('#endMeetingTagInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const tag = e.target.value.trim();
+      if (tag && !state.tags.includes(tag)) {
+        state.tags.push(tag);
+        renderEndMeetingTags();
+      }
+      e.target.value = '';
+    }
+  });
+
+  // Inline participant add
+  $('#btnEndMeetingAddParticipant').addEventListener('click', () => {
+    const input = $('#endMeetingParticipantInput');
+    const name = input.value.trim();
+    if (name) {
+      const contact = addContact({ name });
+      state.participants.push({ id: contact.id, name: contact.name });
+      renderEndMeetingParticipants();
+      input.value = '';
+    }
   });
 
   // Memo
@@ -756,7 +972,7 @@ function init() {
   });
 
   // Highlights
-  $('#btnHighlights').addEventListener('click', () => {
+  $('#btnBookmarks').addEventListener('click', () => {
     renderHighlights('all');
     $('#highlightsModal').hidden = false;
   });
@@ -776,12 +992,23 @@ function init() {
 
   // Meeting History
   $('#btnHistory').addEventListener('click', () => {
+    // Populate category filter dropdown
+    const catSelect = $('#historyFilterCategory');
+    if (catSelect) {
+      const current = catSelect.value;
+      const cats = loadCategories();
+      catSelect.innerHTML = `<option value="" data-i18n="history.filter_all_categories">${t('history.filter_all_categories')}</option>` +
+        cats.map(c => `<option value="${c}">${c}</option>`).join('');
+      catSelect.value = current;
+    }
     refreshHistoryGrid();
     $('#historyModal').hidden = false;
   });
   $('#historySearch').addEventListener('input', () => refreshHistoryGrid());
   $('#historyFilterType').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterTag')?.addEventListener('input', () => refreshHistoryGrid());
+  $('#historyFilterCategory')?.addEventListener('change', () => refreshHistoryGrid());
+  $('#historyFilterRating')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateFrom').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateTo').addEventListener('change', () => refreshHistoryGrid());
 
@@ -951,9 +1178,7 @@ function loadDemoData() {
   state.meetingStartTime = now - 25 * 60000;
   state.meetingId = generateId();
   state.meetingLocation = 'Conference Room A';
-
-  $('#inputMeetingLocation').value = state.meetingLocation;
-  updateMeetingInfoTime();
+  state.meetingTitle = '주간 스프린트 리뷰';
 
   const script = [
     { offset: 0, text: '자, 그럼 이번 주간 회의 시작하겠습니다. 지난주 스프린트 리뷰부터 해볼까요?' },

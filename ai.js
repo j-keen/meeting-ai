@@ -190,6 +190,57 @@ Transcript excerpt: ${transcriptSnippet}`;
   }
 }
 
+// AI-powered meeting title generation
+export async function generateMeetingTitle({ apiKey, transcript, existingTitle }) {
+  if (!apiKey || !transcript || transcript.length === 0) return null;
+
+  const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
+  const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
+  const transcriptText = transcript.length > 60 ? head + '\n...\n' + tail : head;
+
+  const lang = getAiLanguage();
+  const langInstruction = lang === 'ko'
+    ? '한국어로 제목과 태그를 생성하세요.'
+    : 'Generate title and tags in English.';
+
+  const prompt = `Based on this meeting transcript, generate a concise meeting title and relevant tags. ${langInstruction}
+
+${existingTitle ? `Current title: "${existingTitle}" - suggest alternatives that might be better.\n` : ''}
+Transcript:
+${transcriptText}
+
+Return ONLY valid JSON:
+{
+  "title": "suggested main title (concise, under 50 chars)",
+  "alternatives": ["2-3 alternative titles"],
+  "tags": ["3-5 relevant keyword tags"]
+}`;
+
+  try {
+    const url = `${getGeminiUrl('gemini-2.5-flash-lite')}?key=${apiKey}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parsed = parseGeminiResponse(rawText);
+    return {
+      title: parsed.title || '',
+      alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 // AI-powered typo correction
 export async function correctTypos({ apiKey, corrections, recentText, model = 'gemini-2.5-flash' }) {
   if (!apiKey || !recentText) return {};

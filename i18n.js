@@ -5,6 +5,10 @@ const translations = {
     // Header
     'header.timer': '00:00:00',
     'header.theme_tooltip': 'Toggle theme (Ctrl+T)',
+    'header.theme_dark': 'Dark',
+    'header.theme_light': 'Light',
+    'header.history': 'History',
+    'header.settings': 'Settings',
     'header.history_tooltip': 'Meeting history',
     'header.settings_tooltip': 'Settings',
 
@@ -24,6 +28,8 @@ const translations = {
     'panel.prompt_settings': 'AI Settings',
     'ai.empty': 'AI analysis results will appear here.',
     'ai.empty_hint': 'Analysis runs automatically during recording.',
+    'ai.waiting': 'Press Analyze Now or wait for auto-analysis.',
+    'ai.waiting_hint': 'Auto-analyzes every {n}s during recording.',
 
     // Bottom bar
     'record.label': 'REC',
@@ -175,6 +181,10 @@ const translations = {
     'chat.context_added': 'Context added to analysis.',
     'chat.memo_added': 'Memo added to transcript.',
     'chat.rerunning_analysis': 'Re-running analysis with updated context...',
+    'chat.waiting_hint': 'Ask questions about the meeting in progress.',
+    'chat.suggestion_1': 'Summarize the discussion so far',
+    'chat.suggestion_2': 'List action items',
+    'chat.suggestion_3': 'What are the key decisions?',
 
     // Settings tabs
     'settings.tab_general': 'General',
@@ -265,11 +275,46 @@ const translations = {
     'transcript.waiting_hint': 'Speak and it will be transcribed automatically.',
 
     // Analysis countdown
-    'analysis.countdown': '⟳ {n}s',
+    'analysis.countdown': '{n}s',
     'analysis.analyzing': 'Analyzing...',
-    'analysis.paused': '⏸ Paused',
+    'analysis.paused': 'Paused',
     'panel.pause_analysis': 'Pause',
     'panel.resume_analysis': 'Resume',
+
+    // End Meeting Modal
+    'end_meeting.title': 'Save Meeting',
+    'end_meeting.meeting_title': 'Meeting Title',
+    'end_meeting.tags': 'Tags',
+    'end_meeting.categories': 'Categories',
+    'end_meeting.importance': 'Importance',
+    'end_meeting.participants': 'Participants',
+    'end_meeting.location': 'Location',
+    'end_meeting.save': 'Save',
+    'end_meeting.cancel': 'Cancel',
+    'end_meeting.generating': 'Generating AI suggestions...',
+    'end_meeting.add_tag': 'Add tag...',
+    'end_meeting.add_participant': 'Add name...',
+    'end_meeting.no_participants': 'No contacts registered.',
+
+    // Panel bookmarks
+    'panel.bookmarks': 'Bookmarks',
+
+    // Settings Data tab
+    'settings.tab_data': 'Data',
+    'settings.tab_prompt': 'Prompt',
+    'settings.participants': 'Participants',
+    'settings.locations': 'Locations',
+    'settings.categories': 'Categories',
+    'settings.add': 'Add',
+    'settings.no_items': 'No items yet.',
+
+    // History filters
+    'history.filter_all_categories': 'All Categories',
+    'history.filter_all_ratings': 'All Ratings',
+    'history.filter_tag': 'Filter by tag...',
+
+    // Meeting title placeholder
+    'meeting.title_placeholder': 'Meeting title...',
 
     // Misc
     'minutes': '{n} minutes',
@@ -280,6 +325,10 @@ const translations = {
     // Header
     'header.timer': '00:00:00',
     'header.theme_tooltip': '테마 전환 (Ctrl+T)',
+    'header.theme_dark': '다크테마',
+    'header.theme_light': '라이트테마',
+    'header.history': '지난회의기록',
+    'header.settings': '설정',
     'header.history_tooltip': '회의 기록',
     'header.settings_tooltip': '설정',
 
@@ -299,6 +348,8 @@ const translations = {
     'panel.prompt_settings': 'AI 설정',
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
+    'ai.waiting': '즉시 분석을 누르거나 자동 분석을 기다려주세요.',
+    'ai.waiting_hint': '녹음 중 {n}초마다 자동으로 분석됩니다.',
 
     // Bottom bar
     'record.label': 'REC',
@@ -450,6 +501,10 @@ const translations = {
     'chat.context_added': '맥락이 분석에 추가되었습니다.',
     'chat.memo_added': '메모가 회의록에 추가되었습니다.',
     'chat.rerunning_analysis': '업데이트된 맥락으로 재분석 중...',
+    'chat.waiting_hint': '진행 중인 회의에 대해 질문해보세요.',
+    'chat.suggestion_1': '지금까지 논의를 요약해줘',
+    'chat.suggestion_2': '액션 아이템을 정리해줘',
+    'chat.suggestion_3': '주요 결정사항이 뭐야?',
 
     // Settings tabs
     'settings.tab_general': '일반',
@@ -540,11 +595,46 @@ const translations = {
     'transcript.waiting_hint': '말씀하시면 자동으로 기록됩니다.',
 
     // Analysis countdown
-    'analysis.countdown': '⟳ {n}초',
+    'analysis.countdown': '{n}초',
     'analysis.analyzing': '분석 중...',
-    'analysis.paused': '⏸ 일시정지',
+    'analysis.paused': '일시정지',
     'panel.pause_analysis': '일시정지',
     'panel.resume_analysis': '재개',
+
+    // End Meeting Modal
+    'end_meeting.title': '회의 저장',
+    'end_meeting.meeting_title': '회의 제목',
+    'end_meeting.tags': '태그',
+    'end_meeting.categories': '카테고리',
+    'end_meeting.importance': '중요도',
+    'end_meeting.participants': '참석자',
+    'end_meeting.location': '장소',
+    'end_meeting.save': '저장',
+    'end_meeting.cancel': '취소',
+    'end_meeting.generating': 'AI 추천 생성 중...',
+    'end_meeting.add_tag': '태그 추가...',
+    'end_meeting.add_participant': '이름 추가...',
+    'end_meeting.no_participants': '등록된 연락처가 없습니다.',
+
+    // Panel bookmarks
+    'panel.bookmarks': '북마크',
+
+    // Settings Data tab
+    'settings.tab_data': '데이터',
+    'settings.tab_prompt': '프롬프트',
+    'settings.participants': '참석자',
+    'settings.locations': '장소',
+    'settings.categories': '카테고리',
+    'settings.add': '추가',
+    'settings.no_items': '항목이 없습니다.',
+
+    // History filters
+    'history.filter_all_categories': '모든 카테고리',
+    'history.filter_all_ratings': '모든 별점',
+    'history.filter_tag': '태그로 필터...',
+
+    // Meeting title placeholder
+    'meeting.title_placeholder': '회의 제목...',
 
     // Misc
     'minutes': '{n}분',

@@ -5,6 +5,9 @@ import {
   saveSettings, loadSettings, saveApiKey, getApiKey,
   listMeetings, getMeeting,
   loadTypoDict, resetTypoDict,
+  loadContacts, addContact, deleteContact,
+  loadLocations, addLocation, deleteLocation,
+  loadCategories, addCategory, deleteCategory,
 } from './storage.js';
 import { getDefaultPrompt, getPresetContext } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
@@ -274,6 +277,9 @@ export function initSettings() {
       saveSetting('chatModel', e.target.value);
     });
   }
+
+  // ===== Data Tab =====
+  initDataTab();
 }
 
 function addPresetOption(name) {
@@ -412,6 +418,111 @@ function renderTypoDictModal() {
         updateTypoDictCount();
         renderTypoDictModal();
       });
+    });
+    list.appendChild(item);
+  });
+}
+
+// ===== Data Tab (Participants, Locations, Categories) =====
+function initDataTab() {
+  renderDataParticipants();
+  renderDataLocations();
+  renderDataCategories();
+
+  // Add participant
+  $('#btnAddParticipant')?.addEventListener('click', () => {
+    const name = $('#inputNewParticipantName')?.value.trim();
+    if (!name) return;
+    const company = $('#inputNewParticipantCompany')?.value.trim() || '';
+    addContact({ name, company });
+    $('#inputNewParticipantName').value = '';
+    $('#inputNewParticipantCompany').value = '';
+    renderDataParticipants();
+  });
+
+  // Add location
+  $('#btnAddLocation')?.addEventListener('click', () => {
+    const name = $('#inputNewLocation')?.value.trim();
+    if (!name) return;
+    addLocation(name);
+    $('#inputNewLocation').value = '';
+    renderDataLocations();
+  });
+
+  // Add category
+  $('#btnAddCategory')?.addEventListener('click', () => {
+    const name = $('#inputNewCategory')?.value.trim();
+    if (!name) return;
+    addCategory(name);
+    $('#inputNewCategory').value = '';
+    renderDataCategories();
+  });
+}
+
+function renderDataParticipants() {
+  const list = $('#dataParticipantsList');
+  if (!list) return;
+  const contacts = loadContacts();
+  list.innerHTML = '';
+  if (contacts.length === 0) {
+    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
+    return;
+  }
+  contacts.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'data-list-item';
+    item.innerHTML = `
+      <div class="data-list-item-info">
+        <span>${c.name}</span>
+        ${c.company ? `<span class="data-list-item-sub">${c.company}</span>` : ''}
+      </div>
+      <button class="btn btn-xs btn-danger">&times;</button>
+    `;
+    item.querySelector('button').addEventListener('click', () => {
+      deleteContact(c.id);
+      renderDataParticipants();
+    });
+    list.appendChild(item);
+  });
+}
+
+function renderDataLocations() {
+  const list = $('#dataLocationsList');
+  if (!list) return;
+  const locations = loadLocations();
+  list.innerHTML = '';
+  if (locations.length === 0) {
+    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
+    return;
+  }
+  locations.forEach(loc => {
+    const item = document.createElement('div');
+    item.className = 'data-list-item';
+    item.innerHTML = `<span>${loc}</span><button class="btn btn-xs btn-danger">&times;</button>`;
+    item.querySelector('button').addEventListener('click', () => {
+      deleteLocation(loc);
+      renderDataLocations();
+    });
+    list.appendChild(item);
+  });
+}
+
+function renderDataCategories() {
+  const list = $('#dataCategoriesList');
+  if (!list) return;
+  const categories = loadCategories();
+  list.innerHTML = '';
+  if (categories.length === 0) {
+    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
+    return;
+  }
+  categories.forEach(cat => {
+    const item = document.createElement('div');
+    item.className = 'data-list-item';
+    item.innerHTML = `<span>${cat}</span><button class="btn btn-xs btn-danger">&times;</button>`;
+    item.querySelector('button').addEventListener('click', () => {
+      deleteCategory(cat);
+      renderDataCategories();
     });
     list.appendChild(item);
   });

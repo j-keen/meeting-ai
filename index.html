@@ -15,16 +15,17 @@
     <div class="header-left">
       <h1 class="logo">Meeting AI</h1>
       <span class="meeting-timer" id="meetingTimer">00:00:00</span>
+      <input type="text" class="meeting-title-input" id="meetingTitleInput" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title..." hidden>
       <span class="meeting-status" id="meetingStatus"></span>
     </div>
     <div class="header-center"></div>
     <div class="header-right">
-      <button class="btn btn-icon" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
-        <span class="icon-theme-light">&#9788;</span>
-        <span class="icon-theme-dark">&#9790;</span>
+      <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
+        <span class="icon-theme-light" data-i18n="header.theme_dark">Dark</span>
+        <span class="icon-theme-dark" data-i18n="header.theme_light">Light</span>
       </button>
-      <button class="btn btn-icon" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">&#128218;</button>
-      <button class="btn btn-icon" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">&#9881;</button>
+      <button class="btn btn-text" id="btnHistory" data-i18n="header.history" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">History</button>
+      <button class="btn btn-text" id="btnSettings" data-i18n="header.settings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">Settings</button>
     </div>
   </header>
 
@@ -42,14 +43,9 @@
       <div class="panel-header">
         <h2 data-i18n="panel.transcript">Transcript</h2>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="btnHighlights" title="Highlights">&#11088; <span data-i18n="panel.highlights">Highlights</span></button>
+          <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128204; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
           <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Export</span></button>
         </div>
-      </div>
-      <!-- Meeting Info Bar -->
-      <div class="meeting-info-bar" id="meetingInfoBar">
-        <input type="text" class="meeting-info-input" id="inputMeetingLocation" data-i18n-placeholder="meeting.location_placeholder" placeholder="Meeting location...">
-        <span class="meeting-info-time" id="meetingInfoTime"></span>
       </div>
       <div class="transcript-list" id="transcriptList">
         <div class="transcript-empty" id="transcriptEmpty">
@@ -91,9 +87,11 @@
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
         <h2 data-i18n="panel.ai">AI Analysis</h2>
-        <span class="analysis-countdown" id="analysisCountdown"></span>
+        <button class="analysis-chip" id="analysisChip" style="display:none">
+          <span class="analysis-chip-icon" id="analysisChipIcon"></span>
+          <span class="analysis-chip-text" id="analysisChipText"></span>
+        </button>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="btnPauseAnalysis" title="Pause/Resume analysis" style="display:none">&#9208; <span data-i18n="panel.pause_analysis">Pause</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128203; <span data-i18n="panel.analysis_history">History</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Settings</span></button>
@@ -103,6 +101,17 @@
         <div class="ai-empty" id="aiEmpty">
           <p data-i18n="ai.empty">AI analysis results will appear here.</p>
           <p class="text-muted" data-i18n="ai.empty_hint">Analysis runs automatically during recording.</p>
+          <div class="panel-waiting" id="aiWaiting" style="display:none">
+            <div class="waiting-ring-wrap">
+              <svg class="waiting-ring" viewBox="0 0 36 36">
+                <circle class="waiting-ring-bg" cx="18" cy="18" r="15.5" />
+                <circle class="waiting-ring-fill" id="aiWaitingRing" cx="18" cy="18" r="15.5" />
+              </svg>
+              <div class="waiting-dot waiting-dot-accent"></div>
+            </div>
+            <p class="waiting-text" data-i18n="ai.waiting">Press Analyze Now or wait for auto-analysis.</p>
+            <p class="waiting-hint text-muted" id="aiWaitingHint"></p>
+          </div>
         </div>
       </div>
     </section>
@@ -118,6 +127,12 @@
       <div class="chat-messages" id="chatMessages">
         <div class="chat-empty" id="chatEmpty">
           <p data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
+          <div class="panel-waiting" id="chatWaiting" style="display:none">
+            <div class="waiting-dot waiting-dot-success"></div>
+            <p class="waiting-text" data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
+            <p class="waiting-hint text-muted" data-i18n="chat.waiting_hint">Ask questions about the meeting in progress.</p>
+            <div class="chat-suggestions" id="chatSuggestions"></div>
+          </div>
         </div>
       </div>
       <div class="chat-input-wrap">
@@ -168,6 +183,7 @@
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
         <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Integration</button>
+        <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
       </div>
 
       <!-- General Tab -->
@@ -354,6 +370,35 @@
           </div>
         </section>
       </div>
+
+      <!-- Data Tab -->
+      <div class="settings-tab-content" data-tab="data">
+        <section class="settings-section">
+          <h3 data-i18n="settings.participants">Participants</h3>
+          <div class="data-list" id="dataParticipantsList"></div>
+          <div class="data-add-row">
+            <input type="text" class="settings-input" id="inputNewParticipantName" placeholder="Name">
+            <input type="text" class="settings-input" id="inputNewParticipantCompany" placeholder="Company">
+            <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.locations">Locations</h3>
+          <div class="data-list" id="dataLocationsList"></div>
+          <div class="data-add-row">
+            <input type="text" class="settings-input" id="inputNewLocation" placeholder="Location name">
+            <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.categories">Categories</h3>
+          <div class="data-list" id="dataCategoriesList"></div>
+          <div class="data-add-row">
+            <input type="text" class="settings-input" id="inputNewCategory" placeholder="Category name">
+            <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
+          </div>
+        </section>
+      </div>
     </div>
   </aside>
 
@@ -405,6 +450,15 @@
               <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
               <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
               <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+            </select>
+            <select class="settings-select history-filter-select" id="historyFilterCategory">
+              <option value="" data-i18n="history.filter_all_categories">All Categories</option>
+            </select>
+            <select class="settings-select history-filter-select" id="historyFilterRating">
+              <option value="" data-i18n="history.filter_all_ratings">All Ratings</option>
+              <option value="3">&#9733;3+</option>
+              <option value="4">&#9733;4+</option>
+              <option value="5">&#9733;5</option>
             </select>
             <input type="text" class="settings-input history-filter-tag" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
             <input type="date" class="settings-input history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
@@ -463,6 +517,70 @@
           <button class="btn btn-sm" data-tab="memos" data-i18n="highlights.memos">Memos</button>
         </div>
         <div class="highlights-list" id="highlightsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Meeting Modal -->
+  <div class="modal-overlay" id="endMeetingModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="end_meeting.title">Save Meeting</h3>
+        <button class="btn btn-icon modal-close" data-close="endMeetingModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Title -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
+          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title...">
+          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
+            <span class="ai-suggestions-label" data-i18n="end_meeting.generating">Generating AI suggestions...</span>
+            <div class="ai-title-chips" id="aiTitleChips"></div>
+          </div>
+        </div>
+        <!-- Tags -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
+          <div class="end-meeting-tags" id="endMeetingTags"></div>
+          <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
+        </div>
+        <!-- Categories -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
+          <div class="end-meeting-categories" id="endMeetingCategories"></div>
+        </div>
+        <!-- Importance -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
+          <div class="star-rating" id="endMeetingStars">
+            <button class="star-btn" data-star="1">&#9733;</button>
+            <button class="star-btn" data-star="2">&#9733;</button>
+            <button class="star-btn" data-star="3">&#9733;</button>
+            <button class="star-btn" data-star="4">&#9733;</button>
+            <button class="star-btn" data-star="5">&#9733;</button>
+          </div>
+        </div>
+        <!-- Participants -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
+          <div class="end-meeting-participants-selected" id="endMeetingParticipantsSelected"></div>
+          <div class="end-meeting-participants-list" id="endMeetingParticipantsList"></div>
+          <div class="end-meeting-inline-add">
+            <input type="text" class="settings-input" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.add_participant" placeholder="Add name...">
+            <button class="btn btn-sm" id="btnEndMeetingAddParticipant">+</button>
+          </div>
+        </div>
+        <!-- Location -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
+          <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
+          <datalist id="locationDatalist"></datalist>
+        </div>
+        <!-- Actions -->
+        <div class="end-meeting-actions">
+          <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
+          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+        </div>
       </div>
     </div>
   </div>

@@ -188,6 +188,72 @@ export function deleteContact(id) {
   return saveAll(data);
 }
 
+// Locations CRUD
+export function loadLocations() {
+  const data = loadAll();
+  return data.locations || [];
+}
+
+export function saveLocations(locations) {
+  const data = loadAll();
+  data.locations = locations;
+  return saveAll(data);
+}
+
+export function addLocation(name) {
+  const data = loadAll();
+  if (!data.locations) data.locations = [];
+  if (!data.locations.includes(name)) {
+    data.locations.push(name);
+    saveAll(data);
+  }
+  return data.locations;
+}
+
+export function deleteLocation(name) {
+  const data = loadAll();
+  if (!data.locations) return [];
+  data.locations = data.locations.filter(l => l !== name);
+  saveAll(data);
+  return data.locations;
+}
+
+// Categories CRUD
+const DEFAULT_CATEGORIES = ['정기회의', '브레인스토밍', '고객미팅', '1:1', '프로젝트', '교육'];
+
+export function loadCategories() {
+  const data = loadAll();
+  if (!data.categories) {
+    data.categories = [...DEFAULT_CATEGORIES];
+    saveAll(data);
+  }
+  return data.categories;
+}
+
+export function saveCategories(categories) {
+  const data = loadAll();
+  data.categories = categories;
+  return saveAll(data);
+}
+
+export function addCategory(name) {
+  const data = loadAll();
+  if (!data.categories) data.categories = [...DEFAULT_CATEGORIES];
+  if (!data.categories.includes(name)) {
+    data.categories.push(name);
+    saveAll(data);
+  }
+  return data.categories;
+}
+
+export function deleteCategory(name) {
+  const data = loadAll();
+  if (!data.categories) return [];
+  data.categories = data.categories.filter(c => c !== name);
+  saveAll(data);
+  return data.categories;
+}
+
 // Meeting Prep Presets
 export function loadMeetingPrepPresets() {
   const data = loadAll();
