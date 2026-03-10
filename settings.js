@@ -23,6 +23,7 @@ function snapshotSettings() {
   settingsSnapshot = JSON.parse(JSON.stringify(state.settings));
   isDirty = false;
   updateDirtyUI();
+  clearAllHighlights();
 }
 
 function markDirty() {
@@ -40,6 +41,18 @@ function updateDirtyUI() {
   }
 }
 
+function highlightField(el) {
+  const container = el.closest('.settings-label')
+    || el.closest('.settings-inline-row')
+    || el.closest('.strategy-card')
+    || el.closest('.settings-section');
+  if (container) container.classList.add('settings-changed');
+}
+
+function clearAllHighlights() {
+  document.querySelectorAll('.settings-changed').forEach(el => el.classList.remove('settings-changed'));
+}
+
 export function initSettings() {
   const panel = $('#settingsPanel');
   const overlay = $('#settingsOverlay');
@@ -53,6 +66,17 @@ export function initSettings() {
   $('#btnSettingsSave').addEventListener('click', () => saveAllSettings());
   $('#btnSettingsCancel').addEventListener('click', () => tryCloseSettings());
   $('#btnSettingsReset').addEventListener('click', () => resetAllSettings());
+
+  // Highlight changed fields via event delegation
+  panel.addEventListener('change', (e) => highlightField(e.target));
+
+  // Ctrl+S to save settings
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 's' && panel.classList.contains('open')) {
+      e.preventDefault();
+      if (isDirty) saveAllSettings();
+    }
+  });
 
   // Load saved values
   loadSavedSettings();
@@ -173,6 +197,7 @@ export function initSettings() {
     if (!state.settings.customPresets) state.settings.customPresets = {};
     state.settings.customPresets[name] = promptText;
     markDirty();
+    highlightField($('#selectMeetingPreset'));
     addPresetOption(name);
     $('#selectMeetingPreset').value = name;
     state.settings.meetingPreset = name;
@@ -187,6 +212,7 @@ export function initSettings() {
     if (state.settings.customPresets?.[currentPreset]) {
       delete state.settings.customPresets[currentPreset];
       markDirty();
+      highlightField($('#textPresetPrompt'));
     }
     updatePresetPromptDisplay();
   });
@@ -222,6 +248,7 @@ export function initSettings() {
       state.settings.meetingContext = `[Previous Meeting: ${meeting.title || 'Untitled'}]\n${summary}`;
       $('#textMeetingContext').value = state.settings.meetingContext;
       markDirty();
+      highlightField($('#textMeetingContext'));
     }
   });
 
@@ -236,6 +263,7 @@ export function initSettings() {
       state.settings.meetingContext = text;
       $('#textMeetingContext').value = text;
       markDirty();
+      highlightField($('#textMeetingContext'));
     };
     reader.readAsText(file);
   });
@@ -250,6 +278,7 @@ export function initSettings() {
     $('#textPrompt').value = def;
     state.settings.customPrompt = def;
     markDirty();
+    highlightField($('#textPrompt'));
   });
 
   // Chat System Prompt
@@ -261,6 +290,7 @@ export function initSettings() {
     $('#textChatPrompt').value = '';
     state.settings.chatSystemPrompt = '';
     markDirty();
+    highlightField($('#textChatPrompt'));
   });
 
   // Typo Dictionary (immediate save - CRUD operation, not settings)
@@ -362,6 +392,7 @@ function revertSettings() {
 
   isDirty = false;
   updateDirtyUI();
+  clearAllHighlights();
 }
 
 function resetAllSettings() {
@@ -563,6 +594,7 @@ function initChatPresets() {
     if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
     state.settings.chatPresets.push(text);
     markDirty();
+    highlightField($('#chatPresetsList'));
     input.value = '';
     renderChatPresets();
   });
@@ -570,6 +602,7 @@ function initChatPresets() {
   $('#btnResetChatPresets')?.addEventListener('click', () => {
     state.settings.chatPresets = getDefaultChatPresets();
     markDirty();
+    highlightField($('#chatPresetsList'));
     renderChatPresets();
   });
 }
@@ -600,6 +633,7 @@ function renderChatPresets() {
         if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
         state.settings.chatPresets[idx] = newText;
         markDirty();
+        highlightField($('#chatPresetsList'));
       } else if (!newText) {
         span.textContent = text;
       }
@@ -616,6 +650,7 @@ function renderChatPresets() {
       if (!state.settings.chatPresets) state.settings.chatPresets = getDefaultChatPresets();
       state.settings.chatPresets.splice(idx, 1);
       markDirty();
+      highlightField($('#chatPresetsList'));
       renderChatPresets();
     });
 
