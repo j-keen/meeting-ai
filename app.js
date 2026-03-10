@@ -70,6 +70,17 @@ let countdownTimer = null;
 let countdownEnd = 0;
 let countdownIntervalMs = 0;
 
+// Cached analysis chip elements (set after DOMContentLoaded)
+let chipEl = null, chipIconEl = null, chipTextEl = null;
+function getChipEls() {
+  if (!chipEl) {
+    chipEl = $('#analysisChip');
+    chipIconEl = $('#analysisChipIcon');
+    chipTextEl = $('#analysisChipText');
+  }
+  return { chip: chipEl, icon: chipIconEl, text: chipTextEl };
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -194,11 +205,13 @@ function startAutoAnalysis() {
 
 function startAnalysisCountdown(intervalMs) {
   stopAnalysisCountdown();
-  const chip = $('#analysisChip');
+  const { chip } = getChipEls();
   if (!chip) return;
+  const { icon } = getChipEls();
   countdownIntervalMs = intervalMs;
   countdownEnd = Date.now() + intervalMs;
   chip.className = 'analysis-chip counting';
+  if (icon) icon.textContent = '⏸';
   updateCountdownText();
   countdownTimer = setInterval(() => updateCountdownText(), 1000);
   // Animate the SVG ring in AI waiting state
@@ -207,41 +220,35 @@ function startAnalysisCountdown(intervalMs) {
 }
 
 function updateCountdownText() {
-  const icon = $('#analysisChipIcon');
-  const text = $('#analysisChipText');
+  const { icon, text } = getChipEls();
   if (!icon || !text) return;
   const remaining = Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000));
-  icon.textContent = '⏸';
   text.textContent = t('analysis.countdown', { n: remaining });
 }
 
 function stopAnalysisCountdown() {
   clearInterval(countdownTimer);
   countdownTimer = null;
-  const chip = $('#analysisChip');
+  const { chip, icon, text } = getChipEls();
   if (chip) {
     chip.className = 'analysis-chip';
-    const icon = $('#analysisChipIcon');
-    const text = $('#analysisChipText');
     if (icon) icon.textContent = '';
     if (text) text.textContent = '';
   }
 }
 
 function showAnalyzingState() {
-  const chip = $('#analysisChip');
+  const { chip, icon, text } = getChipEls();
   if (!chip) return;
   clearInterval(countdownTimer);
   countdownTimer = null;
   chip.className = 'analysis-chip analyzing';
-  const icon = $('#analysisChipIcon');
-  const text = $('#analysisChipText');
   if (icon) icon.textContent = '⏳';
   if (text) text.textContent = t('analysis.analyzing');
 }
 
 function hideAnalyzingState() {
-  const chip = $('#analysisChip');
+  const { chip } = getChipEls();
   if (chip) chip.classList.remove('analyzing');
   if (isAnalysisPaused) {
     showPausedState();
@@ -267,7 +274,7 @@ function toggleAnalysisPause() {
 }
 
 function updatePauseButtonVisibility(show) {
-  const chip = $('#analysisChip');
+  const { chip } = getChipEls();
   if (!chip) return;
   chip.style.display = show ? '' : 'none';
   if (!show) {
@@ -277,13 +284,11 @@ function updatePauseButtonVisibility(show) {
 }
 
 function showPausedState() {
-  const chip = $('#analysisChip');
+  const { chip, icon, text } = getChipEls();
   if (!chip) return;
   clearInterval(countdownTimer);
   countdownTimer = null;
   chip.className = 'analysis-chip paused';
-  const icon = $('#analysisChipIcon');
-  const text = $('#analysisChipText');
   if (icon) icon.textContent = '▶';
   if (text) text.textContent = t('analysis.paused');
 }
@@ -480,8 +485,12 @@ function renderEndMeetingTags() {
   state.tags.forEach(tag => {
     const el = document.createElement('span');
     el.className = 'end-meeting-tag';
-    el.innerHTML = `${tag}<button class="end-meeting-tag-remove">&times;</button>`;
-    el.querySelector('.end-meeting-tag-remove').addEventListener('click', () => {
+    const tagText = document.createTextNode(tag);
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'end-meeting-tag-remove';
+    removeBtn.textContent = '\u00d7';
+    el.append(tagText, removeBtn);
+    removeBtn.addEventListener('click', () => {
       state.tags = state.tags.filter(t2 => t2 !== tag);
       renderEndMeetingTags();
     });
@@ -525,8 +534,12 @@ function renderEndMeetingParticipants() {
   state.participants.forEach(p => {
     const badge = document.createElement('span');
     badge.className = 'contact-badge';
-    badge.innerHTML = `${p.name || p}<button class="contact-badge-remove">&times;</button>`;
-    badge.querySelector('.contact-badge-remove').addEventListener('click', () => {
+    const nameText = document.createTextNode(p.name || p);
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'contact-badge-remove';
+    removeBtn.textContent = '\u00d7';
+    badge.append(nameText, removeBtn);
+    removeBtn.addEventListener('click', () => {
       state.participants = state.participants.filter(pp => pp !== p);
       renderEndMeetingParticipants();
     });
@@ -542,7 +555,13 @@ function renderEndMeetingParticipants() {
       if (state.participants.some(p => (p.id || p) === contact.id)) return;
       const card = document.createElement('div');
       card.className = 'contact-card';
-      card.innerHTML = `<span class="contact-card-name">${contact.name}</span><span class="contact-card-company">${contact.company || ''}</span>`;
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'contact-card-name';
+      nameSpan.textContent = contact.name;
+      const companySpan = document.createElement('span');
+      companySpan.className = 'contact-card-company';
+      companySpan.textContent = contact.company || '';
+      card.append(nameSpan, companySpan);
       card.addEventListener('click', () => {
         state.participants.push({ id: contact.id, name: contact.name });
         renderEndMeetingParticipants();
@@ -630,13 +649,10 @@ function resetMeeting() {
   state.userInsights = [];
   state.tags = [];
   $('#transcriptList').innerHTML = '';
-  $('#transcriptEmpty').style.display = '';
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';
-  $('#aiEmpty').style.display = '';
   resetAiEmpty();
   $('#chatMessages').innerHTML = '';
-  $('#chatEmpty').style.display = '';
   resetChatEmpty();
   $('#meetingTimer').textContent = '00:00:00';
   $('#meetingStatus').textContent = '';
@@ -807,8 +823,13 @@ function getHistoryFilters() {
   };
 }
 
+let historySearchTimer = null;
 function refreshHistoryGrid() {
   renderHistoryGrid(listMeetings(), getHistoryFilters());
+}
+function refreshHistoryGridDebounced() {
+  clearTimeout(historySearchTimer);
+  historySearchTimer = setTimeout(refreshHistoryGrid, 250);
 }
 
 // ===== Init =====
@@ -1004,9 +1025,9 @@ function init() {
     refreshHistoryGrid();
     $('#historyModal').hidden = false;
   });
-  $('#historySearch').addEventListener('input', () => refreshHistoryGrid());
+  $('#historySearch').addEventListener('input', () => refreshHistoryGridDebounced());
   $('#historyFilterType').addEventListener('change', () => refreshHistoryGrid());
-  $('#historyFilterTag')?.addEventListener('input', () => refreshHistoryGrid());
+  $('#historyFilterTag')?.addEventListener('input', () => refreshHistoryGridDebounced());
   $('#historyFilterCategory')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterRating')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateFrom').addEventListener('change', () => refreshHistoryGrid());

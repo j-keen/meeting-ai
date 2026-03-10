@@ -403,13 +403,21 @@ function renderTypoDictModal() {
   entries.forEach(([before, after]) => {
     const item = document.createElement('div');
     item.className = 'typo-dict-item';
-    item.innerHTML = `
-      <span class="typo-dict-before">${before}</span>
-      <span class="typo-dict-arrow">&rarr;</span>
-      <span class="typo-dict-after">${after}</span>
-      <button class="btn btn-xs btn-danger" data-before="${before}" style="margin-left:auto;">&times;</button>
-    `;
-    item.querySelector('button').addEventListener('click', () => {
+    const beforeSpan = document.createElement('span');
+    beforeSpan.className = 'typo-dict-before';
+    beforeSpan.textContent = before;
+    const arrowSpan = document.createElement('span');
+    arrowSpan.className = 'typo-dict-arrow';
+    arrowSpan.innerHTML = '&rarr;';
+    const afterSpan = document.createElement('span');
+    afterSpan.className = 'typo-dict-after';
+    afterSpan.textContent = after;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.style.marginLeft = 'auto';
+    delBtn.textContent = '\u00d7';
+    item.append(beforeSpan, arrowSpan, afterSpan, delBtn);
+    delBtn.addEventListener('click', () => {
       delete dict[before];
       const { saveTypoDict } = require('./storage.js');
       // Inline delete
@@ -471,13 +479,21 @@ function renderDataParticipants() {
   contacts.forEach(c => {
     const item = document.createElement('div');
     item.className = 'data-list-item';
-    item.innerHTML = `
-      <div class="data-list-item-info">
-        <span>${c.name}</span>
-        ${c.company ? `<span class="data-list-item-sub">${c.company}</span>` : ''}
-      </div>
-      <button class="btn btn-xs btn-danger">&times;</button>
-    `;
+    const info = document.createElement('div');
+    info.className = 'data-list-item-info';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = c.name;
+    info.appendChild(nameSpan);
+    if (c.company) {
+      const compSpan = document.createElement('span');
+      compSpan.className = 'data-list-item-sub';
+      compSpan.textContent = c.company;
+      info.appendChild(compSpan);
+    }
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.textContent = '\u00d7';
+    item.append(info, delBtn);
     item.querySelector('button').addEventListener('click', () => {
       deleteContact(c.id);
       renderDataParticipants();
@@ -498,8 +514,13 @@ function renderDataLocations() {
   locations.forEach(loc => {
     const item = document.createElement('div');
     item.className = 'data-list-item';
-    item.innerHTML = `<span>${loc}</span><button class="btn btn-xs btn-danger">&times;</button>`;
-    item.querySelector('button').addEventListener('click', () => {
+    const span = document.createElement('span');
+    span.textContent = loc;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.textContent = '\u00d7';
+    item.append(span, delBtn);
+    delBtn.addEventListener('click', () => {
       deleteLocation(loc);
       renderDataLocations();
     });
@@ -519,8 +540,13 @@ function renderDataCategories() {
   categories.forEach(cat => {
     const item = document.createElement('div');
     item.className = 'data-list-item';
-    item.innerHTML = `<span>${cat}</span><button class="btn btn-xs btn-danger">&times;</button>`;
-    item.querySelector('button').addEventListener('click', () => {
+    const span = document.createElement('span');
+    span.textContent = cat;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.textContent = '\u00d7';
+    item.append(span, delBtn);
+    delBtn.addEventListener('click', () => {
       deleteCategory(cat);
       renderDataCategories();
     });

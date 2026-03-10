@@ -223,11 +223,7 @@ const DEFAULT_CATEGORIES = ['정기회의', '브레인스토밍', '고객미팅'
 
 export function loadCategories() {
   const data = loadAll();
-  if (!data.categories) {
-    data.categories = [...DEFAULT_CATEGORIES];
-    saveAll(data);
-  }
-  return data.categories;
+  return data.categories || [...DEFAULT_CATEGORIES];
 }
 
 export function saveCategories(categories) {
