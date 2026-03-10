@@ -146,8 +146,9 @@ export function addTranscriptLine(line, corrections) {
   }
 
   if (line.bookmarked) el.classList.add('bookmarked');
-
-  el.querySelector('[data-action="bookmark"]').title = t('transcript.bookmark_tooltip');
+  const bkmBtnInit = el.querySelector('[data-action="bookmark"]');
+  bkmBtnInit.textContent = line.bookmarked ? '★' : '☆';
+  bkmBtnInit.title = t('transcript.bookmark_tooltip');
   el.querySelector('[data-action="edit"]').title = t('transcript.edit_tooltip');
   el.querySelector('[data-action="bookmark"]').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -340,6 +341,8 @@ export function updateTranscriptLineUI(id) {
 
   el.querySelector('.transcript-text').textContent = line.text;
   el.classList.toggle('bookmarked', !!line.bookmarked);
+  const bkmBtn = el.querySelector('[data-action="bookmark"]');
+  if (bkmBtn) bkmBtn.textContent = line.bookmarked ? '★' : '☆';
 }
 
 export function removeTranscriptLineUI(id) {

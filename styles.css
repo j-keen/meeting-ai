@@ -120,6 +120,8 @@ h1, h2, h3 { font-weight: 600; }
 .btn-sm { padding: 3px 8px; font-size: 12px; }
 .btn-xs { padding: 2px 6px; font-size: 11px; border: none; background: transparent; }
 .btn-xs:hover { background: var(--bg-hover); }
+.btn-xs[data-action="bookmark"] { color: var(--text-muted); font-size: 14px; }
+.bookmarked .btn-xs[data-action="bookmark"] { color: #f59e0b; }
 .btn-icon {
   padding: 4px 8px;
   border: none;
@@ -327,11 +329,7 @@ h1, h2, h3 { font-weight: 600; }
 
 /* ===== Transcript Waiting State ===== */
 .transcript-waiting {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 40px 20px;
+  /* positioned by .panel-waiting, .transcript-waiting rule */
 }
 .waiting-indicator {
   width: 16px;
@@ -356,12 +354,7 @@ h1, h2, h3 { font-weight: 600; }
 
 /* ===== Panel Waiting States ===== */
 .panel-waiting {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 20px;
-  width: 100%;
+  /* positioned by .panel-waiting, .transcript-waiting rule */
 }
 
 /* Accent (blue) pulse dot */
@@ -489,13 +482,19 @@ h1, h2, h3 { font-weight: 600; }
   text-align: center;
   color: var(--text-muted);
   padding: 20px;
+  position: relative;
 }
 .panel-waiting, .transcript-waiting {
-  flex: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  width: calc(100% - 40px);
 }
 .transcript-line {
   display: flex;
