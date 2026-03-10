@@ -891,6 +891,7 @@ function init() {
 
   // Demo data
   $('#btnLoadDemo').addEventListener('click', () => loadDemoData());
+  $('#btnLoadDemo2').addEventListener('click', () => loadDemoData2());
 
   // Theme toggle
   $('#btnThemeToggle').addEventListener('click', () => {
@@ -1350,5 +1351,95 @@ function loadDemoData() {
 }
 
 window.__loadDemo = loadDemoData;
+
+function loadDemoData2() {
+  // First load base demo transcript
+  loadDemoData();
+
+  const now = Date.now();
+  const base = now - 55 * 60000;
+
+  // Analysis #1: 초반 (스프린트 리뷰 단계)
+  state.analysisHistory.push({
+    flow: '스프린트 리뷰 진행, 인증 모듈 성과 보고',
+    summary: '주간 스프린트 리뷰가 시작되었습니다. 사용자 인증 모듈 리팩토링이 완료되어 테스트 커버리지가 85%로 목표(80%)를 초과 달성했습니다. 토큰 갱신 레이스 컨디션을 뮤텍스 패턴으로 해결하여 응답 시간이 200ms에서 50ms로 줄었고, Sentry 에러가 하루 340건에서 12건(96% 감소)으로 대폭 개선되었습니다. 새 대시보드 UI 디자인이 Figma에 공유되었으며 총 8화면, 34컴포넌트, 모바일 반응형(768/1024/1440px) 포함입니다.',
+    context: '스프린트 리뷰 및 대시보드 UI 진행상황 공유 단계. 인증 모듈 성과가 매우 긍정적.',
+    openQuestions: [
+      '대시보드 Figma 디자인 리뷰 일정이 아직 확정되지 않음',
+      '다크 모드 HSL 기반 전환이 모든 브라우저에서 테스트되었는지 확인 필요',
+    ],
+    actionItems: [
+      '대시보드 Figma 디자인 리뷰 (이번 주 내)',
+      '경영진 보고에 인증 모듈 성과 수치 포함',
+    ],
+    suggestions: [
+      '인증 모듈 성과(96% 에러 감소)를 팀 전체에 공유하여 사기 진작',
+      '디자인 토큰 JSON export 활용한 자동화 파이프라인 검토',
+    ],
+    timestamp: base + 15 * 60000,
+  });
+
+  // Analysis #2: 중반 (기술 부채 + 데모 준비)
+  state.analysisHistory.push({
+    flow: '기술 부채 논의 → 클라이언트 데모 준비로 전환',
+    summary: '스프린트 리뷰 후 기술 부채 논의로 넘어갔습니다. SonarQube 기준 코드 스멜 287개(critical 12, major 45), 보안 취약점 3개가 확인되었습니다. lodash는 즉시 업그레이드, axios 1.x는 다음 스프린트로 연기하기로 결정했습니다. Critical 코드 스멜 12개는 담당자 배분 완료(민수:인증4, 지영:API5, 현우:프론트3). 이후 4/15 클라이언트 데모(A사 김 부장 외 3명) 준비 논의가 시작되어, 핵심 기능(로그인/대시보드/보고서) 위주로 데모하기로 했습니다. 데모 시나리오 초안은 금요일까지 작성 예정입니다.',
+    context: '기술 부채 정리에서 클라이언트 데모 준비로 전환. axios 업그레이드 리스크 관리가 주요 결정 포인트.',
+    openQuestions: [
+      '보고서 커스터마이징 베타 기능을 데모에서 보여줘도 안전한지 최종 확인 필요',
+      '데모 환경 스테이징 테넌트에 제조업 KPI 더미 데이터 준비 범위',
+    ],
+    actionItems: [
+      'lodash 4.17.21 업그레이드 (이번 스프린트)',
+      'axios 1.x 업그레이드 (다음 스프린트, 별도 브랜치)',
+      'critical 코드 스멜 12개 처리 — 민수(4), 지영(5), 현우(3)',
+      '데모 시나리오 초안 금요일까지 작성',
+      '스테이징 데모 테넌트 + 제조업 더미 데이터 500건 준비',
+    ],
+    suggestions: [
+      'Framer Motion으로 대시보드 애니메이션 추가 시 데모 임팩트 향상',
+      'axios 업그레이드 전 인터셉터 사용 파일 8개 목록을 문서화',
+    ],
+    timestamp: base + 30 * 60000,
+    bookmarked: true,
+    memo: '기술 부채 정리 방향 잘 잡힘',
+  });
+
+  // Analysis #3: 후반 (접근성 + 채용 + 마무리)
+  state.analysisHistory.push({
+    flow: '접근성·CI/CD 강화 → 채용 → 스프린트 목표 10개 확정',
+    summary: '접근성(WCAG 2.1 AA) 이슈로 컬러 대비 5건, aria-label 누락 22건 수정이 필요합니다. CI/CD에 axe-core + Lighthouse CI를 추가하기로 했으며, 파이프라인 시간은 4분30초→5분30초로 수용 가능. 채용 관련으로 시니어 프론트엔드 지원자 12명 중 서류통과 5명이 이번 주 코딩 테스트(React 실시간 데이터 테이블, 3시간) 예정입니다. 면접은 1차 기술(민수+현우), 2차 컬처핏(팀장). 주니어 백엔드 채용은 다음 분기로. 최종적으로 이번 스프린트 목표 10개가 확정되었습니다: REST API 5개, Storybook 문서화, 접근성 수정, lodash 업그레이드, critical 코드 스멜 12개, 데모 시나리오, 스테이징 준비, CI/CD 강화, 코딩 테스트 진행, Figma 리뷰(수요일까지).',
+    context: '회의 마무리 단계. 모든 안건이 정리되었으며 스프린트 목표 10개가 확정됨.',
+    openQuestions: [
+      '주니어 백엔드 채용 시기 — 다음 분기 인원 계획에 포함 예정',
+      'WebSocket 구현 — 다음 스프린트로 연기됨',
+    ],
+    actionItems: [
+      'REST API 5개 엔드포인트 구현',
+      '컴포넌트 라이브러리 Storybook 문서화',
+      '접근성 수정 22건 + 컬러 대비 5건',
+      'lodash 버전 업그레이드',
+      'critical 코드 스멜 12개 처리',
+      '클라이언트 데모 시나리오 금요일까지',
+      '스테이징 데모 테넌트 + 더미 데이터',
+      'CI/CD에 axe-core + Lighthouse CI 추가',
+      '시니어 프론트엔드 코딩 테스트 이번 주 진행',
+      '대시보드 Figma 리뷰 수요일까지',
+      '경영진 보고에 인증 성과 포함 (에러 96%↓, 응답 75%↓)',
+    ],
+    suggestions: [
+      '스프린트 목표 10개가 많으므로 우선순위 매트릭스 작성 권장',
+      '코딩 테스트 결과를 팀 전체 공유하여 평가 기준 정렬',
+      '데모 리허설을 최소 2회 실시하여 엣지케이스 사전 발견',
+    ],
+    timestamp: base + 50 * 60000,
+  });
+
+  renderAnalysisHistory();
+  // Show latest analysis in main panel
+  state.currentAnalysis = state.analysisHistory[state.analysisHistory.length - 1];
+  renderAnalysis(state.currentAnalysis);
+
+  showToast('Demo 2 loaded — 3 analysis snapshots with flow history', 'success');
+}
 
 document.addEventListener('DOMContentLoaded', init);
