@@ -86,11 +86,13 @@
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
-        <h2 data-i18n="panel.ai">AI Analysis</h2>
-        <button class="analysis-chip" id="analysisChip" style="display:none">
-          <span class="analysis-chip-icon" id="analysisChipIcon"></span>
-          <span class="analysis-chip-text" id="analysisChipText"></span>
-        </button>
+        <div style="display:flex;align-items:center">
+          <h2 data-i18n="panel.ai">AI Analysis</h2>
+          <button class="analysis-chip" id="analysisChip" style="display:none">
+            <span class="analysis-chip-icon" id="analysisChipIcon"></span>
+            <span class="analysis-chip-text" id="analysisChipText"></span>
+          </button>
+        </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">&#128203; <span data-i18n="panel.analysis_history">History</span></button>
@@ -529,21 +531,6 @@
         <button class="btn btn-icon modal-close" data-close="endMeetingModal">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- Title -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
-          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title...">
-          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
-            <span class="ai-suggestions-label" data-i18n="end_meeting.generating">Generating AI suggestions...</span>
-            <div class="ai-title-chips" id="aiTitleChips"></div>
-          </div>
-        </div>
-        <!-- Tags -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
-          <div class="end-meeting-tags" id="endMeetingTags"></div>
-          <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
-        </div>
         <!-- Categories -->
         <div class="end-meeting-section">
           <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
@@ -560,6 +547,15 @@
             <button class="star-btn" data-star="5">&#9733;</button>
           </div>
         </div>
+        <!-- Title -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
+          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title...">
+          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
+            <span class="ai-suggestions-label" data-i18n="end_meeting.generating">Generating AI suggestions...</span>
+            <div class="ai-title-chips" id="aiTitleChips"></div>
+          </div>
+        </div>
         <!-- Participants -->
         <div class="end-meeting-section">
           <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
@@ -569,6 +565,12 @@
             <input type="text" class="settings-input" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.add_participant" placeholder="Add name...">
             <button class="btn btn-sm" id="btnEndMeetingAddParticipant">+</button>
           </div>
+        </div>
+        <!-- Tags -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
+          <div class="end-meeting-tags" id="endMeetingTags"></div>
+          <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
         </div>
         <!-- Location -->
         <div class="end-meeting-section">
