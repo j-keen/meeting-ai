@@ -1353,96 +1353,106 @@ function loadDemoData() {
 window.__loadDemo = loadDemoData;
 
 function loadDemoData2() {
-  // First load base demo transcript
+  // First load base demo transcript (65 lines, ~55min)
   loadDemoData();
 
-  // Clear any analysis from auto-trigger or previous demo
-  state.analysisHistory = [];
+  // Extend transcript — additional discussion after main meeting wrap-up
+  const extraScript = [
+    // === Part 8: 추가 논의 — 모니터링 & 장애 대응 (55~62분) ===
+    { offset: 1420, text: '아 잠깐, 하나만 더 얘기합시다. 지난주 금요일 장애 건 후속 조치요.' },
+    { offset: 1440, text: '아, 맞다. 금요일 오후 3시에 DB 커넥션 풀 고갈돼서 API 서버 3대 다 죽었죠.' },
+    { offset: 1460, text: '원인이 뭐였어요? 슬랙에서 대충 보긴 했는데 자세히는 못 봤어요.' },
+    { offset: 1480, text: '배치 작업이 트랜잭션을 안 닫고 커넥션을 물고 있었어요. 최대 풀 사이즈가 20인데 배치가 18개를 점유하고 있었습니다.' },
+    { offset: 1505, text: '그래서 일반 API 요청이 커넥션 대기하다가 타임아웃 난 거군요.' },
+    { offset: 1520, text: '네. 일단 핫픽스로 배치 쪽 커넥션 타임아웃을 30초로 걸었고, 풀 사이즈를 50으로 늘렸어요.' },
+    { offset: 1545, text: '근본적으로는 배치 전용 커넥션 풀을 분리해야 하지 않나요? 같은 풀 쓰면 또 터질 수 있어요.' },
+    { offset: 1565, text: '맞아요. HikariCP 설정에서 배치용 별도 DataSource 만들면 됩니다. 이번 스프린트에 넣을까요?' },
+    { offset: 1585, text: '넣읍시다. 우선순위 높게요. 그리고 모니터링도 강화해야 해요. 커넥션 풀 사용률 알림이 없었잖아요.' },
+    { offset: 1610, text: 'Grafana에 커넥션 풀 대시보드는 있는데, 알림 임계값 설정이 안 돼 있었어요. 80% 넘으면 슬랙 알림 가게 하겠습니다.' },
+    { offset: 1630, text: 'CloudWatch 알림도 같이 걸어주세요. 슬랙 놓칠 수 있으니까 PagerDuty 연동도 검토해봐요.' },
+    { offset: 1650, text: '장애 대응 런북도 업데이트해야 합니다. 현재 런북이 작년 6월 버전이에요.' },
+    { offset: 1670, text: '그건 제가 이번 주에 업데이트하겠습니다. DB 장애, API 장애, 프론트 장애 시나리오별로 정리할게요.' },
 
-  const now = Date.now();
-  const base = now - 55 * 60000;
+    // === Part 9: 성능 최적화 논의 (62~70분) ===
+    { offset: 1695, text: '장애 얘기 나온 김에, 성능 쪽도 좀 봅시다. 대시보드 초기 로딩이 요즘 느려졌다는 피드백이 있어요.' },
+    { offset: 1720, text: 'Lighthouse 점수가 얼마나 나오나요? 저번에 측정했을 때 78점이었는데.' },
+    { offset: 1740, text: '이번 주 측정하니까 65점까지 떨어졌어요. FCP가 3.2초, LCP가 4.8초입니다.' },
+    { offset: 1760, text: '뭐가 그렇게 무거워진 거예요? 번들 사이즈 분석해봤어요?' },
+    { offset: 1780, text: 'webpack-bundle-analyzer 돌려봤는데, chart.js가 500KB, moment.js가 300KB 차지하고 있어요.' },
+    { offset: 1800, text: 'moment.js는 dayjs로 교체합시다. 2KB밖에 안 되잖아요. chart.js는 트리쉐이킹 적용하면 반으로 줄일 수 있어요.' },
+    { offset: 1825, text: '이미지 최적화도 필요해요. 히어로 배너가 2.4MB PNG예요. WebP로 변환하면 200KB까지 줄일 수 있습니다.' },
+    { offset: 1845, text: '코드 스플리팅은요? 대시보드 페이지에서 안 쓰는 모듈까지 전부 로딩되고 있는 것 같은데.' },
+    { offset: 1865, text: 'React.lazy로 라우트별 스플리팅 적용하면 초기 번들이 40%는 줄어들 겁니다. 보고서 모듈이 특히 무거워요.' },
+    { offset: 1885, text: '좋아요. 성능 개선 태스크 정리하면: moment→dayjs, chart.js 트리쉐이킹, 이미지 WebP, 코드 스플리팅. 이 네 가지.' },
+    { offset: 1910, text: '우선순위는 이미지 WebP가 제일 빠르고 효과 크니까 1순위, 그다음 moment→dayjs, 코드 스플리팅, chart.js 순서요.' },
 
-  // Analysis #1: 초반 (스프린트 리뷰 단계)
-  state.analysisHistory.push({
-    flow: '스프린트 리뷰 진행, 인증 모듈 성과 보고',
-    summary: '주간 스프린트 리뷰가 시작되었습니다. 사용자 인증 모듈 리팩토링이 완료되어 테스트 커버리지가 85%로 목표(80%)를 초과 달성했습니다. 토큰 갱신 레이스 컨디션을 뮤텍스 패턴으로 해결하여 응답 시간이 200ms에서 50ms로 줄었고, Sentry 에러가 하루 340건에서 12건(96% 감소)으로 대폭 개선되었습니다. 새 대시보드 UI 디자인이 Figma에 공유되었으며 총 8화면, 34컴포넌트, 모바일 반응형(768/1024/1440px) 포함입니다.',
-    context: '스프린트 리뷰 및 대시보드 UI 진행상황 공유 단계. 인증 모듈 성과가 매우 긍정적.',
-    openQuestions: [
-      '대시보드 Figma 디자인 리뷰 일정이 아직 확정되지 않음',
-      '다크 모드 HSL 기반 전환이 모든 브라우저에서 테스트되었는지 확인 필요',
-    ],
-    actionItems: [
-      '대시보드 Figma 디자인 리뷰 (이번 주 내)',
-      '경영진 보고에 인증 모듈 성과 수치 포함',
-    ],
-    suggestions: [
-      '인증 모듈 성과(96% 에러 감소)를 팀 전체에 공유하여 사기 진작',
-      '디자인 토큰 JSON export 활용한 자동화 파이프라인 검토',
-    ],
-    timestamp: base + 15 * 60000,
+    // === Part 10: 보안 감사 & 컴플라이언스 (70~78분) ===
+    { offset: 1935, text: '한 가지 더. 다음 달에 보안 감사가 있어요. SOC 2 Type II 준비해야 합니다.' },
+    { offset: 1955, text: '작년 감사 때 지적 사항이 뭐였죠? 그거 다 해결했나요?' },
+    { offset: 1975, text: '로그 보관 기간이 30일이었는데 90일로 늘리라는 거랑, MFA 강제 적용이 안 돼 있다는 거였어요.' },
+    { offset: 2000, text: '로그 보관은 S3 라이프사이클 정책으로 90일 설정 완료했고, MFA는 Okta에서 강제 적용했습니다. 12월에.' },
+    { offset: 2025, text: '그럼 작년 지적 사항은 해결된 거네요. 올해 새로 봐야 할 건요?' },
+    { offset: 2045, text: '개인정보 암호화 범위 확인이 필요해요. 이메일, 전화번호는 AES-256으로 암호화돼 있는데, 주소 필드가 평문이에요.' },
+    { offset: 2070, text: '주소도 개인정보니까 암호화 대상이죠. 마이그레이션 스크립트 짜야겠네요. 기존 데이터가 얼마나 돼요?' },
+    { offset: 2090, text: '약 12만 건입니다. 배치로 돌리면 2시간 정도 걸릴 것 같아요. 다운타임 없이 가능합니다.' },
+    { offset: 2110, text: 'API 엔드포인트 인증 검사도 다시 해봐야 해요. 작년에 내부 어드민 API 3개가 인증 없이 열려 있었거든요.' },
+    { offset: 2130, text: '지금은 전부 JWT 검증 미들웨어 통과하게 바꿨는데, 새로 추가된 API가 20개 넘으니까 전수 검사 필요합니다.' },
+    { offset: 2155, text: '자동화된 API 보안 스캔 도구를 CI에 넣읍시다. OWASP ZAP이나 Burp Suite 커뮤니티 쓰면 되지 않나요?' },
+    { offset: 2175, text: 'OWASP ZAP이 CI 연동이 쉬워요. GitHub Actions에 플러그인 있습니다. 이번 스프린트에 세팅하겠습니다.' },
+
+    // === Part 11: 팀 문화 & 프로세스 개선 (78~85분) ===
+    { offset: 2200, text: '기술 얘기는 여기까지 하고, 팀 프로세스 개선 건도 잠깐 논의합시다.' },
+    { offset: 2220, text: '코드 리뷰 병목이 심해요. PR 올리고 리뷰 받기까지 평균 2.3일 걸리고 있어요.' },
+    { offset: 2240, text: '리뷰어 자동 배정이 안 돼 있어서 그래요. CODEOWNERS 파일 설정하고 PR 올리면 자동으로 2명 배정되게 합시다.' },
+    { offset: 2260, text: '리뷰 SLA도 정합시다. PR 올라오면 24시간 이내 최소 1차 리뷰. 어때요?' },
+    { offset: 2280, text: '동의합니다. 그리고 PR 사이즈도 제한하면 좋겠어요. 파일 10개 이상이면 쪼개라고 가이드라인을.' },
+    { offset: 2300, text: '맞아요. 저번에 PR 하나에 파일 47개 바뀐 거 리뷰하느라 반나절 날렸어요.' },
+    { offset: 2320, text: '페어 프로그래밍도 주 1회 정도 하면 어떨까요? 지식 공유도 되고 리뷰 부담도 줄어들 것 같아요.' },
+    { offset: 2340, text: '좋은 아이디어네요. 화요일 오후에 2시간 페어 프로그래밍 슬롯 잡읍시다.' },
+    { offset: 2360, text: '스프린트 회고도 형식적으로 하지 말고 제대로 합시다. 매번 "잘했다, 다음에도 잘하자"로 끝나잖아요.' },
+    { offset: 2385, text: '그래요. 이번부터 KPT 프레임워크 쓰겠습니다. Keep, Problem, Try 각각 3개씩 필수로 적어오기.' },
+
+    // === Part 12: 최종 마무리 (85~90분) ===
+    { offset: 2410, text: '자, 추가 논의까지 정리하면. 장애 후속 조치, 성능 최적화, 보안 감사, 프로세스 개선까지.' },
+    { offset: 2430, text: '스프린트 목표가 원래 10개였는데 추가로 더 늘어난 건 아닌가요?' },
+    { offset: 2450, text: '장애 후속은 핫이슈라 별도 트랙으로 가고, 보안 감사는 다음 달이니까 이번 스프린트에선 준비만. 성능 최적화는 이미지 WebP 변환만 이번에.' },
+    { offset: 2475, text: '프로세스 개선은 CODEOWNERS 설정이랑 리뷰 SLA 적용만 이번 스프린트에 하죠.' },
+    { offset: 2495, text: '그러면 추가 태스크는: 배치 커넥션 풀 분리, Grafana 알림 설정, 런북 업데이트, 이미지 WebP, CODEOWNERS, 리뷰 SLA. 6개.' },
+    { offset: 2520, text: '기존 10개에 6개 추가면 16개인데, 좀 많지 않나요?' },
+    { offset: 2540, text: 'CODEOWNERS랑 리뷰 SLA는 설정만 하면 되니까 30분이면 끝나요. 실질적으로 4개 추가라고 보면 됩니다.' },
+    { offset: 2560, text: '알겠습니다. 그러면 이번 스프린트 총 14개 태스크로 확정. 우선순위는 장애 후속 > 기존 목표 > 성능 순서.' },
+    { offset: 2580, text: '질문이나 우려사항 있으면 슬랙 #dev-team 채널에요. 다들 수고하셨습니다!' },
+    { offset: 2595, text: '수고하셨습니다! 이번 주도 파이팅!' },
+  ];
+
+  const baseIdx = state.transcript.length;
+  extraScript.forEach((item, idx) => {
+    const line = {
+      id: generateId() + 'e' + idx,
+      text: item.text,
+      timestamp: state.meetingStartTime + item.offset * 1000,
+      bookmarked: idx === 0 || idx === 25 || idx === 39,
+    };
+    state.transcript.push(line);
+    addTranscriptLine(line);
   });
 
-  // Analysis #2: 중반 (기술 부채 + 데모 준비)
-  state.analysisHistory.push({
-    flow: '기술 부채 논의 → 클라이언트 데모 준비로 전환',
-    summary: '스프린트 리뷰 후 기술 부채 논의로 넘어갔습니다. SonarQube 기준 코드 스멜 287개(critical 12, major 45), 보안 취약점 3개가 확인되었습니다. lodash는 즉시 업그레이드, axios 1.x는 다음 스프린트로 연기하기로 결정했습니다. Critical 코드 스멜 12개는 담당자 배분 완료(민수:인증4, 지영:API5, 현우:프론트3). 이후 4/15 클라이언트 데모(A사 김 부장 외 3명) 준비 논의가 시작되어, 핵심 기능(로그인/대시보드/보고서) 위주로 데모하기로 했습니다. 데모 시나리오 초안은 금요일까지 작성 예정입니다.',
-    context: '기술 부채 정리에서 클라이언트 데모 준비로 전환. axios 업그레이드 리스크 관리가 주요 결정 포인트.',
-    openQuestions: [
-      '보고서 커스터마이징 베타 기능을 데모에서 보여줘도 안전한지 최종 확인 필요',
-      '데모 환경 스테이징 테넌트에 제조업 KPI 더미 데이터 준비 범위',
-    ],
-    actionItems: [
-      'lodash 4.17.21 업그레이드 (이번 스프린트)',
-      'axios 1.x 업그레이드 (다음 스프린트, 별도 브랜치)',
-      'critical 코드 스멜 12개 처리 — 민수(4), 지영(5), 현우(3)',
-      '데모 시나리오 초안 금요일까지 작성',
-      '스테이징 데모 테넌트 + 제조업 더미 데이터 500건 준비',
-    ],
-    suggestions: [
-      'Framer Motion으로 대시보드 애니메이션 추가 시 데모 임팩트 향상',
-      'axios 업그레이드 전 인터셉터 사용 파일 8개 목록을 문서화',
-    ],
-    timestamp: base + 30 * 60000,
-    bookmarked: true,
-    memo: '기술 부채 정리 방향 잘 잡힘',
+  // Additional memos for extended discussion
+  const extraMemos = [
+    { text: '장애 원인: 배치가 DB 커넥션 18/20개 점유 → 풀 고갈', offset: 1490 },
+    { text: '성능: FCP 3.2s, LCP 4.8s — moment.js(300KB) + chart.js(500KB) 문제', offset: 1770 },
+    { text: 'SOC 2 감사 대비: 주소 필드 암호화 + API 전수 보안 검사 필요', offset: 2050 },
+    { text: '코드 리뷰 SLA: 24시간 이내 1차 리뷰, PR 파일 10개 이하', offset: 2270 },
+  ];
+
+  extraMemos.forEach((m, i) => {
+    const memo = { id: generateId() + 'em' + i, text: m.text, timestamp: state.meetingStartTime + m.offset * 1000 };
+    state.memos.push(memo);
+    addMemoLine(memo);
   });
 
-  // Analysis #3: 후반 (접근성 + 채용 + 마무리)
-  state.analysisHistory.push({
-    flow: '접근성·CI/CD 강화 → 채용 → 스프린트 목표 10개 확정',
-    summary: '접근성(WCAG 2.1 AA) 이슈로 컬러 대비 5건, aria-label 누락 22건 수정이 필요합니다. CI/CD에 axe-core + Lighthouse CI를 추가하기로 했으며, 파이프라인 시간은 4분30초→5분30초로 수용 가능. 채용 관련으로 시니어 프론트엔드 지원자 12명 중 서류통과 5명이 이번 주 코딩 테스트(React 실시간 데이터 테이블, 3시간) 예정입니다. 면접은 1차 기술(민수+현우), 2차 컬처핏(팀장). 주니어 백엔드 채용은 다음 분기로. 최종적으로 이번 스프린트 목표 10개가 확정되었습니다: REST API 5개, Storybook 문서화, 접근성 수정, lodash 업그레이드, critical 코드 스멜 12개, 데모 시나리오, 스테이징 준비, CI/CD 강화, 코딩 테스트 진행, Figma 리뷰(수요일까지).',
-    context: '회의 마무리 단계. 모든 안건이 정리되었으며 스프린트 목표 10개가 확정됨.',
-    openQuestions: [
-      '주니어 백엔드 채용 시기 — 다음 분기 인원 계획에 포함 예정',
-      'WebSocket 구현 — 다음 스프린트로 연기됨',
-    ],
-    actionItems: [
-      'REST API 5개 엔드포인트 구현',
-      '컴포넌트 라이브러리 Storybook 문서화',
-      '접근성 수정 22건 + 컬러 대비 5건',
-      'lodash 버전 업그레이드',
-      'critical 코드 스멜 12개 처리',
-      '클라이언트 데모 시나리오 금요일까지',
-      '스테이징 데모 테넌트 + 더미 데이터',
-      'CI/CD에 axe-core + Lighthouse CI 추가',
-      '시니어 프론트엔드 코딩 테스트 이번 주 진행',
-      '대시보드 Figma 리뷰 수요일까지',
-      '경영진 보고에 인증 성과 포함 (에러 96%↓, 응답 75%↓)',
-    ],
-    suggestions: [
-      '스프린트 목표 10개가 많으므로 우선순위 매트릭스 작성 권장',
-      '코딩 테스트 결과를 팀 전체 공유하여 평가 기준 정렬',
-      '데모 리허설을 최소 2회 실시하여 엣지케이스 사전 발견',
-    ],
-    timestamp: base + 50 * 60000,
-  });
-
-  renderAnalysisHistory();
-  // Show latest analysis in main panel
-  state.currentAnalysis = state.analysisHistory[state.analysisHistory.length - 1];
-  renderAnalysis(state.currentAnalysis);
-
-  showToast('Demo 2 loaded — 3 analysis snapshots with flow history', 'success');
+  state.meetingStartTime = Date.now() - 90 * 60000;
+  showToast('Demo 2 loaded — extended transcript (115 lines, ~90min)', 'success');
 }
 
 document.addEventListener('DOMContentLoaded', init);
