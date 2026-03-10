@@ -103,34 +103,6 @@ async function downloadModelWithProgress(url, onProgress) {
   return await blob.arrayBuffer();
 }
 
-// ===== Downsample Float32 audio to Int16 at 16kHz =====
-function downsampleBuffer(buffer, inputSampleRate, outputSampleRate) {
-  if (inputSampleRate === outputSampleRate) {
-    const result = new Int16Array(buffer.length);
-    for (let i = 0; i < buffer.length; i++) {
-      const s = Math.max(-1, Math.min(1, buffer[i]));
-      result[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-    return result;
-  }
-
-  const ratio = inputSampleRate / outputSampleRate;
-  const newLength = Math.round(buffer.length / ratio);
-  const result = new Int16Array(newLength);
-
-  for (let i = 0; i < newLength; i++) {
-    const srcIndex = i * ratio;
-    const srcIndexFloor = Math.floor(srcIndex);
-    const srcIndexCeil = Math.min(srcIndexFloor + 1, buffer.length - 1);
-    const frac = srcIndex - srcIndexFloor;
-    const sample = buffer[srcIndexFloor] * (1 - frac) + buffer[srcIndexCeil] * frac;
-    const s = Math.max(-1, Math.min(1, sample));
-    result[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-  }
-
-  return result;
-}
-
 // ===== Pre-download & cache check =====
 export async function isModelCached(language) {
   const modelInfo = VOSK_MODELS[language] || VOSK_MODELS.en;
@@ -211,12 +183,8 @@ export function createVoskEngine(language, onProgress) {
         const bufferSize = 4096;
         scriptNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
 
-        const inputSampleRate = audioContext.sampleRate;
-
         scriptNode.onaudioprocess = (e) => {
-          const inputData = e.inputBuffer.getChannelData(0);
-          const int16Data = downsampleBuffer(inputData, inputSampleRate, 16000);
-          recognizer.acceptWaveform(int16Data);
+          recognizer.acceptWaveform(e.inputBuffer);
         };
 
         source.connect(scriptNode);
