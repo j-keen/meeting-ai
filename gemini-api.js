@@ -32,6 +32,14 @@ export function isProxyAvailable() {
  * @returns {Promise<object>} - Parsed JSON response
  */
 export async function callGemini(model, body, apiKey) {
+  // Vertex AI requires role in contents — ensure it's present
+  if (body.contents) {
+    body = {
+      ...body,
+      contents: body.contents.map(c => c.role ? c : { ...c, role: 'user' }),
+    };
+  }
+
   if (apiKey) {
     // Direct AI Studio call
     const url = `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`;
