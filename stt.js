@@ -1,6 +1,6 @@
-// stt.js - STT abstraction (Web Speech API)
+// stt.js - STT abstraction (Web Speech API + Vosk WASM fallback)
 
-import { getActiveSpeaker } from './speakers.js';
+import { createVoskEngine } from './vosk-engine.js';
 
 // Web Speech API engine
 function createWebSpeechEngine(language) {
@@ -27,10 +27,9 @@ function createWebSpeechEngine(language) {
           const result = e.results[i];
           const text = result[0].transcript;
           if (result.isFinal) {
-            const speaker = getActiveSpeaker();
-            onFinal(text, speaker?.id || null);
+            onFinal(text);
           } else {
-            onInterim(text, null);
+            onInterim(text);
           }
         }
       };
@@ -63,6 +62,11 @@ function createWebSpeechEngine(language) {
   };
 }
 
+// Check if Web Speech API is available
+function hasWebSpeechAPI() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+
 // Unified STT interface
 export function createSTT() {
   let currentEngine = null;
@@ -72,11 +76,42 @@ export function createSTT() {
     get isRunning() { return isRunning; },
     get engineName() { return currentEngine?.name || 'none'; },
 
-    async start({ language, onInterim, onFinal, onError }) {
+    async start({ language, sttEngine, onInterim, onFinal, onError, onEngineReady, onModelProgress }) {
       if (isRunning) return;
 
-      currentEngine = createWebSpeechEngine(language);
-      currentEngine.start(onInterim, onFinal, onError);
+      const engine = sttEngine || 'auto';
+
+      if (engine === 'vosk') {
+        // Force Vosk
+        currentEngine = createVoskEngine(language, onModelProgress || null);
+        await currentEngine.start(onInterim, onFinal, onError);
+        if (onEngineReady) onEngineReady('vosk');
+      } else if (engine === 'webspeech') {
+        // Prefer Web Speech, fallback to Vosk if unsupported
+        if (hasWebSpeechAPI()) {
+          currentEngine = createWebSpeechEngine(language);
+          currentEngine.start(onInterim, onFinal, onError);
+          if (onEngineReady) onEngineReady('webspeech');
+        } else {
+          // Fallback to Vosk with toast notification
+          if (onError) onError('Web Speech API not supported in this browser. Falling back to Vosk.');
+          currentEngine = createVoskEngine(language, onModelProgress || null);
+          await currentEngine.start(onInterim, onFinal, onError);
+          if (onEngineReady) onEngineReady('vosk');
+        }
+      } else {
+        // Auto: original logic
+        if (hasWebSpeechAPI()) {
+          currentEngine = createWebSpeechEngine(language);
+          currentEngine.start(onInterim, onFinal, onError);
+          if (onEngineReady) onEngineReady('webspeech');
+        } else {
+          currentEngine = createVoskEngine(language, onModelProgress || null);
+          await currentEngine.start(onInterim, onFinal, onError);
+          if (onEngineReady) onEngineReady('vosk');
+        }
+      }
+
       isRunning = true;
     },
 

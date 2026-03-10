@@ -1,7 +1,6 @@
 // chat.js - AI Chat module with Gemini function calling + model selection
 
 import { state, emit } from './app.js';
-import { getSpeakers } from './speakers.js';
 import { getAiLanguage, t } from './i18n.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -157,7 +156,7 @@ function handleSend() {
 }
 
 function getChatModel() {
-  return state.settings.chatModel || 'gemini-2.0-flash';
+  return state.settings.chatModel || 'gemini-2.5-flash';
 }
 
 async function sendChatMessage(userText) {
@@ -210,7 +209,6 @@ async function sendChatMessage(userText) {
 
 function buildChatSystemPrompt() {
   const lang = getAiLanguage();
-  const speakers = getSpeakers().map(s => s.name).join(', ');
 
   // Use custom prompt if set, otherwise default
   const customPrompt = state.settings.chatSystemPrompt;
@@ -218,19 +216,14 @@ function buildChatSystemPrompt() {
     ? customPrompt
     : lang === 'ko'
       ? `당신은 AI 비서입니다. 현재 회의 맥락이 제공되지만, 어떤 주제든 자유롭게 대화할 수 있습니다.
-회의 참석자: ${speakers}
 사용 가능한 도구: add_context (맥락 추가), add_memo (메모 추가), rerun_analysis (재분석 실행)
 한국어로 답변하세요.`
       : `You are an AI assistant. Meeting context is provided below, but you can discuss any topic freely.
-Meeting participants: ${speakers}
 Available tools: add_context, add_memo, rerun_analysis
 Respond in English.`;
 
   if (state.transcript.length > 0) {
-    const recentLines = state.transcript.slice(-20).map(l => {
-      const speaker = getSpeakers().find(s => s.id === l.speakerId);
-      return `${speaker?.name || '?'}: ${l.text}`;
-    }).join('\n');
+    const recentLines = state.transcript.slice(-20).map(l => l.text).join('\n');
     prompt += `\n\n[Recent Transcript]\n${recentLines}`;
   }
 

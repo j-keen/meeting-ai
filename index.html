@@ -17,9 +17,7 @@
       <span class="meeting-timer" id="meetingTimer">00:00:00</span>
       <span class="meeting-status" id="meetingStatus"></span>
     </div>
-    <div class="header-center">
-      <div class="speaker-bar" id="speakerBar"></div>
-    </div>
+    <div class="header-center"></div>
     <div class="header-right">
       <button class="btn btn-icon" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
         <span class="icon-theme-light">&#9788;</span>
@@ -127,10 +125,9 @@
             <input type="file" id="chatFileInput" accept=".txt,.md" hidden>
           </label>
           <select class="chat-model-select" id="chatModelSelect">
-            <option value="gemini-2.0-flash">Flash 2.0</option>
-            <option value="gemini-2.0-flash-lite">Flash Lite</option>
-            <option value="gemini-2.5-flash-preview-05-20">Flash 2.5</option>
-            <option value="gemini-2.5-pro-preview-06-05">Pro 2.5</option>
+            <option value="gemini-2.5-flash">Flash 2.5</option>
+            <option value="gemini-2.5-flash-lite">Flash 2.5 Lite</option>
+            <option value="gemini-2.5-pro">Pro 2.5</option>
           </select>
         </div>
       </div>
@@ -164,7 +161,6 @@
         <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
-        <button class="settings-tab" data-tab="speakers" data-i18n="settings.tab_speakers">Speakers</button>
         <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Integration</button>
       </div>
 
@@ -200,15 +196,26 @@
           <label class="settings-label">
             <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
             <select class="settings-select" id="selectGeminiModel">
-              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-              <option value="gemini-2.5-flash-preview-05-20">Gemini 2.5 Flash</option>
-              <option value="gemini-2.5-pro-preview-06-05">Gemini 2.5 Pro</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
             </select>
           </label>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.stt">STT Settings</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.stt_engine">STT Engine</span>
+            <select class="settings-select" id="selectSttEngine">
+              <option value="auto" data-i18n="settings.stt_auto">Auto (Detect)</option>
+              <option value="webspeech" data-i18n="settings.stt_webspeech">Web Speech API</option>
+              <option value="vosk" data-i18n="settings.stt_vosk">Vosk (Offline)</option>
+            </select>
+          </label>
+          <p class="text-muted stt-engine-hint" id="sttEngineHint"></p>
+          <button class="btn btn-sm stt-predownload-btn" id="btnPredownloadVosk" hidden>
+            <span data-i18n="settings.predownload_vosk">Download Model</span>
+          </button>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
             <select class="settings-select" id="selectLanguage">
@@ -335,16 +342,14 @@
         </section>
       </div>
 
-      <!-- Speakers Tab -->
-      <div class="settings-tab-content" data-tab="speakers">
+      <!-- Integration Tab -->
+      <div class="settings-tab-content" data-tab="integration">
         <section class="settings-section">
-          <h3 data-i18n="settings.speakers">Speakers</h3>
-          <div id="speakerSettings"></div>
-          <div class="speaker-settings-actions">
-            <button class="btn btn-sm" id="btnAddSpeaker" data-i18n="settings.add_speaker">+ Add Speaker</button>
-            <button class="btn btn-sm" id="btnSaveSpeakerPreset" data-i18n="settings.save_speaker_preset">Save Preset</button>
-            <button class="btn btn-sm" id="btnLoadSpeakerPreset" data-i18n="settings.load_speaker_preset">Load Preset</button>
-          </div>
+          <h3 data-i18n="settings.integrations">Integrations</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
+            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
+          </label>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
@@ -355,17 +360,6 @@
           </div>
         </section>
       </div>
-
-      <!-- Integration Tab -->
-      <div class="settings-tab-content" data-tab="integration">
-        <section class="settings-section">
-          <h3 data-i18n="settings.integrations">Integrations</h3>
-          <label class="settings-label">
-            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
-            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
-          </label>
-        </section>
-      </div>
     </div>
   </aside>
 
@@ -374,14 +368,10 @@
 
   <!-- Context Popup -->
   <div class="context-popup" id="contextPopup" hidden>
-    <button class="context-btn" data-action="changeSpeaker" data-i18n="context.change_speaker">Change Speaker</button>
     <button class="context-btn" data-action="editText" data-i18n="context.edit_text">Edit Text</button>
     <button class="context-btn" data-action="bookmark" data-i18n="context.bookmark">Toggle Bookmark</button>
     <button class="context-btn" data-action="delete" data-i18n="context.delete">Delete</button>
   </div>
-
-  <!-- Speaker Dropdown -->
-  <div class="speaker-dropdown" id="speakerDropdown" hidden></div>
 
   <!-- Export Modal -->
   <div class="modal-overlay" id="exportModal" hidden>
@@ -483,19 +473,6 @@
     </div>
   </div>
 
-  <!-- Speaker Preset Modal -->
-  <div class="modal-overlay" id="speakerPresetModal" hidden>
-    <div class="modal">
-      <div class="modal-header">
-        <h3 data-i18n="settings.speaker_presets">Speaker Presets</h3>
-        <button class="btn btn-icon modal-close" data-close="speakerPresetModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="speakerPresetList"></div>
-      </div>
-    </div>
-  </div>
-
   <!-- Typo Dictionary Modal -->
   <div class="modal-overlay" id="typoDictModal" hidden>
     <div class="modal">
@@ -542,7 +519,6 @@
   <template id="tmplTranscriptLine">
     <div class="transcript-line" data-id="">
       <span class="transcript-time"></span>
-      <button class="transcript-speaker-badge" title="Click to change speaker"></button>
       <span class="transcript-text"></span>
       <div class="transcript-actions">
         <button class="btn btn-xs" data-action="bookmark" title="Bookmark (Ctrl+B)">&#11088;</button>
@@ -573,17 +549,6 @@
     </section>
   </template>
 
-  <template id="tmplSpeakerBadge">
-    <div class="speaker-badge-wrap" data-speaker-id="">
-      <button class="speaker-badge">
-        <span class="speaker-dot"></span>
-        <span class="speaker-name"></span>
-      </button>
-      <input class="speaker-name-edit" type="text" hidden>
-      <button class="speaker-badge-remove btn-xs" title="Remove">&times;</button>
-    </div>
-  </template>
-
   <template id="tmplHistoryCard">
     <div class="history-card" data-meeting-id="">
       <div class="history-card-header">
@@ -593,7 +558,6 @@
       <div class="history-card-meta">
         <span class="history-card-type"></span>
         <span class="history-card-duration"></span>
-        <span class="history-card-speakers"></span>
         <span class="history-card-location"></span>
       </div>
       <div class="history-card-tags"></div>

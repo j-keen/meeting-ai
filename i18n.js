@@ -14,7 +14,6 @@ const translations = {
     'panel.export': 'Export',
     'transcript.empty': 'Start recording to see the transcript here.',
     'transcript.empty_hint': 'Press the record button or Ctrl+R to begin.',
-    'transcript.speaker_click': 'Click to change speaker',
     'transcript.bookmark_tooltip': 'Bookmark (Ctrl+B)',
     'transcript.edit_tooltip': 'Edit',
 
@@ -32,6 +31,9 @@ const translations = {
     'record.status_stopped': 'Stopped',
     'record.status_ended': 'Meeting ended - Resume or start a new meeting',
     'stt.engine_label': 'Web Speech',
+    'stt.vosk_label': 'Vosk (Offline)',
+    'stt.downloading': 'Downloading model: {pct}%',
+    'stt.model_ready': 'Model ready',
     'memo.placeholder': 'Add a memo... (Ctrl+M)',
     'memo.add': 'Add',
     'meeting.end': 'End Meeting',
@@ -73,8 +75,6 @@ const translations = {
     'settings.chat_prompt': 'Chat System Prompt',
     'settings.chat_prompt_placeholder': 'Custom chat system prompt...',
     'settings.reset_chat_prompt': 'Reset to Default',
-    'settings.speakers': 'Speakers',
-    'settings.add_speaker': '+ Add Speaker',
     'settings.integrations': 'Integrations',
     'settings.slack_webhook': 'Slack Webhook URL',
     'settings.ui_language': 'UI Language',
@@ -85,9 +85,18 @@ const translations = {
     'settings.ai_lang_auto': 'Same as UI',
     'settings.ai_lang_en': 'English',
     'settings.ai_lang_ko': 'Korean',
+    'settings.stt_engine': 'STT Engine',
+    'settings.stt_auto': 'Auto (Detect)',
+    'settings.stt_webspeech': 'Web Speech API',
+    'settings.stt_vosk': 'Vosk (Offline)',
+    'settings.stt_hint_auto': 'Automatically selects the best engine for your browser.',
+    'settings.stt_hint_webspeech': 'High accuracy, requires internet. Chrome/Edge only.',
+    'settings.stt_hint_vosk': 'Offline processing, works in all browsers. Lower accuracy.',
+    'settings.predownload_vosk': 'Download Model',
+    'settings.predownload_done': 'Model cached \u2713',
+    'settings.predownloading': 'Downloading... {pct}%',
 
     // Context popup
-    'context.change_speaker': 'Change Speaker',
     'context.edit_text': 'Edit Text',
     'context.bookmark': 'Toggle Bookmark',
     'context.delete': 'Delete',
@@ -109,8 +118,6 @@ const translations = {
     'history.delete': 'Delete',
     'history.no_meetings': 'No meetings found.',
     'history.untitled': 'Untitled Meeting',
-    'history.speakers_count': '{n} speakers',
-
     // Analysis history modal
     'analysis_history.title': 'Analysis History',
     'analysis_history.empty': 'No analysis history yet.',
@@ -132,11 +139,8 @@ const translations = {
     'card.openQuestions': 'Open Questions',
     'card.actionItems': 'Action Items',
     'card.suggestions': 'AI Suggestions',
-    'card.speakerStats': 'Speaker Stats',
     'card.no_items': 'No items yet.',
     'card.no_data': 'No data yet.',
-    'card.no_speaker_data': 'No speaker data yet.',
-    'card.speaking_turns': 'Speaking turns',
     'card.expand': 'Expand',
     'card.toggle': 'Toggle',
 
@@ -186,7 +190,6 @@ const translations = {
     // Settings tabs
     'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
-    'settings.tab_speakers': 'Speakers',
     'settings.tab_integration': 'Integration',
 
     // Strategy descriptions
@@ -209,12 +212,6 @@ const translations = {
     'preset.save': 'Save as Preset',
     'preset.reset': 'Reset',
     'preset.name_prompt': 'Enter preset name:',
-
-    // Speakers
-    'speaker.me': 'Me',
-    'speaker.participant': 'Participant {n}',
-    'speaker.unknown': 'Unknown',
-    'speaker.color_tooltip': 'Click to change color',
 
     // Welcome modal
     'welcome.title': 'Meeting AI',
@@ -288,7 +285,6 @@ const translations = {
     'panel.export': '내보내기',
     'transcript.empty': '녹음을 시작하면 여기에 회의록이 표시됩니다.',
     'transcript.empty_hint': '녹음 버튼 또는 Ctrl+R을 눌러 시작하세요.',
-    'transcript.speaker_click': '클릭하여 화자 변경',
     'transcript.bookmark_tooltip': '북마크 (Ctrl+B)',
     'transcript.edit_tooltip': '편집',
 
@@ -306,6 +302,9 @@ const translations = {
     'record.status_stopped': '중지됨',
     'record.status_ended': '회의 종료됨 - 재개하거나 새 회의를 시작하세요',
     'stt.engine_label': 'Web Speech',
+    'stt.vosk_label': 'Vosk (오프라인)',
+    'stt.downloading': '모델 다운로드 중: {pct}%',
+    'stt.model_ready': '모델 준비 완료',
     'memo.placeholder': '메모 추가... (Ctrl+M)',
     'memo.add': '추가',
     'meeting.end': '회의 종료',
@@ -347,8 +346,6 @@ const translations = {
     'settings.chat_prompt': '챗 시스템 프롬프트',
     'settings.chat_prompt_placeholder': '사용자 정의 챗 시스템 프롬프트...',
     'settings.reset_chat_prompt': '기본값으로 초기화',
-    'settings.speakers': '화자',
-    'settings.add_speaker': '+ 화자 추가',
     'settings.integrations': '연동',
     'settings.slack_webhook': 'Slack Webhook URL',
     'settings.ui_language': 'UI 언어',
@@ -359,9 +356,18 @@ const translations = {
     'settings.ai_lang_auto': 'UI 언어와 동일',
     'settings.ai_lang_en': 'English',
     'settings.ai_lang_ko': '한국어',
+    'settings.stt_engine': 'STT 엔진',
+    'settings.stt_auto': '자동 (감지)',
+    'settings.stt_webspeech': 'Web Speech API',
+    'settings.stt_vosk': 'Vosk (오프라인)',
+    'settings.stt_hint_auto': '브라우저에 맞는 최적 엔진을 자동 선택합니다.',
+    'settings.stt_hint_webspeech': '높은 정확도, 인터넷 필요. Chrome/Edge만 지원.',
+    'settings.stt_hint_vosk': '오프라인 처리, 모든 브라우저 지원. 정확도 낮음.',
+    'settings.predownload_vosk': '모델 다운로드',
+    'settings.predownload_done': '모델 캐시됨 \u2713',
+    'settings.predownloading': '다운로드 중... {pct}%',
 
     // Context popup
-    'context.change_speaker': '화자 변경',
     'context.edit_text': '텍스트 편집',
     'context.bookmark': '북마크 토글',
     'context.delete': '삭제',
@@ -383,8 +389,6 @@ const translations = {
     'history.delete': '삭제',
     'history.no_meetings': '회의 기록이 없습니다.',
     'history.untitled': '제목 없는 회의',
-    'history.speakers_count': '화자 {n}명',
-
     // Analysis history modal
     'analysis_history.title': '분석 기록',
     'analysis_history.empty': '분석 기록이 없습니다.',
@@ -406,11 +410,8 @@ const translations = {
     'card.openQuestions': '미해결 질문',
     'card.actionItems': '실행 항목',
     'card.suggestions': 'AI 제안',
-    'card.speakerStats': '화자 통계',
     'card.no_items': '아직 항목이 없습니다.',
     'card.no_data': '아직 데이터가 없습니다.',
-    'card.no_speaker_data': '화자 데이터가 없습니다.',
-    'card.speaking_turns': '발언 횟수',
     'card.expand': '확대',
     'card.toggle': '접기/펼치기',
 
@@ -460,7 +461,6 @@ const translations = {
     // Settings tabs
     'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
-    'settings.tab_speakers': '화자',
     'settings.tab_integration': '연동',
 
     // Strategy descriptions
@@ -483,12 +483,6 @@ const translations = {
     'preset.save': '프리셋으로 저장',
     'preset.reset': '초기화',
     'preset.name_prompt': '프리셋 이름을 입력하세요:',
-
-    // Speakers
-    'speaker.me': '나',
-    'speaker.participant': '참여자 {n}',
-    'speaker.unknown': '알 수 없음',
-    'speaker.color_tooltip': '클릭하여 색상 변경',
 
     // Welcome modal
     'welcome.title': 'Meeting AI',
@@ -560,9 +554,7 @@ Respond ONLY with valid JSON in this exact format:
   "context": "Current topic being discussed and the flow of conversation",
   "openQuestions": ["List of unresolved questions or topics that need follow-up"],
   "actionItems": ["List of action items with assignee if identifiable"],
-  "suggestions": ["AI suggestions for the meeting (e.g., topics to cover, decisions needed)"],
-  "speakerStats": {"speakerName": count},
-  "speakerMap": [{"line": 0, "speaker": "Name"}, ...]
+  "suggestions": ["AI suggestions for the meeting (e.g., topics to cover, decisions needed)"]
 }
 
 Rules:
@@ -570,8 +562,7 @@ Rules:
 - Extract concrete action items with owners when possible
 - Identify questions that were raised but not answered
 - Provide helpful suggestions based on meeting context
-- Count speaking turns per speaker for stats
-- IMPORTANT: Analyze conversation context to identify WHO is speaking each line (speakerMap). Use participant names. Look for clues like: addressing someone by name, different speaking styles, question-answer patterns, role-based language, self-references. "line" is the 0-based index of the transcript line.`,
+- IMPORTANT: All analysis output (summary, context, openQuestions, actionItems, suggestions) MUST be written in English.`,
 
   ko: `당신은 AI 회의 비서입니다. 회의록을 분석하고 구조화된 분석 결과를 제공하세요.
 
@@ -581,9 +572,7 @@ Rules:
   "context": "현재 논의 중인 주제와 대화 흐름",
   "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 목록"],
   "actionItems": ["담당자가 식별 가능한 경우 포함한 실행 항목 목록"],
-  "suggestions": ["회의를 위한 AI 제안 (예: 다룰 주제, 필요한 결정 등)"],
-  "speakerStats": {"화자이름": 횟수},
-  "speakerMap": [{"line": 0, "speaker": "이름"}, ...]
+  "suggestions": ["회의를 위한 AI 제안 (예: 다룰 주제, 필요한 결정 등)"]
 }
 
 규칙:
@@ -591,8 +580,7 @@ Rules:
 - 가능한 경우 담당자가 명시된 구체적인 실행 항목 추출
 - 제기되었으나 답변되지 않은 질문 식별
 - 회의 맥락에 기반한 유용한 제안 제공
-- 화자별 발언 횟수 통계
-- 중요: 대화 맥락을 분석하여 각 줄의 화자를 식별(speakerMap). 참가자 이름 사용. 이름 호칭, 말투 차이, 질문-답변 패턴, 역할 기반 언어, 자기 언급 등의 단서 활용. "line"은 0부터 시작하는 회의록 줄 인덱스.`
+- 중요: 모든 분석 결과(summary, context, openQuestions, actionItems, suggestions)를 반드시 한국어로 작성하세요.`
 };
 
 const AI_PRESET_CONTEXTS = {

@@ -5,11 +5,10 @@ import {
   saveSettings, loadSettings, saveApiKey, getApiKey,
   listMeetings, getMeeting,
   loadTypoDict, resetTypoDict,
-  loadSpeakerPresets, saveSpeakerPreset, deleteSpeakerPreset
 } from './storage.js';
-import { getSpeakers, addSpeaker, updateSpeaker, removeSpeaker, getColors, loadFromPreset } from './speakers.js';
 import { getDefaultPrompt, getPresetContext } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
+import { predownloadModel, isModelCached } from './vosk-engine.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -63,10 +62,43 @@ export function initSettings() {
     saveSetting('geminiModel', e.target.value);
   });
 
+  // STT Engine
+  $('#selectSttEngine').addEventListener('change', (e) => {
+    state.settings.sttEngine = e.target.value;
+    saveSetting('sttEngine', e.target.value);
+    updateSttEngineHint();
+    // Stop recording if active (engine change requires restart)
+    if (state.isRecording) {
+      emit('recording:toggle');
+    }
+  });
+  updateSttEngineHint();
+
+  // Predownload Vosk model
+  $('#btnPredownloadVosk').addEventListener('click', async () => {
+    const btn = $('#btnPredownloadVosk');
+    const lang = state.settings.language || 'ko';
+    btn.classList.add('downloading');
+    btn.querySelector('span').textContent = t('settings.predownloading', { pct: 0 });
+    try {
+      await predownloadModel(lang, (pct) => {
+        btn.querySelector('span').textContent = t('settings.predownloading', { pct });
+      });
+      btn.classList.remove('downloading');
+      btn.classList.add('done');
+      btn.querySelector('span').textContent = t('settings.predownload_done');
+    } catch (err) {
+      btn.classList.remove('downloading');
+      btn.querySelector('span').textContent = t('settings.predownload_vosk');
+      emit('toast', { message: 'Model download failed: ' + err.message, type: 'error' });
+    }
+  });
+
   // STT language
   $('#selectLanguage').addEventListener('change', (e) => {
     state.settings.language = e.target.value;
     saveSetting('language', e.target.value);
+    updateSttEngineHint(); // refresh cache status for new language
   });
 
   // Auto Analysis toggle
@@ -233,26 +265,6 @@ export function initSettings() {
     saveSetting('chatSystemPrompt', '');
   });
 
-  // Speakers
-  $('#btnAddSpeaker').addEventListener('click', () => {
-    addSpeaker();
-    renderSpeakerSettings();
-    emit('speaker:update');
-  });
-
-  // Speaker Presets
-  $('#btnSaveSpeakerPreset').addEventListener('click', () => {
-    const name = prompt(t('settings.preset_name_prompt') || 'Preset name:');
-    if (!name) return;
-    saveSpeakerPreset(name, getSpeakers());
-    emit('toast', { message: `Speaker preset "${name}" saved`, type: 'success' });
-  });
-
-  $('#btnLoadSpeakerPreset').addEventListener('click', () => {
-    renderSpeakerPresetModal();
-    $('#speakerPresetModal').hidden = false;
-  });
-
   // Typo Dictionary
   updateTypoDictCount();
   $('#btnResetTypoDict').addEventListener('click', () => {
@@ -289,14 +301,12 @@ export function initSettings() {
   // Chat model select
   const chatModelSelect = $('#chatModelSelect');
   if (chatModelSelect) {
-    chatModelSelect.value = state.settings.chatModel || 'gemini-2.0-flash';
+    chatModelSelect.value = state.settings.chatModel || 'gemini-2.5-flash';
     chatModelSelect.addEventListener('change', (e) => {
       state.settings.chatModel = e.target.value;
       saveSetting('chatModel', e.target.value);
     });
   }
-
-  renderSpeakerSettings();
 }
 
 function addPresetOption(name) {
@@ -334,8 +344,8 @@ function loadSavedSettings() {
   const s = state.settings;
 
   s.geminiKey = getApiKey('gemini');
-  s.geminiModel = saved.geminiModel || 'gemini-2.0-flash';
-  s.chatModel = saved.chatModel || 'gemini-2.0-flash';
+  s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
+  s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';
   s.autoAnalysis = saved.autoAnalysis !== false;
   s.analysisInterval = saved.analysisInterval || 30;
@@ -350,10 +360,12 @@ function loadSavedSettings() {
   s.uiLanguage = saved.uiLanguage || 'auto';
   s.aiLanguage = saved.aiLanguage || 'auto';
   s.customPresets = saved.customPresets || {};
+  s.sttEngine = saved.sttEngine || 'auto';
 
   // Apply to inputs
   $('#selectUiLanguage').value = s.uiLanguage;
   $('#selectAiLanguage').value = s.aiLanguage;
+  $('#selectSttEngine').value = s.sttEngine;
   $('#inputGeminiKey').value = s.geminiKey;
   $('#selectGeminiModel').value = s.geminiModel;
   $('#selectLanguage').value = s.language;
@@ -440,95 +452,42 @@ function renderTypoDictModal() {
   });
 }
 
-function renderSpeakerPresetModal() {
-  const presets = loadSpeakerPresets();
-  const list = $('#speakerPresetList');
-  list.innerHTML = '';
+async function updateSttEngineHint() {
+  const engine = state.settings.sttEngine || 'auto';
+  const hint = $('#sttEngineHint');
+  const btn = $('#btnPredownloadVosk');
 
-  const entries = Object.entries(presets);
-  if (entries.length === 0) {
-    list.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;">No presets saved</p>';
-    return;
-  }
-
-  entries.forEach(([name, speakers]) => {
-    const item = document.createElement('div');
-    item.className = 'speaker-preset-item';
-    item.innerHTML = `
-      <div>
-        <div class="speaker-preset-name">${name}</div>
-        <div class="speaker-preset-speakers">${speakers.map(s => s.name).join(', ')}</div>
-      </div>
-      <div class="speaker-preset-actions">
-        <button class="btn btn-xs" data-action="load">Load</button>
-        <button class="btn btn-xs btn-danger" data-action="delete">&times;</button>
-      </div>
-    `;
-    item.querySelector('[data-action="load"]').addEventListener('click', () => {
-      loadFromPreset(speakers);
-      emit('speaker:update');
-      renderSpeakerSettings();
-      $('#speakerPresetModal').hidden = true;
-      emit('toast', { message: `Loaded preset "${name}"`, type: 'success' });
-    });
-    item.querySelector('[data-action="delete"]').addEventListener('click', () => {
-      deleteSpeakerPreset(name);
-      renderSpeakerPresetModal();
-    });
-    list.appendChild(item);
-  });
-}
-
-export function renderSpeakerSettings() {
-  const container = $('#speakerSettings');
-  const speakers = getSpeakers();
-  const colors = getColors();
-
-  container.innerHTML = '';
-  speakers.forEach(speaker => {
-    const item = document.createElement('div');
-    item.className = 'speaker-setting-item';
-
-    const colorDot = document.createElement('div');
-    colorDot.className = 'speaker-color-dot';
-    colorDot.style.backgroundColor = speaker.color;
-    colorDot.title = t('speaker.color_tooltip');
-    colorDot.addEventListener('click', () => {
-      const currentIdx = colors.indexOf(speaker.color);
-      const nextColor = colors[(currentIdx + 1) % colors.length];
-      updateSpeaker(speaker.id, { color: nextColor });
-      colorDot.style.backgroundColor = nextColor;
-      emit('speaker:update');
-    });
-
-    const nameInput = document.createElement('input');
-    nameInput.className = 'speaker-name-input';
-    nameInput.value = speaker.name;
-    nameInput.addEventListener('change', () => {
-      updateSpeaker(speaker.id, { name: nameInput.value });
-      emit('speaker:update');
-    });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'speaker-delete-btn';
-    deleteBtn.innerHTML = '&times;';
-    deleteBtn.addEventListener('click', () => {
-      if (removeSpeaker(speaker.id)) {
-        renderSpeakerSettings();
-        emit('speaker:update');
+  if (engine === 'auto') {
+    hint.textContent = t('settings.stt_hint_auto');
+    btn.hidden = true;
+  } else if (engine === 'webspeech') {
+    hint.textContent = t('settings.stt_hint_webspeech');
+    btn.hidden = true;
+  } else if (engine === 'vosk') {
+    hint.textContent = t('settings.stt_hint_vosk');
+    btn.hidden = false;
+    // Check if model is cached
+    try {
+      const cached = await isModelCached(state.settings.language || 'ko');
+      if (cached) {
+        btn.classList.remove('downloading');
+        btn.classList.add('done');
+        btn.querySelector('span').textContent = t('settings.predownload_done');
+      } else {
+        btn.classList.remove('done', 'downloading');
+        btn.querySelector('span').textContent = t('settings.predownload_vosk');
       }
-    });
-
-    item.append(colorDot, nameInput, deleteBtn);
-    container.appendChild(item);
-  });
+    } catch {
+      btn.classList.remove('done', 'downloading');
+      btn.querySelector('span').textContent = t('settings.predownload_vosk');
+    }
+  }
 }
 
 export function openSettings() {
   $('#settingsPanel').classList.add('open');
   $('#settingsOverlay').classList.add('visible');
   $('#settingsPanel').setAttribute('aria-hidden', 'false');
-  renderSpeakerSettings();
   updateTypoDictCount();
   updatePresetPromptDisplay();
 }

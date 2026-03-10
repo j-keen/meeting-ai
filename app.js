@@ -1,6 +1,5 @@
 // app.js - State management, pub/sub, initialization
 
-import { initSpeakers, getSpeakers, getActiveSpeaker, updateSpeaker } from './speakers.js';
 import { createSTT } from './stt.js';
 import { analyzeTranscript, getDefaultPrompt, generateTags, correctTypos } from './ai.js';
 import {
@@ -9,15 +8,15 @@ import {
   loadTypoDict, saveTypoDict, addTypoCorrection,
 } from './storage.js';
 import {
-  initDragResizer, initPanelTabs, renderSpeakerBar, addTranscriptLine, showInterim, clearInterim,
+  initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
   addMemoLine, showAnalysisSkeletons, renderAnalysis, renderHighlights,
   renderAnalysisHistory, renderHistoryGrid, renderMeetingViewer,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
-  refreshAllSpeakerBadges, refreshTypoDict, applyTypoCorrections,
+  refreshTypoDict, applyTypoCorrections,
   updateMeetingInfoTime,
 } from './ui.js';
-import { initSettings, closeSettings, renderSpeakerSettings, updateTypoDictCount } from './settings.js';
+import { initSettings, closeSettings, updateTypoDictCount } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
@@ -95,17 +94,17 @@ async function startRecording() {
   try {
     await stt.start({
       language: state.settings.language || 'ko',
+      sttEngine: state.settings.sttEngine || 'auto',
       onInterim: (text) => {
         showInterim(text);
       },
-      onFinal: (text, speakerId) => {
+      onFinal: (text) => {
         // Apply typo corrections
         const { text: correctedText, corrections } = applyTypoCorrections(text);
 
         const line = {
           id: generateId(),
           text: correctedText,
-          speakerId: speakerId || getActiveSpeaker()?.id || null,
           timestamp: Date.now(),
           bookmarked: false,
         };
@@ -115,6 +114,20 @@ async function startRecording() {
       },
       onError: (err) => {
         showToast(err, 'error');
+      },
+      onEngineReady: (name) => {
+        const label = $('#sttEngineLabel');
+        if (label) {
+          label.textContent = name === 'vosk' ? t('stt.vosk_label') : t('stt.engine_label');
+          label.classList.remove('downloading');
+        }
+      },
+      onModelProgress: (pct) => {
+        const label = $('#sttEngineLabel');
+        if (label) {
+          label.textContent = t('stt.downloading', { pct });
+          label.classList.add('downloading');
+        }
       },
     });
 
@@ -159,6 +172,13 @@ function stopRecording() {
   btn.classList.remove('recording');
   btn.querySelector('.record-label').textContent = t('record.label');
   $('#meetingStatus').textContent = t('record.status_stopped');
+
+  // Reset STT engine label
+  const sttLabel = $('#sttEngineLabel');
+  if (sttLabel) {
+    sttLabel.textContent = t('stt.engine_label');
+    sttLabel.classList.remove('downloading');
+  }
 
   autoSave();
 }
@@ -223,7 +243,7 @@ function startAiTypoCorrection() {
         apiKey: state.settings.geminiKey,
         corrections: currentDict,
         recentText,
-        model: state.settings.geminiModel || 'gemini-2.0-flash',
+        model: state.settings.geminiModel || 'gemini-2.5-flash',
       });
       if (newCorrections && Object.keys(newCorrections).length > 0) {
         const merged = { ...currentDict, ...newCorrections };
@@ -258,7 +278,6 @@ async function runAnalysis() {
     const result = await analyzeTranscript({
       apiKey: state.settings.geminiKey,
       transcript: state.transcript,
-      speakers: getSpeakers(),
       prompt: state.settings.customPrompt,
       meetingContext: state.settings.meetingContext,
       meetingPreset: state.settings.meetingPreset,
@@ -267,7 +286,7 @@ async function runAnalysis() {
       recentMinutes: state.settings.recentMinutes || 5,
       previousSummary,
       userInsights: state.userInsights,
-      model: state.settings.geminiModel || 'gemini-2.0-flash',
+      model: state.settings.geminiModel || 'gemini-2.5-flash',
     });
 
     state.currentAnalysis = result;
@@ -275,26 +294,13 @@ async function runAnalysis() {
     state.analysisHistory.push(result);
     renderAnalysis(result);
 
-    // Apply AI speaker diarization
-    if (result.speakerMap && Array.isArray(result.speakerMap)) {
-      const speakers = getSpeakers();
-      result.speakerMap.forEach(({ line: idx, speaker: name }) => {
-        if (idx == null || !name || idx >= state.transcript.length) return;
-        const sp = speakers.find(s => s.name === name);
-        if (sp && state.transcript[idx].speakerId !== sp.id) {
-          state.transcript[idx].speakerId = sp.id;
-          updateTranscriptLineUI(state.transcript[idx].id);
-        }
-      });
-    }
-
     // Auto-generate tags
     if (result.summary && state.tags.length === 0) {
       generateTags({
         apiKey: state.settings.geminiKey,
         summary: result.summary,
         transcript: state.transcript,
-        model: state.settings.geminiModel || 'gemini-2.0-flash',
+        model: state.settings.geminiModel || 'gemini-2.5-flash',
       }).then(tags => {
         if (tags.length > 0) state.tags = tags;
       });
@@ -305,7 +311,7 @@ async function runAnalysis() {
     showToast(t('toast.analysis_fail') + err.message, 'error');
     renderAnalysis(state.currentAnalysis || {
       summary: '', context: '', openQuestions: [],
-      actionItems: [], suggestions: [], speakerStats: {}
+      actionItems: [], suggestions: [],
     });
   } finally {
     isAnalyzing = false;
@@ -322,7 +328,6 @@ function autoSave() {
     preset: state.settings.meetingPreset || 'general',
     location: state.meetingLocation || $('#inputMeetingLocation')?.value || '',
     meetingContext: state.settings.meetingContext || '',
-    speakers: getSpeakers(),
     transcript: state.transcript,
     memos: state.memos,
     analysisHistory: state.analysisHistory,
@@ -417,20 +422,17 @@ function resetMeeting() {
 
 // ===== Export =====
 function generateMarkdownFull() {
-  const speakers = getSpeakers();
-  const getName = (id) => speakers.find(s => s.id === id)?.name || t('speaker.unknown');
   let md = `${t('md.meeting_notes')}\n`;
   md += `${t('md.date')}: ${new Date(state.meetingStartTime || Date.now()).toLocaleString(getDateLocale())}\n`;
   md += `${t('md.duration')}: ${getElapsedTimeStr()}\n`;
   if (state.meetingLocation) md += `Location: ${state.meetingLocation}\n`;
-  md += `${t('md.participants')}: ${speakers.map(s => s.name).join(', ')}\n`;
   if (state.tags.length > 0) md += `Tags: ${state.tags.join(', ')}\n`;
   md += '\n';
 
   md += `${t('md.transcript')}\n\n`;
   state.transcript.forEach(line => {
     const time = formatTimeSimple(line.timestamp);
-    md += `**[${time}] ${getName(line.speakerId)}:** ${line.text}\n\n`;
+    md += `**[${time}]** ${line.text}\n\n`;
   });
 
   if (state.memos.length > 0) {
@@ -481,13 +483,11 @@ function generateMarkdownSummary() {
 }
 
 function generateMarkdownHighlights() {
-  const speakers = getSpeakers();
-  const getName = (id) => speakers.find(s => s.id === id)?.name || t('speaker.unknown');
   let md = `${t('md.highlights_title')}\n\n`;
   const bookmarked = state.transcript.filter(l => l.bookmarked);
   if (bookmarked.length > 0) {
     md += `${t('md.bookmarks')}\n\n`;
-    bookmarked.forEach(l => { md += `- **[${formatTimeSimple(l.timestamp)}] ${getName(l.speakerId)}:** ${l.text}\n`; });
+    bookmarked.forEach(l => { md += `- **[${formatTimeSimple(l.timestamp)}]** ${l.text}\n`; });
     md += '\n';
   }
   if (state.memos.length > 0) {
@@ -503,7 +503,6 @@ function generateJSON() {
     startTime: state.meetingStartTime,
     duration: getElapsedTimeStr(),
     location: state.meetingLocation,
-    speakers: getSpeakers(),
     transcript: state.transcript,
     memos: state.memos,
     analysisHistory: state.analysisHistory,
@@ -592,8 +591,6 @@ function init() {
   setLanguage(savedSettings.uiLanguage || 'auto');
   setAiLanguage(savedSettings.aiLanguage || 'auto');
 
-  initSpeakers(savedSettings.speakers);
-
   initSettings();
   initDragResizer();
   initPanelTabs();
@@ -601,7 +598,6 @@ function init() {
   initContextPopup();
   initKeyboardShortcuts();
   initChat();
-  renderSpeakerBar();
   refreshTypoDict();
 
   // Set meeting info time
@@ -761,14 +757,6 @@ function init() {
     removeTranscriptLineUI(id);
   });
 
-  on('transcript:changeSpeaker', ({ id, speakerId }) => {
-    const line = state.transcript.find(l => l.id === id);
-    if (line) {
-      line.speakerId = speakerId;
-      updateTranscriptLineUI(id);
-    }
-  });
-
   // Transcript edit - detect typo corrections
   on('transcript:edit', ({ id, text, original }) => {
     if (original && text !== original) {
@@ -787,16 +775,8 @@ function init() {
     }
   });
 
-  // Speaker update
-  on('speaker:update', () => {
-    renderSpeakerBar();
-    refreshAllSpeakerBadges();
-    renderSpeakerSettings();
-  });
-
   // Language change
   on('language:change', () => {
-    renderSpeakerBar();
     if (state.currentAnalysis) renderAnalysis(state.currentAnalysis);
   });
 
@@ -867,16 +847,6 @@ function init() {
       state.settings.customPrompt = config.customPrompt;
       saveSettings({ customPrompt: config.customPrompt });
     }
-    // Load attendees as speakers
-    if (config.attendees && config.attendees.length > 0) {
-      const speakers = getSpeakers();
-      config.attendees.forEach((attendee, i) => {
-        if (i < speakers.length) {
-          updateSpeaker(speakers[i].id, { name: attendee.name });
-        }
-      });
-      emit('speaker:update');
-    }
     // Start recording
     startRecording();
   });
@@ -943,46 +913,40 @@ function loadDemoData() {
   $('#inputMeetingLocation').value = state.meetingLocation;
   updateMeetingInfoTime();
 
-  const speakers = getSpeakers();
-  const s1 = speakers[0];
-  const s2 = speakers[1];
-  const s3 = speakers[2];
-
   const script = [
-    { speaker: s1, offset: 0, text: '자, 그럼 이번 주간 회의 시작하겠습니다. 지난주 스프린트 리뷰부터 해볼까요?' },
-    { speaker: s2, offset: 15, text: '네, 지난주에 사용자 인증 모듈 리팩토링 완료했고요, 테스트 커버리지 85%까지 올렸습니다.' },
-    { speaker: s1, offset: 35, text: '좋습니다. 목표가 80%였으니까 초과 달성이네요. 성능 이슈는 해결됐나요?' },
-    { speaker: s2, offset: 50, text: '토큰 갱신 부분에서 레이스 컨디션이 있었는데, 뮤텍스 패턴으로 해결했습니다. 응답 시간 200ms에서 50ms로 줄었어요.' },
-    { speaker: s3, offset: 70, text: '저는 새 대시보드 UI 디자인 완료했습니다. Figma에 올려놨는데 리뷰 부탁드려요.' },
-    { speaker: s1, offset: 85, text: '오, 대시보드 기대되네요. 이번주 중으로 리뷰하겠습니다. 모바일 반응형도 포함인가요?' },
-    { speaker: s3, offset: 100, text: '네, 모바일 브레이크포인트 3개로 잡았고요. 태블릿은 그리드 2열, 모바일은 1열 레이아웃입니다.' },
-    { speaker: s2, offset: 120, text: '프론트엔드 구현할 때 디자인 토큰 사용하면 좋을 것 같은데, 색상 변수 정리되어 있나요?' },
-    { speaker: s3, offset: 135, text: '네, 디자인 시스템에 시맨틱 컬러 토큰 12개 정의해놨어요. JSON으로 export 가능합니다.' },
-    { speaker: s1, offset: 155, text: '좋아요. 그러면 이번 주 목표 정리해봅시다. 개발팀은 대시보드 API 엔드포인트 구현, 맞죠?' },
-    { speaker: s2, offset: 170, text: '네, REST API 5개 엔드포인트랑 WebSocket 실시간 알림 기능까지 이번주 목표입니다.' },
-    { speaker: s1, offset: 190, text: '일정이 빡빡한데 괜찮을까요? WebSocket은 다음 주로 넘겨도 될 것 같은데.' },
-    { speaker: s2, offset: 210, text: '음... 솔직히 WebSocket은 좀 여유가 없을 수 있어요. 다음 주로 넘기는 게 나을 것 같습니다.' },
-    { speaker: s3, offset: 225, text: '그러면 저는 이번주에 컴포넌트 라이브러리 문서화 작업 진행할게요. Storybook으로요.' },
-    { speaker: s1, offset: 240, text: '좋습니다. 그리고 한 가지 더, 다음 달 클라이언트 데모가 있어서 준비해야 합니다.' },
-    { speaker: s2, offset: 260, text: '데모 범위가 어디까지인가요? 전체 플로우인지, 핵심 기능만인지?' },
-    { speaker: s1, offset: 275, text: '핵심 기능 위주로요. 로그인, 대시보드, 보고서 생성 이 세 가지면 충분합니다.' },
-    { speaker: s3, offset: 290, text: '대시보드 애니메이션 효과 넣으면 데모에서 임팩트가 좋을 것 같은데, 개발 공수가 어떤가요?' },
-    { speaker: s2, offset: 310, text: 'Framer Motion 쓰면 하루 정도면 가능합니다. 차트 진입 애니메이션이랑 숫자 카운트업 정도?' },
-    { speaker: s1, offset: 325, text: '좋아요, 그건 데모 전 주에 넣는 걸로 합시다. 다른 이슈 있나요?' },
-    { speaker: s3, offset: 340, text: '아, 접근성 관련해서 WCAG 2.1 AA 기준 맞추려면 컬러 대비 일부 수정이 필요해요.' },
-    { speaker: s1, offset: 355, text: '중요한 포인트네요. 이번 스프린트에 접근성 태스크도 추가합시다.' },
-    { speaker: s2, offset: 370, text: '그리고 CI/CD 파이프라인에 접근성 자동 체크 넣으면 좋겠는데, axe-core 같은 거요.' },
-    { speaker: s1, offset: 390, text: '동의합니다. 그럼 정리하면: API 엔드포인트 구현, 컴포넌트 문서화, 접근성 수정, 데모 준비. 다들 오케이?' },
-    { speaker: s2, offset: 405, text: '네, 오케이입니다.' },
-    { speaker: s3, offset: 410, text: '저도 좋습니다!' },
-    { speaker: s1, offset: 420, text: '좋아요, 수고하셨습니다. 다음 주 같은 시간에 봐요!' },
+    { offset: 0, text: '자, 그럼 이번 주간 회의 시작하겠습니다. 지난주 스프린트 리뷰부터 해볼까요?' },
+    { offset: 15, text: '네, 지난주에 사용자 인증 모듈 리팩토링 완료했고요, 테스트 커버리지 85%까지 올렸습니다.' },
+    { offset: 35, text: '좋습니다. 목표가 80%였으니까 초과 달성이네요. 성능 이슈는 해결됐나요?' },
+    { offset: 50, text: '토큰 갱신 부분에서 레이스 컨디션이 있었는데, 뮤텍스 패턴으로 해결했습니다. 응답 시간 200ms에서 50ms로 줄었어요.' },
+    { offset: 70, text: '저는 새 대시보드 UI 디자인 완료했습니다. Figma에 올려놨는데 리뷰 부탁드려요.' },
+    { offset: 85, text: '오, 대시보드 기대되네요. 이번주 중으로 리뷰하겠습니다. 모바일 반응형도 포함인가요?' },
+    { offset: 100, text: '네, 모바일 브레이크포인트 3개로 잡았고요. 태블릿은 그리드 2열, 모바일은 1열 레이아웃입니다.' },
+    { offset: 120, text: '프론트엔드 구현할 때 디자인 토큰 사용하면 좋을 것 같은데, 색상 변수 정리되어 있나요?' },
+    { offset: 135, text: '네, 디자인 시스템에 시맨틱 컬러 토큰 12개 정의해놨어요. JSON으로 export 가능합니다.' },
+    { offset: 155, text: '좋아요. 그러면 이번 주 목표 정리해봅시다. 개발팀은 대시보드 API 엔드포인트 구현, 맞죠?' },
+    { offset: 170, text: '네, REST API 5개 엔드포인트랑 WebSocket 실시간 알림 기능까지 이번주 목표입니다.' },
+    { offset: 190, text: '일정이 빡빡한데 괜찮을까요? WebSocket은 다음 주로 넘겨도 될 것 같은데.' },
+    { offset: 210, text: '음... 솔직히 WebSocket은 좀 여유가 없을 수 있어요. 다음 주로 넘기는 게 나을 것 같습니다.' },
+    { offset: 225, text: '그러면 저는 이번주에 컴포넌트 라이브러리 문서화 작업 진행할게요. Storybook으로요.' },
+    { offset: 240, text: '좋습니다. 그리고 한 가지 더, 다음 달 클라이언트 데모가 있어서 준비해야 합니다.' },
+    { offset: 260, text: '데모 범위가 어디까지인가요? 전체 플로우인지, 핵심 기능만인지?' },
+    { offset: 275, text: '핵심 기능 위주로요. 로그인, 대시보드, 보고서 생성 이 세 가지면 충분합니다.' },
+    { offset: 290, text: '대시보드 애니메이션 효과 넣으면 데모에서 임팩트가 좋을 것 같은데, 개발 공수가 어떤가요?' },
+    { offset: 310, text: 'Framer Motion 쓰면 하루 정도면 가능합니다. 차트 진입 애니메이션이랑 숫자 카운트업 정도?' },
+    { offset: 325, text: '좋아요, 그건 데모 전 주에 넣는 걸로 합시다. 다른 이슈 있나요?' },
+    { offset: 340, text: '아, 접근성 관련해서 WCAG 2.1 AA 기준 맞추려면 컬러 대비 일부 수정이 필요해요.' },
+    { offset: 355, text: '중요한 포인트네요. 이번 스프린트에 접근성 태스크도 추가합시다.' },
+    { offset: 370, text: '그리고 CI/CD 파이프라인에 접근성 자동 체크 넣으면 좋겠는데, axe-core 같은 거요.' },
+    { offset: 390, text: '동의합니다. 그럼 정리하면: API 엔드포인트 구현, 컴포넌트 문서화, 접근성 수정, 데모 준비. 다들 오케이?' },
+    { offset: 405, text: '네, 오케이입니다.' },
+    { offset: 410, text: '저도 좋습니다!' },
+    { offset: 420, text: '좋아요, 수고하셨습니다. 다음 주 같은 시간에 봐요!' },
   ];
 
   script.forEach((item, idx) => {
     const line = {
       id: generateId() + idx,
       text: item.text,
-      speakerId: item.speaker?.id || s1.id,
       timestamp: state.meetingStartTime + item.offset * 1000,
       bookmarked: idx === 3 || idx === 14,
     };

@@ -1,6 +1,6 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
-import { getAiPrompt, getAiPresetContext, getDateLocale, t } from './i18n.js';
+import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t } from './i18n.js';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -16,18 +16,12 @@ export function getPresetContext(preset) {
   return getAiPresetContext(preset);
 }
 
-function buildTranscriptText(transcript, speakers, strategy, recentMinutes, previousSummary) {
+function buildTranscriptText(transcript, strategy, recentMinutes, previousSummary) {
   if (!transcript || transcript.length === 0) return '';
-
-  const getSpeakerName = (id) => {
-    const s = speakers.find(sp => sp.id === id);
-    return s ? s.name : t('speaker.unknown');
-  };
 
   const formatLine = (line, idx) => {
     const time = new Date(line.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-    const name = getSpeakerName(line.speakerId);
-    return `#${idx} [${time}] ${name}: ${line.text}`;
+    return `#${idx} [${time}]: ${line.text}`;
   };
 
   if (strategy === 'full') {
@@ -66,14 +60,12 @@ function parseGeminiResponse(text) {
     openQuestions: [],
     actionItems: [],
     suggestions: [],
-    speakerStats: {}
   };
 }
 
 export async function analyzeTranscript({
   apiKey,
   transcript,
-  speakers,
   prompt,
   meetingContext,
   meetingPreset,
@@ -82,19 +74,17 @@ export async function analyzeTranscript({
   recentMinutes = 5,
   previousSummary = null,
   userInsights = [],
-  model = 'gemini-2.0-flash',
+  model = 'gemini-2.5-flash',
 }) {
   if (!apiKey) throw new Error('Gemini API key not set');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
 
-  const speakerList = speakers.map(s => s.name).join(', ');
   const contextText = meetingContext || getPresetContext(meetingPreset || 'general');
-  const transcriptText = buildTranscriptText(transcript, speakers, strategy, recentMinutes, previousSummary);
+  const transcriptText = buildTranscriptText(transcript, strategy, recentMinutes, previousSummary);
 
   const systemPrompt = prompt || getAiPrompt();
   const messageParts = [
     `Meeting Context: ${contextText}`,
-    `Participants: ${speakerList}`,
     `Elapsed Time: ${elapsedTime || 'unknown'}`,
   ];
 
@@ -146,8 +136,6 @@ export async function analyzeTranscript({
         openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
         actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
         suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-        speakerStats: parsed.speakerStats || {},
-        speakerMap: Array.isArray(parsed.speakerMap) ? parsed.speakerMap : [],
         timestamp: Date.now(),
       };
     } catch (err) {
@@ -160,11 +148,15 @@ export async function analyzeTranscript({
 }
 
 // Auto-generate tags from analysis
-export async function generateTags({ apiKey, summary, transcript, model = 'gemini-2.0-flash' }) {
+export async function generateTags({ apiKey, summary, transcript, model = 'gemini-2.5-flash' }) {
   if (!apiKey || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
-  const prompt = `Based on this meeting summary and transcript, generate 3-5 short tags (keywords) that categorize this meeting. Return ONLY a JSON array of strings. No explanation.
+  const lang = getAiLanguage();
+  const langInstruction = lang === 'ko'
+    ? '태그를 반드시 한국어로 생성하세요.'
+    : 'Generate tags in English.';
+  const prompt = `Based on this meeting summary and transcript, generate 3-5 short tags (keywords) that categorize this meeting. ${langInstruction} Return ONLY a JSON array of strings. No explanation.
 
 Summary: ${summary}
 
@@ -193,11 +185,13 @@ Transcript excerpt: ${transcriptSnippet}`;
 }
 
 // AI-powered typo correction
-export async function correctTypos({ apiKey, corrections, recentText, model = 'gemini-2.0-flash' }) {
+export async function correctTypos({ apiKey, corrections, recentText, model = 'gemini-2.5-flash' }) {
   if (!apiKey || !recentText) return {};
 
   const existingDict = Object.entries(corrections || {}).map(([k, v]) => `"${k}" -> "${v}"`).join(', ');
-  const prompt = `You are a meeting transcript typo corrector for Korean/English text.
+  const lang = getAiLanguage();
+  const langLabel = lang === 'ko' ? 'Korean' : 'English';
+  const prompt = `You are a meeting transcript typo corrector for ${langLabel} text.
 Existing corrections: ${existingDict || 'none'}
 
 Recent transcript text:

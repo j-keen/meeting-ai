@@ -175,95 +175,6 @@ h1, h2, h3 { font-weight: 600; }
 [data-theme="light"] .icon-theme-dark { display: none; }
 [data-theme="dark"] .icon-theme-light { display: none; }
 
-/* ===== Speaker Bar ===== */
-.speaker-bar {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.speaker-badge-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-.speaker-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 2px solid transparent;
-  background: var(--bg-tertiary);
-  cursor: pointer;
-  font-size: 12px;
-  font-family: var(--font-sans);
-  color: var(--text-primary);
-  transition: all var(--transition-fast);
-}
-.speaker-badge:hover { background: var(--bg-hover); }
-.speaker-badge.active {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-}
-.speaker-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-}
-.speaker-name-edit {
-  width: 80px;
-  padding: 2px 6px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 12px;
-  outline: none;
-}
-/* Speaker remove button - inline, not absolute (fixes clipping) */
-.speaker-badge-remove {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--danger);
-  color: var(--text-inverse);
-  font-size: 10px;
-  line-height: 1;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border: none;
-  flex-shrink: 0;
-  margin-left: -4px;
-}
-.speaker-badge-wrap:hover .speaker-badge-remove {
-  display: inline-flex;
-}
-.speaker-add-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px dashed var(--border-color);
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 16px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-.speaker-add-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-bg);
-}
 
 /* ===== Panel Tabs (Mobile) ===== */
 .panel-tabs {
@@ -457,21 +368,6 @@ h1, h2, h3 { font-weight: 600; }
   padding-top: 2px;
   flex-shrink: 0;
 }
-.transcript-speaker-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  border: none;
-  font-size: 11px;
-  font-family: var(--font-sans);
-  cursor: pointer;
-  color: var(--text-inverse);
-  flex-shrink: 0;
-  min-width: 50px;
-  justify-content: center;
-}
 .transcript-text {
   flex: 1;
   line-height: 1.5;
@@ -573,35 +469,6 @@ h1, h2, h3 { font-weight: 600; }
 }
 .ai-section-body ul { margin: 4px 0; padding-left: 20px; }
 .ai-section-body li { margin-bottom: 4px; }
-
-/* Speaker Stats */
-.speaker-stat-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 13px;
-}
-.speaker-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.speaker-stat-name { min-width: 60px; color: var(--text-primary); }
-.speaker-stat-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.speaker-stat-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-.speaker-stat-value {
-  font-size: 12px;
-  color: var(--text-muted);
-  min-width: 60px;
-  text-align: right;
-}
 
 /* Skeleton */
 .skeleton-section { pointer-events: none; }
@@ -796,7 +663,15 @@ h1, h2, h3 { font-weight: 600; }
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
-.stt-engine-label { font-size: 11px; color: var(--text-muted); }
+.stt-engine-label { font-size: 11px; color: var(--text-muted); transition: color var(--transition-fast); }
+.stt-engine-label.downloading {
+  color: var(--accent);
+  animation: stt-pulse 1.5s ease-in-out infinite;
+}
+@keyframes stt-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
 
 /* ===== Settings Panel ===== */
 .settings-panel {
@@ -1092,50 +967,12 @@ h1, h2, h3 { font-weight: 600; }
 .toggle-wrap input:checked + .toggle-slider { background: var(--accent); }
 .toggle-wrap input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-/* Speaker Settings */
-.speaker-setting-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-}
-.speaker-color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-.speaker-name-input {
-  flex: 1;
-  padding: 3px 6px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  outline: none;
-}
-.speaker-name-input:focus { border-color: var(--accent); }
-.speaker-delete-btn {
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 16px;
-  flex-shrink: 0;
-}
-.speaker-delete-btn:hover { color: var(--danger); }
-.speaker-settings-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* STT Engine hint & predownload */
+.stt-engine-hint { margin-top: -4px; margin-bottom: 8px; }
+.stt-predownload-btn { margin-bottom: 12px; }
+.stt-predownload-btn.downloading { color: var(--accent); pointer-events: none; }
+.stt-predownload-btn.done { color: var(--success); }
+
 .typo-dict-actions {
   display: flex;
   gap: 6px;
@@ -1215,33 +1052,6 @@ h1, h2, h3 { font-weight: 600; }
 }
 .context-btn:hover { background: var(--bg-hover); }
 .context-btn[data-action="delete"] { color: var(--danger); }
-
-/* Speaker Dropdown */
-.speaker-dropdown {
-  position: fixed;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  z-index: 300;
-  padding: 4px;
-  min-width: 120px;
-}
-.speaker-dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border: none;
-  background: none;
-  width: 100%;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-}
-.speaker-dropdown-item:hover { background: var(--bg-hover); }
 
 /* ===== History Grid ===== */
 .history-toolbar { margin-bottom: 12px; }
@@ -1494,20 +1304,6 @@ h1, h2, h3 { font-weight: 600; }
 
 /* Export button */
 .export-btn { text-align: left; padding: 10px 14px; }
-
-/* Speaker Preset List */
-.speaker-preset-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  margin-bottom: 6px;
-}
-.speaker-preset-name { font-weight: 500; font-size: 13px; }
-.speaker-preset-speakers { font-size: 11px; color: var(--text-muted); }
-.speaker-preset-actions { display: flex; gap: 4px; }
 
 /* Typo Dict List */
 .typo-dict-item {

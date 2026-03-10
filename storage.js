@@ -148,28 +148,6 @@ export function resetTypoDict() {
   return saveTypoDict({});
 }
 
-// Speaker Presets
-export function loadSpeakerPresets() {
-  const data = loadAll();
-  return data.settings.speakerPresets || {};
-}
-
-export function saveSpeakerPreset(name, speakers) {
-  const data = loadAll();
-  if (!data.settings.speakerPresets) data.settings.speakerPresets = {};
-  data.settings.speakerPresets[name] = speakers.map(s => ({ name: s.name, color: s.color }));
-  return saveAll(data);
-}
-
-export function deleteSpeakerPreset(name) {
-  const data = loadAll();
-  if (data.settings.speakerPresets) {
-    delete data.settings.speakerPresets[name];
-    return saveAll(data);
-  }
-  return { success: false };
-}
-
 // Contacts CRUD
 export function loadContacts() {
   const data = loadAll();

@@ -1,7 +1,6 @@
 // ui.js - DOM rendering, events, drag resizer
 
 import { state, emit, on } from './app.js';
-import { getSpeakers, getSpeaker, getActiveSpeaker, setActiveSpeaker, setActiveSpeakerByIndex, addSpeaker, updateSpeaker, removeSpeaker } from './speakers.js';
 import { t, getDateLocale } from './i18n.js';
 import { loadTypoDict } from './storage.js';
 
@@ -119,103 +118,6 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// ===== Speaker Bar (with inline editing) =====
-export function renderSpeakerBar() {
-  const bar = $('#speakerBar');
-  bar.innerHTML = '';
-  const speakers = getSpeakers();
-  const active = getActiveSpeaker();
-
-  speakers.forEach((speaker, idx) => {
-    const tmpl = $('#tmplSpeakerBadge');
-    const wrap = tmpl.content.cloneNode(true).querySelector('.speaker-badge-wrap');
-    wrap.dataset.speakerId = speaker.id;
-
-    const badge = wrap.querySelector('.speaker-badge');
-    const dot = wrap.querySelector('.speaker-dot');
-    const nameSpan = wrap.querySelector('.speaker-name');
-    const nameInput = wrap.querySelector('.speaker-name-edit');
-    const removeBtn = wrap.querySelector('.speaker-badge-remove');
-
-    dot.style.backgroundColor = speaker.color;
-    nameSpan.textContent = `${idx + 1}. ${speaker.name}`;
-    if (active && active.id === speaker.id) badge.classList.add('active');
-
-    let clickTimer = null;
-    badge.addEventListener('click', () => {
-      if (clickTimer) return;
-      clickTimer = setTimeout(() => {
-        clickTimer = null;
-        setActiveSpeaker(speaker.id);
-        renderSpeakerBar();
-      }, 250);
-    });
-
-    badge.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
-      startInlineEdit(badge, nameSpan, nameInput, speaker);
-    });
-
-    if (speakers.length > 1) {
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        removeSpeaker(speaker.id);
-        emit('speaker:update');
-      });
-    } else {
-      removeBtn.style.display = 'none';
-    }
-
-    bar.appendChild(wrap);
-  });
-
-  // Add "+" button
-  const addBtn = document.createElement('button');
-  addBtn.className = 'speaker-add-btn';
-  addBtn.textContent = '+';
-  addBtn.title = t('settings.add_speaker');
-  addBtn.addEventListener('click', () => {
-    const newSpeaker = addSpeaker();
-    emit('speaker:update');
-    setTimeout(() => {
-      const wrap = bar.querySelector(`.speaker-badge-wrap[data-speaker-id="${newSpeaker.id}"]`);
-      if (wrap) {
-        const badge = wrap.querySelector('.speaker-badge');
-        const nameSpan = wrap.querySelector('.speaker-name');
-        const nameInput = wrap.querySelector('.speaker-name-edit');
-        startInlineEdit(badge, nameSpan, nameInput, newSpeaker);
-      }
-    }, 50);
-  });
-  bar.appendChild(addBtn);
-}
-
-function startInlineEdit(badge, nameSpan, nameInput, speaker) {
-  badge.style.display = 'none';
-  nameInput.hidden = false;
-  nameInput.value = speaker.name;
-  nameInput.focus();
-  nameInput.select();
-
-  const finish = () => {
-    const newName = nameInput.value.trim();
-    if (newName && newName !== speaker.name) {
-      updateSpeaker(speaker.id, { name: newName });
-      emit('speaker:update');
-    } else {
-      badge.style.display = '';
-      nameInput.hidden = true;
-    }
-  };
-
-  nameInput.addEventListener('blur', finish, { once: true });
-  nameInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); }
-    if (e.key === 'Escape') { nameInput.value = speaker.name; nameInput.blur(); }
-  });
-}
-
 // ===== Transcript Rendering =====
 function formatTime(timestamp) {
   if (!state.meetingStartTime) return '00:00';
@@ -235,21 +137,6 @@ export function addTranscriptLine(line, corrections) {
   const el = tmpl.content.cloneNode(true).querySelector('.transcript-line');
   el.dataset.id = line.id;
   el.querySelector('.transcript-time').textContent = formatTime(line.timestamp);
-
-  const badge = el.querySelector('.transcript-speaker-badge');
-  badge.title = t('transcript.speaker_click');
-  const speaker = getSpeaker(line.speakerId);
-  if (speaker) {
-    badge.textContent = speaker.name;
-    badge.style.backgroundColor = speaker.color;
-  } else {
-    badge.textContent = '?';
-    badge.style.backgroundColor = '#888';
-  }
-  badge.addEventListener('click', (e) => {
-    e.stopPropagation();
-    showSpeakerDropdown(e.target, line.id);
-  });
 
   const textEl = el.querySelector('.transcript-text');
   if (corrections && corrections.length > 0) {
@@ -425,13 +312,7 @@ export function initContextPopup() {
     const lineId = popup.dataset.lineId;
     popup.hidden = true;
 
-    if (action === 'changeSpeaker') {
-      const lineEl = document.querySelector(`.transcript-line[data-id="${lineId}"]`);
-      if (lineEl) {
-        const badge = lineEl.querySelector('.transcript-speaker-badge');
-        showSpeakerDropdown(badge, lineId);
-      }
-    } else if (action === 'editText') {
+    if (action === 'editText') {
       editTranscriptLine(lineId);
     } else if (action === 'bookmark') {
       emit('transcript:bookmark', { id: lineId });
@@ -441,48 +322,11 @@ export function initContextPopup() {
   });
 }
 
-// ===== Speaker Dropdown =====
-function showSpeakerDropdown(anchor, lineId) {
-  const dropdown = $('#speakerDropdown');
-  dropdown.innerHTML = '';
-  dropdown.hidden = false;
-
-  const rect = anchor.getBoundingClientRect();
-  dropdown.style.left = rect.left + 'px';
-  dropdown.style.top = rect.bottom + 4 + 'px';
-
-  getSpeakers().forEach(speaker => {
-    const btn = document.createElement('button');
-    btn.className = 'speaker-dropdown-item';
-    btn.innerHTML = `<span class="speaker-dot" style="background:${speaker.color};width:8px;height:8px;border-radius:50%;display:inline-block;"></span>${speaker.name}`;
-    btn.addEventListener('click', () => {
-      emit('transcript:changeSpeaker', { id: lineId, speakerId: speaker.id });
-      dropdown.hidden = true;
-    });
-    dropdown.appendChild(btn);
-  });
-
-  const close = (ev) => {
-    if (!dropdown.contains(ev.target)) {
-      dropdown.hidden = true;
-      document.removeEventListener('click', close);
-    }
-  };
-  setTimeout(() => document.addEventListener('click', close), 0);
-}
-
 export function updateTranscriptLineUI(id) {
   const line = state.transcript.find(l => l.id === id);
   if (!line) return;
   const el = document.querySelector(`.transcript-line[data-id="${id}"]`);
   if (!el) return;
-
-  const speaker = getSpeaker(line.speakerId);
-  const badge = el.querySelector('.transcript-speaker-badge');
-  if (badge && speaker) {
-    badge.textContent = speaker.name;
-    badge.style.backgroundColor = speaker.color;
-  }
 
   el.querySelector('.transcript-text').textContent = line.text;
   el.classList.toggle('bookmarked', !!line.bookmarked);
@@ -501,7 +345,6 @@ function getSectionConfig() {
     { key: 'openQuestions', icon: '\u{2753}', title: t('card.openQuestions') },
     { key: 'actionItems', icon: '\u{2705}', title: t('card.actionItems') },
     { key: 'suggestions', icon: '\u{1F4A1}', title: t('card.suggestions') },
-    { key: 'speakerStats', icon: '\u{1F4CA}', title: t('card.speakerStats') },
   ];
 }
 
@@ -530,9 +373,7 @@ export function renderAnalysis(analysis) {
     section.querySelector('.ai-section-label').textContent = title;
     const body = section.querySelector('.ai-section-body');
 
-    if (key === 'speakerStats') {
-      renderSpeakerStatsSection(body, analysis.speakerStats);
-    } else if (Array.isArray(analysis[key])) {
+    if (Array.isArray(analysis[key])) {
       if (analysis[key].length === 0) {
         body.textContent = t('card.no_items');
       } else {
@@ -549,34 +390,6 @@ export function renderAnalysis(analysis) {
     }
 
     container.appendChild(section);
-  });
-}
-
-function renderSpeakerStatsSection(body, stats) {
-  if (!stats || Object.keys(stats).length === 0) {
-    body.textContent = t('card.no_speaker_data');
-    return;
-  }
-  const entries = Object.entries(stats);
-  const maxVal = Math.max(...entries.map(([, v]) => v));
-  const total = entries.reduce((sum, [, v]) => sum + v, 0);
-  const speakers = getSpeakers();
-
-  entries.forEach(([name, count]) => {
-    const s = speakers.find(sp => sp.name === name);
-    const color = s ? s.color : '#888';
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-    const barWidth = maxVal > 0 ? Math.round((count / maxVal) * 100) : 0;
-
-    const line = document.createElement('div');
-    line.className = 'speaker-stat-line';
-    line.innerHTML = `
-      <span class="speaker-stat-dot" style="background:${color}"></span>
-      <span class="speaker-stat-name">${name}</span>
-      <div class="speaker-stat-bar"><div class="speaker-stat-bar-fill" style="width:${barWidth}%;background:${color}"></div></div>
-      <span class="speaker-stat-value">${count} (${pct}%)</span>
-    `;
-    body.appendChild(line);
   });
 }
 
@@ -605,7 +418,7 @@ export function renderHighlights(filter = 'all') {
       <span class="transcript-time">${formatTime(item.timestamp)}</span>
       ${item.type === 'memo'
         ? `<span class="memo-badge">MEMO</span>`
-        : `<span class="transcript-speaker-badge" style="background:${getSpeaker(item.speakerId)?.color || '#888'}">${getSpeaker(item.speakerId)?.name || '?'}</span>`
+        : ``
       }
       <span class="transcript-text${item.type === 'memo' ? ' memo-text' : ''}">${item.text}</span>
     `;
@@ -682,7 +495,6 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     card.querySelector('.history-card-date').textContent = new Date(meeting.createdAt).toLocaleDateString(getDateLocale());
     card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_general');
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
-    card.querySelector('.history-card-speakers').textContent = t('history.speakers_count', { n: meeting.speakers?.length || 0 });
     card.querySelector('.history-card-location').textContent = meeting.location || '';
 
     // Tags
@@ -753,7 +565,6 @@ export function renderMeetingViewer(meeting) {
     { label: 'Duration', value: meeting.duration || '' },
     { label: 'Type', value: meeting.preset || 'General' },
     { label: 'Location', value: meeting.location || '' },
-    { label: 'Speakers', value: (meeting.speakers || []).map(s => s.name).join(', ') },
   ];
   if (meeting.meetingContext) {
     metaItems.push({ label: 'Context', value: meeting.meetingContext.slice(0, 100) + (meeting.meetingContext.length > 100 ? '...' : '') });
@@ -778,10 +589,8 @@ export function renderMeetingViewer(meeting) {
     const div = document.createElement('div');
     div.className = 'transcript-line' + (line.bookmarked ? ' bookmarked' : '');
     div.dataset.index = idx;
-    const speaker = (meeting.speakers || []).find(s => s.id === line.speakerId);
     div.innerHTML = `
       <span class="transcript-time" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:48px;">${formatTimeFromMs(line.timestamp - (meeting.startTime || 0))}</span>
-      <span class="transcript-speaker-badge" style="background:${speaker?.color || '#888'};color:var(--text-inverse);padding:1px 8px;border-radius:9999px;font-size:11px;">${speaker?.name || '?'}</span>
       <span class="transcript-text">${line.text}</span>
     `;
     transcriptContainer.appendChild(div);
@@ -932,7 +741,6 @@ export function initKeyboardShortcuts() {
     if (e.key === 'Escape') {
       document.querySelectorAll('.modal-overlay:not([hidden])').forEach(m => m.hidden = true);
       $('#contextPopup').hidden = true;
-      $('#speakerDropdown').hidden = true;
       const settingsPanel = $('#settingsPanel');
       if (settingsPanel.classList.contains('open')) emit('settings:close');
       return;
@@ -940,19 +748,6 @@ export function initKeyboardShortcuts() {
 
     // Ignore shortcuts when typing in inputs
     if (e.target.matches('input, textarea, [contenteditable]')) return;
-
-    // Number keys 1-8: switch active speaker
-    if (!e.ctrlKey && !e.altKey && !e.metaKey) {
-      const num = parseInt(e.key);
-      if (num >= 1 && num <= 8) {
-        const speaker = setActiveSpeakerByIndex(num - 1);
-        if (speaker) {
-          renderSpeakerBar();
-          showToast(`Speaker: ${speaker.name}`, 'success');
-        }
-        return;
-      }
-    }
 
     if (e.ctrlKey && e.key === 'r') {
       e.preventDefault();
@@ -969,11 +764,6 @@ export function initKeyboardShortcuts() {
       toggleTheme();
     }
   });
-}
-
-// Rebuild all speaker badges in transcript when speakers change
-export function refreshAllSpeakerBadges() {
-  state.transcript.forEach(line => updateTranscriptLineUI(line.id));
 }
 
 // Update meeting info bar time display
