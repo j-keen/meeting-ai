@@ -255,7 +255,7 @@ export function createSTT() {
   return {
     get isRunning() { return isRunning; },
 
-    async start({ language, engineType, onInterim, onFinal, onError }) {
+    async start({ language, engineType, onInterim, onFinal, onError, onEngineChange }) {
       if (isRunning) return;
       isRunning = true;
 
@@ -280,15 +280,15 @@ export function createSTT() {
           await currentEngine.start(onInterim, safeFinal, (err) => {
             // On Deepgram error, fall back to WebSpeech
             console.warn('[STT] Deepgram error, falling back to WebSpeech:', err);
-            onError(err + ' ' + t('stt.fallback_webspeech'));
             currentEngine = createWebSpeechEngine(language);
             currentEngine.start(onInterim, safeFinal, onError);
+            if (onEngineChange) onEngineChange('webspeech');
           });
         } catch (err) {
           console.warn('[STT] Deepgram failed, falling back to WebSpeech:', err);
-          onError(t('stt.fallback_webspeech'));
           currentEngine = createWebSpeechEngine(language);
           currentEngine.start(onInterim, safeFinal, onError);
+          if (onEngineChange) onEngineChange('webspeech');
         }
       } else {
         currentEngine = createWebSpeechEngine(language);

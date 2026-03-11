@@ -20,7 +20,7 @@ import {
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
 } from './ui.js';
-import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount } from './settings.js';
+import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount, syncSttEngineUI } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
@@ -134,6 +134,20 @@ async function startRecording() {
       },
       onError: (err) => {
         showToast(err, 'error');
+      },
+      onEngineChange: (newEngine) => {
+        // Update label with warning indicator
+        const engineLabel = document.getElementById('sttEngineLabel');
+        if (engineLabel) {
+          engineLabel.textContent = newEngine === 'webspeech' ? 'Web Speech ⚠' : 'Deepgram';
+        }
+        // Update settings and persist
+        state.settings.sttEngine = newEngine;
+        saveSettings({ sttEngine: newEngine });
+        // Sync settings UI dropdown
+        syncSttEngineUI(newEngine);
+        // Show warning toast
+        showToast(t('stt.fallback_warning'), 'warning');
       },
     });
 

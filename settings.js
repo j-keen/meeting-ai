@@ -812,6 +812,11 @@ function renderDataCategories() {
   });
 }
 
+export function syncSttEngineUI(engine) {
+  const select = $('#selectSttEngine');
+  if (select) select.value = engine;
+}
+
 export function openSettings() {
   $('#settingsPanel').classList.add('open');
   $('#settingsOverlay').classList.add('visible');
