@@ -142,29 +142,29 @@ function createDeepgramEngine(language) {
     name: 'deepgram',
 
     async start(onInterim, onFinal, onError) {
-      // Fetch API key from server
+      // Fetch API key and mic permission in parallel for faster startup
       let apiKey;
       try {
-        const resp = await fetch('/api/stt-token');
-        if (!resp.ok) throw new Error('Failed to get STT token');
-        const data = await resp.json();
-        apiKey = data.key;
+        const [tokenResult, micResult] = await Promise.all([
+          fetch('/api/stt-token').then(async (resp) => {
+            if (!resp.ok) throw new Error('Failed to get STT token');
+            return (await resp.json()).key;
+          }),
+          navigator.mediaDevices.getUserMedia({ audio: true }),
+        ]);
+        apiKey = tokenResult;
+        stream = micResult;
       } catch (err) {
-        onError(t('stt.deepgram_key_missing'));
-        return;
-      }
-
-      // Get microphone stream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch {
-        onError(t('stt.mic_permission_denied'));
+        // Clean up mic if token failed but mic succeeded
+        if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
+        const msg = err.message?.includes('token') ? t('stt.deepgram_key_missing') : t('stt.mic_permission_denied');
+        onError(msg);
         return;
       }
 
       const connectWebSocket = () => {
         const lang = langMap[language] || 'en';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=1000&vad_events=true`;
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true&punctuate=true&numerals=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
 
         ws = new WebSocket(wsUrl, ['token', apiKey]);
 
@@ -183,7 +183,7 @@ function createDeepgramEngine(language) {
             }
           };
 
-          mediaRecorder.start(250); // Send chunks every 250ms
+          mediaRecorder.start(100); // Send chunks every 100ms for lower latency
         };
 
         ws.onmessage = (e) => {
