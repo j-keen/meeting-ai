@@ -2001,7 +2001,7 @@ h1, h2, h3 { font-weight: 600; }
   padding: 16px;
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
-  text-align: left;
+  text-align: center;
 }
 .welcome-privacy-info p { margin: 0; }
 .welcome-start-btn {

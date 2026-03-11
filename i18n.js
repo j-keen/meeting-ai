@@ -268,7 +268,7 @@ const translations = {
     // Welcome modal
     'welcome.title': 'Meeting AI',
     'welcome.privacy_desc': 'Your data is safe.',
-    'welcome.privacy_detail': 'All meeting data is stored locally on your device only. AI analysis uses Vertex AI, which does not use your data for training.',
+    'welcome.privacy_detail': 'All meeting data is stored locally on your device.<br>AI analysis is powered by Google Vertex AI,<br>which does not use your data for training.',
     'welcome.get_started': 'Get Started',
 
     // Meeting prep
@@ -684,7 +684,7 @@ const translations = {
     // Welcome modal
     'welcome.title': 'Meeting AI',
     'welcome.privacy_desc': '데이터가 안전합니다.',
-    'welcome.privacy_detail': '모든 회의 데이터는 이 기기에만 로컬 저장됩니다. AI 분석은 Vertex AI를 사용하며, 데이터를 학습에 사용하지 않습니다.',
+    'welcome.privacy_detail': '모든 회의 데이터는 이 기기에만 저장됩니다.<br>AI 분석은 Google Vertex AI를 사용하며,<br>데이터를 학습에 사용하지 않습니다.',
     'welcome.get_started': '시작하기',
 
     // Meeting prep
@@ -1107,7 +1107,9 @@ export function getDateLocale() {
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    el.textContent = t(key);
+    const val = t(key);
+    if (val.includes('<')) el.innerHTML = val;
+    else el.textContent = val;
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
