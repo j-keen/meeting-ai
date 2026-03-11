@@ -84,33 +84,36 @@ export function initPanelTabs() {
 let typoDict = {};
 
 export function refreshTypoDict() {
-  typoDict = loadTypoDict();
+  const raw = loadTypoDict();
+  const clean = {};
+  for (const [before, after] of Object.entries(raw)) {
+    if (before !== after && before.length > 1) clean[before] = after;
+  }
+  typoDict = clean;
 }
 
 export function applyTypoCorrections(text) {
   if (!typoDict || Object.keys(typoDict).length === 0) return { text, corrections: [] };
-  let corrected = text;
+  const tokens = text.split(' ');
   const corrections = [];
-  for (const [before, after] of Object.entries(typoDict)) {
-    if (corrected.includes(before)) {
-      corrected = corrected.split(before).join(after);
-      corrections.push({ before, after });
+  for (let i = 0; i < tokens.length; i++) {
+    if (typoDict[tokens[i]] && typoDict[tokens[i]] !== tokens[i]) {
+      corrections.push({ index: i, before: tokens[i], after: typoDict[tokens[i]] });
+      tokens[i] = typoDict[tokens[i]];
     }
   }
-  return { text: corrected, corrections };
+  return { text: tokens.join(' '), corrections };
 }
 
 // Render text with typo highlights (returns HTML string)
 function renderTextWithTypoHighlights(text, corrections) {
   if (!corrections || corrections.length === 0) return escapeHtml(text);
-  let html = escapeHtml(text);
-  for (const { before, after } of corrections) {
-    const escaped = escapeHtml(after);
-    html = html.split(escaped).join(
-      `<span class="typo-corrected" data-original="${escapeHtml(before)}">${escaped}</span>`
-    );
-  }
-  return html;
+  const correctionMap = new Map(corrections.map(c => [c.index, c]));
+  return text.split(' ').map((token, i) => {
+    const escaped = escapeHtml(token);
+    const c = correctionMap.get(i);
+    return c ? `<span class="typo-corrected" data-original="${escapeHtml(c.before)}">${escaped}</span>` : escaped;
+  }).join(' ');
 }
 
 function escapeHtml(str) {
@@ -907,6 +910,13 @@ export function toggleTheme() {
 export function initKeyboardShortcuts() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      // viewerModal → historyModal로 복귀
+      const viewerModal = $('#viewerModal');
+      if (viewerModal && !viewerModal.hidden) {
+        viewerModal.hidden = true;
+        $('#historyModal').hidden = false;
+        return;
+      }
       // If any modal is open, close it first and stop
       const openModals = document.querySelectorAll('.modal-overlay:not([hidden])');
       if (openModals.length > 0) {

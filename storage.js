@@ -139,6 +139,7 @@ export function saveTypoDict(dict) {
 }
 
 export function addTypoCorrection(before, after) {
+  if (!before || !after || before === after || before.length <= 1) return;
   const dict = loadTypoDict();
   dict[before] = after;
   return saveTypoDict(dict);

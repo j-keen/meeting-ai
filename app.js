@@ -331,7 +331,11 @@ function startAiTypoCorrection() {
         model: state.settings.geminiModel || 'gemini-2.5-flash',
       });
       if (newCorrections && Object.keys(newCorrections).length > 0) {
-        const merged = { ...currentDict, ...newCorrections };
+        const filtered = {};
+        for (const [before, after] of Object.entries(newCorrections)) {
+          if (before !== after && before.length > 1) filtered[before] = after;
+        }
+        const merged = { ...currentDict, ...filtered };
         saveTypoDict(merged);
         refreshTypoDict();
         updateTypoDictCount();
@@ -387,6 +391,7 @@ async function runAnalysis() {
       previousSummary,
       userInsights: state.userInsights,
       memos: state.memos,
+      userProfile: state.settings.userProfile || '',
       model: state.settings.geminiModel || 'gemini-2.5-flash',
     });
 
