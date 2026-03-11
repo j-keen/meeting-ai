@@ -6,6 +6,8 @@ import { t } from './i18n.js';
 function createWebSpeechEngine(language) {
   let recognition = null;
   let shouldRestart = false;
+  let noSpeechCount = 0;
+  let restartFailCount = 0;
 
   return {
     name: 'webspeech',
@@ -23,6 +25,7 @@ function createWebSpeechEngine(language) {
       recognition.lang = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : language === 'zh' ? 'zh-CN' : 'en-US';
 
       recognition.onresult = (e) => {
+        noSpeechCount = 0;
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
           const text = result[0].transcript;
@@ -35,14 +38,45 @@ function createWebSpeechEngine(language) {
       };
 
       recognition.onerror = (e) => {
-        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+        if (e.error === 'no-speech') {
+          noSpeechCount++;
+          if (noSpeechCount >= 3) {
+            noSpeechCount = 0;
+            onError(t('stt.no_mic_input'));
+          }
+        } else if (e.error !== 'aborted') {
           onError(`Speech recognition error: ${e.error}`);
         }
       };
 
+      recognition.onaudiostart = () => {
+        console.log('[STT] Audio input started');
+      };
+
+      recognition.onspeechstart = () => {
+        console.log('[STT] Speech detected');
+      };
+
+      recognition.onaudioend = () => {
+        console.log('[STT] Audio input ended');
+      };
+
       recognition.onend = () => {
         if (shouldRestart) {
-          try { recognition.start(); } catch {}
+          console.log('[STT] Recognition ended, restarting...');
+          try {
+            recognition.start();
+            restartFailCount = 0;
+          } catch (err) {
+            restartFailCount++;
+            if (restartFailCount >= 3) {
+              shouldRestart = false;
+              restartFailCount = 0;
+              onError(t('stt.restart_failed'));
+            }
+          }
+        } else {
+          console.log('[STT] Recognition ended');
         }
       };
 
@@ -70,8 +104,16 @@ export function createSTT() {
   return {
     get isRunning() { return isRunning; },
 
-    start({ language, onInterim, onFinal, onError }) {
+    async start({ language, onInterim, onFinal, onError }) {
       if (isRunning) return;
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      } catch {
+        onError(t('stt.mic_permission_denied'));
+        return;
+      }
 
       currentEngine = createWebSpeechEngine(language);
       currentEngine.start(onInterim, onFinal, onError);

@@ -103,7 +103,7 @@ function getElapsedTimeStr() {
   return t('minutes', { n: mins });
 }
 
-function startRecording() {
+async function startRecording() {
   if (state.isRecording) return;
 
   // Load typo dictionary
@@ -112,7 +112,7 @@ function startRecording() {
   stt = createSTT();
 
   try {
-    stt.start({
+    await stt.start({
       language: state.settings.language || 'ko',
       onInterim: (text) => {
         showInterim(text);
