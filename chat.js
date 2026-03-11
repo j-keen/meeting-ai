@@ -277,7 +277,7 @@ async function handleFunctionCall(fc) {
 }
 
 // ===== Markdown Renderer =====
-function renderMarkdown(text) {
+export function renderMarkdown(text) {
   // HTML escape first (XSS prevention)
   let html = text
     .replace(/&/g, '&amp;')

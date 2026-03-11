@@ -1,6 +1,6 @@
 // app.js - State management, pub/sub, initialization
 
-import { createSTT } from './stt.js';
+import { createSTT, startSTTComparison } from './stt.js';
 import { analyzeTranscript, getDefaultPrompt, generateTags, correctSentences, generateMeetingTitle } from './ai.js';
 import { checkProxyAvailable, isProxyAvailable } from './gemini-api.js';
 import {
@@ -67,6 +67,8 @@ let isAnalyzing = false;
 let isAnalysisPaused = false;
 let aiCorrectionTimer = null;
 let isCorrecting = false;
+let corrCountdownTimer = null;
+let corrCountdownEnd = 0;
 let countdownTimer = null;
 let countdownEnd = 0;
 let countdownIntervalMs = 0;
@@ -80,6 +82,17 @@ function getChipEls() {
     chipTextEl = $('#analysisChipText');
   }
   return { chip: chipEl, icon: chipIconEl, text: chipTextEl };
+}
+
+// Cached correction chip elements
+let corrChipEl = null, corrChipIconEl = null, corrChipTextEl = null;
+function getCorrChipEls() {
+  if (!corrChipEl) {
+    corrChipEl = $('#correctionChip');
+    corrChipIconEl = $('#correctionChipIcon');
+    corrChipTextEl = $('#correctionChipText');
+  }
+  return { chip: corrChipEl, icon: corrChipIconEl, text: corrChipTextEl };
 }
 
 function generateId() {
@@ -111,6 +124,169 @@ function setSttBadgeStatus(status, label) {
   if (nameEl && label) nameEl.textContent = label;
 }
 
+// ===== STT Event Log =====
+const sttEventLog = [];
+const MAX_STT_LOG = 20;
+
+function logSttEvent(type, message) {
+  const entry = {
+    time: new Date(),
+    type, // 'connect' | 'error' | 'fallback' | 'info' | 'disconnect'
+    message,
+  };
+  sttEventLog.unshift(entry);
+  if (sttEventLog.length > MAX_STT_LOG) sttEventLog.pop();
+}
+
+function getSttLogIcon(type) {
+  switch (type) {
+    case 'connect': return '<span style="color:var(--success)">&#9679;</span>';
+    case 'error': return '<span style="color:var(--danger)">&#10005;</span>';
+    case 'fallback': return '<span style="color:var(--warning)">&#9888;</span>';
+    case 'disconnect': return '<span style="color:var(--text-muted)">&#9675;</span>';
+    default: return '<span style="color:var(--accent)">&#8505;</span>';
+  }
+}
+
+function renderSttContextMenu() {
+  const menu = document.getElementById('sttContextMenu');
+  const badge = document.getElementById('sttEngineBadge');
+  if (!menu || !badge) return;
+
+  // Header
+  const engineName = document.getElementById('sttEngineLabel')?.textContent || 'Web Speech';
+  document.getElementById('sttCtxEngine').textContent = engineName;
+  const statusEl = document.getElementById('sttCtxStatus');
+  const status = badge.dataset.status || 'idle';
+  const statusLabels = { idle: t('stt.status_idle'), connecting: t('stt.status_connecting'), active: t('stt.status_active'), fallback: t('stt.status_fallback'), error: t('stt.status_error') };
+  statusEl.textContent = statusLabels[status] || status;
+  statusEl.dataset.s = status;
+
+  // Log
+  const logEl = document.getElementById('sttCtxLog');
+  if (sttEventLog.length === 0) {
+    logEl.innerHTML = `<p class="text-muted" style="font-size:11px;text-align:center;padding:8px">${t('stt.no_events')}</p>`;
+  } else {
+    logEl.innerHTML = sttEventLog.map(e => {
+      const time = e.time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return `<div class="stt-ctx-log-item"><span class="stt-ctx-log-time">${time}</span><span class="stt-ctx-log-icon">${getSttLogIcon(e.type)}</span><span class="stt-ctx-log-msg">${e.message}</span></div>`;
+    }).join('');
+  }
+
+  // Disable compare button during recording
+  const compareBtn = document.getElementById('btnSttCompare');
+  if (compareBtn) {
+    compareBtn.disabled = state.isRecording;
+    if (state.isRecording) compareBtn.title = t('stt.recording_locked');
+    else compareBtn.title = '';
+  }
+}
+
+function showSttContextMenu(x, y) {
+  const menu = document.getElementById('sttContextMenu');
+  if (!menu) return;
+  renderSttContextMenu();
+  menu.hidden = false;
+
+  // Position above the badge (bottom bar is at the bottom)
+  requestAnimationFrame(() => {
+    const menuRect = menu.getBoundingClientRect();
+    const viewW = window.innerWidth;
+
+    let left = x - menuRect.width / 2;
+    let top = y - menuRect.height - 8;
+
+    // Clamp to viewport
+    if (left < 8) left = 8;
+    if (left + menuRect.width > viewW - 8) left = viewW - menuRect.width - 8;
+    if (top < 8) top = y + 8; // flip below if no room above
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+  });
+}
+
+function hideSttContextMenu() {
+  const menu = document.getElementById('sttContextMenu');
+  if (menu) menu.hidden = true;
+}
+
+// ===== STT Comparison Mode =====
+let stopComparison = null;
+
+function startComparisonMode() {
+  if (state.isRecording) {
+    showToast(t('stt.recording_locked'), 'warning');
+    return;
+  }
+
+  const overlay = document.getElementById('sttCompareOverlay');
+  if (!overlay) return;
+
+  // Reset UI
+  document.getElementById('compareWsResults').innerHTML = '';
+  document.getElementById('compareDgResults').innerHTML = '';
+  document.getElementById('compareWsInterim').textContent = '';
+  document.getElementById('compareDgInterim').textContent = '';
+  document.getElementById('compareWsCount').textContent = '0';
+  document.getElementById('compareDgCount').textContent = '0';
+  document.getElementById('compareWsDot').style.background = 'var(--text-muted)';
+  document.getElementById('compareDgDot').style.background = 'var(--text-muted)';
+
+  let wsCount = 0, dgCount = 0;
+
+  overlay.hidden = false;
+  logSttEvent('info', t('stt.log_compare_start'));
+
+  stopComparison = startSTTComparison({
+    language: state.settings.language || 'ko',
+    onResult: (engine, text, isFinal) => {
+      const prefix = engine === 'webspeech' ? 'Ws' : 'Dg';
+      if (isFinal) {
+        const resultsEl = document.getElementById(`compare${prefix}Results`);
+        const p = document.createElement('p');
+        p.textContent = text;
+        resultsEl.appendChild(p);
+        resultsEl.scrollTop = resultsEl.scrollHeight;
+        document.getElementById(`compare${prefix}Interim`).textContent = '';
+
+        if (engine === 'webspeech') wsCount++;
+        else dgCount++;
+        document.getElementById(`compare${prefix}Count`).textContent = engine === 'webspeech' ? wsCount : dgCount;
+      } else {
+        document.getElementById(`compare${prefix}Interim`).textContent = text;
+      }
+    },
+    onError: (engine, err) => {
+      const prefix = engine === 'webspeech' ? 'Ws' : 'Dg';
+      const resultsEl = document.getElementById(`compare${prefix}Results`);
+      const p = document.createElement('p');
+      p.style.color = 'var(--danger)';
+      p.textContent = `Error: ${err}`;
+      resultsEl.appendChild(p);
+      logSttEvent('error', `[${engine}] ${err}`);
+    },
+    onStatusChange: (engine, status) => {
+      const dotId = engine === 'webspeech' ? 'compareWsDot' : 'compareDgDot';
+      const dot = document.getElementById(dotId);
+      if (dot) {
+        const colors = { connecting: 'var(--warning)', active: 'var(--success)', error: 'var(--danger)' };
+        dot.style.background = colors[status] || 'var(--text-muted)';
+      }
+    },
+  });
+}
+
+function stopComparisonMode() {
+  if (stopComparison) {
+    stopComparison();
+    stopComparison = null;
+  }
+  const overlay = document.getElementById('sttCompareOverlay');
+  if (overlay) overlay.hidden = true;
+  logSttEvent('info', t('stt.log_compare_end'));
+}
+
 async function startRecording() {
   if (state.isRecording) return;
 
@@ -123,6 +299,8 @@ async function startRecording() {
   const sttSelect = document.getElementById('selectSttEngine');
   if (sttSelect) sttSelect.disabled = true;
 
+  logSttEvent('connect', t('stt.log_starting', { engine: isDeepgram ? 'Deepgram' : 'Web Speech' }));
+
   try {
     await stt.start({
       language: state.settings.language || 'ko',
@@ -133,6 +311,7 @@ async function startRecording() {
         const badge = document.getElementById('sttEngineBadge');
         if (badge && badge.dataset.status === 'connecting') {
           setSttBadgeStatus('active', 'Deepgram');
+          logSttEvent('connect', 'Deepgram connected');
         }
       },
       onFinal: (text) => {
@@ -140,6 +319,7 @@ async function startRecording() {
         const badge = document.getElementById('sttEngineBadge');
         if (badge && badge.dataset.status === 'connecting') {
           setSttBadgeStatus('active', 'Deepgram');
+          logSttEvent('connect', 'Deepgram connected');
         }
 
         const line = {
@@ -153,6 +333,7 @@ async function startRecording() {
         emit('transcript:add', line);
       },
       onError: (err) => {
+        logSttEvent('error', err);
         showToast(err, 'error');
       },
       onEngineChange: (newEngine) => {
@@ -217,6 +398,7 @@ function stopRecording() {
   clearInterval(autoAnalysisInterval);
   clearInterval(aiCorrectionTimer);
   stopAnalysisCountdown();
+  stopCorrectionCountdown();
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
 
@@ -331,17 +513,71 @@ function showPausedState() {
   if (text) text.textContent = t('analysis.paused');
 }
 
+// Correction countdown chip
+function startCorrectionCountdown(intervalMs) {
+  stopCorrectionCountdown();
+  const { chip, icon } = getCorrChipEls();
+  if (!chip) return;
+  corrCountdownEnd = Date.now() + intervalMs;
+  chip.style.display = '';
+  chip.className = 'analysis-chip correction-chip counting';
+  if (icon) icon.textContent = '⏸';
+  updateCorrectionCountdownText();
+  corrCountdownTimer = setInterval(() => updateCorrectionCountdownText(), 1000);
+}
+
+function updateCorrectionCountdownText() {
+  const { text } = getCorrChipEls();
+  if (!text) return;
+  const remaining = Math.max(0, Math.ceil((corrCountdownEnd - Date.now()) / 1000));
+  text.textContent = t('analysis.countdown', { n: remaining });
+}
+
+function stopCorrectionCountdown() {
+  clearInterval(corrCountdownTimer);
+  corrCountdownTimer = null;
+  const { chip, icon, text } = getCorrChipEls();
+  if (chip) {
+    chip.style.display = 'none';
+    chip.className = 'analysis-chip correction-chip';
+    if (icon) icon.textContent = '';
+    if (text) text.textContent = '';
+  }
+}
+
+function showCorrectingState() {
+  const { chip, icon, text } = getCorrChipEls();
+  if (!chip) return;
+  clearInterval(corrCountdownTimer);
+  corrCountdownTimer = null;
+  chip.style.display = '';
+  chip.className = 'analysis-chip correction-chip correcting';
+  if (icon) icon.textContent = '⏳';
+  if (text) text.textContent = t('analysis.analyzing');
+}
+
+function hideCorrectionChip() {
+  if (state.settings.autoCorrection && state.isRecording) {
+    const intervalMs = (state.settings.correctionInterval || 60) * 1000;
+    startCorrectionCountdown(intervalMs);
+  } else {
+    stopCorrectionCountdown();
+  }
+}
+
 // AI sentence correction
 function startAiCorrection() {
   clearInterval(aiCorrectionTimer);
   if (!state.settings.autoCorrection) return;
   const intervalMs = (state.settings.correctionInterval || 60) * 1000;
   aiCorrectionTimer = setInterval(() => runCorrection(true), intervalMs);
+  startCorrectionCountdown(intervalMs);
 }
 
 async function runCorrection(uncorrectedOnly) {
   if (isCorrecting || !isProxyAvailable()) return;
   isCorrecting = true;
+  showCorrectingState();
   try {
     const lines = uncorrectedOnly
       ? state.transcript.filter(l => !l.originalText)
@@ -364,7 +600,10 @@ async function runCorrection(uncorrectedOnly) {
       }
     }
   } catch { /* silent */ }
-  finally { isCorrecting = false; }
+  finally {
+    isCorrecting = false;
+    hideCorrectionChip();
+  }
 }
 
 async function runAnalysis() {

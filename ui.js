@@ -2,6 +2,7 @@
 
 import { state, emit, on } from './app.js';
 import { t, getDateLocale } from './i18n.js';
+import { renderMarkdown } from './chat.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -373,15 +374,9 @@ export function updateAnalysisNav() {
   const viewIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
   const isLatest = viewIdx === total - 1;
 
-  const label = $('#analysisNavLabel');
-  const hint = $('#analysisNavHint');
   const prevBtn = $('#analysisNavPrev');
   const nextBtn = $('#analysisNavNext');
 
-  label.innerHTML = isLatest
-    ? `#${viewIdx + 1} / ${total} <span class="nav-live">LIVE</span>`
-    : `#${viewIdx + 1} / ${total}`;
-  hint.textContent = '← →';
   prevBtn.disabled = viewIdx <= 0;
   nextBtn.disabled = isLatest;
 
@@ -871,6 +866,41 @@ export function renderMeetingViewer(meeting) {
       renderViewerAnalysis(analysisContainer, analyses[matchIdx]);
     }
   });
+
+  // Render chat history
+  const chatContainer = $('#viewerChat');
+  chatContainer.innerHTML = '';
+  const chatTitle = document.createElement('h4');
+  chatTitle.className = 'viewer-section-title';
+  chatTitle.textContent = 'AI Chat';
+  chatContainer.appendChild(chatTitle);
+
+  const chatHistory = (meeting.chatHistory || []).filter(msg =>
+    !msg.text.startsWith('[add_context:') &&
+    !msg.text.startsWith('[add_memo:') &&
+    msg.text !== '[rerun_analysis]'
+  );
+
+  if (chatHistory.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'text-muted';
+    empty.textContent = t('viewer.no_chat');
+    chatContainer.appendChild(empty);
+  } else {
+    chatHistory.forEach(msg => {
+      const div = document.createElement('div');
+      div.className = `chat-message ${msg.role}`;
+      const content = document.createElement('div');
+      content.className = 'chat-message-content';
+      if (msg.role === 'model') {
+        content.innerHTML = renderMarkdown(msg.text);
+      } else {
+        content.textContent = msg.text;
+      }
+      div.appendChild(content);
+      chatContainer.appendChild(div);
+    });
+  }
 }
 
 function renderViewerAnalysis(container, analysis) {

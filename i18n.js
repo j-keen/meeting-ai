@@ -152,6 +152,7 @@ const translations = {
     // Meeting viewer
     'viewer.title': 'Meeting Details',
     'viewer.no_analysis': 'No analysis data.',
+    'viewer.no_chat': 'No chat history.',
 
     // AI cards
     'card.summary': 'Summary',
@@ -527,6 +528,7 @@ const translations = {
     // Meeting viewer
     'viewer.title': '회의 상세',
     'viewer.no_analysis': '분석 데이터가 없습니다.',
+    'viewer.no_chat': '채팅 내역이 없습니다.',
 
     // AI cards
     'card.summary': '요약',

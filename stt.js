@@ -307,3 +307,38 @@ export function createSTT() {
     }
   };
 }
+
+// STT Comparison Mode — runs both engines simultaneously
+export function startSTTComparison({ language, onResult, onError, onStatusChange }) {
+  // onResult(engineName, text, isFinal)
+  // onStatusChange(engineName, status) — 'connecting'|'active'|'error'
+
+  const wsEngine = createWebSpeechEngine(language);
+  const dgEngine = createDeepgramEngine(language);
+  let stopped = false;
+
+  // Start WebSpeech
+  onStatusChange('webspeech', 'active');
+  wsEngine.start(
+    (text) => { if (!stopped) onResult('webspeech', text, false); },
+    (text) => { if (!stopped) onResult('webspeech', text, true); },
+    (err) => { if (!stopped) { onStatusChange('webspeech', 'error'); onError('webspeech', err); } }
+  );
+
+  // Start Deepgram
+  onStatusChange('deepgram', 'connecting');
+  dgEngine.start(
+    (text) => { if (!stopped) { onStatusChange('deepgram', 'active'); onResult('deepgram', text, false); } },
+    (text) => { if (!stopped) { onStatusChange('deepgram', 'active'); onResult('deepgram', text, true); } },
+    (err) => { if (!stopped) { onStatusChange('deepgram', 'error'); onError('deepgram', err.message || String(err)); } }
+  ).catch((err) => {
+    if (!stopped) { onStatusChange('deepgram', 'error'); onError('deepgram', err.message || String(err)); }
+  });
+
+  // Return stop function
+  return () => {
+    stopped = true;
+    wsEngine.stop();
+    dgEngine.stop();
+  };
+}

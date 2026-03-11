@@ -41,7 +41,13 @@
     <!-- Left Panel: Transcript -->
     <section class="panel panel-left panel-active" id="panelLeft">
       <div class="panel-header">
-        <h2 data-i18n="panel.transcript">Transcript</h2>
+        <div style="display:flex;align-items:center">
+          <h2 data-i18n="panel.transcript">Transcript</h2>
+          <button class="analysis-chip correction-chip" id="correctionChip" style="display:none">
+            <span class="correction-chip-icon" id="correctionChipIcon"></span>
+            <span class="correction-chip-text" id="correctionChipText"></span>
+          </button>
+        </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCorrectNow" title="AI Correction">&#9998; <span data-i18n="panel.correct">Correct</span></button>
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
@@ -105,9 +111,7 @@
       </div>
       <div class="analysis-nav" id="analysisNav" style="display:none">
         <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
-        <span class="analysis-nav-label" id="analysisNavLabel">#1 / 1</span>
         <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
-        <span class="analysis-nav-hint" id="analysisNavHint"></span>
       </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
@@ -178,6 +182,20 @@
         <span class="stt-engine-dot" id="sttEngineDot"></span>
         <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
       </span>
+      <!-- STT Context Menu (right-click on badge) -->
+      <div class="stt-context-menu" id="sttContextMenu" hidden>
+        <div class="stt-ctx-header">
+          <span class="stt-ctx-engine" id="sttCtxEngine">Web Speech</span>
+          <span class="stt-ctx-status" id="sttCtxStatus"></span>
+        </div>
+        <div class="stt-ctx-divider"></div>
+        <div class="stt-ctx-log" id="sttCtxLog">
+          <p class="text-muted" style="font-size:11px;text-align:center;padding:8px">No events yet</p>
+        </div>
+        <div class="stt-ctx-divider"></div>
+        <button class="stt-ctx-action" id="btnSttCompare" data-i18n="stt.compare_mode">Compare Engines</button>
+        <button class="stt-ctx-action" id="btnSttCopyLog" data-i18n="stt.copy_log">Copy Log</button>
+      </div>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
@@ -548,6 +566,7 @@
             <div class="viewer-transcript" id="viewerTranscript"></div>
             <div class="viewer-timeline" id="viewerTimeline"></div>
             <div class="viewer-analysis" id="viewerAnalysis"></div>
+            <div class="viewer-chat" id="viewerChat"></div>
           </div>
         </div>
       </div>
@@ -774,6 +793,41 @@
       <div class="chat-message-content"></div>
     </div>
   </template>
+
+  <!-- STT Comparison Modal -->
+  <div class="modal-overlay" id="sttCompareOverlay" hidden>
+    <div class="modal stt-compare-modal">
+      <div class="modal-header">
+        <h3 data-i18n="stt.compare_title">Engine Comparison</h3>
+        <button class="btn btn-icon" id="btnCloseCompare">&times;</button>
+      </div>
+      <div class="stt-compare-body">
+        <div class="stt-compare-col">
+          <div class="stt-compare-col-header">
+            <span class="stt-engine-dot" id="compareWsDot"></span>
+            <strong>Web Speech</strong>
+            <span class="stt-compare-count" id="compareWsCount">0</span>
+          </div>
+          <div class="stt-compare-results" id="compareWsResults"></div>
+          <div class="stt-compare-interim" id="compareWsInterim"></div>
+        </div>
+        <div class="stt-compare-divider"></div>
+        <div class="stt-compare-col">
+          <div class="stt-compare-col-header">
+            <span class="stt-engine-dot" id="compareDgDot"></span>
+            <strong>Deepgram Nova-3</strong>
+            <span class="stt-compare-count" id="compareDgCount">0</span>
+          </div>
+          <div class="stt-compare-results" id="compareDgResults"></div>
+          <div class="stt-compare-interim" id="compareDgInterim"></div>
+        </div>
+      </div>
+      <div class="stt-compare-footer">
+        <span class="stt-compare-hint" data-i18n="stt.compare_hint">Speak to compare recognition results</span>
+        <button class="btn btn-primary" id="btnStopCompare" data-i18n="stt.compare_stop">Stop Comparison</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>
