@@ -218,6 +218,10 @@ Respond in English.`;
     prompt += `\n\n[User Insights]\n${state.userInsights.map(i => '- ' + i).join('\n')}`;
   }
 
+  if (state.settings.userProfile) {
+    prompt += `\n\n[User Profile]\n${state.settings.userProfile}`;
+  }
+
   if (state.settings.meetingContext) {
     prompt += `\n\n[Meeting Context]\n${state.settings.meetingContext}`;
   }

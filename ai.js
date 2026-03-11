@@ -65,6 +65,7 @@ export async function analyzeTranscript({
   previousSummary = null,
   userInsights = [],
   memos = [],
+  userProfile = '',
   model = 'gemini-2.5-flash',
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
@@ -78,6 +79,12 @@ export async function analyzeTranscript({
     `Meeting Context: ${contextText}`,
     `Elapsed Time: ${elapsedTime || 'unknown'}`,
   ];
+
+  if (userProfile) {
+    messageParts.push('');
+    messageParts.push('[User Profile - information about the meeting participant]');
+    messageParts.push(userProfile);
+  }
 
   if (userInsights && userInsights.length > 0) {
     messageParts.push('');

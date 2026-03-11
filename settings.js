@@ -324,6 +324,27 @@ export function initSettings() {
     $('#typoDictModal').hidden = false;
   });
 
+  // User Profile
+  $('#userProfileText').addEventListener('change', (e) => {
+    state.settings.userProfile = e.target.value;
+    markDirty();
+  });
+
+  $('#userProfileFileUpload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = reader.result;
+      $('#profileFilePreview').textContent = text.slice(0, 500) + (text.length > 500 ? '...' : '');
+      $('#userProfileText').value = text;
+      state.settings.userProfile = text;
+      markDirty();
+      highlightField($('#userProfileText'));
+    };
+    reader.readAsText(file);
+  });
+
   // Slack webhook
   $('#inputSlackWebhook').addEventListener('change', (e) => {
     state.settings.slackWebhook = e.target.value;
@@ -378,6 +399,7 @@ function saveAllSettings() {
     meetingContext: s.meetingContext,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
+    userProfile: s.userProfile,
     slackWebhook: s.slackWebhook,
     customPresets: s.customPresets,
     chatPresets: s.chatPresets,
@@ -443,6 +465,7 @@ function resetAllSettings() {
   s.meetingContext = '';
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
+  s.userProfile = '';
   s.slackWebhook = '';
   s.customPresets = {};
   s.chatPresets = null;
@@ -486,6 +509,7 @@ function applySettingsToForm() {
   $('#textMeetingContext').value = s.meetingContext;
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
+  $('#userProfileText').value = s.userProfile || '';
   $('#inputSlackWebhook').value = s.slackWebhook;
 
   const chatModelSelect = $('#chatModelSelect');
@@ -543,6 +567,7 @@ function loadSavedSettings() {
   s.meetingContext = saved.meetingContext || '';
   s.customPrompt = saved.customPrompt || getDefaultPrompt();
   s.chatSystemPrompt = saved.chatSystemPrompt || '';
+  s.userProfile = saved.userProfile || '';
   s.slackWebhook = saved.slackWebhook || '';
   s.theme = saved.theme || 'light';
   s.uiLanguage = saved.uiLanguage || 'auto';

@@ -197,6 +197,7 @@
         <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
+        <button class="settings-tab" data-tab="profile" data-i18n="settings.tab_profile">Profile</button>
         <button class="settings-tab" data-tab="connect" data-i18n="settings.tab_connect">Connect</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
       </div>
@@ -362,6 +363,20 @@
             <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
           </div>
           <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
+        </section>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="settings-tab-content" data-tab="profile">
+        <section class="settings-section">
+          <h3 data-i18n="settings.profile_text">About Me</h3>
+          <p class="text-muted" style="font-size:12px;margin-bottom:8px;" data-i18n="settings.profile_hint">This information will be used by AI analysis and chat to provide personalized insights.</p>
+          <textarea class="settings-textarea" id="userProfileText" rows="6" data-i18n-placeholder="settings.profile_text_placeholder" placeholder="e.g. Name, title, team, role, interests, work goals..."></textarea>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.profile_file">Upload profile file</h3>
+          <input type="file" class="settings-input" id="userProfileFileUpload" accept=".txt,.md">
+          <div class="file-context-preview" id="profileFilePreview"></div>
         </section>
       </div>
 

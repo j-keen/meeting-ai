@@ -208,7 +208,14 @@ const translations = {
     'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
     'settings.tab_chat': 'Chat',
+    'settings.tab_profile': 'Profile',
     'settings.tab_connect': 'Connect',
+
+    // Profile
+    'settings.profile_text': 'About Me',
+    'settings.profile_text_placeholder': 'e.g. Name, title, team, role, interests, work goals...',
+    'settings.profile_file': 'Upload profile file',
+    'settings.profile_hint': 'This information will be used by AI analysis and chat to provide personalized insights.',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
@@ -567,7 +574,14 @@ const translations = {
     'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
     'settings.tab_chat': '채팅',
+    'settings.tab_profile': '내 프로필',
     'settings.tab_connect': '연동',
+
+    // Profile
+    'settings.profile_text': '내 정보',
+    'settings.profile_text_placeholder': '예: 이름, 직책, 소속 팀, 역할, 관심 분야, 업무 목표 등',
+    'settings.profile_file': '프로필 파일 업로드',
+    'settings.profile_hint': '이 정보는 AI 분석과 채팅에서 맞춤형 인사이트를 제공하는 데 활용됩니다.',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
