@@ -3,12 +3,11 @@
 import { state, emit } from './app.js';
 import {
   saveSettings, loadSettings,
-  listMeetings, getMeeting,
   loadContacts, addContact, deleteContact,
   loadLocations, addLocation, deleteLocation,
   loadCategories, addCategory, deleteCategory,
 } from './storage.js';
-import { getDefaultPrompt, getPresetContext } from './ai.js';
+import { getDefaultPrompt } from './ai.js';
 import { t, setLanguage, setAiLanguage, getPromptPresets } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 
@@ -44,7 +43,6 @@ function updateDirtyUI() {
 function highlightField(el) {
   const container = el.closest('.settings-label')
     || el.closest('.settings-inline-row')
-    || el.closest('.strategy-card')
     || el.closest('.settings-section');
   if (container) container.classList.add('settings-changed');
 }
@@ -234,115 +232,6 @@ export function initSettings() {
     });
   });
 
-  // Meeting preset (in Prompt tab)
-  $('#selectMeetingPreset').addEventListener('change', (e) => {
-    state.settings.meetingPreset = e.target.value;
-    markDirty();
-    updatePresetPromptDisplay();
-    if (e.target.value !== 'custom') {
-      const ctx = getPresetContext(e.target.value);
-      $('#textMeetingContext').value = ctx;
-      state.settings.meetingContext = ctx;
-    }
-    // Sync quick start selector
-    const qs = $('#selectQuickPreset');
-    if (qs) qs.value = e.target.value;
-  });
-
-  // Preset prompt display - always show current prompt
-  updatePresetPromptDisplay();
-
-  // Edit preset prompt inline
-  const btnEditInline = $('#btnEditPresetInline');
-  const presetEditor = $('#presetPromptEditor');
-  btnEditInline.addEventListener('click', () => {
-    const isHidden = presetEditor.hidden;
-    presetEditor.hidden = !isHidden;
-    if (!isHidden) return;
-    const currentPreset = state.settings.meetingPreset || 'general';
-    const customPresets = state.settings.customPresets || {};
-    const promptText = customPresets[currentPreset] || getPresetContext(currentPreset);
-    $('#textPresetPrompt').value = promptText;
-  });
-
-  $('#btnSaveAsPreset').addEventListener('click', () => {
-    const name = prompt(t('preset.name_prompt') || 'Enter preset name:');
-    if (!name) return;
-    const promptText = $('#textPresetPrompt').value;
-    if (!state.settings.customPresets) state.settings.customPresets = {};
-    state.settings.customPresets[name] = promptText;
-    markDirty();
-    highlightField($('#selectMeetingPreset'));
-    addPresetOption(name);
-    $('#selectMeetingPreset').value = name;
-    state.settings.meetingPreset = name;
-    presetEditor.hidden = true;
-    updatePresetPromptDisplay();
-  });
-
-  $('#btnResetPresetPrompt').addEventListener('click', () => {
-    const currentPreset = state.settings.meetingPreset || 'general';
-    const defaultCtx = getPresetContext(currentPreset);
-    $('#textPresetPrompt').value = defaultCtx;
-    if (state.settings.customPresets?.[currentPreset]) {
-      delete state.settings.customPresets[currentPreset];
-      markDirty();
-      highlightField($('#textPresetPrompt'));
-    }
-    updatePresetPromptDisplay();
-  });
-
-  // Meeting context source tabs
-  document.querySelectorAll('.context-source-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.context-source-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.context-source-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      const content = document.querySelector(`.context-source-content[data-ctx="${tab.dataset.ctx}"]`);
-      if (content) content.classList.add('active');
-      if (tab.dataset.ctx === 'previous') populatePreviousMeetings();
-    });
-  });
-
-  // Meeting context (manual)
-  $('#textMeetingContext').addEventListener('change', (e) => {
-    state.settings.meetingContext = e.target.value;
-    markDirty();
-  });
-
-  // Previous meeting context
-  $('#selectPreviousMeeting').addEventListener('change', (e) => {
-    const meetingId = e.target.value;
-    const preview = $('#previousMeetingPreview');
-    if (!meetingId) { preview.textContent = ''; return; }
-    const meeting = getMeeting(meetingId);
-    if (meeting) {
-      const lastAnalysis = meeting.analysisHistory?.[meeting.analysisHistory.length - 1];
-      const summary = lastAnalysis?.summary || t('viewer.no_analysis');
-      preview.textContent = summary;
-      state.settings.meetingContext = `[Previous Meeting: ${meeting.title || 'Untitled'}]\n${summary}`;
-      $('#textMeetingContext').value = state.settings.meetingContext;
-      markDirty();
-      highlightField($('#textMeetingContext'));
-    }
-  });
-
-  // File context upload
-  $('#fileContextUpload').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = reader.result;
-      $('#fileContextPreview').textContent = text.slice(0, 500) + (text.length > 500 ? '...' : '');
-      state.settings.meetingContext = text;
-      $('#textMeetingContext').value = text;
-      markDirty();
-      highlightField($('#textMeetingContext'));
-    };
-    reader.readAsText(file);
-  });
-
   // Prompt presets
   function populatePromptPresets() {
     const select = $('#selectPromptPreset');
@@ -497,15 +386,12 @@ function saveAllSettings() {
     sttEngine: s.sttEngine,
     autoAnalysis: s.autoAnalysis,
     analysisInterval: s.analysisInterval,
-    meetingPreset: s.meetingPreset,
-    meetingContext: s.meetingContext,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
     autoCorrection: s.autoCorrection,
     userProfile: s.userProfile,
     welcomeDismissed: s.welcomeDismissed,
     slackWebhook: s.slackWebhook,
-    customPresets: s.customPresets,
     customPromptPresets: s.customPromptPresets,
     chatPresets: s.chatPresets,
   });
@@ -565,13 +451,10 @@ function resetAllSettings() {
   s.autoAnalysis = true;
   s.analysisInterval = 30;
   s.autoCorrection = true;
-  s.meetingPreset = 'general';
-  s.meetingContext = '';
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
   s.userProfile = '';
   s.slackWebhook = '';
-  s.customPresets = {};
   s.customPromptPresets = {};
   s.chatPresets = null;
 
@@ -604,14 +487,6 @@ function applySettingsToForm() {
   const checkAutoCorrection = $('#checkAutoCorrection');
   if (checkAutoCorrection) checkAutoCorrection.checked = s.autoCorrection !== false;
 
-  const select = $('#selectMeetingPreset');
-  Object.keys(s.customPresets || {}).forEach(name => addPresetOption(name));
-  select.value = s.meetingPreset;
-
-  const qs = $('#selectQuickPreset');
-  if (qs) qs.value = s.meetingPreset;
-
-  $('#textMeetingContext').value = s.meetingContext;
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
   $('#inputSlackWebhook').value = s.slackWebhook;
@@ -620,40 +495,10 @@ function applySettingsToForm() {
   if (chatModelSelect) chatModelSelect.value = s.chatModel;
 
   renderChatPresets();
-  updatePresetPromptDisplay();
 }
 
 // ===== Helpers =====
 
-function addPresetOption(name) {
-  const select = $('#selectMeetingPreset');
-  if (![...select.options].some(o => o.value === name)) {
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    select.insertBefore(option, select.querySelector('[value="custom"]'));
-  }
-}
-
-function updatePresetPromptDisplay() {
-  const currentPreset = state.settings.meetingPreset || 'general';
-  const customPresets = state.settings.customPresets || {};
-  const promptText = customPresets[currentPreset] || getPresetContext(currentPreset);
-  const display = $('#presetPromptText');
-  if (display) display.textContent = promptText || '(No prompt configured)';
-}
-
-function populatePreviousMeetings() {
-  const select = $('#selectPreviousMeeting');
-  const meetings = listMeetings();
-  while (select.options.length > 1) select.remove(1);
-  meetings.forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
-    opt.textContent = m.title || t('history.untitled');
-    select.appendChild(opt);
-  });
-}
 
 function loadSavedSettings() {
   const saved = loadSettings();
@@ -676,7 +521,6 @@ function loadSavedSettings() {
   s.theme = saved.theme || 'light';
   s.uiLanguage = saved.uiLanguage || 'auto';
   s.aiLanguage = saved.aiLanguage || 'auto';
-  s.customPresets = saved.customPresets || {};
   s.customPromptPresets = saved.customPromptPresets || {};
   s.chatPresets = saved.chatPresets || null;
 
@@ -902,7 +746,6 @@ export function openSettings() {
   $('#settingsPanel').classList.add('open');
   $('#settingsOverlay').classList.add('visible');
   $('#settingsPanel').setAttribute('aria-hidden', 'false');
-  updatePresetPromptDisplay();
   snapshotSettings();
 }
 

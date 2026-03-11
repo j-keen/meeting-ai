@@ -315,10 +315,25 @@ const translations = {
     'contacts.save': 'Save',
     'contacts.cancel': 'Cancel',
 
+    // Model names
+    'settings.model_flash': 'Gemini 2.5 Flash',
+    'settings.model_flash_lite': 'Gemini 2.5 Flash Lite',
+    'settings.model_pro': 'Gemini 2.5 Pro',
+
+    // AI correction hint
+    'settings.auto_correction_hint': 'AI automatically corrects typos and speech recognition errors during recording.',
+
+    // Analyze cooldown
+    'toast.analyze_cooldown': 'Please wait before analyzing again.',
+
     // Meeting quick start
     'meeting.quick_start_title': 'Start a new meeting',
     'meeting.quick_start': 'Quick Start',
-    'meeting.manual_setup': 'Setup & Start',
+    'meeting.quick_start_desc': 'Start recording immediately',
+    'meeting.meeting_prep': 'Meeting Prep',
+    'meeting.meeting_prep_desc': 'Set up meeting details step by step',
+    'meeting.meeting_search': 'Search Meetings',
+    'meeting.meeting_search_desc': 'Browse past meeting records',
     'toast.recording_started': 'Recording started. Speak to transcribe.',
     'transcript.waiting': 'Listening for speech...',
     'transcript.waiting_hint': 'Speak and it will be transcribed automatically.',
@@ -731,10 +746,25 @@ const translations = {
     'contacts.save': '저장',
     'contacts.cancel': '취소',
 
+    // Model names
+    'settings.model_flash': '빠르고 균형 잡힌 모델',
+    'settings.model_flash_lite': '가장 빠르고 가벼운 모델',
+    'settings.model_pro': '가장 정확한 모델',
+
+    // AI correction hint
+    'settings.auto_correction_hint': '녹음 중 AI가 오타와 음성인식 오류를 자동 교정합니다.',
+
+    // Analyze cooldown
+    'toast.analyze_cooldown': '잠시 후 다시 분석해주세요.',
+
     // Meeting quick start
     'meeting.quick_start_title': '새 회의 시작',
     'meeting.quick_start': '빠른 시작',
-    'meeting.manual_setup': '설정 후 시작',
+    'meeting.quick_start_desc': '바로 녹음을 시작합니다',
+    'meeting.meeting_prep': '회의 준비',
+    'meeting.meeting_prep_desc': '단계별로 회의를 설정합니다',
+    'meeting.meeting_search': '회의 검색',
+    'meeting.meeting_search_desc': '지난 회의 기록을 찾아봅니다',
     'toast.recording_started': '녹음이 시작되었습니다. 말씀하시면 자동으로 기록됩니다.',
     'transcript.waiting': '음성을 인식하고 있습니다...',
     'transcript.waiting_hint': '말씀하시면 자동으로 기록됩니다.',

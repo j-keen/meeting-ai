@@ -1176,40 +1176,21 @@ function init() {
     saveSettings({ theme: state.settings.theme });
   });
 
-  // Quick Start
+  // Quick Start — start recording immediately
   $('#btnQuickStart')?.addEventListener('click', async () => {
-    const preset = $('#selectQuickPreset')?.value || 'general';
-    state.settings.meetingPreset = preset;
-    saveSettings({ meetingPreset: preset });
-    $('#selectMeetingPreset').value = preset;
+    state.settings.meetingPreset = 'general';
     await startRecording();
   });
 
-  // Manual Setup & Start
-  $('#btnManualSetup')?.addEventListener('click', () => {
-    // Open settings to Prompt tab
-    emit('settings:openPromptTab');
+  // Meeting Prep — guided setup flow
+  $('#btnMeetingPrep')?.addEventListener('click', () => {
+    startMeetingPrep();
   });
 
-  on('settings:openPromptTab', () => {
-    const { openSettings } = require('./settings.js');
-    import('./settings.js').then(mod => {
-      mod.openSettings();
-      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-      const promptTab = document.querySelector('.settings-tab[data-tab="analysis"]');
-      const promptContent = document.querySelector('.settings-tab-content[data-tab="analysis"]');
-      if (promptTab) promptTab.classList.add('active');
-      if (promptContent) promptContent.classList.add('active');
-    });
-  });
-
-  // Quick start preset sync
-  $('#selectQuickPreset')?.addEventListener('change', (e) => {
-    const preset = e.target.value;
-    state.settings.meetingPreset = preset;
-    saveSettings({ meetingPreset: preset });
-    $('#selectMeetingPreset').value = preset;
+  // Meeting Search — open history modal
+  $('#btnMeetingSearch')?.addEventListener('click', () => {
+    $('#historyModal').hidden = false;
+    refreshHistoryGrid();
   });
 
   // Meeting title input binding
@@ -1413,10 +1394,6 @@ function init() {
     if (config.meetingType) {
       state.settings.meetingPreset = config.meetingType;
       saveSettings({ meetingPreset: config.meetingType });
-      const presetSelect = $('#selectMeetingPreset');
-      if (presetSelect) presetSelect.value = config.meetingType;
-      const quickPreset = $('#selectQuickPreset');
-      if (quickPreset) quickPreset.value = config.meetingType;
     }
     if (config.agenda) {
       state.settings.meetingContext = (state.settings.meetingContext || '') +
@@ -1803,8 +1780,8 @@ async function runCompareAnalysis() {
     meetingContext: state.settings.meetingContext,
     meetingPreset: state.settings.meetingPreset,
     elapsedTime: getElapsedTimeStr(),
-    strategy: state.settings.tokenStrategy || 'smart',
-    recentMinutes: state.settings.recentMinutes || 5,
+    strategy: 'full',
+    recentMinutes: 5,
     previousSummary,
     userInsights: state.userInsights,
     memos: state.memos,

@@ -57,21 +57,23 @@
         <div class="transcript-empty" id="transcriptEmpty">
           <div class="quick-start-section" id="quickStartSection">
             <p class="quick-start-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
-            <div class="quick-start-preset">
-              <select class="settings-select" id="selectQuickPreset">
-                <option value="general" data-i18n="settings.preset_general">General</option>
-                <option value="weekly" data-i18n="settings.preset_weekly">Weekly Meeting</option>
-                <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
-                <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
-                <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
-                <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
-              </select>
+            <div class="quick-start-actions-grid">
+              <button class="quick-action-card" id="btnQuickStart">
+                <span class="quick-action-icon">&#9889;</span>
+                <span class="quick-action-label" data-i18n="meeting.quick_start">Quick Start</span>
+                <span class="quick-action-desc" data-i18n="meeting.quick_start_desc">Start recording immediately</span>
+              </button>
+              <button class="quick-action-card" id="btnMeetingPrep">
+                <span class="quick-action-icon">&#128221;</span>
+                <span class="quick-action-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
+                <span class="quick-action-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
+              </button>
+              <button class="quick-action-card" id="btnMeetingSearch">
+                <span class="quick-action-icon">&#128269;</span>
+                <span class="quick-action-label" data-i18n="meeting.meeting_search">Search Meetings</span>
+                <span class="quick-action-desc" data-i18n="meeting.meeting_search_desc">Browse past meeting records</span>
+              </button>
             </div>
-            <div class="quick-start-actions">
-              <button class="btn btn-primary" id="btnQuickStart" data-i18n="meeting.quick_start">Quick Start</button>
-              <button class="btn btn-sm" id="btnManualSetup" data-i18n="meeting.manual_setup">Setup & Start</button>
-            </div>
-            <p class="text-muted" data-i18n="transcript.empty_hint">Press Ctrl+R to record manually.</p>
           </div>
           <div class="transcript-waiting" id="transcriptWaiting" style="display:none">
             <div class="waiting-indicator"></div>
@@ -287,52 +289,6 @@
             </div>
           </div>
           <p class="settings-hint" data-i18n="settings.auto_correction_hint">AI automatically corrects typos and speech recognition errors during recording.</p>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.meeting_type">Meeting Type</h3>
-          <select class="settings-select" id="selectMeetingPreset" style="margin-bottom:10px;">
-            <option value="general" data-i18n="settings.preset_general">General</option>
-            <option value="weekly" data-i18n="settings.preset_weekly">Weekly Meeting</option>
-            <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
-            <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
-            <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
-            <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
-            <option value="custom" data-i18n="settings.preset_custom">Custom</option>
-          </select>
-          <div class="preset-prompt-display" id="presetPromptDisplay">
-            <div class="preset-prompt-text" id="presetPromptText"></div>
-            <button class="btn btn-xs preset-prompt-edit-btn" id="btnEditPresetInline" title="Edit">&#9998;</button>
-          </div>
-          <div id="presetPromptEditor" hidden>
-            <textarea class="settings-textarea" id="textPresetPrompt" rows="6" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
-            <div style="display:flex;gap:6px;margin-top:6px;">
-              <button class="btn btn-sm" id="btnSaveAsPreset" data-i18n="preset.save">Save as Preset</button>
-              <button class="btn btn-sm" id="btnResetPresetPrompt" data-i18n="preset.reset">Reset</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.meeting_context">Meeting Context</h3>
-          <div class="context-source-tabs">
-            <button class="context-source-tab active" data-ctx="manual" data-i18n="context.direct">Direct Input</button>
-            <button class="context-source-tab" data-ctx="previous" data-i18n="context.previous">Previous Meeting</button>
-            <button class="context-source-tab" data-ctx="file" data-i18n="context.file">File (.txt/.md)</button>
-          </div>
-          <div class="context-source-content active" data-ctx="manual">
-            <textarea class="settings-textarea" id="textMeetingContext" data-i18n-placeholder="settings.context_placeholder" placeholder="Describe the meeting context, goals, participants..." rows="3"></textarea>
-          </div>
-          <div class="context-source-content" data-ctx="previous">
-            <select class="settings-select" id="selectPreviousMeeting" style="margin-bottom:8px;">
-              <option value="">-- Select a meeting --</option>
-            </select>
-            <div class="previous-meeting-preview" id="previousMeetingPreview"></div>
-          </div>
-          <div class="context-source-content" data-ctx="file">
-            <input type="file" class="settings-input" id="fileContextUpload" accept=".txt,.md">
-            <div class="file-context-preview" id="fileContextPreview"></div>
-          </div>
         </section>
 
         <section class="settings-section">
