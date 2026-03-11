@@ -193,9 +193,10 @@ const translations = {
     'chat.suggestion_3': 'What are the key decisions?',
 
     // Settings tabs
-    'settings.tab_language': 'Language',
+    'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
-    'settings.tab_integration': 'Chat & Integration',
+    'settings.tab_chat': 'Chat',
+    'settings.tab_connect': 'Connect',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
@@ -306,7 +307,6 @@ const translations = {
 
     // Settings Data tab
     'settings.tab_data': 'Data',
-    'settings.tab_prompt': 'Prompt',
     'settings.participants': 'Participants',
     'settings.locations': 'Locations',
     'settings.categories': 'Categories',
@@ -540,9 +540,10 @@ const translations = {
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
 
     // Settings tabs
-    'settings.tab_language': '언어',
+    'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
-    'settings.tab_integration': '채팅 & 연동',
+    'settings.tab_chat': '채팅',
+    'settings.tab_connect': '연동',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
@@ -653,7 +654,6 @@ const translations = {
 
     // Settings Data tab
     'settings.tab_data': '데이터',
-    'settings.tab_prompt': '프롬프트',
     'settings.participants': '참석자',
     'settings.locations': '장소',
     'settings.categories': '카테고리',

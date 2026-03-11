@@ -194,15 +194,15 @@
     <div class="settings-body">
       <!-- Settings Tabs -->
       <div class="settings-tabs" id="settingsTabs">
-        <button class="settings-tab active" data-tab="language" data-i18n="settings.tab_language">Language</button>
+        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
-        <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
-        <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Chat &amp; Integration</button>
+        <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
+        <button class="settings-tab" data-tab="connect" data-i18n="settings.tab_connect">Connect</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
       </div>
 
-      <!-- Language Tab -->
-      <div class="settings-tab-content active" data-tab="language">
+      <!-- General Tab -->
+      <div class="settings-tab-content active" data-tab="general">
         <section class="settings-section">
           <h3 data-i18n="settings.language">Language</h3>
           <div class="settings-row-2col">
@@ -286,10 +286,7 @@
             </label>
           </div>
         </section>
-      </div>
 
-      <!-- Prompt Tab (NEW) -->
-      <div class="settings-tab-content" data-tab="prompt">
         <section class="settings-section">
           <h3 data-i18n="settings.meeting_type">Meeting Type</h3>
           <select class="settings-select" id="selectMeetingPreset" style="margin-bottom:10px;">
@@ -341,23 +338,14 @@
           <textarea class="settings-textarea" id="textPrompt" rows="6" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
         </section>
+      </div>
 
+      <!-- Chat Tab -->
+      <div class="settings-tab-content" data-tab="chat">
         <section class="settings-section">
           <h3 data-i18n="settings.chat_prompt">Chat System Prompt</h3>
           <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
-        </section>
-
-      </div>
-
-      <!-- Integration Tab -->
-      <div class="settings-tab-content" data-tab="integration">
-        <section class="settings-section">
-          <h3 data-i18n="settings.integrations">Integrations</h3>
-          <label class="settings-label">
-            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
-            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
-          </label>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
@@ -367,6 +355,17 @@
             <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
           </div>
           <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
+        </section>
+      </div>
+
+      <!-- Connect Tab -->
+      <div class="settings-tab-content" data-tab="connect">
+        <section class="settings-section">
+          <h3 data-i18n="settings.integrations">Integrations</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
+            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
+          </label>
         </section>
       </div>
 
