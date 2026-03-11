@@ -111,6 +111,12 @@ async function startRecording() {
 
   stt = createSTT();
 
+  // Set initial STT engine label (onEngineChange may override on fallback)
+  const engineLabel = document.getElementById('sttEngineLabel');
+  if (engineLabel) {
+    engineLabel.textContent = (state.settings.sttEngine === 'deepgram') ? 'Deepgram' : 'Web Speech';
+  }
+
   try {
     await stt.start({
       language: state.settings.language || 'ko',
@@ -150,12 +156,6 @@ async function startRecording() {
         showToast(t('stt.fallback_warning'), 'warning');
       },
     });
-
-    // Update STT engine label
-    const engineLabel = document.getElementById('sttEngineLabel');
-    if (engineLabel) {
-      engineLabel.textContent = (state.settings.sttEngine === 'deepgram') ? 'Deepgram' : 'Web Speech';
-    }
 
     // Set recording state only AFTER stt.start() succeeds
     state.isRecording = true;
