@@ -455,7 +455,7 @@ function showPausedState() {
 function startAiCorrection() {
   clearInterval(aiCorrectionTimer);
   if (!state.settings.autoCorrection) return;
-  const intervalMs = (state.settings.correctionInterval || 60) * 1000;
+  const intervalMs = 5 * 60 * 1000; // 5 minutes
   aiCorrectionTimer = setInterval(() => runCorrection(true), intervalMs);
 }
 

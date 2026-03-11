@@ -465,11 +465,6 @@ export function initSettings() {
     state.settings.autoCorrection = e.target.checked;
     markDirty();
   });
-  $('#inputCorrectionInterval')?.addEventListener('change', (e) => {
-    const val = parseInt(e.target.value) || 60;
-    state.settings.correctionInterval = val;
-    markDirty();
-  });
 
   // User Profile - structured form
   const profileFields = ['profileName', 'profileTitle', 'profileTeam', 'profileNotes'];
@@ -571,7 +566,6 @@ function saveAllSettings() {
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
     autoCorrection: s.autoCorrection,
-    correctionInterval: s.correctionInterval,
     userProfile: s.userProfile,
     profileFields: s.profileFields,
     profileFileContent: s.profileFileContent,
@@ -637,7 +631,6 @@ function resetAllSettings() {
   s.autoAnalysis = true;
   s.analysisInterval = 30;
   s.autoCorrection = true;
-  s.correctionInterval = 60;
   s.tokenStrategy = 'smart';
   s.recentMinutes = 5;
   s.meetingPreset = 'general';
@@ -676,8 +669,6 @@ function applySettingsToForm() {
   $('#inputAnalysisInterval').value = s.analysisInterval;
   const checkAutoCorrection = $('#checkAutoCorrection');
   if (checkAutoCorrection) checkAutoCorrection.checked = s.autoCorrection !== false;
-  const inputCorrectionInterval = $('#inputCorrectionInterval');
-  if (inputCorrectionInterval) inputCorrectionInterval.value = s.correctionInterval || 60;
 
   const strategyRadio = document.querySelector(`input[name="tokenStrategy"][value="${s.tokenStrategy}"]`);
   if (strategyRadio) strategyRadio.checked = true;
@@ -749,7 +740,6 @@ function loadSavedSettings() {
   s.autoAnalysis = saved.autoAnalysis !== false;
   s.analysisInterval = saved.analysisInterval || 30;
   s.autoCorrection = saved.autoCorrection !== false;
-  s.correctionInterval = saved.correctionInterval || 60;
   s.tokenStrategy = saved.tokenStrategy || 'smart';
   s.recentMinutes = saved.recentMinutes || 5;
   s.meetingPreset = saved.meetingPreset || 'general';
