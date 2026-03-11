@@ -125,11 +125,14 @@ function createWebSpeechEngine(language) {
 // Deepgram Nova-3 engine (WebSocket streaming)
 function createDeepgramEngine(language) {
   let ws = null;
-  let mediaRecorder = null;
+  let audioCtx = null;
+  let processor = null;
+  let source = null;
   let stream = null;
   let shouldReconnect = false;
   let reconnectAttempts = 0;
   const MAX_RECONNECT = 3;
+  const TARGET_SAMPLE_RATE = 16000;
 
   const langMap = {
     ko: 'ko',
@@ -137,6 +140,38 @@ function createDeepgramEngine(language) {
     ja: 'ja',
     zh: 'zh',
   };
+
+  // Convert Float32 audio samples to Int16 PCM
+  function float32ToInt16(float32Array) {
+    const int16 = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32Array[i]));
+      int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return int16;
+  }
+
+  // Downsample audio from source rate to target rate
+  function downsample(buffer, srcRate, tgtRate) {
+    if (srcRate === tgtRate) return buffer;
+    const ratio = srcRate / tgtRate;
+    const newLength = Math.round(buffer.length / ratio);
+    const result = new Float32Array(newLength);
+    for (let i = 0; i < newLength; i++) {
+      const idx = Math.round(i * ratio);
+      result[i] = buffer[idx];
+    }
+    return result;
+  }
+
+  function cleanupAudio() {
+    if (processor) { processor.disconnect(); processor = null; }
+    if (source) { source.disconnect(); source = null; }
+    if (audioCtx && audioCtx.state !== 'closed') {
+      audioCtx.close().catch(() => {});
+      audioCtx = null;
+    }
+  }
 
   return {
     name: 'deepgram',
@@ -164,7 +199,7 @@ function createDeepgramEngine(language) {
 
       const connectWebSocket = () => {
         const lang = langMap[language] || 'en';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=${TARGET_SAMPLE_RATE}&channels=1&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
 
         ws = new WebSocket(wsUrl, ['token', apiKey]);
 
@@ -172,18 +207,22 @@ function createDeepgramEngine(language) {
           console.log('[STT:Deepgram] WebSocket connected');
           reconnectAttempts = 0;
 
-          // Start MediaRecorder to capture audio
-          mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm;codecs=opus',
-          });
+          // Set up AudioContext for raw PCM capture
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          source = audioCtx.createMediaStreamSource(stream);
+          processor = audioCtx.createScriptProcessor(4096, 1, 1);
 
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
-              ws.send(e.data);
+          processor.onaudioprocess = (e) => {
+            if (ws?.readyState === WebSocket.OPEN) {
+              const float32 = e.inputBuffer.getChannelData(0);
+              const downsampled = downsample(float32, audioCtx.sampleRate, TARGET_SAMPLE_RATE);
+              const pcm16 = float32ToInt16(downsampled);
+              ws.send(pcm16.buffer);
             }
           };
 
-          mediaRecorder.start(100); // Send chunks every 100ms for lower latency
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
         };
 
         ws.onmessage = (e) => {
@@ -214,13 +253,15 @@ function createDeepgramEngine(language) {
         };
 
         ws.onclose = (e) => {
-          console.log('[STT:Deepgram] WebSocket closed:', e.code, e.reason);
+          console.warn(`[STT:Deepgram] WebSocket closed: code=${e.code} reason="${e.reason}"`);
+          cleanupAudio();
           if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
             reconnectAttempts++;
             console.log(`[STT:Deepgram] Reconnecting... attempt ${reconnectAttempts}`);
             setTimeout(connectWebSocket, 1000 * reconnectAttempts);
           } else if (shouldReconnect) {
-            onError(t('stt.connection_failed'));
+            const detail = e.code !== 1000 ? ` (code=${e.code}${e.reason ? ': ' + e.reason : ''})` : '';
+            onError(t('stt.connection_failed') + detail);
           }
         };
       };
@@ -231,10 +272,7 @@ function createDeepgramEngine(language) {
 
     stop() {
       shouldReconnect = false;
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      mediaRecorder = null;
+      cleanupAudio();
       if (ws) {
         ws.close();
         ws = null;

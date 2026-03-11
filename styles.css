@@ -894,8 +894,8 @@ h1, h2, h3 { font-weight: 600; }
   padding: 6px 14px;
   border: none;
   border-radius: var(--radius-full);
-  background: var(--danger);
-  color: #fff;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 600;
@@ -906,7 +906,7 @@ h1, h2, h3 { font-weight: 600; }
   display: inline-block;
   width: 8px;
   height: 8px;
-  background: #fff;
+  background: var(--danger);
   border-radius: 2px;
 }
 .privacy-badge {
@@ -921,7 +921,8 @@ h1, h2, h3 { font-weight: 600; }
 .privacy-icon { font-size: 13px; }
 .privacy-label { font-weight: 500; }
 .btn-end-meeting:hover {
-  background: color-mix(in srgb, var(--danger) 85%, #000);
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 /* Record button */
