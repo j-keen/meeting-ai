@@ -18,11 +18,12 @@ import {
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
   updateAnalysisNav,
+  getAnalysisAsText, renderAnalysisInto,
 } from './ui.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
-import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
+import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, getPromptPresets } from './i18n.js';
 
 // ===== Pub/Sub =====
 const listeners = {};
@@ -1109,6 +1110,19 @@ function init() {
   // Analyze now
   $('#btnAnalyzeNow').addEventListener('click', () => runAnalysis());
 
+  // Copy analysis as markdown
+  $('#btnCopyAnalysis').addEventListener('click', () => {
+    const text = getAnalysisAsText(state.currentAnalysis);
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(t('toast.copied_md'), 'success');
+    });
+  });
+
+  // Compare prompts modal
+  $('#btnComparePrompts').addEventListener('click', () => openCompareModal());
+  $('#btnRunCompare').addEventListener('click', () => runCompareAnalysis());
+
   // Demo data
   $('#btnLoadDemo').addEventListener('click', () => loadDemoData());
   $('#btnLoadDemo2').addEventListener('click', () => loadDemoData2());
@@ -1672,6 +1686,133 @@ function loadDemoData2() {
 
   state.meetingStartTime = Date.now() - 90 * 60000;
   showToast('Demo 2 loaded — extended transcript (115 lines, ~90min)', 'success');
+}
+
+// ===== Compare Prompts =====
+function openCompareModal() {
+  const modal = $('#compareModal');
+  modal.hidden = false;
+
+  // Populate select options with built-in + custom presets
+  const builtIn = getPromptPresets();
+  const custom = state.settings.customPromptPresets || {};
+
+  [['compareSelectA', 'compareTextA'], ['compareSelectB', 'compareTextB']].forEach(([selId, textId], idx) => {
+    const sel = $(`#${selId}`);
+    sel.innerHTML = '';
+    // Current prompt option
+    const currentOpt = document.createElement('option');
+    currentOpt.value = '__current__';
+    currentOpt.textContent = t('compare.current_prompt');
+    sel.appendChild(currentOpt);
+    // Built-in presets
+    Object.entries(builtIn).forEach(([key, { name }]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    // Custom presets
+    Object.keys(custom).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = '__custom__' + name;
+      opt.textContent = '\u2605 ' + name;
+      sel.appendChild(opt);
+    });
+
+    // Default: A = current, B = first non-default preset
+    if (idx === 0) {
+      sel.value = '__current__';
+    } else {
+      const keys = Object.keys(builtIn);
+      sel.value = keys.length > 1 ? keys[1] : '__current__';
+    }
+
+    // Set textarea from selection
+    const updateText = () => {
+      const ta = $(`#${textId}`);
+      const val = sel.value;
+      if (val === '__current__') {
+        ta.value = state.settings.customPrompt || getDefaultPrompt();
+      } else if (val.startsWith('__custom__')) {
+        ta.value = custom[val.slice('__custom__'.length)] || '';
+      } else {
+        const preset = builtIn[val];
+        ta.value = (preset && preset.prompt) || getDefaultPrompt();
+      }
+    };
+    updateText();
+    sel.addEventListener('change', updateText);
+  });
+
+  // Clear previous results
+  $('#compareResultA').innerHTML = '';
+  $('#compareResultB').innerHTML = '';
+}
+
+async function runCompareAnalysis() {
+  if (state.transcript.length === 0) {
+    showToast(t('toast.no_transcript'), 'warning');
+    return;
+  }
+  if (!isProxyAvailable()) {
+    showToast(t('toast.no_api_key'), 'warning');
+    return;
+  }
+
+  const btn = $('#btnRunCompare');
+  const origText = btn.textContent;
+  btn.textContent = t('compare.running');
+  btn.disabled = true;
+
+  const promptA = $('#compareTextA').value;
+  const promptB = $('#compareTextB').value;
+
+  const resultA = $('#compareResultA');
+  const resultB = $('#compareResultB');
+  resultA.innerHTML = '<div class="skeleton-section"></div>';
+  resultB.innerHTML = '<div class="skeleton-section"></div>';
+
+  const lastAnalysis = state.analysisHistory.length > 0
+    ? state.analysisHistory[state.analysisHistory.length - 1]
+    : null;
+  const previousSummary = lastAnalysis
+    ? (lastAnalysis.markdown || lastAnalysis.summary || '')
+    : null;
+
+  const baseOpts = {
+    transcript: state.transcript,
+    meetingContext: state.settings.meetingContext,
+    meetingPreset: state.settings.meetingPreset,
+    elapsedTime: getElapsedTimeStr(),
+    strategy: state.settings.tokenStrategy || 'smart',
+    recentMinutes: state.settings.recentMinutes || 5,
+    previousSummary,
+    userInsights: state.userInsights,
+    memos: state.memos,
+    userProfile: buildFullProfile(),
+    model: state.settings.geminiModel || 'gemini-2.5-flash',
+  };
+
+  const results = await Promise.allSettled([
+    analyzeTranscript({ ...baseOpts, prompt: promptA }),
+    analyzeTranscript({ ...baseOpts, prompt: promptB }),
+  ]);
+
+  if (results[0].status === 'fulfilled') {
+    renderAnalysisInto(resultA, results[0].value);
+  } else {
+    resultA.innerHTML = `<p class="text-muted">${t('compare.error')}: ${results[0].reason?.message || ''}</p>`;
+  }
+
+  if (results[1].status === 'fulfilled') {
+    renderAnalysisInto(resultB, results[1].value);
+  } else {
+    resultB.innerHTML = `<p class="text-muted">${t('compare.error')}: ${results[1].reason?.message || ''}</p>`;
+  }
+
+  btn.textContent = origText;
+  btn.disabled = false;
 }
 
 document.addEventListener('DOMContentLoaded', init);

@@ -419,7 +419,7 @@ export function updateAnalysisNav() {
     const time = analysis?.timestamp
       ? new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
       : '';
-    label.innerHTML = `<span class="nav-time">${time}</span> #${viewIdx + 1}`;
+    label.innerHTML = `${t('panel.ai')} ${viewIdx + 1} <span class="nav-time">${time}</span>`;
   }
 
   if (!analysisNavInitialized) {
@@ -465,6 +465,37 @@ export function renderAnalysis(analysis) {
   analysisNavIndex = -1;
   renderAnalysisContent(container, analysis);
   updateAnalysisNav();
+
+  // Toggle copy & compare buttons
+  const copyBtn = $('#btnCopyAnalysis');
+  const compareBtn = $('#btnComparePrompts');
+  if (copyBtn) copyBtn.style.display = '';
+  if (compareBtn) compareBtn.style.display = '';
+}
+
+// Get analysis content as markdown text for clipboard
+export function getAnalysisAsText(analysis) {
+  if (!analysis) return '';
+  if (analysis.markdown) return analysis.markdown;
+  // Legacy format: build markdown from sections
+  const lines = [];
+  getSectionConfig().forEach(({ key, title }) => {
+    const val = analysis[key];
+    if (!val) return;
+    lines.push(`## ${title}`);
+    if (Array.isArray(val)) {
+      val.forEach(item => lines.push(`- ${item}`));
+    } else {
+      lines.push(val);
+    }
+    lines.push('');
+  });
+  return lines.join('\n');
+}
+
+// Render analysis into any container element
+export function renderAnalysisInto(container, analysis) {
+  renderAnalysisContent(container, analysis);
 }
 
 // ===== Highlights =====

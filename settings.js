@@ -365,22 +365,67 @@ export function initSettings() {
       opt.textContent = name;
       select.appendChild(opt);
     });
+    // Append custom prompt presets
+    const customPromptPresets = state.settings.customPromptPresets || {};
+    Object.keys(customPromptPresets).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = '__custom__' + name;
+      opt.textContent = '\u2605 ' + name;
+      select.appendChild(opt);
+    });
   }
   populatePromptPresets();
 
+  function updateDeletePresetBtn(key) {
+    const btn = $('#btnDeletePromptPreset');
+    if (btn) btn.style.display = (key && key.startsWith('__custom__')) ? '' : 'none';
+  }
+
   $('#selectPromptPreset').addEventListener('change', (e) => {
     const key = e.target.value;
+    updateDeletePresetBtn(key);
     if (!key) return;
-    const presets = getPromptPresets();
-    const preset = presets[key];
-    if (!preset) return;
-    const promptText = preset.prompt || getDefaultPrompt();
-    $('#textPrompt').value = promptText;
-    state.settings.customPrompt = promptText;
+    let promptText;
+    if (key.startsWith('__custom__')) {
+      const name = key.slice('__custom__'.length);
+      promptText = (state.settings.customPromptPresets || {})[name];
+    } else {
+      const presets = getPromptPresets();
+      const preset = presets[key];
+      if (!preset) return;
+      promptText = preset.prompt || getDefaultPrompt();
+    }
+    if (promptText) {
+      $('#textPrompt').value = promptText;
+      state.settings.customPrompt = promptText;
+      markDirty();
+      highlightField($('#textPrompt'));
+    }
+  });
+
+  // Save current prompt as custom preset
+  $('#btnSavePromptPreset').addEventListener('click', () => {
+    const name = prompt(t('preset.name_prompt') || 'Enter preset name:');
+    if (!name) return;
+    if (!state.settings.customPromptPresets) state.settings.customPromptPresets = {};
+    state.settings.customPromptPresets[name] = $('#textPrompt').value;
     markDirty();
-    highlightField($('#textPrompt'));
-    // Reset select to placeholder
-    e.target.value = '';
+    populatePromptPresets();
+    $('#selectPromptPreset').value = '__custom__' + name;
+    updateDeletePresetBtn('__custom__' + name);
+  });
+
+  // Delete custom preset
+  $('#btnDeletePromptPreset').addEventListener('click', () => {
+    const key = $('#selectPromptPreset').value;
+    if (!key || !key.startsWith('__custom__')) return;
+    if (!confirm(t('preset.delete_confirm'))) return;
+    const name = key.slice('__custom__'.length);
+    delete (state.settings.customPromptPresets || {})[name];
+    markDirty();
+    populatePromptPresets();
+    $('#selectPromptPreset').value = '';
+    updateDeletePresetBtn('');
   });
 
   // Prompt
@@ -527,6 +572,7 @@ function saveAllSettings() {
     profileFileName: s.profileFileName,
     slackWebhook: s.slackWebhook,
     customPresets: s.customPresets,
+    customPromptPresets: s.customPromptPresets,
     chatPresets: s.chatPresets,
   });
   snapshotSettings();
@@ -598,6 +644,7 @@ function resetAllSettings() {
   s.profileFileName = '';
   s.slackWebhook = '';
   s.customPresets = {};
+  s.customPromptPresets = {};
   s.chatPresets = null;
 
   // Apply to form
@@ -714,6 +761,7 @@ function loadSavedSettings() {
   s.uiLanguage = saved.uiLanguage || 'auto';
   s.aiLanguage = saved.aiLanguage || 'auto';
   s.customPresets = saved.customPresets || {};
+  s.customPromptPresets = saved.customPromptPresets || {};
   s.chatPresets = saved.chatPresets || null;
 
   applySettingsToForm();

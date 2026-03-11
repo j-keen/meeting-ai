@@ -418,6 +418,21 @@ const translations = {
     'settings.reset_confirm': 'Reset all settings to defaults? This cannot be undone.',
     'settings.reset_done': 'All settings reset to defaults.',
 
+    // Copy & Compare
+    'panel.copy_md': 'Copy',
+    'panel.compare': 'Compare',
+    'toast.copied_md': 'Copied as Markdown!',
+    'compare.title': 'Prompt A/B Compare',
+    'compare.prompt_a': 'Prompt A',
+    'compare.prompt_b': 'Prompt B',
+    'compare.run': 'Run Comparison',
+    'compare.running': 'Analyzing...',
+    'compare.current_prompt': '(Current Prompt)',
+    'compare.error': 'Analysis failed',
+
+    // Custom prompt presets
+    'preset.delete_confirm': 'Delete this preset?',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -839,6 +854,21 @@ const translations = {
     'settings.saved': '설정이 저장되었습니다.',
     'settings.reset_confirm': '모든 설정을 기본값으로 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
     'settings.reset_done': '모든 설정이 기본값으로 초기화되었습니다.',
+
+    // Copy & Compare
+    'panel.copy_md': '복사',
+    'panel.compare': '비교',
+    'toast.copied_md': '마크다운으로 복사됨!',
+    'compare.title': '프롬프트 A/B 비교',
+    'compare.prompt_a': '프롬프트 A',
+    'compare.prompt_b': '프롬프트 B',
+    'compare.run': '비교 실행',
+    'compare.running': '분석 중...',
+    'compare.current_prompt': '(현재 프롬프트)',
+    'compare.error': '분석 실패',
+
+    // Custom prompt presets
+    'preset.delete_confirm': '이 프리셋을 삭제하시겠습니까?',
 
     // Misc
     'minutes': '{n}분',

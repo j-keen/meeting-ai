@@ -99,6 +99,8 @@
           </button>
         </div>
         <div class="panel-actions">
+          <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
+          <button class="btn btn-sm" id="btnComparePrompts" title="Compare prompts" style="display:none">🔀 <span data-i18n="panel.compare">Compare</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">🕐 <span data-i18n="panel.analysis_history">History</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
@@ -364,14 +366,18 @@
 
         <section class="settings-section">
           <h3 data-i18n="settings.analysis_prompt">Analysis Prompt</h3>
-          <div style="margin-bottom:8px;">
-            <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Prompt Preset</label>
-            <select class="settings-select" id="selectPromptPreset" style="width:100%;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+            <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Prompt Preset</label>
+            <select class="settings-select" id="selectPromptPreset" style="flex:1;">
               <option value="" data-i18n="settings.prompt_preset_select">Select a preset...</option>
             </select>
+            <button class="btn btn-sm" id="btnDeletePromptPreset" style="display:none" title="Delete">&times;</button>
           </div>
           <textarea class="settings-textarea" id="textPrompt" rows="8" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
-          <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
+            <button class="btn btn-sm" id="btnSavePromptPreset">💾 <span data-i18n="preset.save">Save as Preset</span></button>
+          </div>
         </section>
       </div>
 
@@ -545,7 +551,10 @@
       </div>
       <div class="modal-body">
         <div class="history-toolbar">
-          <input type="search" class="settings-input" id="historySearch" data-i18n-placeholder="history.search" placeholder="Search meetings...">
+          <div class="history-search-wrapper">
+            <span class="history-search-icon">&#128269;</span>
+            <input type="search" class="history-search-input" id="historySearch" data-i18n-placeholder="history.search" placeholder="Search meetings...">
+          </div>
           <div class="history-filters">
             <select class="settings-select history-filter-select" id="historyFilterType">
               <option value="" data-i18n="history.filter_all">All Types</option>
@@ -567,6 +576,7 @@
             </select>
             <input type="text" class="settings-input history-filter-tag" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
             <input type="date" class="settings-input history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
+            <span class="history-filter-sep">~</span>
             <input type="date" class="settings-input history-filter-date" id="historyFilterDateTo" data-i18n-title="history.filter_date_to" title="To date">
           </div>
         </div>
@@ -618,6 +628,43 @@
       </div>
       <div class="modal-body">
         <div class="ai-sections" id="analysisDetailSections"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compare Prompts Modal -->
+  <div class="modal-overlay" id="compareModal" hidden>
+    <div class="modal modal-large" style="max-width:960px;">
+      <div class="modal-header">
+        <h3 data-i18n="compare.title">Prompt A/B Compare</h3>
+        <button class="btn btn-icon modal-close" data-close="compareModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="compare-prompt-row">
+          <div style="flex:1">
+            <label class="compare-label" data-i18n="compare.prompt_a">Prompt A</label>
+            <select class="settings-select" id="compareSelectA" style="margin-bottom:6px;width:100%"></select>
+            <textarea class="settings-textarea" id="compareTextA" rows="4"></textarea>
+          </div>
+          <div style="flex:1">
+            <label class="compare-label" data-i18n="compare.prompt_b">Prompt B</label>
+            <select class="settings-select" id="compareSelectB" style="margin-bottom:6px;width:100%"></select>
+            <textarea class="settings-textarea" id="compareTextB" rows="4"></textarea>
+          </div>
+        </div>
+        <div style="text-align:center;margin:12px 0;">
+          <button class="btn btn-sm btn-primary" id="btnRunCompare" data-i18n="compare.run">Run Comparison</button>
+        </div>
+        <div class="compare-split">
+          <div class="compare-panel">
+            <div class="compare-label" data-i18n="compare.prompt_a">Prompt A</div>
+            <div class="ai-sections" id="compareResultA"></div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-label" data-i18n="compare.prompt_b">Prompt B</div>
+            <div class="ai-sections" id="compareResultB"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
