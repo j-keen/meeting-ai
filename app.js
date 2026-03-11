@@ -105,7 +105,6 @@ function getElapsedTimeStr() {
 
 async function startRecording() {
   if (state.isRecording) return;
-  state.isRecording = true;
 
   // Load typo dictionary
   refreshTypoDict();
@@ -137,6 +136,9 @@ async function startRecording() {
       },
     });
 
+    // Set recording state only AFTER stt.start() succeeds
+    state.isRecording = true;
+
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
       state.meetingId = generateId();
@@ -165,9 +167,9 @@ async function startRecording() {
     showToast(t('toast.recording_started'), 'success');
 
   } catch (err) {
-    state.isRecording = false;
     stt?.stop();
     stt = null;
+    state.isRecording = false;
     showToast(t('toast.record_fail') + err.message, 'error');
   }
 }
@@ -622,10 +624,10 @@ function showPostEndButtons() {
   });
 }
 
-function resumeMeeting() {
+async function resumeMeeting() {
   state.meetingEnded = false;
   restoreEndButton();
-  startRecording();
+  await startRecording();
   showToast(t('toast.meeting_resumed'), 'success');
 }
 
@@ -872,9 +874,9 @@ function init() {
 
   // Record button
   $('#btnRecord').addEventListener('click', () => emit('recording:toggle'));
-  on('recording:toggle', () => {
+  on('recording:toggle', async () => {
     if (state.isRecording) stopRecording();
-    else startRecording();
+    else await startRecording();
   });
 
   // End meeting (with confirmation)
@@ -897,12 +899,12 @@ function init() {
   });
 
   // Quick Start
-  $('#btnQuickStart')?.addEventListener('click', () => {
+  $('#btnQuickStart')?.addEventListener('click', async () => {
     const preset = $('#selectQuickPreset')?.value || 'general';
     state.settings.meetingPreset = preset;
     saveSettings({ meetingPreset: preset });
     $('#selectMeetingPreset').value = preset;
-    startRecording();
+    await startRecording();
   });
 
   // Manual Setup & Start
@@ -1137,7 +1139,7 @@ function init() {
     startMeetingPrep();
   });
 
-  on('meetingPrep:complete', (config) => {
+  on('meetingPrep:complete', async (config) => {
     // Apply meeting prep settings
     if (config.meetingType) {
       state.settings.meetingPreset = config.meetingType;
@@ -1157,7 +1159,7 @@ function init() {
       saveSettings({ customPrompt: config.customPrompt });
     }
     // Start recording
-    startRecording();
+    await startRecording();
   });
 
   // beforeunload auto-save
@@ -1178,9 +1180,9 @@ function showWelcomeModal() {
   if (!modal) return;
   modal.hidden = false;
 
-  $('#welcomeQuickStart').addEventListener('click', () => {
+  $('#welcomeQuickStart').addEventListener('click', async () => {
     closeWelcomeModal();
-    startRecording();
+    await startRecording();
   });
 
   $('#welcomeMeetingPrep').addEventListener('click', () => {

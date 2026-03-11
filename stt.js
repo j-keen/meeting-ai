@@ -49,7 +49,9 @@ function createWebSpeechEngine(language) {
         }
       };
 
+      let audioStarted = false;
       recognition.onaudiostart = () => {
+        audioStarted = true;
         console.log('[STT] Audio input started');
       };
 
@@ -89,6 +91,13 @@ function createWebSpeechEngine(language) {
       } catch (err) {
         onError(err.message);
       }
+
+      // Network timeout: if no audio input within 10s, notify error
+      setTimeout(() => {
+        if (!audioStarted && shouldRestart) {
+          onError(t('stt.network_timeout'));
+        }
+      }, 10000);
     },
 
     stop() {
@@ -116,8 +125,7 @@ export function createSTT() {
         stream.getTracks().forEach(track => track.stop());
       } catch {
         isRunning = false;
-        onError(t('stt.mic_permission_denied'));
-        return;
+        throw new Error(t('stt.mic_permission_denied'));
       }
 
       currentEngine = createWebSpeechEngine(language);
