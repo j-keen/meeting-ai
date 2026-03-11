@@ -339,6 +339,7 @@ async function startRecording() {
       onEngineChange: (newEngine) => {
         // Fallback occurred — update badge to fallback state (don't change settings)
         setSttBadgeStatus('fallback', 'Web Speech (fallback)');
+        logSttEvent('fallback', t('stt.fallback_warning'));
         // Show warning toast
         showToast(t('stt.fallback_warning'), 'warning');
       },
@@ -379,6 +380,7 @@ async function startRecording() {
     stt = null;
     state.isRecording = false;
     setSttBadgeStatus('error', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
+    logSttEvent('error', err.message);
     const sttSelect = document.getElementById('selectSttEngine');
     if (sttSelect) sttSelect.disabled = false;
     showToast(t('toast.record_fail') + err.message, 'error');
@@ -392,6 +394,7 @@ function stopRecording() {
   stt = null;
   state.isRecording = false;
   clearInterim();
+  logSttEvent('disconnect', t('stt.log_stopped'));
 
   clearInterval(timerInterval);
   clearInterval(autoSaveInterval);
@@ -1256,6 +1259,48 @@ function init() {
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {
     btn.addEventListener('click', () => updateStarRating(parseInt(btn.dataset.star)));
   });
+
+  // STT Badge right-click context menu
+  const sttBadge = document.getElementById('sttEngineBadge');
+  if (sttBadge) {
+    sttBadge.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const rect = sttBadge.getBoundingClientRect();
+      showSttContextMenu(rect.left + rect.width / 2, rect.top);
+    });
+    // Also allow regular click
+    sttBadge.style.cursor = 'context-menu';
+  }
+
+  // Close context menu on outside click
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('sttContextMenu');
+    if (menu && !menu.hidden && !menu.contains(e.target) && !document.getElementById('sttEngineBadge')?.contains(e.target)) {
+      hideSttContextMenu();
+    }
+  });
+
+  // Copy log button
+  document.getElementById('btnSttCopyLog')?.addEventListener('click', () => {
+    const text = sttEventLog.map(e => {
+      const time = e.time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return `[${time}] ${e.type}: ${e.message}`;
+    }).join('\n');
+    navigator.clipboard.writeText(text || 'No events').then(() => {
+      showToast(t('stt.log_copied'), 'success');
+    });
+    hideSttContextMenu();
+  });
+
+  // Compare mode button
+  document.getElementById('btnSttCompare')?.addEventListener('click', () => {
+    hideSttContextMenu();
+    startComparisonMode();
+  });
+
+  // Close comparison
+  document.getElementById('btnCloseCompare')?.addEventListener('click', stopComparisonMode);
+  document.getElementById('btnStopCompare')?.addEventListener('click', stopComparisonMode);
 
   // Tag input (Enter to add)
   $('#endMeetingTagInput').addEventListener('keydown', (e) => {

@@ -57,6 +57,22 @@ const translations = {
     'stt.test_fail': 'Connection failed.',
     'stt.test_fail_browser': 'Web Speech API not supported in this browser.',
     'stt.recording_locked': 'Stop recording to change STT engine.',
+    'stt.status_idle': 'Idle',
+    'stt.status_connecting': 'Connecting...',
+    'stt.status_active': 'Active',
+    'stt.status_fallback': 'Fallback',
+    'stt.status_error': 'Error',
+    'stt.no_events': 'No events yet',
+    'stt.log_starting': 'Starting {engine}...',
+    'stt.log_stopped': 'Recording stopped',
+    'stt.log_compare_start': 'Comparison mode started',
+    'stt.log_compare_end': 'Comparison mode ended',
+    'stt.log_copied': 'Log copied to clipboard',
+    'stt.compare_mode': 'Compare Engines',
+    'stt.compare_title': 'Engine Comparison',
+    'stt.compare_hint': 'Speak to compare recognition results',
+    'stt.compare_stop': 'Stop Comparison',
+    'stt.copy_log': 'Copy Log',
     'privacy.badge': 'Private',
     'privacy.tooltip': 'All data stays local. AI analysis via Vertex AI (not used for training).',
     'privacy.proxy_hint': 'Cloud AI active — API key not required. Your data is never used for AI training.',
@@ -247,6 +263,10 @@ const translations = {
     'preset.reset': 'Reset',
     'preset.name_prompt': 'Enter preset name:',
 
+    // Prompt presets
+    'settings.prompt_preset': 'Prompt Preset',
+    'settings.prompt_preset_select': 'Select a preset...',
+
     // Welcome modal
     'welcome.title': 'Meeting AI',
     'welcome.subtitle': 'What would you like to do?',
@@ -433,6 +453,22 @@ const translations = {
     'stt.test_fail': '연결 실패.',
     'stt.test_fail_browser': '이 브라우저에서 Web Speech API를 지원하지 않습니다.',
     'stt.recording_locked': '녹음을 중지한 후 STT 엔진을 변경하세요.',
+    'stt.status_idle': '대기',
+    'stt.status_connecting': '연결 중...',
+    'stt.status_active': '활성',
+    'stt.status_fallback': 'Fallback',
+    'stt.status_error': '오류',
+    'stt.no_events': '이벤트 없음',
+    'stt.log_starting': '{engine} 시작 중...',
+    'stt.log_stopped': '녹음 중지됨',
+    'stt.log_compare_start': '비교 모드 시작',
+    'stt.log_compare_end': '비교 모드 종료',
+    'stt.log_copied': '로그가 클립보드에 복사되었습니다',
+    'stt.compare_mode': '엔진 비교',
+    'stt.compare_title': '엔진 비교',
+    'stt.compare_hint': '말씀하시면 인식 결과를 비교합니다',
+    'stt.compare_stop': '비교 종료',
+    'stt.copy_log': '로그 복사',
     'privacy.badge': '비공개',
     'privacy.tooltip': '모든 데이터는 로컬에 저장됩니다. AI 분석은 Vertex AI 경유 (학습에 사용되지 않음).',
     'privacy.proxy_hint': 'Cloud AI 활성 — API 키 없이 사용 가능. 데이터는 AI 학습에 사용되지 않습니다.',
@@ -623,6 +659,10 @@ const translations = {
     'preset.reset': '초기화',
     'preset.name_prompt': '프리셋 이름을 입력하세요:',
 
+    // Prompt presets
+    'settings.prompt_preset': '프롬프트 프리셋',
+    'settings.prompt_preset_select': '프리셋 선택...',
+
     // Welcome modal
     'welcome.title': 'Meeting AI',
     'welcome.subtitle': '무엇을 하시겠습니까?',
@@ -754,7 +794,7 @@ const translations = {
   }
 };
 
-// AI-specific prompts per language
+// AI-specific prompts per language (Markdown output)
 const AI_PROMPTS = {
   en: `You are an expert AI meeting analyst. You MUST respond ONLY in English regardless of the transcript language.
 
@@ -763,21 +803,33 @@ const AI_PROMPTS = {
 - Preserve specific numbers, names, dates, and technical terms exactly as mentioned
 - If a previous analysis is provided, RETAIN its content in full and APPEND new discussion points
 
-Respond ONLY with valid JSON in this exact format:
-{
-  "flow": "One-line summary (max 60 chars) of the current meeting flow/direction. e.g. 'Budget review → timeline adjustment, assignees confirmed'",
-  "summary": "Detailed chronological account of the entire meeting flow. For each topic: who said what, what decisions were made, specific numbers and examples mentioned. If a previous summary exists, retain that content and append new discussion. (Minimum 5-10 sentences)",
-  "context": "Current topic under discussion, conversation flow, and how it connects to previous topics",
-  "openQuestions": ["Unresolved questions with specific context about when/why they were raised"],
-  "actionItems": ["Action items with assignee, deadline, and specific details when identifiable"],
-  "suggestions": ["Context-based suggestions: missed topics, needed decisions, follow-ups"]
-}
+Respond in well-structured **Markdown** format. Use headings, bullet points, and bold text for clarity. Structure your analysis with the following sections (adapt freely as needed):
+
+## Headline
+One-line summary of the meeting result — focus on what was decided.
+
+## Decisions
+What was confirmed/finalized in this meeting (irreversible-level decisions).
+
+## Summary
+Chronological account of the discussion flow. For each topic: who said what, decisions made, specific numbers/examples. If a previous summary exists, retain and append. Mark [DECIDED] or [PENDING] next to each topic. (Minimum 5-10 sentences)
+
+## Action Items
+- **[Assignee]** Task description — Deadline (if known)
+
+## Pending Issues
+Items without conclusion — why unresolved, who needs to resolve them.
+
+## Risks
+Things that could become problems if missed — be specific.
+
+## Next Steps
+What to prepare before the next meeting, or agenda items for follow-up.
 
 Rules:
-- Write summary as CUMULATIVE: preserve previous summary content and add new discussion
+- Write summary as CUMULATIVE: preserve previous content and add new discussion
 - Record specific numbers, dates, names, and technical terms exactly as stated
-- Instead of abstract statements like "discussed X", describe the ACTUAL content discussed
-- For unresolved questions, include the original context in which they were raised
+- Describe ACTUAL content instead of abstract statements like "discussed X"
 - CRITICAL: All output MUST be in English, REGARDLESS of transcript language.`,
 
   ko: `당신은 AI 회의 기록 전문가입니다. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요.
@@ -787,23 +839,156 @@ Rules:
 - 참여자가 언급한 구체적 수치, 이름, 날짜, 기술 용어를 그대로 보존하십시오
 - 이전 분석 내용이 제공된 경우, 해당 내용을 그대로 유지하면서 새로운 내용을 추가하십시오
 
-반드시 아래 형식의 유효한 JSON으로만 응답하세요:
-{
-  "flow": "현재 회의 흐름을 한 줄로 요약 (최대 60자). 예: '예산 논의 → 일정 조정, 담당자 배정 완료'",
-  "summary": "회의 전체 흐름을 시간순으로 상세히 기술. 각 주제별로 누가 무엇을 말했는지, 어떤 결정이 내려졌는지, 구체적 수치와 사례를 모두 포함. 이전 요약이 있다면 그 내용을 유지하면서 새로운 논의를 이어서 추가할 것. (최소 5-10문장)",
-  "context": "현재 논의 중인 주제, 대화 흐름, 그리고 이 주제가 이전 논의와 어떻게 연결되는지",
-  "openQuestions": ["미해결 질문이나 후속 조치가 필요한 주제 - 구체적 맥락 포함"],
-  "actionItems": ["실행 항목 - 담당자, 기한, 구체적 내용을 최대한 포함"],
-  "suggestions": ["회의 맥락에 기반한 제안 - 놓친 주제, 필요한 결정, 후속 조치 등"]
-}
+잘 구조화된 **Markdown** 형식으로 응답하세요. 제목, 불릿 포인트, 볼드체를 활용해 가독성을 높이세요. 아래 섹션을 기본으로 하되, 필요에 따라 자유롭게 조정하세요:
+
+## 한줄 요약
+회의 결과를 한 줄로 — 무엇이 결정되었는지 중심으로.
+
+## 결정사항
+이번 회의에서 확정된 것들 (번복 불가 수준의 결정).
+
+## 회의 요약
+논의 흐름을 시간순으로 상세히 기술. 각 주제별로 누가 무엇을 말했는지, 결정 내용, 구체적 수치/사례를 포함. 이전 요약이 있다면 유지하면서 새로운 논의를 추가. 각 주제에 [결정] 또는 [미결] 마커 표시. (최소 5-10문장)
+
+## 실행 항목 (To-Do)
+- **[담당자]** 할 일 — 기한 (파악 가능한 경우)
+
+## 미결 사항
+결론이 나지 않은 것들 — 왜 결론이 안 났는지, 누가 해결해야 하는지.
+
+## 리스크
+놓치면 문제될 것들 — 구체적 리스크를 서술.
+
+## 다음 단계
+다음 회의 전 준비사항 또는 다음 회의 안건.
 
 규칙:
-- summary는 누적형으로 작성: 이전 요약 내용을 보존하면서 새로운 논의를 추가
+- 요약은 누적형으로 작성: 이전 내용을 보존하면서 새로운 논의를 추가
 - 구체적 수치, 날짜, 이름, 기술 용어는 반드시 그대로 기록
 - "~에 대해 논의함" 같은 추상적 요약 대신, 실제 논의된 구체적 내용을 서술
-- 제기되었으나 답변되지 않은 질문은 원문 맥락과 함께 기록
-- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요. 절대 다른 언어로 응답하지 마세요.`
+- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.`
 };
+
+// Prompt presets for quick selection
+const AI_PROMPT_PRESETS = {
+  en: {
+    default: { name: 'Default (Comprehensive)', prompt: null },
+    decision: { name: 'Decision-Focused', prompt: `You are an AI meeting analyst focused on DECISIONS. Respond in English using Markdown.
+
+## Headline
+One sentence: what was decided today.
+
+## Key Decisions
+List each decision with context and rationale.
+
+## Action Items
+- **[Owner]** Task — Deadline
+
+## Unresolved
+What still needs to be decided, and blockers.
+
+## Risks & Dependencies
+What could go wrong, what depends on what.
+
+Rules: Be specific. Use exact numbers, names, dates. Cumulative — preserve previous content.` },
+    actionItems: { name: 'Action Items Only', prompt: `You are an AI meeting assistant focused on ACTION ITEMS. Respond in English using Markdown.
+
+## Meeting Summary
+2-3 sentence overview of what was discussed.
+
+## Action Items
+For each action item:
+- **[Owner]** Specific task description — **Deadline** (if mentioned)
+- Priority: High/Medium/Low (infer from context)
+
+## Blockers
+Issues preventing progress on any items.
+
+## Follow-ups Needed
+Questions or topics that need follow-up.
+
+Rules: Be specific. Include exact names, deadlines, numbers. Cumulative.` },
+    brainstorm: { name: 'Brainstorm / Ideas', prompt: `You are an AI meeting analyst for BRAINSTORMING sessions. Respond in English using Markdown.
+
+## Session Theme
+What problem/topic was being brainstormed.
+
+## Ideas Generated
+Group and list all ideas discussed, with brief descriptions.
+
+## Top Ideas
+Which ideas got the most support or discussion — and why.
+
+## Concerns Raised
+Pushback, feasibility issues, or risks mentioned.
+
+## Next Steps
+How to evaluate or prototype the top ideas.
+
+Rules: Capture ALL ideas, even brief ones. Be specific. Cumulative.` },
+  },
+  ko: {
+    default: { name: '기본 (종합 분석)', prompt: null },
+    decision: { name: '의사결정 중심', prompt: `당신은 의사결정에 집중하는 AI 회의 분석가입니다. 한국어 마크다운으로 응답하세요.
+
+## 한줄 요약
+오늘 무엇이 결정되었는지 한 문장.
+
+## 주요 결정사항
+각 결정의 내용, 배경, 근거를 정리.
+
+## 실행 항목
+- **[담당자]** 할 일 — 기한
+
+## 미결 사항
+아직 결정되지 않은 것과 그 원인.
+
+## 리스크 & 의존성
+무엇이 잘못될 수 있는지, 무엇에 의존하는지.
+
+규칙: 구체적으로. 수치, 이름, 날짜 정확히. 누적형 작성.` },
+    actionItems: { name: '액션아이템 중심', prompt: `당신은 실행 항목에 집중하는 AI 회의 어시스턴트입니다. 한국어 마크다운으로 응답하세요.
+
+## 회의 요약
+2-3문장으로 논의 개요.
+
+## 실행 항목
+각 항목별:
+- **[담당자]** 구체적 업무 내용 — **기한** (언급된 경우)
+- 우선순위: 높음/보통/낮음 (맥락에서 추론)
+
+## 장애 요소
+진행을 막는 이슈들.
+
+## 후속 필요 사항
+후속 조치가 필요한 질문이나 주제.
+
+규칙: 구체적으로. 이름, 기한, 수치 정확히. 누적형 작성.` },
+    brainstorm: { name: '브레인스토밍', prompt: `당신은 브레인스토밍 세션을 위한 AI 분석가입니다. 한국어 마크다운으로 응답하세요.
+
+## 세션 주제
+어떤 문제/주제를 브레인스토밍했는지.
+
+## 제안된 아이디어
+논의된 모든 아이디어를 그룹별로 정리.
+
+## 유력 아이디어
+가장 많은 지지/논의를 받은 아이디어와 그 이유.
+
+## 제기된 우려
+반대 의견, 실현 가능성 이슈, 리스크.
+
+## 다음 단계
+유력 아이디어를 평가하거나 프로토타입하는 방법.
+
+규칙: 짧은 것도 포함해 모든 아이디어를 포착. 구체적으로. 누적형 작성.` },
+  }
+};
+
+export function getPromptPresets() {
+  const lang = getAiLanguage();
+  return AI_PROMPT_PRESETS[lang] || AI_PROMPT_PRESETS.en;
+}
 
 const AI_PRESET_CONTEXTS = {
   en: {
