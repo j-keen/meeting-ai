@@ -64,6 +64,7 @@ export async function analyzeTranscript({
   recentMinutes = 5,
   previousSummary = null,
   userInsights = [],
+  memos = [],
   model = 'gemini-2.5-flash',
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
@@ -82,6 +83,15 @@ export async function analyzeTranscript({
     messageParts.push('');
     messageParts.push('[User Insights]');
     userInsights.forEach(insight => messageParts.push(`- ${insight}`));
+  }
+
+  if (memos && memos.length > 0) {
+    messageParts.push('');
+    messageParts.push('[User Memos - personal notes and opinions from the meeting participant]');
+    memos.forEach(m => {
+      const time = new Date(m.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+      messageParts.push(`- [${time}] ${m.text}`);
+    });
   }
 
   messageParts.push('');

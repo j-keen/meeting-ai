@@ -386,6 +386,7 @@ async function runAnalysis() {
       recentMinutes: state.settings.recentMinutes || 5,
       previousSummary,
       userInsights: state.userInsights,
+      memos: state.memos,
       model: state.settings.geminiModel || 'gemini-2.5-flash',
     });
 
