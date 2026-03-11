@@ -8,6 +8,8 @@ function createWebSpeechEngine(language) {
   let shouldRestart = false;
   let noSpeechCount = 0;
   let restartFailCount = 0;
+  let abortCount = 0;
+  let lastResultTime = 0;
 
   return {
     name: 'webspeech',
@@ -26,6 +28,8 @@ function createWebSpeechEngine(language) {
 
       recognition.onresult = (e) => {
         noSpeechCount = 0;
+        abortCount = 0;
+        lastResultTime = Date.now();
         console.log('[STT] onresult fired, results:', e.results.length, 'from index:', e.resultIndex);
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
@@ -47,7 +51,14 @@ function createWebSpeechEngine(language) {
             noSpeechCount = 0;
             onError(t('stt.no_mic_input'));
           }
-        } else if (e.error !== 'aborted') {
+        } else if (e.error === 'aborted') {
+          abortCount++;
+          if (abortCount >= 5) {
+            shouldRestart = false;
+            abortCount = 0;
+            onError(t('stt.connection_failed'));
+          }
+        } else {
           onError(`Speech recognition error: ${e.error}`);
         }
       };
