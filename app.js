@@ -1081,6 +1081,9 @@ function init() {
   // Pause/resume analysis (chip toggle)
   $('#analysisChip').addEventListener('click', () => toggleAnalysisPause());
 
+  // Compare STT engines
+  $('#btnCompareEngines')?.addEventListener('click', () => startComparisonMode());
+
   // Analyze now
   $('#btnAnalyzeNow').addEventListener('click', () => runAnalysis());
 
@@ -1096,6 +1099,8 @@ function init() {
   // Compare prompts modal
   $('#btnComparePrompts').addEventListener('click', () => openCompareModal());
   $('#btnRunCompare').addEventListener('click', () => runCompareAnalysis());
+  $('#btnSetDefaultA').addEventListener('click', () => applyComparePromptAsDefault($('#compareTextA').value));
+  $('#btnSetDefaultB').addEventListener('click', () => applyComparePromptAsDefault($('#compareTextB').value));
 
   // Demo data
   $('#btnLoadDemo').addEventListener('click', () => loadDemoData());
@@ -1768,25 +1773,48 @@ async function runCompareAnalysis() {
     model: state.settings.geminiModel || 'gemini-2.5-flash',
   };
 
-  const results = await Promise.allSettled([
-    analyzeTranscript({ ...baseOpts, prompt: promptA }),
-    analyzeTranscript({ ...baseOpts, prompt: promptB }),
-  ]);
+  const progress = $('#compareProgress');
+  const btnDefaultA = $('#btnSetDefaultA');
+  const btnDefaultB = $('#btnSetDefaultB');
+  btnDefaultA.style.display = 'none';
+  btnDefaultB.style.display = 'none';
+  progress.textContent = t('compare.running');
+
+  const taskA = analyzeTranscript({ ...baseOpts, prompt: promptA });
+  const taskB = analyzeTranscript({ ...baseOpts, prompt: promptB });
+
+  // Track individual completion for progress
+  let aDone = false, bDone = false;
+  taskA.then(r => { aDone = true; if (!bDone) progress.textContent = t('compare.progress_a_done'); return r; });
+  taskB.then(r => { bDone = true; if (!aDone) progress.textContent = t('compare.progress_b_done'); return r; });
+
+  const results = await Promise.allSettled([taskA, taskB]);
 
   if (results[0].status === 'fulfilled') {
     renderAnalysisInto(resultA, results[0].value);
+    btnDefaultA.style.display = '';
   } else {
     resultA.innerHTML = `<p class="text-muted">${t('compare.error')}: ${results[0].reason?.message || ''}</p>`;
   }
 
   if (results[1].status === 'fulfilled') {
     renderAnalysisInto(resultB, results[1].value);
+    btnDefaultB.style.display = '';
   } else {
     resultB.innerHTML = `<p class="text-muted">${t('compare.error')}: ${results[1].reason?.message || ''}</p>`;
   }
 
+  progress.textContent = '';
   btn.textContent = origText;
   btn.disabled = false;
+}
+
+function applyComparePromptAsDefault(promptText) {
+  state.settings.customPrompt = promptText;
+  saveSettings(state.settings);
+  const textPrompt = $('#textPrompt');
+  if (textPrompt) textPrompt.value = promptText;
+  showToast(t('compare.set_default_success'), 'success');
 }
 
 document.addEventListener('DOMContentLoaded', init);

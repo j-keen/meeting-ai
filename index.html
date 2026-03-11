@@ -104,7 +104,6 @@
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-          <button class="btn btn-sm" id="btnComparePrompts" title="Compare prompts" style="display:none">🔀 <span data-i18n="panel.compare">Compare</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">🕐 <span data-i18n="panel.analysis_history">History</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
@@ -242,6 +241,7 @@
                 <option value="deepgram" data-i18n="stt.engine_deepgram">Deepgram Nova-3 (Paid, High Accuracy)</option>
               </select>
               <button class="btn btn-sm btn-test-connection" id="btnTestStt" data-i18n="stt.test_connection">Test</button>
+              <button class="btn btn-sm btn-test-connection" id="btnCompareEngines" data-i18n="stt.compare_mode">Compare Engines</button>
             </div>
             <span class="stt-test-result" id="sttTestResult"></span>
           </label>
@@ -369,9 +369,10 @@
             <button class="btn btn-sm" id="btnDeletePromptPreset" style="display:none" title="Delete">&times;</button>
           </div>
           <textarea class="settings-textarea" id="textPrompt" rows="8" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
             <button class="btn btn-sm" id="btnSavePromptPreset">💾 <span data-i18n="preset.save">Save as Preset</span></button>
+            <button class="btn btn-sm" id="btnComparePrompts">🔀 <span data-i18n="panel.compare">Compare</span></button>
           </div>
         </section>
       </div>
@@ -616,36 +617,45 @@
 
   <!-- Compare Prompts Modal -->
   <div class="modal-overlay" id="compareModal" hidden>
-    <div class="modal modal-large" style="max-width:960px;">
+    <div class="modal" style="max-width:95vw;width:1200px;">
       <div class="modal-header">
         <h3 data-i18n="compare.title">Prompt A/B Compare</h3>
         <button class="btn btn-icon modal-close" data-close="compareModal">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="compare-prompt-row">
-          <div style="flex:1">
+      <div class="modal-body" style="padding:12px;">
+        <div class="compare-layout">
+          <!-- Column 1: Prompt A -->
+          <div class="compare-col">
             <label class="compare-label" data-i18n="compare.prompt_a">Prompt A</label>
             <select class="settings-select" id="compareSelectA" style="margin-bottom:6px;width:100%"></select>
-            <textarea class="settings-textarea" id="compareTextA" rows="4"></textarea>
+            <textarea class="settings-textarea compare-textarea" id="compareTextA" rows="10"></textarea>
           </div>
-          <div style="flex:1">
+          <!-- Column 2: Prompt B -->
+          <div class="compare-col">
             <label class="compare-label" data-i18n="compare.prompt_b">Prompt B</label>
             <select class="settings-select" id="compareSelectB" style="margin-bottom:6px;width:100%"></select>
-            <textarea class="settings-textarea" id="compareTextB" rows="4"></textarea>
+            <textarea class="settings-textarea compare-textarea" id="compareTextB" rows="10"></textarea>
+          </div>
+          <!-- Column 3: Results -->
+          <div class="compare-col compare-col-result">
+            <div class="compare-result-split">
+              <div class="compare-result-panel">
+                <div class="compare-label" data-i18n="compare.prompt_a">Prompt A</div>
+                <div class="ai-sections" id="compareResultA"></div>
+                <button class="btn btn-sm compare-set-default" id="btnSetDefaultA" style="display:none" data-i18n="compare.set_default">Set as Default Prompt</button>
+              </div>
+              <div class="compare-result-panel">
+                <div class="compare-label" data-i18n="compare.prompt_b">Prompt B</div>
+                <div class="ai-sections" id="compareResultB"></div>
+                <button class="btn btn-sm compare-set-default" id="btnSetDefaultB" style="display:none" data-i18n="compare.set_default">Set as Default Prompt</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div style="text-align:center;margin:12px 0;">
+        <!-- Run button spanning under columns 1+2 -->
+        <div class="compare-run-section">
           <button class="btn btn-sm btn-primary" id="btnRunCompare" data-i18n="compare.run">Run Comparison</button>
-        </div>
-        <div class="compare-split">
-          <div class="compare-panel">
-            <div class="compare-label" data-i18n="compare.prompt_a">Prompt A</div>
-            <div class="ai-sections" id="compareResultA"></div>
-          </div>
-          <div class="compare-panel">
-            <div class="compare-label" data-i18n="compare.prompt_b">Prompt B</div>
-            <div class="ai-sections" id="compareResultB"></div>
-          </div>
+          <span class="compare-progress" id="compareProgress"></span>
         </div>
       </div>
     </div>
