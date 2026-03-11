@@ -417,6 +417,10 @@ const translations = {
     'compare.running': 'Analyzing...',
     'compare.current_prompt': '(Current Prompt)',
     'compare.error': 'Analysis failed',
+    'compare.set_default': 'Set as Default Prompt',
+    'compare.set_default_success': 'Prompt set as default',
+    'compare.progress_a_done': 'A \u2713 / B analyzing...',
+    'compare.progress_b_done': 'A analyzing... / B \u2713',
 
     // Custom prompt presets
     'preset.delete_confirm': 'Delete this preset?',
@@ -443,6 +447,13 @@ const translations = {
     'onboarding.complete_desc': 'Meeting AI analyzes your meetings in real-time with <b>Gemini 2.0 Flash</b>, providing summaries, action items, and insights tailored to your role.',
     'onboarding.privacy': '\uD83D\uDD12 Your data is stored locally on this device only. AI analysis uses Vertex AI, which does not train on your data.',
     'onboarding.start': 'Get Started',
+
+    // Guards
+    'guard.idle_warning': 'No speech detected for 15 minutes. Recording will auto-stop in 5 minutes.',
+    'guard.idle_auto_stopped': 'Recording auto-stopped due to 20 minutes of silence.',
+    'guard.max_duration': 'Recording auto-stopped after 6 hours.',
+    'guard.strategy_fallback': 'Transcript is long — switched to smart strategy for this analysis.',
+    'guard.chat_large_confirm': 'Transcript is very large ({lines} lines). Send to AI?',
 
     // Misc
     'minutes': '{n} minutes',
@@ -865,6 +876,10 @@ const translations = {
     'compare.running': '분석 중...',
     'compare.current_prompt': '(현재 프롬프트)',
     'compare.error': '분석 실패',
+    'compare.set_default': '이 프롬프트를 기본으로 설정',
+    'compare.set_default_success': '프롬프트가 기본으로 설정되었습니다',
+    'compare.progress_a_done': 'A ✓ / B 분석 중...',
+    'compare.progress_b_done': 'A 분석 중... / B ✓',
 
     // Custom prompt presets
     'preset.delete_confirm': '이 프리셋을 삭제하시겠습니까?',
@@ -891,6 +906,13 @@ const translations = {
     'onboarding.complete_desc': 'Meeting AI는 <b>Gemini 2.0 Flash</b>로 회의를 실시간 분석하여, 요약·액션 아이템·인사이트를 제공합니다.',
     'onboarding.privacy': '\uD83D\uDD12 데이터는 이 기기에만 로컬 저장됩니다. AI 분석은 Vertex AI를 사용하며, 데이터를 학습에 사용하지 않습니다.',
     'onboarding.start': '시작하기',
+
+    // Guards
+    'guard.idle_warning': '15분간 음성이 감지되지 않았습니다. 5분 후 녹음이 자동 중지됩니다.',
+    'guard.idle_auto_stopped': '20분간 음성이 없어 녹음이 자동 중지되었습니다.',
+    'guard.max_duration': '6시간 경과로 녹음이 자동 중지되었습니다.',
+    'guard.strategy_fallback': '회의록이 길어 이번 분석은 스마트 전략으로 전환했습니다.',
+    'guard.chat_large_confirm': '회의록이 매우 깁니다 ({lines}줄). AI에 전송하시겠습니까?',
 
     // Misc
     'minutes': '{n}분',

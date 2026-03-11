@@ -470,9 +470,7 @@ export function renderAnalysis(analysis) {
 
   // Toggle copy & compare buttons
   const copyBtn = $('#btnCopyAnalysis');
-  const compareBtn = $('#btnComparePrompts');
   if (copyBtn) copyBtn.style.display = '';
-  if (compareBtn) compareBtn.style.display = '';
 }
 
 // Get analysis content as markdown text for clipboard

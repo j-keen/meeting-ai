@@ -81,6 +81,15 @@ let countdownTimer = null;
 let countdownEnd = 0;
 let countdownIntervalMs = 0;
 
+// Guard: idle detection + max duration
+const IDLE_WARNING_MS = 15 * 60 * 1000;
+const IDLE_AUTOPAUSE_MS = 20 * 60 * 1000;
+const MAX_RECORDING_MS = 6 * 60 * 60 * 1000;
+let lastTranscriptTime = 0;
+let idleCheckInterval = null;
+let idleWarningShown = false;
+let maxDurationTimeout = null;
+
 // Cached analysis chip elements (set after DOMContentLoaded)
 let chipEl = null, chipIconEl = null, chipTextEl = null;
 function getChipEls() {
@@ -267,6 +276,8 @@ async function startRecording() {
         state.transcript.push(line);
         addTranscriptLine(line);
         emit('transcript:add', line);
+        lastTranscriptTime = Date.now();
+        idleWarningShown = false;
       },
       onError: (err) => {
         logSttEvent('error', err);
@@ -300,6 +311,15 @@ async function startRecording() {
     startAutoAnalysis();
     startAiCorrection();
     updatePauseButtonVisibility(true);
+
+    // Guards: idle detection + max duration
+    lastTranscriptTime = Date.now();
+    idleWarningShown = false;
+    idleCheckInterval = setInterval(checkIdle, 60000);
+    maxDurationTimeout = setTimeout(() => {
+      stopRecording();
+      showToast(t('guard.max_duration'), 'warning');
+    }, MAX_RECORDING_MS);
 
     const btn = $('#btnRecord');
     btn.classList.add('recording');
@@ -336,6 +356,8 @@ function stopRecording() {
   clearInterval(autoSaveInterval);
   clearInterval(autoAnalysisInterval);
   clearInterval(aiCorrectionTimer);
+  clearInterval(idleCheckInterval);
+  clearTimeout(maxDurationTimeout);
   stopAnalysisCountdown();
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
@@ -351,6 +373,18 @@ function stopRecording() {
   $('#meetingStatus').textContent = t('record.status_stopped');
 
   autoSave();
+}
+
+function checkIdle() {
+  if (!state.isRecording) return;
+  const idleMs = Date.now() - lastTranscriptTime;
+  if (idleMs >= IDLE_AUTOPAUSE_MS) {
+    stopRecording();
+    showToast(t('guard.idle_auto_stopped'), 'warning');
+  } else if (idleMs >= IDLE_WARNING_MS && !idleWarningShown) {
+    idleWarningShown = true;
+    showToast(t('guard.idle_warning'), 'warning');
+  }
 }
 
 function startAutoAnalysis() {
@@ -525,13 +559,20 @@ async function runAnalysis() {
             ].filter(Boolean).join(''))
       : null;
 
+    // Guard 4: force smart strategy for long transcripts
+    let effectiveStrategy = state.settings.tokenStrategy || 'smart';
+    if (state.transcript.length > 200 && effectiveStrategy === 'full') {
+      effectiveStrategy = 'smart';
+      showToast(t('guard.strategy_fallback'), 'info');
+    }
+
     const result = await analyzeTranscript({
       transcript: state.transcript,
       prompt: state.settings.customPrompt,
       meetingContext: state.settings.meetingContext,
       meetingPreset: state.settings.meetingPreset,
       elapsedTime: getElapsedTimeStr(),
-      strategy: state.settings.tokenStrategy || 'smart',
+      strategy: effectiveStrategy,
       recentMinutes: state.settings.recentMinutes || 5,
       previousSummary,
       userInsights: state.userInsights,
