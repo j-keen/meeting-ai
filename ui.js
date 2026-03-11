@@ -316,22 +316,22 @@ function getSectionConfig() {
   ];
 }
 
-export function showAnalysisSkeletons() {
-  const container = $('#aiSections');
-  const empty = $('#aiEmpty');
-  if (empty) empty.style.display = 'none';
-  container.innerHTML = '';
-  for (let i = 0; i < 4; i++) {
-    const tmpl = $('#tmplSkeletonSection');
-    container.appendChild(tmpl.content.cloneNode(true));
-  }
+// Check if analysis uses the new markdown format
+function isMarkdownAnalysis(analysis) {
+  return !!(analysis && analysis.markdown);
 }
 
-// ===== Analysis Navigator =====
-let analysisNavIndex = -1; // -1 = latest (live)
-let analysisNavInitialized = false;
+// Render markdown analysis as a single rich content block
+function renderMarkdownAnalysis(container, analysis) {
+  container.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'ai-markdown-content';
+  div.innerHTML = renderMarkdown(analysis.markdown);
+  container.appendChild(div);
+}
 
-function renderAnalysisContent(container, analysis) {
+// Render legacy JSON-based analysis with section cards
+function renderLegacySections(container, analysis) {
   container.innerHTML = '';
   getSectionConfig().forEach(({ key, icon, title }) => {
     const tmpl = $('#tmplAiSection');
@@ -361,6 +361,29 @@ function renderAnalysisContent(container, analysis) {
   });
 }
 
+export function showAnalysisSkeletons() {
+  const container = $('#aiSections');
+  const empty = $('#aiEmpty');
+  if (empty) empty.style.display = 'none';
+  container.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const tmpl = $('#tmplSkeletonSection');
+    container.appendChild(tmpl.content.cloneNode(true));
+  }
+}
+
+// ===== Analysis Navigator =====
+let analysisNavIndex = -1; // -1 = latest (live)
+let analysisNavInitialized = false;
+
+function renderAnalysisContent(container, analysis) {
+  if (isMarkdownAnalysis(analysis)) {
+    renderMarkdownAnalysis(container, analysis);
+  } else {
+    renderLegacySections(container, analysis);
+  }
+}
+
 export function updateAnalysisNav() {
   const nav = $('#analysisNav');
   const history = state.analysisHistory;
@@ -376,9 +399,18 @@ export function updateAnalysisNav() {
 
   const prevBtn = $('#analysisNavPrev');
   const nextBtn = $('#analysisNavNext');
+  const label = $('#analysisNavLabel');
 
   prevBtn.disabled = viewIdx <= 0;
   nextBtn.disabled = isLatest;
+
+  if (label) {
+    const analysis = history[viewIdx];
+    const time = analysis?.timestamp
+      ? new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
+      : '';
+    label.innerHTML = `<span class="nav-time">${time}</span> #${viewIdx + 1}`;
+  }
 
   if (!analysisNavInitialized) {
     analysisNavInitialized = true;
@@ -552,35 +584,7 @@ function openAnalysisDetail(analysis, idx) {
   const container = $('#analysisDetailSections');
   const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
   title.textContent = `#${idx + 1} — ${time}`;
-  container.innerHTML = '';
-
-  getSectionConfig().forEach(({ key, icon, title: sectionTitle }) => {
-    const tmpl = $('#tmplAiSection');
-    const section = tmpl.content.cloneNode(true).querySelector('.ai-section');
-    section.dataset.section = key;
-    section.querySelector('.ai-section-icon').textContent = icon;
-    section.querySelector('.ai-section-label').textContent = sectionTitle;
-    const body = section.querySelector('.ai-section-body');
-
-    if (Array.isArray(analysis[key])) {
-      if (analysis[key].length === 0) {
-        body.textContent = t('card.no_items');
-      } else {
-        const ul = document.createElement('ul');
-        analysis[key].forEach(item => {
-          const li = document.createElement('li');
-          li.textContent = item;
-          ul.appendChild(li);
-        });
-        body.appendChild(ul);
-      }
-    } else {
-      body.textContent = analysis[key] || t('card.no_data');
-    }
-
-    container.appendChild(section);
-  });
-
+  renderAnalysisContent(container, analysis);
   modal.hidden = false;
 }
 
@@ -904,27 +908,32 @@ export function renderMeetingViewer(meeting) {
 }
 
 function renderViewerAnalysis(container, analysis) {
-  container.innerHTML = '';
-  getSectionConfig().forEach(({ key, icon, title }) => {
-    const section = document.createElement('div');
-    section.className = 'ai-section';
-    const content = analysis[key];
-    let bodyHtml = '';
-    if (Array.isArray(content)) {
-      bodyHtml = content.length > 0
-        ? '<ul>' + content.map(i => `<li>${i}</li>`).join('') + '</ul>'
-        : t('card.no_items');
-    } else if (typeof content === 'object' && content) {
-      bodyHtml = Object.entries(content).map(([k, v]) => `${k}: ${v}`).join('<br>');
-    } else {
-      bodyHtml = content || t('card.no_data');
-    }
-    section.innerHTML = `
-      <h3 class="ai-section-title"><span class="ai-section-icon">${icon}</span><span class="ai-section-label">${title}</span></h3>
-      <div class="ai-section-body">${bodyHtml}</div>
-    `;
-    container.appendChild(section);
-  });
+  if (isMarkdownAnalysis(analysis)) {
+    renderMarkdownAnalysis(container, analysis);
+  } else {
+    // Legacy JSON-based rendering
+    container.innerHTML = '';
+    getSectionConfig().forEach(({ key, icon, title }) => {
+      const section = document.createElement('div');
+      section.className = 'ai-section';
+      const content = analysis[key];
+      let bodyHtml = '';
+      if (Array.isArray(content)) {
+        bodyHtml = content.length > 0
+          ? '<ul>' + content.map(i => `<li>${i}</li>`).join('') + '</ul>'
+          : t('card.no_items');
+      } else if (typeof content === 'object' && content) {
+        bodyHtml = Object.entries(content).map(([k, v]) => `${k}: ${v}`).join('<br>');
+      } else {
+        bodyHtml = content || t('card.no_data');
+      }
+      section.innerHTML = `
+        <h3 class="ai-section-title"><span class="ai-section-icon">${icon}</span><span class="ai-section-label">${title}</span></h3>
+        <div class="ai-section-body">${bodyHtml}</div>
+      `;
+      container.appendChild(section);
+    });
+  }
 }
 
 function formatTimeFromMs(ms) {

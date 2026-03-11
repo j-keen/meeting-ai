@@ -219,7 +219,10 @@ Respond in English.`;
   }
 
   if (state.settings.userProfile) {
-    prompt += `\n\n[User Profile]\n${state.settings.userProfile}`;
+    prompt += `\n\n[User Profile - one of the meeting participants]\n${state.settings.userProfile}`;
+    if (state.settings.profileFileContent) {
+      prompt += `\n\n[Attached Profile Document]\n${state.settings.profileFileContent}`;
+    }
   }
 
   if (state.settings.meetingContext) {

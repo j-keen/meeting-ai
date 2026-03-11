@@ -58,6 +58,14 @@ export const state = {
 
 const $ = (sel) => document.querySelector(sel);
 
+function buildFullProfile() {
+  let profile = state.settings.userProfile || '';
+  if (state.settings.profileFileContent) {
+    profile += (profile ? '\n\n' : '') + '[Attached Profile Document]\n' + state.settings.profileFileContent;
+  }
+  return profile;
+}
+
 // ===== Core Logic =====
 let stt = null;
 let timerInterval = null;
@@ -67,8 +75,6 @@ let isAnalyzing = false;
 let isAnalysisPaused = false;
 let aiCorrectionTimer = null;
 let isCorrecting = false;
-let corrCountdownTimer = null;
-let corrCountdownEnd = 0;
 let countdownTimer = null;
 let countdownEnd = 0;
 let countdownIntervalMs = 0;
@@ -84,16 +90,6 @@ function getChipEls() {
   return { chip: chipEl, icon: chipIconEl, text: chipTextEl };
 }
 
-// Cached correction chip elements
-let corrChipEl = null, corrChipIconEl = null, corrChipTextEl = null;
-function getCorrChipEls() {
-  if (!corrChipEl) {
-    corrChipEl = $('#correctionChip');
-    corrChipIconEl = $('#correctionChipIcon');
-    corrChipTextEl = $('#correctionChipText');
-  }
-  return { chip: corrChipEl, icon: corrChipIconEl, text: corrChipTextEl };
-}
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -146,69 +142,6 @@ function getSttLogIcon(type) {
     case 'disconnect': return '<span style="color:var(--text-muted)">&#9675;</span>';
     default: return '<span style="color:var(--accent)">&#8505;</span>';
   }
-}
-
-function renderSttContextMenu() {
-  const menu = document.getElementById('sttContextMenu');
-  const badge = document.getElementById('sttEngineBadge');
-  if (!menu || !badge) return;
-
-  // Header
-  const engineName = document.getElementById('sttEngineLabel')?.textContent || 'Web Speech';
-  document.getElementById('sttCtxEngine').textContent = engineName;
-  const statusEl = document.getElementById('sttCtxStatus');
-  const status = badge.dataset.status || 'idle';
-  const statusLabels = { idle: t('stt.status_idle'), connecting: t('stt.status_connecting'), active: t('stt.status_active'), fallback: t('stt.status_fallback'), error: t('stt.status_error') };
-  statusEl.textContent = statusLabels[status] || status;
-  statusEl.dataset.s = status;
-
-  // Log
-  const logEl = document.getElementById('sttCtxLog');
-  if (sttEventLog.length === 0) {
-    logEl.innerHTML = `<p class="text-muted" style="font-size:11px;text-align:center;padding:8px">${t('stt.no_events')}</p>`;
-  } else {
-    logEl.innerHTML = sttEventLog.map(e => {
-      const time = e.time.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      return `<div class="stt-ctx-log-item"><span class="stt-ctx-log-time">${time}</span><span class="stt-ctx-log-icon">${getSttLogIcon(e.type)}</span><span class="stt-ctx-log-msg">${e.message}</span></div>`;
-    }).join('');
-  }
-
-  // Disable compare button during recording
-  const compareBtn = document.getElementById('btnSttCompare');
-  if (compareBtn) {
-    compareBtn.disabled = state.isRecording;
-    if (state.isRecording) compareBtn.title = t('stt.recording_locked');
-    else compareBtn.title = '';
-  }
-}
-
-function showSttContextMenu(x, y) {
-  const menu = document.getElementById('sttContextMenu');
-  if (!menu) return;
-  renderSttContextMenu();
-  menu.hidden = false;
-
-  // Position above the badge (bottom bar is at the bottom)
-  requestAnimationFrame(() => {
-    const menuRect = menu.getBoundingClientRect();
-    const viewW = window.innerWidth;
-
-    let left = x - menuRect.width / 2;
-    let top = y - menuRect.height - 8;
-
-    // Clamp to viewport
-    if (left < 8) left = 8;
-    if (left + menuRect.width > viewW - 8) left = viewW - menuRect.width - 8;
-    if (top < 8) top = y + 8; // flip below if no room above
-
-    menu.style.left = left + 'px';
-    menu.style.top = top + 'px';
-  });
-}
-
-function hideSttContextMenu() {
-  const menu = document.getElementById('sttContextMenu');
-  if (menu) menu.hidden = true;
 }
 
 // ===== STT Comparison Mode =====
@@ -298,6 +231,8 @@ async function startRecording() {
   // Lock STT engine select during recording
   const sttSelect = document.getElementById('selectSttEngine');
   if (sttSelect) sttSelect.disabled = true;
+  const lockedHint = document.getElementById('sttEngineLocked');
+  if (lockedHint) lockedHint.hidden = false;
 
   logSttEvent('connect', t('stt.log_starting', { engine: isDeepgram ? 'Deepgram' : 'Web Speech' }));
 
@@ -327,6 +262,7 @@ async function startRecording() {
           text,
           timestamp: Date.now(),
           bookmarked: false,
+          engine: stt?.engineName || 'unknown',
         };
         state.transcript.push(line);
         addTranscriptLine(line);
@@ -401,7 +337,6 @@ function stopRecording() {
   clearInterval(autoAnalysisInterval);
   clearInterval(aiCorrectionTimer);
   stopAnalysisCountdown();
-  stopCorrectionCountdown();
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
 
@@ -516,71 +451,17 @@ function showPausedState() {
   if (text) text.textContent = t('analysis.paused');
 }
 
-// Correction countdown chip
-function startCorrectionCountdown(intervalMs) {
-  stopCorrectionCountdown();
-  const { chip, icon } = getCorrChipEls();
-  if (!chip) return;
-  corrCountdownEnd = Date.now() + intervalMs;
-  chip.style.display = '';
-  chip.className = 'analysis-chip correction-chip counting';
-  if (icon) icon.textContent = '⏸';
-  updateCorrectionCountdownText();
-  corrCountdownTimer = setInterval(() => updateCorrectionCountdownText(), 1000);
-}
-
-function updateCorrectionCountdownText() {
-  const { text } = getCorrChipEls();
-  if (!text) return;
-  const remaining = Math.max(0, Math.ceil((corrCountdownEnd - Date.now()) / 1000));
-  text.textContent = t('analysis.countdown', { n: remaining });
-}
-
-function stopCorrectionCountdown() {
-  clearInterval(corrCountdownTimer);
-  corrCountdownTimer = null;
-  const { chip, icon, text } = getCorrChipEls();
-  if (chip) {
-    chip.style.display = 'none';
-    chip.className = 'analysis-chip correction-chip';
-    if (icon) icon.textContent = '';
-    if (text) text.textContent = '';
-  }
-}
-
-function showCorrectingState() {
-  const { chip, icon, text } = getCorrChipEls();
-  if (!chip) return;
-  clearInterval(corrCountdownTimer);
-  corrCountdownTimer = null;
-  chip.style.display = '';
-  chip.className = 'analysis-chip correction-chip correcting';
-  if (icon) icon.textContent = '⏳';
-  if (text) text.textContent = t('analysis.analyzing');
-}
-
-function hideCorrectionChip() {
-  if (state.settings.autoCorrection && state.isRecording) {
-    const intervalMs = (state.settings.correctionInterval || 60) * 1000;
-    startCorrectionCountdown(intervalMs);
-  } else {
-    stopCorrectionCountdown();
-  }
-}
-
-// AI sentence correction
+// AI sentence correction (runs silently in background)
 function startAiCorrection() {
   clearInterval(aiCorrectionTimer);
   if (!state.settings.autoCorrection) return;
   const intervalMs = (state.settings.correctionInterval || 60) * 1000;
   aiCorrectionTimer = setInterval(() => runCorrection(true), intervalMs);
-  startCorrectionCountdown(intervalMs);
 }
 
 async function runCorrection(uncorrectedOnly) {
   if (isCorrecting || !isProxyAvailable()) return;
   isCorrecting = true;
-  showCorrectingState();
   try {
     const lines = uncorrectedOnly
       ? state.transcript.filter(l => !l.originalText)
@@ -603,10 +484,7 @@ async function runCorrection(uncorrectedOnly) {
       }
     }
   } catch { /* silent */ }
-  finally {
-    isCorrecting = false;
-    hideCorrectionChip();
-  }
+  finally { isCorrecting = false; }
 }
 
 async function runAnalysis() {
@@ -637,12 +515,14 @@ async function runAnalysis() {
       : null;
 
     const previousSummary = lastAnalysis
-      ? [
-          lastAnalysis.summary,
-          lastAnalysis.context ? `\n[대화 흐름] ${lastAnalysis.context}` : '',
-          lastAnalysis.actionItems?.length ? `\n[실행 항목] ${lastAnalysis.actionItems.join(' / ')}` : '',
-          lastAnalysis.openQuestions?.length ? `\n[미해결 질문] ${lastAnalysis.openQuestions.join(' / ')}` : '',
-        ].filter(Boolean).join('')
+      ? (lastAnalysis.markdown
+          ? lastAnalysis.markdown
+          : [
+              lastAnalysis.summary,
+              lastAnalysis.context ? `\n[대화 흐름] ${lastAnalysis.context}` : '',
+              lastAnalysis.actionItems?.length ? `\n[실행 항목] ${lastAnalysis.actionItems.join(' / ')}` : '',
+              lastAnalysis.openQuestions?.length ? `\n[미해결 질문] ${lastAnalysis.openQuestions.join(' / ')}` : '',
+            ].filter(Boolean).join(''))
       : null;
 
     const result = await analyzeTranscript({
@@ -656,7 +536,7 @@ async function runAnalysis() {
       previousSummary,
       userInsights: state.userInsights,
       memos: state.memos,
-      userProfile: state.settings.userProfile || '',
+      userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
     });
 
@@ -993,16 +873,20 @@ function generateMarkdownFull() {
 
   const analysis = state.currentAnalysis;
   if (analysis) {
-    md += `${t('md.summary')}\n\n${analysis.summary || 'N/A'}\n\n`;
-    if (analysis.actionItems?.length) {
-      md += `${t('md.action_items')}\n\n`;
-      analysis.actionItems.forEach(i => { md += `- [ ] ${i}\n`; });
-      md += '\n';
-    }
-    if (analysis.openQuestions?.length) {
-      md += `${t('md.open_questions')}\n\n`;
-      analysis.openQuestions.forEach(q => { md += `- ${q}\n`; });
-      md += '\n';
+    if (analysis.markdown) {
+      md += `${t('md.summary')}\n\n${analysis.markdown}\n\n`;
+    } else {
+      md += `${t('md.summary')}\n\n${analysis.summary || 'N/A'}\n\n`;
+      if (analysis.actionItems?.length) {
+        md += `${t('md.action_items')}\n\n`;
+        analysis.actionItems.forEach(i => { md += `- [ ] ${i}\n`; });
+        md += '\n';
+      }
+      if (analysis.openQuestions?.length) {
+        md += `${t('md.open_questions')}\n\n`;
+        analysis.openQuestions.forEach(q => { md += `- ${q}\n`; });
+        md += '\n';
+      }
     }
   }
   return md;
@@ -1011,6 +895,12 @@ function generateMarkdownFull() {
 function generateMarkdownSummary() {
   const analysis = state.currentAnalysis;
   if (!analysis) return `${t('md.no_analysis')}\n`;
+  if (analysis.markdown) {
+    let md = `${t('md.meeting_summary')}\n`;
+    md += `${t('md.date')}: ${new Date(state.meetingStartTime || Date.now()).toLocaleString(getDateLocale())}\n\n`;
+    md += analysis.markdown + '\n';
+    return md;
+  }
   let md = `${t('md.meeting_summary')}\n`;
   md += `${t('md.date')}: ${new Date(state.meetingStartTime || Date.now()).toLocaleString(getDateLocale())}\n\n`;
   md += `${t('md.summary')}\n${analysis.summary || 'N/A'}\n\n`;
@@ -1142,12 +1032,6 @@ function refreshHistoryGridDebounced() {
   historySearchTimer = setTimeout(refreshHistoryGrid, 250);
 }
 
-function updateProxyHint(available) {
-  const badge = $('#privacyBadge');
-  const divider = $('#privacyDivider');
-  if (badge) badge.style.display = available ? '' : 'none';
-  if (divider) divider.style.display = available ? '' : 'none';
-}
 
 // ===== Init =====
 function init() {
@@ -1175,9 +1059,7 @@ function init() {
   }
 
   // Check if Vertex AI proxy is available (for keyless operation)
-  checkProxyAvailable().then(available => {
-    if (available) updateProxyHint(true);
-  });
+  checkProxyAvailable();
 
   // ===== Welcome Modal =====
   showWelcomeModal();

@@ -36,6 +36,7 @@ function buildTranscriptText(transcript, strategy, recentMinutes, previousSummar
 }
 
 function parseGeminiResponse(text) {
+  // Try JSON parse for backward compatibility (old prompts / tag generation)
   try { return JSON.parse(text); } catch {}
   const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch) {
@@ -45,13 +46,20 @@ function parseGeminiResponse(text) {
   if (jsonMatch) {
     try { return JSON.parse(jsonMatch[0]); } catch {}
   }
-  return {
-    summary: text.slice(0, 500),
-    context: '',
-    openQuestions: [],
-    actionItems: [],
-    suggestions: [],
-  };
+  return null;
+}
+
+// Extract first heading or first line as a short flow/headline
+function extractHeadline(markdown) {
+  // Try ## Headline / ## 한줄 요약 content
+  const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
+  if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
+  // Try first ## heading
+  const firstH2 = markdown.match(/^##\s+(.+)/m);
+  if (firstH2) return firstH2[1].trim().slice(0, 80);
+  // Fallback: first non-empty line
+  const firstLine = markdown.split('\n').find(l => l.trim());
+  return (firstLine || '').replace(/^#+\s*/, '').trim().slice(0, 80);
 }
 
 export async function analyzeTranscript({
@@ -82,7 +90,7 @@ export async function analyzeTranscript({
 
   if (userProfile) {
     messageParts.push('');
-    messageParts.push('[User Profile - information about the meeting participant]');
+    messageParts.push('[User Profile - This person is ONE of the meeting participants. NOT all statements are from this person. If you find any insight in the transcript that would be particularly helpful for this participant, mention it briefly.]');
     messageParts.push(userProfile);
   }
 
@@ -118,7 +126,6 @@ export async function analyzeTranscript({
       parts: [{ text: systemPrompt + '\n\n' + userMessage }]
     }],
     generationConfig: {
-      responseMimeType: 'application/json',
       temperature: 0.3,
     }
   };
@@ -128,15 +135,27 @@ export async function analyzeTranscript({
     try {
       const data = await callGemini(model, body);
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = parseGeminiResponse(rawText);
 
+      // Try JSON parse for backward compatibility with old-style prompts
+      const parsed = parseGeminiResponse(rawText);
+      if (parsed && parsed.summary) {
+        return {
+          flow: parsed.flow || '',
+          summary: parsed.summary || '',
+          context: parsed.context || '',
+          openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
+          actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+          suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+          markdown: null,
+          timestamp: Date.now(),
+        };
+      }
+
+      // Markdown response (new default)
       return {
-        flow: parsed.flow || '',
-        summary: parsed.summary || '',
-        context: parsed.context || '',
-        openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
-        actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
-        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+        markdown: rawText,
+        flow: extractHeadline(rawText),
+        summary: rawText,
         timestamp: Date.now(),
       };
     } catch (err) {

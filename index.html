@@ -43,13 +43,8 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center">
           <h2 data-i18n="panel.transcript">Transcript</h2>
-          <button class="analysis-chip correction-chip" id="correctionChip" style="display:none">
-            <span class="correction-chip-icon" id="correctionChipIcon"></span>
-            <span class="correction-chip-text" id="correctionChipText"></span>
-          </button>
         </div>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="btnCorrectNow" title="AI Correction">&#9998; <span data-i18n="panel.correct">Correct</span></button>
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
           <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Export</span></button>
         </div>
@@ -111,6 +106,7 @@
       </div>
       <div class="analysis-nav" id="analysisNav" style="display:none">
         <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
+        <span class="analysis-nav-label" id="analysisNavLabel"></span>
         <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
       </div>
       <div class="ai-sections" id="aiSections">
@@ -182,30 +178,11 @@
         <span class="stt-engine-dot" id="sttEngineDot"></span>
         <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
       </span>
-      <!-- STT Context Menu (right-click on badge) -->
-      <div class="stt-context-menu" id="sttContextMenu" hidden>
-        <div class="stt-ctx-header">
-          <span class="stt-ctx-engine" id="sttCtxEngine">Web Speech</span>
-          <span class="stt-ctx-status" id="sttCtxStatus"></span>
-        </div>
-        <div class="stt-ctx-divider"></div>
-        <div class="stt-ctx-log" id="sttCtxLog">
-          <p class="text-muted" style="font-size:11px;text-align:center;padding:8px">No events yet</p>
-        </div>
-        <div class="stt-ctx-divider"></div>
-        <button class="stt-ctx-action" id="btnSttCompare" data-i18n="stt.compare_mode">Compare Engines</button>
-        <button class="stt-ctx-action" id="btnSttCopyLog" data-i18n="stt.copy_log">Copy Log</button>
-      </div>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm btn-end-meeting" id="btnEndMeeting" data-i18n="meeting.end" title="End meeting">End Meeting</button>
-      <span class="bottom-divider privacy-divider" id="privacyDivider" style="display:none"></span>
-      <span class="privacy-badge" id="privacyBadge" style="display:none" data-i18n-title="privacy.tooltip" title="All data stays local. AI analysis via Vertex AI (not used for training).">
-        <span class="privacy-icon">&#128274;</span>
-        <span class="privacy-label" data-i18n="privacy.badge">Private</span>
-      </span>
     </div>
   </footer>
 
@@ -265,6 +242,7 @@
               <button class="btn btn-sm btn-test-connection" id="btnTestStt" data-i18n="stt.test_connection">Test</button>
             </div>
             <span class="stt-test-result" id="sttTestResult"></span>
+            <span class="stt-engine-locked-hint" id="sttEngineLocked" hidden data-i18n="stt.recording_locked">Stop recording to change STT engine.</span>
           </label>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
@@ -386,7 +364,13 @@
 
         <section class="settings-section">
           <h3 data-i18n="settings.analysis_prompt">Analysis Prompt</h3>
-          <textarea class="settings-textarea" id="textPrompt" rows="6" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
+          <div style="margin-bottom:8px;">
+            <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Prompt Preset</label>
+            <select class="settings-select" id="selectPromptPreset" style="width:100%;margin-bottom:8px;">
+              <option value="" data-i18n="settings.prompt_preset_select">Select a preset...</option>
+            </select>
+          </div>
+          <textarea class="settings-textarea" id="textPrompt" rows="8" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
         </section>
       </div>
@@ -412,14 +396,52 @@
       <!-- Profile Tab -->
       <div class="settings-tab-content" data-tab="profile">
         <section class="settings-section">
-          <h3 data-i18n="settings.profile_text">About Me</h3>
-          <p class="text-muted" style="font-size:12px;margin-bottom:8px;" data-i18n="settings.profile_hint">This information will be used by AI analysis and chat to provide personalized insights.</p>
-          <textarea class="settings-textarea" id="userProfileText" rows="6" data-i18n-placeholder="settings.profile_text_placeholder" placeholder="e.g. Name, title, team, role, interests, work goals..."></textarea>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.profile_file">Upload profile file</h3>
-          <input type="file" class="settings-input" id="userProfileFileUpload" accept=".txt,.md">
-          <div class="file-context-preview" id="profileFilePreview"></div>
+          <p class="text-muted" style="font-size:12px;margin-bottom:12px;" data-i18n="settings.profile_hint">This information will be used by AI analysis and chat to provide personalized insights.</p>
+
+          <div class="profile-form">
+            <label class="settings-label">
+              <span data-i18n="settings.profile_name">Name</span>
+              <input type="text" class="settings-input" id="profileName" data-i18n-placeholder="settings.profile_name_ph" placeholder="e.g. John Doe">
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.profile_title">Title / Position</span>
+              <input type="text" class="settings-input" id="profileTitle" data-i18n-placeholder="settings.profile_title_ph" placeholder="e.g. Product Manager">
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.profile_team">Team / Department</span>
+              <input type="text" class="settings-input" id="profileTeam" data-i18n-placeholder="settings.profile_team_ph" placeholder="e.g. Product Team">
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.profile_role">Meeting Role</span>
+              <select class="settings-select" id="profileRole">
+                <option value="attendee" data-i18n="settings.profile_role_attendee">Attendee</option>
+                <option value="facilitator" data-i18n="settings.profile_role_facilitator">Facilitator</option>
+                <option value="presenter" data-i18n="settings.profile_role_presenter">Presenter</option>
+                <option value="observer" data-i18n="settings.profile_role_observer">Observer</option>
+              </select>
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.profile_interests">Interests / Work Goals</span>
+              <input type="text" class="settings-input" id="profileInterests" data-i18n-placeholder="settings.profile_interests_ph" placeholder="e.g. UX improvement, product roadmap">
+            </label>
+            <label class="settings-label">
+              <span data-i18n="settings.profile_notes">Additional Notes</span>
+              <textarea class="settings-textarea" id="profileNotes" rows="3" data-i18n-placeholder="settings.profile_notes_ph" placeholder="Anything else AI should know about you..."></textarea>
+            </label>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+            <button class="btn btn-sm btn-accent" id="btnProfileAiChat" data-i18n="settings.profile_ai_chat">Fill with AI Chat</button>
+            <label class="btn btn-sm" style="cursor:pointer;margin:0;">
+              <span data-i18n="settings.profile_file">Attach File</span>
+              <input type="file" id="userProfileFileUpload" accept=".txt,.md" style="display:none;">
+            </label>
+          </div>
+          <div class="profile-file-chip" id="profileFileChip" hidden>
+            <span class="profile-file-name" id="profileFileName"></span>
+            <button class="btn btn-xs" id="btnProfileFileView" data-i18n="settings.profile_file_view">View</button>
+            <button class="btn btn-xs btn-danger" id="btnProfileFileRemove">&times;</button>
+          </div>
         </section>
       </div>
 
@@ -489,6 +511,7 @@
 
   <!-- Context Popup -->
   <div class="context-popup" id="contextPopup" hidden>
+    <div class="context-engine-info" id="contextEngineInfo"></div>
     <button class="context-btn" data-action="editText" data-i18n="context.edit_text">Edit Text</button>
     <button class="context-btn" data-action="bookmark" data-i18n="context.bookmark">Toggle Bookmark</button>
     <button class="context-btn" data-action="delete" data-i18n="context.delete">Delete</button>
@@ -677,6 +700,40 @@
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile File Viewer Modal -->
+  <div class="modal-overlay" id="profileFileModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="profileFileModalTitle">File</h3>
+        <button class="btn btn-icon modal-close" data-close="profileFileModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre class="profile-file-content" id="profileFileModalContent"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Profile Chat Modal -->
+  <div class="modal-overlay" id="profileAiChatModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="settings.profile_ai_chat_title">Fill Profile with AI</h3>
+        <button class="btn btn-icon modal-close" data-close="profileAiChatModal">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;height:60vh;">
+        <div class="profile-chat-messages" id="profileChatMessages" style="flex:1;overflow-y:auto;padding:12px;"></div>
+        <div class="profile-chat-input-row" style="display:flex;gap:8px;padding:12px 0 0;">
+          <input type="text" class="settings-input" id="profileChatInput" data-i18n-placeholder="settings.profile_ai_chat_ph" placeholder="Answer the question..." style="flex:1;">
+          <button class="btn btn-primary btn-sm" id="btnProfileChatSend" data-i18n="chat.send">Send</button>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:12px 20px;border-top:1px solid var(--border-color);display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" id="btnProfileChatCancel" data-i18n="settings.cancel">Cancel</button>
+        <button class="btn btn-primary" id="btnProfileChatApply" data-i18n="settings.profile_ai_apply">Apply to Profile</button>
       </div>
     </div>
   </div>
