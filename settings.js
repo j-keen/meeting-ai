@@ -135,14 +135,21 @@ export function initSettings() {
     markDirty();
   });
 
-  // STT Engine - show toast when clicking disabled select during recording
+  // STT Engine - show inline warning when clicking disabled select during recording
   const sttEngineRow = $('#selectSttEngine')?.closest('.settings-engine-row');
   if (sttEngineRow) {
     sttEngineRow.addEventListener('pointerdown', (e) => {
       const sel = $('#selectSttEngine');
       if (sel?.disabled) {
         e.preventDefault();
-        import('./ui.js').then(m => m.showToast(t('stt.recording_locked'), 'warning'));
+        const label = sel.closest('.settings-label');
+        if (label && !label.querySelector('.stt-engine-inline-warning')) {
+          const warn = document.createElement('span');
+          warn.className = 'stt-engine-inline-warning';
+          warn.textContent = t('stt.recording_locked');
+          sttEngineRow.insertAdjacentElement('beforebegin', warn);
+          setTimeout(() => warn.remove(), 2000);
+        }
       }
     });
   }
@@ -465,12 +472,11 @@ export function initSettings() {
   });
 
   // User Profile - structured form
-  const profileFields = ['profileName', 'profileTitle', 'profileTeam', 'profileInterests', 'profileNotes'];
+  const profileFields = ['profileName', 'profileTitle', 'profileTeam', 'profileNotes'];
   profileFields.forEach(id => {
     const el = $(`#${id}`);
     if (el) el.addEventListener('change', () => { syncProfileFromForm(); markDirty(); highlightField(el); });
   });
-  $('#profileRole')?.addEventListener('change', () => { syncProfileFromForm(); markDirty(); highlightField($('#profileRole')); });
 
   // Profile file upload — attachment only (no copy to textarea)
   $('#userProfileFileUpload').addEventListener('change', (e) => {
@@ -984,8 +990,6 @@ function syncProfileFromForm() {
     name: $('#profileName')?.value.trim() || '',
     title: $('#profileTitle')?.value.trim() || '',
     team: $('#profileTeam')?.value.trim() || '',
-    role: $('#profileRole')?.value || 'attendee',
-    interests: $('#profileInterests')?.value.trim() || '',
     notes: $('#profileNotes')?.value.trim() || '',
   };
   state.settings.profileFields = pf;
@@ -993,13 +997,11 @@ function syncProfileFromForm() {
   state.settings.userProfile = buildUserProfileString(pf);
 }
 
-function buildUserProfileString(pf) {
+export function buildUserProfileString(pf) {
   const parts = [];
   if (pf.name) parts.push(`Name: ${pf.name}`);
   if (pf.title) parts.push(`Title: ${pf.title}`);
   if (pf.team) parts.push(`Team: ${pf.team}`);
-  if (pf.role) parts.push(`Meeting Role: ${pf.role}`);
-  if (pf.interests) parts.push(`Interests/Goals: ${pf.interests}`);
   if (pf.notes) parts.push(`Notes: ${pf.notes}`);
   return parts.join('\n');
 }
@@ -1010,8 +1012,6 @@ function applyProfileToForm() {
   if (el('profileName')) el('profileName').value = pf.name || '';
   if (el('profileTitle')) el('profileTitle').value = pf.title || '';
   if (el('profileTeam')) el('profileTeam').value = pf.team || '';
-  if (el('profileRole')) el('profileRole').value = pf.role || 'attendee';
-  if (el('profileInterests')) el('profileInterests').value = pf.interests || '';
   if (el('profileNotes')) el('profileNotes').value = pf.notes || '';
 
   if (state.settings.profileFileName) {

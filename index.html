@@ -41,8 +41,12 @@
     <!-- Left Panel: Transcript -->
     <section class="panel panel-left panel-active" id="panelLeft">
       <div class="panel-header">
-        <div style="display:flex;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.transcript">Transcript</h2>
+          <span class="stt-engine-badge" id="sttEngineBadge">
+            <span class="stt-engine-dot" id="sttEngineDot"></span>
+            <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
+          </span>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
@@ -176,10 +180,6 @@
         <span class="record-dot"></span>
         <span class="record-label">REC</span>
       </button>
-      <span class="stt-engine-badge" id="sttEngineBadge">
-        <span class="stt-engine-dot" id="sttEngineDot"></span>
-        <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
-      </span>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
@@ -244,7 +244,6 @@
               <button class="btn btn-sm btn-test-connection" id="btnTestStt" data-i18n="stt.test_connection">Test</button>
             </div>
             <span class="stt-test-result" id="sttTestResult"></span>
-            <span class="stt-engine-locked-hint" id="sttEngineLocked" hidden data-i18n="stt.recording_locked">Stop recording to change STT engine.</span>
           </label>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
@@ -416,19 +415,6 @@
             <label class="settings-label">
               <span data-i18n="settings.profile_team">Team / Department</span>
               <input type="text" class="settings-input" id="profileTeam" data-i18n-placeholder="settings.profile_team_ph" placeholder="e.g. Product Team">
-            </label>
-            <label class="settings-label">
-              <span data-i18n="settings.profile_role">Meeting Role</span>
-              <select class="settings-select" id="profileRole">
-                <option value="attendee" data-i18n="settings.profile_role_attendee">Attendee</option>
-                <option value="facilitator" data-i18n="settings.profile_role_facilitator">Facilitator</option>
-                <option value="presenter" data-i18n="settings.profile_role_presenter">Presenter</option>
-                <option value="observer" data-i18n="settings.profile_role_observer">Observer</option>
-              </select>
-            </label>
-            <label class="settings-label">
-              <span data-i18n="settings.profile_interests">Interests / Work Goals</span>
-              <input type="text" class="settings-input" id="profileInterests" data-i18n-placeholder="settings.profile_interests_ph" placeholder="e.g. UX improvement, product roadmap">
             </label>
             <label class="settings-label">
               <span data-i18n="settings.profile_notes">Additional Notes</span>
@@ -782,6 +768,15 @@
         <button class="btn" id="btnProfileChatCancel" data-i18n="settings.cancel">Cancel</button>
         <button class="btn btn-primary" id="btnProfileChatApply" data-i18n="settings.profile_ai_apply">Apply to Profile</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Onboarding Modal -->
+  <div class="onboarding-modal" id="onboardingModal" hidden>
+    <div class="onboarding-content">
+      <div class="onboarding-progress" id="onboardingDots"></div>
+      <div class="onboarding-cards" id="onboardingCards"></div>
+      <button class="onboarding-skip-all" id="onboardingSkipAll" data-i18n="onboarding.skip_all">Skip All</button>
     </div>
   </div>
 

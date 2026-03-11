@@ -23,6 +23,7 @@ import {
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
+import { showOnboarding } from './onboarding.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, getPromptPresets } from './i18n.js';
 
 // ===== Pub/Sub =====
@@ -232,8 +233,6 @@ async function startRecording() {
   // Lock STT engine select during recording
   const sttSelect = document.getElementById('selectSttEngine');
   if (sttSelect) sttSelect.disabled = true;
-  const lockedHint = document.getElementById('sttEngineLocked');
-  if (lockedHint) lockedHint.hidden = false;
 
   logSttEvent('connect', t('stt.log_starting', { engine: isDeepgram ? 'Deepgram' : 'Web Speech' }));
 
@@ -320,8 +319,6 @@ async function startRecording() {
     logSttEvent('error', err.message);
     const sttSelect = document.getElementById('selectSttEngine');
     if (sttSelect) sttSelect.disabled = false;
-    const lockedHint2 = document.getElementById('sttEngineLocked');
-    if (lockedHint2) lockedHint2.hidden = true;
     showToast(t('toast.record_fail') + err.message, 'error');
   }
 }
@@ -347,8 +344,6 @@ function stopRecording() {
   setSttBadgeStatus('idle', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
   const sttSelect = document.getElementById('selectSttEngine');
   if (sttSelect) sttSelect.disabled = false;
-  const lockedHint3 = document.getElementById('sttEngineLocked');
-  if (lockedHint3) lockedHint3.hidden = true;
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -454,25 +449,6 @@ function showPausedState() {
   chip.className = 'analysis-chip paused';
   if (icon) icon.textContent = '▶';
   if (text) text.textContent = t('analysis.paused');
-}
-
-// Simple confirm dialog (returns Promise<boolean>)
-function showConfirmDialog(message, yesLabel, noLabel) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-      <div class="modal" style="max-width:400px;padding:24px;">
-        <p style="margin:0 0 20px;font-size:14px;line-height:1.5;">${message}</p>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button class="btn btn-sm" id="confirmNo">${noLabel}</button>
-          <button class="btn btn-sm btn-primary" id="confirmYes">${yesLabel}</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.querySelector('#confirmYes').addEventListener('click', () => { overlay.remove(); resolve(true); });
-    overlay.querySelector('#confirmNo').addEventListener('click', () => { overlay.remove(); resolve(false); });
-  });
 }
 
 // AI sentence correction (runs silently in background)
@@ -790,19 +766,12 @@ async function finalizeEndMeeting() {
   state.meetingLocation = $('#endMeetingLocation').value.trim();
   if (state.meetingLocation) addLocation(state.meetingLocation);
 
-  // Ask user if they want AI correction before saving
+  // Auto-correct all uncorrected lines before saving
   const hasUncorrected = state.transcript.some(l => !l.originalText);
   if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
-    const doCorrect = await showConfirmDialog(
-      t('meeting.correct_all_prompt'),
-      t('meeting.correct_all_yes'),
-      t('meeting.correct_all_no')
-    );
-    if (doCorrect) {
-      showToast(t('toast.correcting'), 'info');
-      await runCorrection(false);
-      showToast(t('toast.correction_done'), 'success');
-    }
+    showToast(t('toast.correcting'), 'info');
+    await runCorrection(false);
+    showToast(t('toast.correction_done'), 'success');
   }
 
   autoSave();
@@ -1089,8 +1058,13 @@ function init() {
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
 
-  // ===== Welcome Modal =====
-  showWelcomeModal();
+  // ===== Onboarding / Welcome Modal =====
+  const saved = loadSettings();
+  if (!saved.profileComplete) {
+    showOnboarding().then(() => showWelcomeModal());
+  } else {
+    showWelcomeModal();
+  }
 
   // ===== Event Bindings =====
 

@@ -134,11 +134,6 @@ const translations = {
     'context.delete': 'Delete',
     'context.engine': 'STT Engine',
 
-    // End meeting correction
-    'meeting.correct_all_prompt': 'Would you like to run AI correction on the full transcript before saving?',
-    'meeting.correct_all_yes': 'Correct & Save',
-    'meeting.correct_all_no': 'Save As-Is',
-
     // Export modal
     'export.title': 'Export Meeting',
     'export.md_full': 'Markdown - Full Report',
@@ -251,13 +246,6 @@ const translations = {
     'settings.profile_title_ph': 'e.g. Product Manager',
     'settings.profile_team': 'Team / Department',
     'settings.profile_team_ph': 'e.g. Product Team',
-    'settings.profile_role': 'Meeting Role',
-    'settings.profile_role_attendee': 'Attendee',
-    'settings.profile_role_facilitator': 'Facilitator',
-    'settings.profile_role_presenter': 'Presenter',
-    'settings.profile_role_observer': 'Observer',
-    'settings.profile_interests': 'Interests / Work Goals',
-    'settings.profile_interests_ph': 'e.g. UX improvement, product roadmap',
     'settings.profile_notes': 'Additional Notes',
     'settings.profile_notes_ph': 'Anything else AI should know about you...',
     'settings.profile_file': 'Attach File',
@@ -433,6 +421,29 @@ const translations = {
     // Custom prompt presets
     'preset.delete_confirm': 'Delete this preset?',
 
+    // Onboarding
+    'onboarding.q_name': 'What\'s your name?',
+    'onboarding.q_title': 'What\'s your job title?',
+    'onboarding.q_team': 'Which team or department?',
+    'onboarding.q_role': 'What\'s your usual meeting role?',
+    'onboarding.q_interests': 'What topics interest you most?',
+    'onboarding.ph_name': 'e.g. John Kim',
+    'onboarding.ph_title': 'e.g. Product Manager',
+    'onboarding.ph_team': 'e.g. Platform Team',
+    'onboarding.ph_interests': 'e.g. UX, backend architecture',
+    'onboarding.benefit': 'Just 5 quick questions to dramatically improve your meeting notes quality.',
+    'onboarding.next': 'Next',
+    'onboarding.skip': 'Skip',
+    'onboarding.skip_all': 'Skip All',
+    'onboarding.role_attendee': 'Attendee',
+    'onboarding.role_facilitator': 'Facilitator',
+    'onboarding.role_presenter': 'Presenter',
+    'onboarding.role_observer': 'Observer',
+    'onboarding.complete_title': 'All set!',
+    'onboarding.complete_desc': 'Meeting AI analyzes your meetings in real-time with <b>Gemini 2.0 Flash</b>, providing summaries, action items, and insights tailored to your role.',
+    'onboarding.privacy': '\uD83D\uDD12 Your data is stored locally on this device only. AI analysis uses Vertex AI, which does not train on your data.',
+    'onboarding.start': 'Get Started',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -571,11 +582,6 @@ const translations = {
     'context.delete': '삭제',
     'context.engine': 'STT 엔진',
 
-    // End meeting correction
-    'meeting.correct_all_prompt': '저장 전에 AI 전체 교정을 실행하시겠습니까?',
-    'meeting.correct_all_yes': '교정 후 저장',
-    'meeting.correct_all_no': '그대로 저장',
-
     // Export modal
     'export.title': '회의 내보내기',
     'export.md_full': 'Markdown - 전체 보고서',
@@ -688,13 +694,6 @@ const translations = {
     'settings.profile_title_ph': '예: 프로덕트 매니저',
     'settings.profile_team': '팀 / 부서',
     'settings.profile_team_ph': '예: 제품팀',
-    'settings.profile_role': '회의 역할',
-    'settings.profile_role_attendee': '참석자',
-    'settings.profile_role_facilitator': '진행자',
-    'settings.profile_role_presenter': '발표자',
-    'settings.profile_role_observer': '관찰자',
-    'settings.profile_interests': '관심 분야 / 업무 목표',
-    'settings.profile_interests_ph': '예: UX 개선, 제품 로드맵',
     'settings.profile_notes': '기타 메모',
     'settings.profile_notes_ph': 'AI가 알아야 할 추가 정보...',
     'settings.profile_file': '파일 첨부',
@@ -869,6 +868,29 @@ const translations = {
 
     // Custom prompt presets
     'preset.delete_confirm': '이 프리셋을 삭제하시겠습니까?',
+
+    // Onboarding
+    'onboarding.q_name': '이름이 어떻게 되세요?',
+    'onboarding.q_title': '어떤 직책을 맡고 계세요?',
+    'onboarding.q_team': '어느 팀/부서에서 일하세요?',
+    'onboarding.q_role': '회의에서 주로 어떤 역할이세요?',
+    'onboarding.q_interests': '관심 분야가 무엇인가요?',
+    'onboarding.ph_name': '예: 김철수',
+    'onboarding.ph_title': '예: 프로덕트 매니저',
+    'onboarding.ph_team': '예: 플랫폼팀',
+    'onboarding.ph_interests': '예: UX, 백엔드 아키텍처',
+    'onboarding.benefit': '5가지 질문에 답하면 회의록 품질이 크게 향상됩니다.',
+    'onboarding.next': '다음',
+    'onboarding.skip': '건너뛰기',
+    'onboarding.skip_all': '모두 건너뛰기',
+    'onboarding.role_attendee': '참석자',
+    'onboarding.role_facilitator': '진행자',
+    'onboarding.role_presenter': '발표자',
+    'onboarding.role_observer': '관찰자',
+    'onboarding.complete_title': '준비 완료!',
+    'onboarding.complete_desc': 'Meeting AI는 <b>Gemini 2.0 Flash</b>로 회의를 실시간 분석하여, 요약·액션 아이템·인사이트를 제공합니다.',
+    'onboarding.privacy': '\uD83D\uDD12 데이터는 이 기기에만 로컬 저장됩니다. AI 분석은 Vertex AI를 사용하며, 데이터를 학습에 사용하지 않습니다.',
+    'onboarding.start': '시작하기',
 
     // Misc
     'minutes': '{n}분',

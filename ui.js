@@ -358,7 +358,9 @@ function renderLegacySections(container, analysis) {
         const ul = document.createElement('ul');
         analysis[key].forEach(item => {
           const li = document.createElement('li');
-          li.textContent = item;
+          li.textContent = typeof item === 'object' && item !== null
+            ? Object.values(item).filter(v => v != null).join(' — ')
+            : item;
           ul.appendChild(li);
         });
         body.appendChild(ul);
@@ -961,7 +963,12 @@ function renderViewerAnalysis(container, analysis) {
       let bodyHtml = '';
       if (Array.isArray(content)) {
         bodyHtml = content.length > 0
-          ? '<ul>' + content.map(i => `<li>${i}</li>`).join('') + '</ul>'
+          ? '<ul>' + content.map(i => {
+              const text = typeof i === 'object' && i !== null
+                ? Object.values(i).filter(v => v != null).join(' — ')
+                : i;
+              return `<li>${text}</li>`;
+            }).join('') + '</ul>'
           : t('card.no_items');
       } else if (typeof content === 'object' && content) {
         bodyHtml = Object.entries(content).map(([k, v]) => `${k}: ${v}`).join('<br>');

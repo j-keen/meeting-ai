@@ -206,8 +206,35 @@ Available tools: add_context, add_memo, rerun_analysis
 Respond in English.`;
 
   if (state.transcript.length > 0) {
-    const recentLines = state.transcript.slice(-20).map(l => l.text).join('\n');
-    prompt += `\n\n[Recent Transcript]\n${recentLines}`;
+    const MAX_CHARS = 500000;
+    const lines = state.transcript.map(l => {
+      const t = new Date(l.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return `[${t}] ${l.text}`;
+    });
+    let text = lines.join('\n');
+    if (text.length > MAX_CHARS) {
+      // Keep the end (most recent), trim the beginning
+      let kept = 0;
+      let startIdx = lines.length;
+      let charCount = 0;
+      for (let i = lines.length - 1; i >= 0; i--) {
+        charCount += lines[i].length + 1;
+        if (charCount > MAX_CHARS) break;
+        startIdx = i;
+        kept++;
+      }
+      const skipped = lines.length - kept;
+      text = `[... 이전 ${skipped}줄 생략 ...]\n` + lines.slice(startIdx).join('\n');
+    }
+    prompt += `\n\n[Full Transcript]\n${text}`;
+  }
+
+  if (state.memos?.length > 0) {
+    const memoLines = state.memos.map(m => {
+      const t = new Date(m.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      return `- [${t}] ${m.text}`;
+    });
+    prompt += `\n\n[User Memos]\n${memoLines.join('\n')}`;
   }
 
   if (state.currentAnalysis) {

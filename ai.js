@@ -3,6 +3,16 @@
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 
+// Normalize array items: if Gemini returns objects instead of strings, flatten them
+function flattenItems(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(item =>
+    typeof item === 'object' && item !== null
+      ? Object.values(item).filter(v => v != null).join(' — ')
+      : String(item)
+  );
+}
+
 export function getDefaultPrompt() {
   return getAiPrompt();
 }
@@ -143,9 +153,9 @@ export async function analyzeTranscript({
           flow: parsed.flow || '',
           summary: parsed.summary || '',
           context: parsed.context || '',
-          openQuestions: Array.isArray(parsed.openQuestions) ? parsed.openQuestions : [],
-          actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
-          suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+          openQuestions: flattenItems(parsed.openQuestions),
+          actionItems: flattenItems(parsed.actionItems),
+          suggestions: flattenItems(parsed.suggestions),
           markdown: null,
           timestamp: Date.now(),
         };
