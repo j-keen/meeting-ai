@@ -20,7 +20,7 @@ import {
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
 } from './ui.js';
-import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount, syncSttEngineUI } from './settings.js';
+import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
@@ -103,6 +103,14 @@ function getElapsedTimeStr() {
   return t('minutes', { n: mins });
 }
 
+// STT Engine Badge status helper
+function setSttBadgeStatus(status, label) {
+  const badge = document.getElementById('sttEngineBadge');
+  const nameEl = document.getElementById('sttEngineLabel');
+  if (badge) badge.dataset.status = status;
+  if (nameEl && label) nameEl.textContent = label;
+}
+
 async function startRecording() {
   if (state.isRecording) return;
 
@@ -111,11 +119,12 @@ async function startRecording() {
 
   stt = createSTT();
 
-  // Set initial STT engine label (onEngineChange may override on fallback)
-  const engineLabel = document.getElementById('sttEngineLabel');
-  if (engineLabel) {
-    engineLabel.textContent = (state.settings.sttEngine === 'deepgram') ? 'Deepgram' : 'Web Speech';
-  }
+  const isDeepgram = state.settings.sttEngine === 'deepgram';
+  setSttBadgeStatus(isDeepgram ? 'connecting' : 'active', isDeepgram ? 'Deepgram' : 'Web Speech');
+
+  // Lock STT engine select during recording
+  const sttSelect = document.getElementById('selectSttEngine');
+  if (sttSelect) sttSelect.disabled = true;
 
   try {
     await stt.start({
@@ -123,8 +132,19 @@ async function startRecording() {
       engineType: state.settings.sttEngine || 'webspeech',
       onInterim: (text) => {
         showInterim(text);
+        // First result: mark badge as active (Deepgram connected successfully)
+        const badge = document.getElementById('sttEngineBadge');
+        if (badge && badge.dataset.status === 'connecting') {
+          setSttBadgeStatus('active', 'Deepgram');
+        }
       },
       onFinal: (text) => {
+        // First result: mark badge as active
+        const badge = document.getElementById('sttEngineBadge');
+        if (badge && badge.dataset.status === 'connecting') {
+          setSttBadgeStatus('active', 'Deepgram');
+        }
+
         // Apply typo corrections
         const { text: correctedText, corrections } = applyTypoCorrections(text);
 
@@ -142,16 +162,8 @@ async function startRecording() {
         showToast(err, 'error');
       },
       onEngineChange: (newEngine) => {
-        // Update label with warning indicator
-        const engineLabel = document.getElementById('sttEngineLabel');
-        if (engineLabel) {
-          engineLabel.textContent = newEngine === 'webspeech' ? 'Web Speech ⚠' : 'Deepgram';
-        }
-        // Update settings and persist
-        state.settings.sttEngine = newEngine;
-        saveSettings({ sttEngine: newEngine });
-        // Sync settings UI dropdown
-        syncSttEngineUI(newEngine);
+        // Fallback occurred — update badge to fallback state (don't change settings)
+        setSttBadgeStatus('fallback', 'Web Speech (fallback)');
         // Show warning toast
         showToast(t('stt.fallback_warning'), 'warning');
       },
@@ -210,6 +222,11 @@ function stopRecording() {
   stopAnalysisCountdown();
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
+
+  // Reset badge and unlock engine select
+  setSttBadgeStatus('idle', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
+  const sttSelect = document.getElementById('selectSttEngine');
+  if (sttSelect) sttSelect.disabled = false;
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -1236,14 +1253,24 @@ function showWelcomeModal() {
     closeWelcomeModal();
   });
 
-  // ESC to close
-  const escHandler = (e) => {
-    if (e.key === 'Escape' && !modal.hidden) {
+  // Keyboard shortcuts: 1/2/3 to select, ESC to close
+  const keyHandler = (e) => {
+    if (modal.hidden) return;
+    if (e.key === 'Escape') {
       closeWelcomeModal();
-      document.removeEventListener('keydown', escHandler);
+      document.removeEventListener('keydown', keyHandler);
+    } else if (e.key === '1') {
+      $('#welcomeQuickStart').click();
+      document.removeEventListener('keydown', keyHandler);
+    } else if (e.key === '2') {
+      $('#welcomeMeetingPrep').click();
+      document.removeEventListener('keydown', keyHandler);
+    } else if (e.key === '3') {
+      $('#welcomeSearch').click();
+      document.removeEventListener('keydown', keyHandler);
     }
   };
-  document.addEventListener('keydown', escHandler);
+  document.addEventListener('keydown', keyHandler);
 }
 
 function closeWelcomeModal() {

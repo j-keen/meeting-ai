@@ -167,7 +167,10 @@
         <span class="record-dot"></span>
         <span class="record-label">REC</span>
       </button>
-      <span class="stt-engine-label" id="sttEngineLabel" data-i18n="stt.engine_label">Web Speech</span>
+      <span class="stt-engine-badge" id="sttEngineBadge">
+        <span class="stt-engine-dot" id="sttEngineDot"></span>
+        <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
+      </span>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
@@ -229,10 +232,14 @@
           <h3 data-i18n="settings.stt">STT Settings</h3>
           <label class="settings-label">
             <span data-i18n="stt.engine">STT Engine</span>
-            <select class="settings-select" id="selectSttEngine">
-              <option value="webspeech" data-i18n="stt.engine_webspeech">Web Speech (Free)</option>
-              <option value="deepgram" data-i18n="stt.engine_deepgram">Deepgram Nova-2 (Paid, High Accuracy)</option>
-            </select>
+            <div class="settings-engine-row">
+              <select class="settings-select" id="selectSttEngine">
+                <option value="webspeech" data-i18n="stt.engine_webspeech">Web Speech (Free)</option>
+                <option value="deepgram" data-i18n="stt.engine_deepgram">Deepgram Nova-3 (Paid, High Accuracy)</option>
+              </select>
+              <button class="btn btn-sm btn-test-connection" id="btnTestStt" data-i18n="stt.test_connection">Test</button>
+            </div>
+            <span class="stt-test-result" id="sttTestResult"></span>
           </label>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
@@ -665,16 +672,19 @@
       <p class="welcome-modal-subtitle" data-i18n="welcome.subtitle">What would you like to do?</p>
       <div class="welcome-actions">
         <button class="welcome-action-card" id="welcomeQuickStart">
+          <span class="welcome-action-shortcut">1</span>
           <span class="welcome-action-icon">&#9654;</span>
           <span class="welcome-action-title" data-i18n="welcome.quick_start">Quick Start</span>
           <span class="welcome-action-desc" data-i18n="welcome.quick_start_desc">Start recording immediately</span>
         </button>
         <button class="welcome-action-card" id="welcomeMeetingPrep">
+          <span class="welcome-action-shortcut">2</span>
           <span class="welcome-action-icon">&#128221;</span>
           <span class="welcome-action-title" data-i18n="welcome.meeting_prep">Meeting Prep</span>
           <span class="welcome-action-desc" data-i18n="welcome.meeting_prep_desc">AI-guided setup</span>
         </button>
         <button class="welcome-action-card" id="welcomeSearch">
+          <span class="welcome-action-shortcut">3</span>
           <span class="welcome-action-icon">&#128269;</span>
           <span class="welcome-action-title" data-i18n="welcome.search">Search Meetings</span>
           <span class="welcome-action-desc" data-i18n="welcome.search_desc">Browse past meetings</span>
