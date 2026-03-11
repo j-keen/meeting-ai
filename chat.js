@@ -146,6 +146,15 @@ function handleSend() {
   attachedFileContent = null;
   attachedFileName = null;
 
+  // Guard 5: confirm before sending large transcripts
+  const totalChars = state.transcript.reduce((sum, l) => sum + l.text.length, 0);
+  if (totalChars > 80000) {
+    if (!confirm(t('guard.chat_large_confirm', { lines: state.transcript.length }))) {
+      input.value = text;
+      return;
+    }
+  }
+
   state.chatHistory.push({ role: 'user', text: fullText, timestamp: Date.now() });
   sendChatMessage(fullText);
 }
@@ -206,7 +215,7 @@ Available tools: add_context, add_memo, rerun_analysis
 Respond in English.`;
 
   if (state.transcript.length > 0) {
-    const MAX_CHARS = 500000;
+    const MAX_CHARS = 100000;
     const lines = state.transcript.map(l => {
       const t = new Date(l.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
       return `[${t}] ${l.text}`;
@@ -247,9 +256,6 @@ Respond in English.`;
 
   if (state.settings.userProfile) {
     prompt += `\n\n[User Profile - one of the meeting participants]\n${state.settings.userProfile}`;
-    if (state.settings.profileFileContent) {
-      prompt += `\n\n[Attached Profile Document]\n${state.settings.profileFileContent}`;
-    }
   }
 
   if (state.settings.meetingContext) {

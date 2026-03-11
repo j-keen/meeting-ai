@@ -36,9 +36,13 @@ const translations = {
     // Bottom bar
     'record.label': 'REC',
     'record.stop': 'STOP',
+    'record.meeting_active': 'In Meeting',
+    'record.paused': 'Paused',
     'record.status_recording': 'Recording...',
+    'record.status_paused': 'Paused',
     'record.status_stopped': 'Stopped',
     'record.status_ended': 'Meeting ended - Resume or start a new meeting',
+    'meeting.end_short': 'End Meeting',
     'stt.engine_label': 'Web Speech',
     'stt.unsupported': 'Web Speech API is not supported. Please use Chrome or Edge.',
     'stt.mic_permission_denied': 'Microphone permission denied. Please allow microphone access.',
@@ -235,27 +239,7 @@ const translations = {
     'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
     'settings.tab_chat': 'Chat',
-    'settings.tab_profile': 'Profile',
     'settings.tab_connect': 'Connect',
-
-    // Profile
-    'settings.profile_hint': 'This information will be used by AI analysis and chat to provide personalized insights.',
-    'settings.profile_name': 'Name',
-    'settings.profile_name_ph': 'e.g. John Doe',
-    'settings.profile_title': 'Title / Position',
-    'settings.profile_title_ph': 'e.g. Product Manager',
-    'settings.profile_team': 'Team / Department',
-    'settings.profile_team_ph': 'e.g. Product Team',
-    'settings.profile_notes': 'Additional Notes',
-    'settings.profile_notes_ph': 'Anything else AI should know about you...',
-    'settings.profile_file': 'Attach File',
-    'settings.profile_file_view': 'View',
-    'settings.profile_ai_chat': 'Fill with AI Chat',
-    'settings.profile_ai_chat_title': 'Fill Profile with AI',
-    'settings.profile_ai_chat_ph': 'Answer the question...',
-    'settings.profile_ai_apply': 'Apply to Profile',
-    'settings.profile_applied': 'Profile updated!',
-    'settings.profile_chat_incomplete': 'Please complete the conversation first.',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
@@ -283,13 +267,9 @@ const translations = {
 
     // Welcome modal
     'welcome.title': 'Meeting AI',
-    'welcome.subtitle': 'What would you like to do?',
-    'welcome.quick_start': 'Quick Start',
-    'welcome.quick_start_desc': 'Start recording immediately with default settings',
-    'welcome.meeting_prep': 'Meeting Prep',
-    'welcome.meeting_prep_desc': 'AI-guided setup for your meeting',
-    'welcome.search': 'Search Meetings',
-    'welcome.search_desc': 'Browse and search past meetings',
+    'welcome.privacy_desc': 'Your data is safe.',
+    'welcome.privacy_detail': 'All meeting data is stored locally on your device only. AI analysis uses Vertex AI, which does not use your data for training.',
+    'welcome.get_started': 'Get Started',
 
     // Meeting prep
     'prep.step_type': 'What kind of meeting is this?',
@@ -425,29 +405,6 @@ const translations = {
     // Custom prompt presets
     'preset.delete_confirm': 'Delete this preset?',
 
-    // Onboarding
-    'onboarding.q_name': 'What\'s your name?',
-    'onboarding.q_title': 'What\'s your job title?',
-    'onboarding.q_team': 'Which team or department?',
-    'onboarding.q_role': 'What\'s your usual meeting role?',
-    'onboarding.q_interests': 'What topics interest you most?',
-    'onboarding.ph_name': 'e.g. John Kim',
-    'onboarding.ph_title': 'e.g. Product Manager',
-    'onboarding.ph_team': 'e.g. Platform Team',
-    'onboarding.ph_interests': 'e.g. UX, backend architecture',
-    'onboarding.benefit': 'Just 5 quick questions to dramatically improve your meeting notes quality.',
-    'onboarding.next': 'Next',
-    'onboarding.skip': 'Skip',
-    'onboarding.skip_all': 'Skip All',
-    'onboarding.role_attendee': 'Attendee',
-    'onboarding.role_facilitator': 'Facilitator',
-    'onboarding.role_presenter': 'Presenter',
-    'onboarding.role_observer': 'Observer',
-    'onboarding.complete_title': 'All set!',
-    'onboarding.complete_desc': 'Meeting AI analyzes your meetings in real-time with <b>Gemini 2.0 Flash</b>, providing summaries, action items, and insights tailored to your role.',
-    'onboarding.privacy': '\uD83D\uDD12 Your data is stored locally on this device only. AI analysis uses Vertex AI, which does not train on your data.',
-    'onboarding.start': 'Get Started',
-
     // Guards
     'guard.idle_warning': 'No speech detected for 15 minutes. Recording will auto-stop in 5 minutes.',
     'guard.idle_auto_stopped': 'Recording auto-stopped due to 20 minutes of silence.',
@@ -495,9 +452,13 @@ const translations = {
     // Bottom bar
     'record.label': 'REC',
     'record.stop': 'STOP',
+    'record.meeting_active': '미팅중',
+    'record.paused': '일시정지',
     'record.status_recording': '녹음 중...',
+    'record.status_paused': '일시정지됨',
     'record.status_stopped': '중지됨',
     'record.status_ended': '회의 종료됨 - 재개하거나 새 회의를 시작하세요',
+    'meeting.end_short': '미팅종료',
     'stt.engine_label': 'Web Speech',
     'stt.unsupported': 'Web Speech API가 지원되지 않습니다. Chrome 또는 Edge를 사용해주세요.',
     'stt.mic_permission_denied': '마이크 권한이 거부되었습니다. 마이크 접근을 허용해주세요.',
@@ -694,27 +655,7 @@ const translations = {
     'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
     'settings.tab_chat': '채팅',
-    'settings.tab_profile': '내 프로필',
     'settings.tab_connect': '연동',
-
-    // Profile
-    'settings.profile_hint': '이 정보는 AI 분석과 채팅에서 맞춤형 인사이트를 제공하는 데 활용됩니다.',
-    'settings.profile_name': '이름',
-    'settings.profile_name_ph': '예: 홍길동',
-    'settings.profile_title': '직책 / 직급',
-    'settings.profile_title_ph': '예: 프로덕트 매니저',
-    'settings.profile_team': '팀 / 부서',
-    'settings.profile_team_ph': '예: 제품팀',
-    'settings.profile_notes': '기타 메모',
-    'settings.profile_notes_ph': 'AI가 알아야 할 추가 정보...',
-    'settings.profile_file': '파일 첨부',
-    'settings.profile_file_view': '보기',
-    'settings.profile_ai_chat': 'AI 대화로 채우기',
-    'settings.profile_ai_chat_title': 'AI와 대화로 프로필 작성',
-    'settings.profile_ai_chat_ph': '질문에 답변하세요...',
-    'settings.profile_ai_apply': '프로필에 반영',
-    'settings.profile_applied': '프로필이 업데이트되었습니다!',
-    'settings.profile_chat_incomplete': '대화를 먼저 완료해주세요.',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
@@ -742,13 +683,9 @@ const translations = {
 
     // Welcome modal
     'welcome.title': 'Meeting AI',
-    'welcome.subtitle': '무엇을 하시겠습니까?',
-    'welcome.quick_start': '빠른 시작',
-    'welcome.quick_start_desc': '기본 설정으로 바로 녹음 시작',
-    'welcome.meeting_prep': '회의 준비',
-    'welcome.meeting_prep_desc': 'AI 가이드로 회의 설정',
-    'welcome.search': '회의 검색',
-    'welcome.search_desc': '이전 회의 검색 및 조회',
+    'welcome.privacy_desc': '데이터가 안전합니다.',
+    'welcome.privacy_detail': '모든 회의 데이터는 이 기기에만 로컬 저장됩니다. AI 분석은 Vertex AI를 사용하며, 데이터를 학습에 사용하지 않습니다.',
+    'welcome.get_started': '시작하기',
 
     // Meeting prep
     'prep.step_type': '어떤 종류의 회의인가요?',
@@ -883,29 +820,6 @@ const translations = {
 
     // Custom prompt presets
     'preset.delete_confirm': '이 프리셋을 삭제하시겠습니까?',
-
-    // Onboarding
-    'onboarding.q_name': '이름이 어떻게 되세요?',
-    'onboarding.q_title': '어떤 직책을 맡고 계세요?',
-    'onboarding.q_team': '어느 팀/부서에서 일하세요?',
-    'onboarding.q_role': '회의에서 주로 어떤 역할이세요?',
-    'onboarding.q_interests': '관심 분야가 무엇인가요?',
-    'onboarding.ph_name': '예: 김철수',
-    'onboarding.ph_title': '예: 프로덕트 매니저',
-    'onboarding.ph_team': '예: 플랫폼팀',
-    'onboarding.ph_interests': '예: UX, 백엔드 아키텍처',
-    'onboarding.benefit': '5가지 질문에 답하면 회의록 품질이 크게 향상됩니다.',
-    'onboarding.next': '다음',
-    'onboarding.skip': '건너뛰기',
-    'onboarding.skip_all': '모두 건너뛰기',
-    'onboarding.role_attendee': '참석자',
-    'onboarding.role_facilitator': '진행자',
-    'onboarding.role_presenter': '발표자',
-    'onboarding.role_observer': '관찰자',
-    'onboarding.complete_title': '준비 완료!',
-    'onboarding.complete_desc': 'Meeting AI는 <b>Gemini 2.0 Flash</b>로 회의를 실시간 분석하여, 요약·액션 아이템·인사이트를 제공합니다.',
-    'onboarding.privacy': '\uD83D\uDD12 데이터는 이 기기에만 로컬 저장됩니다. AI 분석은 Vertex AI를 사용하며, 데이터를 학습에 사용하지 않습니다.',
-    'onboarding.start': '시작하기',
 
     // Guards
     'guard.idle_warning': '15분간 음성이 감지되지 않았습니다. 5분 후 녹음이 자동 중지됩니다.',

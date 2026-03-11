@@ -466,51 +466,6 @@ export function initSettings() {
     markDirty();
   });
 
-  // User Profile - structured form
-  const profileFields = ['profileName', 'profileTitle', 'profileTeam', 'profileNotes'];
-  profileFields.forEach(id => {
-    const el = $(`#${id}`);
-    if (el) el.addEventListener('change', () => { syncProfileFromForm(); markDirty(); highlightField(el); });
-  });
-
-  // Profile file upload — attachment only (no copy to textarea)
-  $('#userProfileFileUpload').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      state.settings.profileFileContent = reader.result;
-      state.settings.profileFileName = file.name;
-      showProfileFileChip(file.name);
-      markDirty();
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  });
-
-  // View attached file
-  $('#btnProfileFileView')?.addEventListener('click', () => {
-    const content = state.settings.profileFileContent;
-    const name = state.settings.profileFileName;
-    if (!content) return;
-    $('#profileFileModalTitle').textContent = name || 'File';
-    $('#profileFileModalContent').textContent = content;
-    $('#profileFileModal').hidden = false;
-  });
-
-  // Remove attached file
-  $('#btnProfileFileRemove')?.addEventListener('click', () => {
-    state.settings.profileFileContent = '';
-    state.settings.profileFileName = '';
-    $('#profileFileChip').hidden = true;
-    markDirty();
-  });
-
-  // AI Profile Chat button
-  $('#btnProfileAiChat')?.addEventListener('click', () => {
-    startProfileAiChat();
-  });
-
   // Slack webhook
   $('#inputSlackWebhook').addEventListener('change', (e) => {
     state.settings.slackWebhook = e.target.value;
@@ -567,9 +522,7 @@ function saveAllSettings() {
     chatSystemPrompt: s.chatSystemPrompt,
     autoCorrection: s.autoCorrection,
     userProfile: s.userProfile,
-    profileFields: s.profileFields,
-    profileFileContent: s.profileFileContent,
-    profileFileName: s.profileFileName,
+    welcomeDismissed: s.welcomeDismissed,
     slackWebhook: s.slackWebhook,
     customPresets: s.customPresets,
     customPromptPresets: s.customPromptPresets,
@@ -638,9 +591,6 @@ function resetAllSettings() {
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
   s.userProfile = '';
-  s.profileFields = { name: '', title: '', team: '', role: 'attendee', interests: '', notes: '' };
-  s.profileFileContent = '';
-  s.profileFileName = '';
   s.slackWebhook = '';
   s.customPresets = {};
   s.customPromptPresets = {};
@@ -687,7 +637,6 @@ function applySettingsToForm() {
   $('#textMeetingContext').value = s.meetingContext;
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
-  applyProfileToForm();
   $('#inputSlackWebhook').value = s.slackWebhook;
 
   const chatModelSelect = $('#chatModelSelect');
@@ -746,12 +695,8 @@ function loadSavedSettings() {
   s.meetingContext = saved.meetingContext || '';
   s.customPrompt = saved.customPrompt || getDefaultPrompt();
   s.chatSystemPrompt = saved.chatSystemPrompt || '';
-  s.profileFields = saved.profileFields || { name: '', title: '', team: '', role: 'attendee', interests: '', notes: '' };
-  // Rebuild userProfile from structured fields (or keep legacy string)
-  const rebuiltProfile = buildUserProfileString(s.profileFields);
-  s.userProfile = rebuiltProfile || saved.userProfile || '';
-  s.profileFileContent = saved.profileFileContent || '';
-  s.profileFileName = saved.profileFileName || '';
+  s.userProfile = saved.userProfile || '';
+  s.welcomeDismissed = saved.welcomeDismissed || false;
   s.slackWebhook = saved.slackWebhook || '';
   s.theme = saved.theme || 'light';
   s.uiLanguage = saved.uiLanguage || 'auto';
@@ -971,225 +916,6 @@ function renderDataCategories() {
     });
     list.appendChild(item);
   });
-}
-
-// ===== Profile Helpers =====
-
-function syncProfileFromForm() {
-  const pf = {
-    name: $('#profileName')?.value.trim() || '',
-    title: $('#profileTitle')?.value.trim() || '',
-    team: $('#profileTeam')?.value.trim() || '',
-    notes: $('#profileNotes')?.value.trim() || '',
-  };
-  state.settings.profileFields = pf;
-  // Build unified userProfile string for AI consumption
-  state.settings.userProfile = buildUserProfileString(pf);
-}
-
-export function buildUserProfileString(pf) {
-  const parts = [];
-  if (pf.name) parts.push(`Name: ${pf.name}`);
-  if (pf.title) parts.push(`Title: ${pf.title}`);
-  if (pf.team) parts.push(`Team: ${pf.team}`);
-  if (pf.notes) parts.push(`Notes: ${pf.notes}`);
-  return parts.join('\n');
-}
-
-function applyProfileToForm() {
-  const pf = state.settings.profileFields || {};
-  const el = (id) => $(`#${id}`);
-  if (el('profileName')) el('profileName').value = pf.name || '';
-  if (el('profileTitle')) el('profileTitle').value = pf.title || '';
-  if (el('profileTeam')) el('profileTeam').value = pf.team || '';
-  if (el('profileNotes')) el('profileNotes').value = pf.notes || '';
-
-  if (state.settings.profileFileName) {
-    showProfileFileChip(state.settings.profileFileName);
-  } else {
-    $('#profileFileChip').hidden = true;
-  }
-}
-
-function showProfileFileChip(name) {
-  const chip = $('#profileFileChip');
-  if (chip) {
-    chip.hidden = false;
-    $('#profileFileName').textContent = name;
-  }
-}
-
-// ===== AI Profile Chat =====
-
-let profileChatHistory = [];
-let profileChatResult = null;
-
-async function startProfileAiChat() {
-  if (!isProxyAvailable()) {
-    emit('toast', { message: t('toast.no_api_key'), type: 'error' });
-    return;
-  }
-
-  profileChatHistory = [];
-  profileChatResult = null;
-  const msgContainer = $('#profileChatMessages');
-  msgContainer.innerHTML = '';
-  $('#profileAiChatModal').hidden = false;
-  $('#profileChatInput').value = '';
-
-  // Initial AI question
-  const lang = state.settings.aiLanguage === 'ko' || (state.settings.aiLanguage === 'auto' && (state.settings.uiLanguage === 'ko' || (state.settings.uiLanguage === 'auto' && navigator.language?.startsWith('ko')))) ? 'ko' : 'en';
-  const greeting = lang === 'ko'
-    ? '안녕하세요! 프로필을 작성해 드리겠습니다. 먼저 이름을 알려주세요.'
-    : "Hi! I'll help you fill out your profile. Let's start with your name.";
-  addProfileChatMsg('ai', greeting);
-  profileChatHistory.push({ role: 'model', text: greeting });
-
-  // Send button
-  const sendBtn = $('#btnProfileChatSend');
-  const input = $('#profileChatInput');
-
-  const sendHandler = () => handleProfileChatSend();
-  const keyHandler = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleProfileChatSend(); } };
-
-  // Clean up old listeners by cloning
-  const newSend = sendBtn.cloneNode(true);
-  sendBtn.parentNode.replaceChild(newSend, sendBtn);
-  const newInput = input.cloneNode(true);
-  input.parentNode.replaceChild(newInput, input);
-
-  newSend.addEventListener('click', sendHandler);
-  newInput.addEventListener('keydown', keyHandler);
-
-  // Apply button
-  const applyBtn = $('#btnProfileChatApply');
-  const newApply = applyBtn.cloneNode(true);
-  applyBtn.parentNode.replaceChild(newApply, applyBtn);
-  newApply.addEventListener('click', () => applyProfileFromChat());
-
-  // Cancel button
-  const cancelBtn = $('#btnProfileChatCancel');
-  const newCancel = cancelBtn.cloneNode(true);
-  cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
-  newCancel.addEventListener('click', () => { $('#profileAiChatModal').hidden = true; });
-}
-
-function addProfileChatMsg(role, text) {
-  const container = $('#profileChatMessages');
-  const div = document.createElement('div');
-  div.className = `profile-chat-msg ${role}`;
-  div.textContent = text;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-async function handleProfileChatSend() {
-  const input = $('#profileChatInput');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-
-  addProfileChatMsg('user', text);
-  profileChatHistory.push({ role: 'user', text });
-
-  // Build prompt for Gemini
-  const lang = state.settings.aiLanguage === 'ko' || (state.settings.aiLanguage === 'auto' && (state.settings.uiLanguage === 'ko' || (state.settings.uiLanguage === 'auto' && navigator.language?.startsWith('ko')))) ? 'ko' : 'en';
-
-  const systemPrompt = lang === 'ko'
-    ? `당신은 사용자 프로필을 작성하는 친절한 AI 어시스턴트입니다.
-대화를 통해 아래 항목을 하나씩 자연스럽게 질문하세요:
-- 이름, 직책/직급, 팀/부서, 회의에서의 역할(참석자/진행자/발표자/관찰자), 관심 분야/업무 목표, 기타 메모
-이미 답변된 항목은 건너뛰세요. 모든 항목을 수집했다면 "프로필 정보를 모두 수집했습니다! '프로필에 반영' 버튼을 눌러주세요."라고 안내하세요.
-마지막 메시지에 반드시 아래 JSON 블록을 포함하세요:
-\`\`\`json
-{"name":"","title":"","team":"","role":"attendee|facilitator|presenter|observer","interests":"","notes":""}
-\`\`\`
-한국어로 대화하세요.`
-    : `You are a friendly AI assistant that helps users fill out their profile.
-Ask about each field naturally through conversation:
-- Name, Title/Position, Team/Department, Meeting Role (attendee/facilitator/presenter/observer), Interests/Work Goals, Additional Notes
-Skip fields already answered. When all fields are collected, say "I've gathered all your profile info! Click 'Apply to Profile' to save."
-In your final message, include this JSON block:
-\`\`\`json
-{"name":"","title":"","team":"","role":"attendee|facilitator|presenter|observer","interests":"","notes":""}
-\`\`\``;
-
-  const contents = [];
-  contents.push({
-    role: 'user',
-    parts: [{ text: systemPrompt + '\n\n---\n\n' + profileChatHistory[0].text }]
-  });
-  // Skip first model message in history, it was the greeting
-  for (let i = 1; i < profileChatHistory.length; i++) {
-    contents.push({
-      role: profileChatHistory[i].role === 'user' ? 'user' : 'model',
-      parts: [{ text: profileChatHistory[i].text }]
-    });
-  }
-
-  try {
-    addProfileChatMsg('system', '...');
-    const data = await callGemini('gemini-2.5-flash', {
-      contents,
-      generationConfig: { temperature: 0.5 }
-    });
-    // Remove loading indicator
-    const msgs = $('#profileChatMessages');
-    const lastMsg = msgs.querySelector('.profile-chat-msg.system:last-child');
-    if (lastMsg && lastMsg.textContent === '...') lastMsg.remove();
-
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    addProfileChatMsg('ai', reply);
-    profileChatHistory.push({ role: 'model', text: reply });
-
-    // Try to extract JSON from the response
-    const jsonMatch = reply.match(/```json\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      try {
-        profileChatResult = JSON.parse(jsonMatch[1].trim());
-      } catch {}
-    }
-  } catch (err) {
-    const msgs = $('#profileChatMessages');
-    const lastMsg = msgs.querySelector('.profile-chat-msg.system:last-child');
-    if (lastMsg && lastMsg.textContent === '...') lastMsg.remove();
-    addProfileChatMsg('system', 'Error: ' + err.message);
-  }
-}
-
-function applyProfileFromChat() {
-  if (!profileChatResult) {
-    // Try to extract from last AI message
-    const lastAi = profileChatHistory.filter(m => m.role === 'model').pop();
-    if (lastAi) {
-      const jsonMatch = lastAi.text.match(/```json\s*([\s\S]*?)```/) || lastAi.text.match(/\{[\s\S]*"name"[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          profileChatResult = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-        } catch {}
-      }
-    }
-  }
-
-  if (profileChatResult) {
-    const pf = {
-      name: profileChatResult.name || '',
-      title: profileChatResult.title || '',
-      team: profileChatResult.team || '',
-      role: profileChatResult.role || 'attendee',
-      interests: profileChatResult.interests || '',
-      notes: profileChatResult.notes || '',
-    };
-    state.settings.profileFields = pf;
-    state.settings.userProfile = buildUserProfileString(pf);
-    applyProfileToForm();
-    markDirty();
-    emit('toast', { message: t('settings.profile_applied') || 'Profile updated!', type: 'success' });
-  } else {
-    emit('toast', { message: t('settings.profile_chat_incomplete') || 'Please complete the conversation first.', type: 'warning' });
-  }
-
-  $('#profileAiChatModal').hidden = true;
 }
 
 export function syncSttEngineUI(engine) {

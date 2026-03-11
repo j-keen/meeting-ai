@@ -23,7 +23,6 @@ import {
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
-import { showOnboarding } from './onboarding.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, getPromptPresets } from './i18n.js';
 
 // ===== Pub/Sub =====
@@ -61,11 +60,7 @@ export const state = {
 const $ = (sel) => document.querySelector(sel);
 
 function buildFullProfile() {
-  let profile = state.settings.userProfile || '';
-  if (state.settings.profileFileContent) {
-    profile += (profile ? '\n\n' : '') + '[Attached Profile Document]\n' + state.settings.profileFileContent;
-  }
-  return profile;
+  return state.settings.userProfile || '';
 }
 
 // ===== Core Logic =====
@@ -322,9 +317,11 @@ async function startRecording() {
     }, MAX_RECORDING_MS);
 
     const btn = $('#btnRecord');
+    btn.classList.remove('paused');
     btn.classList.add('recording');
-    btn.querySelector('.record-label').textContent = t('record.stop');
+    btn.querySelector('.record-label').textContent = t('record.meeting_active');
     $('#meetingStatus').textContent = t('record.status_recording');
+    $('#btnEndMeeting').hidden = false;
 
     showTranscriptWaiting();
     showAiWaiting(state.settings.analysisInterval || 30);
@@ -369,8 +366,9 @@ function stopRecording() {
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
-  btn.querySelector('.record-label').textContent = t('record.label');
-  $('#meetingStatus').textContent = t('record.status_stopped');
+  btn.classList.add('paused');
+  btn.querySelector('.record-label').textContent = t('record.paused');
+  $('#meetingStatus').textContent = t('record.status_paused');
 
   autoSave();
 }
@@ -818,6 +816,12 @@ async function finalizeEndMeeting() {
   autoSave();
   state.meetingEnded = true;
   $('#endMeetingModal').hidden = true;
+
+  // Reset record button to initial state
+  const recBtn = $('#btnRecord');
+  recBtn.classList.remove('recording', 'paused');
+  recBtn.querySelector('.record-label').textContent = t('record.label');
+
   showPostEndButtons();
 
   $('#meetingStatus').textContent = t('record.status_ended');
@@ -844,7 +848,7 @@ function showPostEndButtons() {
   btnNew.id = 'btnNewMeeting';
   btnNew.textContent = t('meeting.new');
 
-  endBtn.style.display = 'none';
+  endBtn.hidden = true;
   endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
   endBtn.parentNode.insertBefore(btnNew, btnResume.nextSibling);
 
@@ -864,7 +868,7 @@ async function resumeMeeting() {
 
 function restoreEndButton() {
   const endBtn = $('#btnEndMeeting');
-  endBtn.style.display = '';
+  endBtn.hidden = false;
   const resume = $('#btnResumeMeeting');
   const newBtn = $('#btnNewMeeting');
   if (resume) resume.remove();
@@ -874,6 +878,11 @@ function restoreEndButton() {
 function resetMeeting() {
   state.meetingEnded = false;
   state.meetingStartTime = null;
+  // Reset record button and hide end meeting button
+  const recBtn = $('#btnRecord');
+  recBtn.classList.remove('recording', 'paused');
+  recBtn.querySelector('.record-label').textContent = t('record.label');
+  $('#btnEndMeeting').hidden = true;
   state.meetingId = null;
   state.meetingLocation = '';
   state.meetingTitle = '';
@@ -1099,11 +1108,9 @@ function init() {
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
 
-  // ===== Onboarding / Welcome Modal =====
+  // ===== Welcome Modal =====
   const saved = loadSettings();
-  if (!saved.profileComplete) {
-    showOnboarding().then(() => showWelcomeModal());
-  } else {
+  if (!saved.welcomeDismissed) {
     showWelcomeModal();
   }
 
@@ -1380,7 +1387,8 @@ function init() {
 
   // Meeting prep events
   on('meetingPrep:start', () => {
-    closeWelcomeModal();
+    const modal = $('#welcomeModal');
+    if (modal) modal.hidden = true;
     startMeetingPrep();
   });
 
@@ -1425,48 +1433,22 @@ function showWelcomeModal() {
   if (!modal) return;
   modal.hidden = false;
 
-  $('#welcomeQuickStart').addEventListener('click', async () => {
-    closeWelcomeModal();
-    await startRecording();
-  });
+  const close = () => {
+    modal.hidden = true;
+    state.settings.welcomeDismissed = true;
+    saveSettings(state.settings);
+  };
 
-  $('#welcomeMeetingPrep').addEventListener('click', () => {
-    emit('meetingPrep:start');
-  });
+  $('#welcomeClose').addEventListener('click', close);
 
-  $('#welcomeSearch').addEventListener('click', () => {
-    closeWelcomeModal();
-    refreshHistoryGrid();
-    $('#historyModal').hidden = false;
-  });
-
-  $('#welcomeClose').addEventListener('click', () => {
-    closeWelcomeModal();
-  });
-
-  // Keyboard shortcuts: 1/2/3 to select, ESC to close
   const keyHandler = (e) => {
     if (modal.hidden) return;
-    if (e.key === 'Escape') {
-      closeWelcomeModal();
-      document.removeEventListener('keydown', keyHandler);
-    } else if (e.key === '1') {
-      $('#welcomeQuickStart').click();
-      document.removeEventListener('keydown', keyHandler);
-    } else if (e.key === '2') {
-      $('#welcomeMeetingPrep').click();
-      document.removeEventListener('keydown', keyHandler);
-    } else if (e.key === '3') {
-      $('#welcomeSearch').click();
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      close();
       document.removeEventListener('keydown', keyHandler);
     }
   };
   document.addEventListener('keydown', keyHandler);
-}
-
-function closeWelcomeModal() {
-  const modal = $('#welcomeModal');
-  if (modal) modal.hidden = true;
 }
 
 // ===== Demo Data =====
