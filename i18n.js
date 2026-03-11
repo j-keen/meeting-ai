@@ -128,7 +128,7 @@ const translations = {
     'settings.ui_lang_en': 'English',
     'settings.ui_lang_ko': 'Korean',
     'settings.ai_language': 'AI Analysis Language',
-    'settings.ai_lang_auto': 'Same as UI',
+    'settings.ai_lang_auto': 'Auto (Browser)',
     'settings.ai_lang_en': 'English',
     'settings.ai_lang_ko': 'Korean',
 
@@ -544,7 +544,7 @@ const translations = {
     'settings.ui_lang_en': 'English',
     'settings.ui_lang_ko': '한국어',
     'settings.ai_language': 'AI 분석 언어',
-    'settings.ai_lang_auto': 'UI 언어와 동일',
+    'settings.ai_lang_auto': '자동 (브라우저)',
     'settings.ai_lang_en': 'English',
     'settings.ai_lang_ko': '한국어',
 
