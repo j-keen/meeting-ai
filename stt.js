@@ -26,9 +26,11 @@ function createWebSpeechEngine(language) {
 
       recognition.onresult = (e) => {
         noSpeechCount = 0;
+        console.log('[STT] onresult fired, results:', e.results.length, 'from index:', e.resultIndex);
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
           const text = result[0].transcript;
+          console.log(`[STT] Result[${i}] isFinal=${result.isFinal} confidence=${result[0].confidence} text="${text}"`);
           if (result.isFinal) {
             onFinal(text);
           } else {
@@ -38,6 +40,7 @@ function createWebSpeechEngine(language) {
       };
 
       recognition.onerror = (e) => {
+        console.warn('[STT] onerror:', e.error, e.message);
         if (e.error === 'no-speech') {
           noSpeechCount++;
           if (noSpeechCount >= 3) {
