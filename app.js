@@ -1742,7 +1742,7 @@ function openCompareModal() {
       }
     };
     updateText();
-    sel.addEventListener('change', updateText);
+    sel.onchange = updateText;
   });
 
   // Clear previous results
