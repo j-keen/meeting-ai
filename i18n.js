@@ -20,6 +20,7 @@ const translations = {
     'transcript.empty_hint': 'Press the record button or Ctrl+R to begin.',
     'transcript.bookmark_tooltip': 'Bookmark (Ctrl+B)',
     'transcript.edit_tooltip': 'Edit',
+    'transcript.delete_tooltip': 'Delete',
 
     // AI panel
     'panel.ai': 'AI Analysis',
@@ -378,6 +379,7 @@ const translations = {
     'transcript.empty_hint': '녹음 버튼 또는 Ctrl+R을 눌러 시작하세요.',
     'transcript.bookmark_tooltip': '북마크 (Ctrl+B)',
     'transcript.edit_tooltip': '편집',
+    'transcript.delete_tooltip': '삭제',
 
     // AI panel
     'panel.ai': 'AI 분석',

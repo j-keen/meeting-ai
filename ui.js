@@ -147,14 +147,14 @@ export function addTranscriptLine(line, corrections) {
 
   if (line.bookmarked) el.classList.add('bookmarked');
   el.querySelector('[data-action="bookmark"]').title = t('transcript.bookmark_tooltip');
-  el.querySelector('[data-action="edit"]').title = t('transcript.edit_tooltip');
+  el.querySelector('[data-action="delete"]').title = t('transcript.delete_tooltip');
   el.querySelector('[data-action="bookmark"]').addEventListener('click', (e) => {
     e.stopPropagation();
     emit('transcript:bookmark', { id: line.id });
   });
-  el.querySelector('[data-action="edit"]').addEventListener('click', (e) => {
+  el.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
     e.stopPropagation();
-    editTranscriptLine(line.id);
+    emit('transcript:delete', { id: line.id });
   });
 
   textEl.addEventListener('dblclick', (e) => {
