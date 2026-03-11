@@ -1665,7 +1665,7 @@ h1, h2, h3 { font-weight: 600; }
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.toast-out { animation: toast-out 0.3s ease forwards; }
+.toast.toast-out { animation: toast-out 0.3s ease forwards; }
 @keyframes toast-out {
   to { opacity: 0; transform: translateY(10px); }
 }

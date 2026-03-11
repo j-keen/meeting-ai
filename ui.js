@@ -21,8 +21,9 @@ export function showToast(message, type = 'success') {
 }
 
 function removeToast(el) {
+  if (el.classList.contains('toast-out')) return;
   el.classList.add('toast-out');
-  el.addEventListener('animationend', () => el.remove());
+  setTimeout(() => el.remove(), 300);
 }
 
 // ===== Drag Resizer =====
@@ -732,18 +733,34 @@ export function renderMeetingViewer(meeting) {
   });
 
   const transcript = meeting.transcript || [];
+  const memos = meeting.memos || [];
   const analyses = meeting.analysisHistory || [];
 
-  // Render transcript with data-index
+  // Merge transcript lines and memos, sorted by timestamp
+  const merged = [
+    ...transcript.map((line, idx) => ({ ...line, _type: 'transcript', _index: idx })),
+    ...memos.map(m => ({ ...m, _type: 'memo' }))
+  ].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+  // Render transcript + memos with data-index
   transcriptContainer.innerHTML = '';
-  transcript.forEach((line, idx) => {
+  merged.forEach(item => {
     const div = document.createElement('div');
-    div.className = 'transcript-line' + (line.bookmarked ? ' bookmarked' : '');
-    div.dataset.index = idx;
-    div.innerHTML = `
-      <span class="transcript-time" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:48px;">${formatTimeFromMs(line.timestamp - (meeting.startTime || 0))}</span>
-      <span class="transcript-text">${line.text}</span>
-    `;
+    if (item._type === 'memo') {
+      div.className = 'transcript-line memo-line';
+      div.innerHTML = `
+        <span class="transcript-time" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:48px;">${formatTimeFromMs(item.timestamp - (meeting.startTime || 0))}</span>
+        <span class="memo-badge">MEMO</span>
+        <span class="transcript-text memo-text">${item.text}</span>
+      `;
+    } else {
+      div.className = 'transcript-line' + (item.bookmarked ? ' bookmarked' : '');
+      div.dataset.index = item._index;
+      div.innerHTML = `
+        <span class="transcript-time" style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:48px;">${formatTimeFromMs(item.timestamp - (meeting.startTime || 0))}</span>
+        <span class="transcript-text">${item.text}</span>
+      `;
+    }
     transcriptContainer.appendChild(div);
   });
 
