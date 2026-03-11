@@ -105,6 +105,7 @@ function getElapsedTimeStr() {
 
 async function startRecording() {
   if (state.isRecording) return;
+  state.isRecording = true;
 
   // Load typo dictionary
   refreshTypoDict();
@@ -136,7 +137,6 @@ async function startRecording() {
       },
     });
 
-    state.isRecording = true;
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
       state.meetingId = generateId();
@@ -165,6 +165,9 @@ async function startRecording() {
     showToast(t('toast.recording_started'), 'success');
 
   } catch (err) {
+    state.isRecording = false;
+    stt?.stop();
+    stt = null;
     showToast(t('toast.record_fail') + err.message, 'error');
   }
 }
