@@ -194,7 +194,7 @@
     <div class="settings-body">
       <!-- Settings Tabs -->
       <div class="settings-tabs" id="settingsTabs">
-        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
+        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_language">Language</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
         <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Integration</button>
@@ -225,22 +225,6 @@
           </div>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.api_keys">API & Model</h3>
-          <label class="settings-label">
-            <span data-i18n="settings.gemini_key">Gemini API Key</span>
-            <input type="password" class="settings-input" id="inputGeminiKey" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
-            <span class="proxy-hint" id="proxyAvailableHint" style="display:none; color:var(--success, #22c55e); font-size:12px; margin-top:4px;" data-i18n="privacy.proxy_hint">&#128274; Cloud AI active — API key not required. Your data is never used for AI training.</span>
-          </label>
-          <label class="settings-label">
-            <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
-            <select class="settings-select" id="selectGeminiModel">
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-            </select>
-          </label>
-        </section>
-        <section class="settings-section">
           <h3 data-i18n="settings.stt">STT Settings</h3>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
@@ -258,6 +242,14 @@
       <div class="settings-tab-content" data-tab="analysis">
         <section class="settings-section">
           <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
+            <select class="settings-select" id="selectGeminiModel">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+            </select>
+          </label>
           <div class="settings-inline-row">
             <span data-i18n="settings.auto_analysis">Auto Analysis</span>
             <div class="toggle-wrap">
@@ -282,17 +274,6 @@
               </div>
               <div class="strategy-card-minutes">
                 <input type="number" class="settings-number-sm" data-strategy="smart" min="1" max="30" value="5" step="1">
-                <span>min</span>
-              </div>
-            </label>
-            <label class="strategy-card">
-              <input type="radio" name="tokenStrategy" value="recent">
-              <div class="strategy-card-content">
-                <strong data-i18n="settings.strategy_recent">Recent N minutes</strong>
-                <p data-i18n="strategy.recent_desc">Only the most recent N minutes of transcript.</p>
-              </div>
-              <div class="strategy-card-minutes">
-                <input type="number" class="settings-number-sm" data-strategy="recent" min="1" max="30" value="5" step="1">
                 <span>min</span>
               </div>
             </label>

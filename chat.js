@@ -155,7 +155,7 @@ function getChatModel() {
 }
 
 async function sendChatMessage(userText) {
-  if (!state.settings.geminiKey && !isProxyAvailable()) {
+  if (!isProxyAvailable()) {
     renderSystemMessage(t('toast.no_api_key'));
     return;
   }
@@ -171,7 +171,7 @@ async function sendChatMessage(userText) {
       generationConfig: { temperature: 0.5 }
     };
 
-    const data = await callGemini(model, body, state.settings.geminiKey);
+    const data = await callGemini(model, body);
     const candidate = data.candidates?.[0];
     if (!candidate) throw new Error('No response from AI');
 

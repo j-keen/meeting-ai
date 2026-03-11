@@ -2,7 +2,7 @@
 
 import { state, emit } from './app.js';
 import {
-  saveSettings, loadSettings, saveApiKey, getApiKey,
+  saveSettings, loadSettings,
   listMeetings, getMeeting,
   loadTypoDict, resetTypoDict,
   loadContacts, addContact, deleteContact,
@@ -120,12 +120,6 @@ export function initSettings() {
   $('#selectAiLanguage').addEventListener('change', (e) => {
     state.settings.aiLanguage = e.target.value;
     setAiLanguage(e.target.value);
-    markDirty();
-  });
-
-  // API keys
-  $('#inputGeminiKey').addEventListener('change', (e) => {
-    state.settings.geminiKey = e.target.value;
     markDirty();
   });
 
@@ -381,7 +375,6 @@ function saveAllSettings() {
     customPresets: s.customPresets,
     chatPresets: s.chatPresets,
   });
-  saveApiKey('gemini', s.geminiKey);
   snapshotSettings();
 
   // Check animation on save button
@@ -431,7 +424,6 @@ function resetAllSettings() {
   const s = state.settings;
   s.uiLanguage = 'auto';
   s.aiLanguage = 'auto';
-  s.geminiKey = '';
   s.geminiModel = 'gemini-2.5-flash';
   s.chatModel = 'gemini-2.5-flash';
   s.language = 'ko';
@@ -463,7 +455,6 @@ function applySettingsToForm() {
   const s = state.settings;
   $('#selectUiLanguage').value = s.uiLanguage;
   $('#selectAiLanguage').value = s.aiLanguage;
-  $('#inputGeminiKey').value = s.geminiKey || '';
   $('#selectGeminiModel').value = s.geminiModel;
   $('#selectLanguage').value = s.language;
   $('#checkAutoAnalysis').checked = s.autoAnalysis;
@@ -531,7 +522,6 @@ function loadSavedSettings() {
   const saved = loadSettings();
   const s = state.settings;
 
-  s.geminiKey = getApiKey('gemini');
   s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
   s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';

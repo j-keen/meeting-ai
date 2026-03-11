@@ -295,12 +295,11 @@ function showPausedState() {
 function startAiTypoCorrection() {
   clearInterval(aiTypoCorrectionTimer);
   aiTypoCorrectionTimer = setInterval(async () => {
-    if ((!state.settings.geminiKey && !isProxyAvailable()) || state.transcript.length < 5) return;
+    if (!isProxyAvailable() || state.transcript.length < 5) return;
     const recentText = state.transcript.slice(-10).map(l => l.text).join('\n');
     const currentDict = loadTypoDict();
     try {
       const newCorrections = await correctTypos({
-        apiKey: state.settings.geminiKey,
         corrections: currentDict,
         recentText,
         model: state.settings.geminiModel || 'gemini-2.5-flash',
@@ -319,7 +318,7 @@ async function runAnalysis() {
   stopAnalysisCountdown();
   showAnalyzingState();
   if (isAnalyzing) return;
-  if (!state.settings.geminiKey && !isProxyAvailable()) {
+  if (!isProxyAvailable()) {
     showToast(t('toast.no_api_key'), 'warning');
     return;
   }
@@ -346,7 +345,6 @@ async function runAnalysis() {
       : null;
 
     const result = await analyzeTranscript({
-      apiKey: state.settings.geminiKey,
       transcript: state.transcript,
       prompt: state.settings.customPrompt,
       meetingContext: state.settings.meetingContext,
@@ -367,7 +365,6 @@ async function runAnalysis() {
     // Auto-generate tags
     if (result.summary && state.tags.length === 0) {
       generateTags({
-        apiKey: state.settings.geminiKey,
         summary: result.summary,
         transcript: state.transcript,
         model: state.settings.geminiModel || 'gemini-2.5-flash',
@@ -451,13 +448,12 @@ function showEndMeetingModal() {
   // AI title/tag generation
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
-  if ((state.settings.geminiKey || isProxyAvailable()) && state.transcript.length > 0) {
+  if (isProxyAvailable() && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
     suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.generating');
     chipsEl.innerHTML = '';
 
     generateMeetingTitle({
-      apiKey: state.settings.geminiKey,
       transcript: state.transcript,
       existingTitle: state.meetingTitle,
     }).then(result => {
@@ -840,8 +836,6 @@ function refreshHistoryGridDebounced() {
 }
 
 function updateProxyHint(available) {
-  const hint = $('#proxyAvailableHint');
-  if (hint) hint.style.display = available ? '' : 'none';
   const badge = $('#privacyBadge');
   const divider = $('#privacyDivider');
   if (badge) badge.style.display = available ? '' : 'none';
@@ -1425,7 +1419,6 @@ function loadDemoData2() {
     { offset: 2595, text: '수고하셨습니다! 이번 주도 파이팅!' },
   ];
 
-  const baseIdx = state.transcript.length;
   extraScript.forEach((item, idx) => {
     const line = {
       id: generateId() + 'e' + idx,

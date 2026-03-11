@@ -26,10 +26,6 @@ function buildTranscriptText(transcript, strategy, recentMinutes, previousSummar
   const cutoff = Date.now() - recentMinutes * 60 * 1000;
   const recent = transcript.filter(l => l.timestamp >= cutoff);
 
-  if (strategy === 'recent') {
-    return recent.map(formatLine).join('\n');
-  }
-
   // 'smart': previous summary + recent transcript
   let text = '';
   if (previousSummary) {
@@ -59,7 +55,6 @@ function parseGeminiResponse(text) {
 }
 
 export async function analyzeTranscript({
-  apiKey,
   transcript,
   prompt,
   meetingContext,
@@ -71,7 +66,7 @@ export async function analyzeTranscript({
   userInsights = [],
   model = 'gemini-2.5-flash',
 }) {
-  if (!apiKey && !isProxyAvailable()) throw new Error('Gemini API key not set');
+  if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
 
   const contextText = meetingContext || getPresetContext(meetingPreset || 'general');
@@ -114,7 +109,7 @@ export async function analyzeTranscript({
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const data = await callGemini(model, body, apiKey);
+      const data = await callGemini(model, body);
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const parsed = parseGeminiResponse(rawText);
 
@@ -137,8 +132,8 @@ export async function analyzeTranscript({
 }
 
 // Auto-generate tags from analysis
-export async function generateTags({ apiKey, summary, transcript, model = 'gemini-2.5-flash' }) {
-  if ((!apiKey && !isProxyAvailable()) || !summary) return [];
+export async function generateTags({ summary, transcript, model = 'gemini-2.5-flash' }) {
+  if (!isProxyAvailable() || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
   const lang = getAiLanguage();
@@ -155,7 +150,7 @@ Transcript excerpt: ${transcriptSnippet}`;
     const data = await callGemini(model, {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
-    }, apiKey);
+    });
 
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
@@ -167,8 +162,8 @@ Transcript excerpt: ${transcriptSnippet}`;
 }
 
 // AI-powered meeting title generation
-export async function generateMeetingTitle({ apiKey, transcript, existingTitle }) {
-  if ((!apiKey && !isProxyAvailable()) || !transcript || transcript.length === 0) return null;
+export async function generateMeetingTitle({ transcript, existingTitle }) {
+  if (!isProxyAvailable() || !transcript || transcript.length === 0) return null;
 
   const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
   const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
@@ -196,7 +191,7 @@ Return ONLY valid JSON:
     const data = await callGemini('gemini-2.5-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
-    }, apiKey);
+    });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = parseGeminiResponse(rawText);
     return {
@@ -210,8 +205,8 @@ Return ONLY valid JSON:
 }
 
 // AI-powered typo correction
-export async function correctTypos({ apiKey, corrections, recentText, model = 'gemini-2.5-flash' }) {
-  if ((!apiKey && !isProxyAvailable()) || !recentText) return {};
+export async function correctTypos({ corrections, recentText, model = 'gemini-2.5-flash' }) {
+  if (!isProxyAvailable() || !recentText) return {};
 
   const existingDict = Object.entries(corrections || {}).map(([k, v]) => `"${k}" -> "${v}"`).join(', ');
   const lang = getAiLanguage();
@@ -228,7 +223,7 @@ Find any obvious typos, misheard words, or STT errors. Return a JSON object wher
     const data = await callGemini(model, {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-    }, apiKey);
+    });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;

@@ -64,7 +64,6 @@ const translations = {
     'settings.analysis_interval': 'Analysis Interval:',
     'settings.token_strategy': 'Token Strategy',
     'settings.strategy_smart': 'Smart (Summary + Recent)',
-    'settings.strategy_recent': 'Recent N minutes',
     'settings.strategy_full': 'Full Transcript',
     'settings.recent_minutes': 'Recent Minutes:',
     'settings.meeting_type': 'Meeting Type',
@@ -194,13 +193,13 @@ const translations = {
     'chat.suggestion_3': 'What are the key decisions?',
 
     // Settings tabs
+    'settings.tab_language': 'Language',
     'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
     'settings.tab_integration': 'Integration',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
-    'strategy.recent_desc': 'Only the most recent N minutes of transcript. Good balance of context and cost.',
     'strategy.full_desc': 'Sends entire transcript. Most accurate but uses more tokens.',
 
     // History filters
@@ -409,7 +408,6 @@ const translations = {
     'settings.analysis_interval': '분석 주기:',
     'settings.token_strategy': '토큰 전략',
     'settings.strategy_smart': '스마트 (요약 + 최근)',
-    'settings.strategy_recent': '최근 N분',
     'settings.strategy_full': '전체 회의록',
     'settings.recent_minutes': '최근 시간(분):',
     'settings.meeting_type': '회의 유형',
@@ -539,13 +537,13 @@ const translations = {
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
 
     // Settings tabs
+    'settings.tab_language': '언어',
     'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
     'settings.tab_integration': '연동',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
-    'strategy.recent_desc': '최근 N분의 회의록만 사용. 맥락과 비용의 균형.',
     'strategy.full_desc': '전체 회의록 전송. 가장 정확하지만 토큰 많이 사용.',
 
     // History filters
