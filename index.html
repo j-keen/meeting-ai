@@ -102,6 +102,12 @@
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
         </div>
       </div>
+      <div class="analysis-nav" id="analysisNav" style="display:none">
+        <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
+        <span class="analysis-nav-label" id="analysisNavLabel">#1 / 1</span>
+        <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
+        <span class="analysis-nav-hint" id="analysisNavHint"></span>
+      </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
           <p data-i18n="ai.empty">AI analysis results will appear here.</p>

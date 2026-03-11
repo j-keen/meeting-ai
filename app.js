@@ -203,6 +203,9 @@ async function startRecording() {
     stt?.stop();
     stt = null;
     state.isRecording = false;
+    setSttBadgeStatus('error', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
+    const sttSelect = document.getElementById('selectSttEngine');
+    if (sttSelect) sttSelect.disabled = false;
     showToast(t('toast.record_fail') + err.message, 'error');
   }
 }

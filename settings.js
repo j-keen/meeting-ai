@@ -139,6 +139,64 @@ export function initSettings() {
   $('#selectSttEngine').addEventListener('change', (e) => {
     state.settings.sttEngine = e.target.value;
     markDirty();
+    // Clear previous test result when engine changes
+    const result = $('#sttTestResult');
+    if (result) { result.textContent = ''; result.className = 'stt-test-result'; }
+  });
+
+  // STT Connection Test
+  $('#btnTestStt')?.addEventListener('click', async () => {
+    const btn = $('#btnTestStt');
+    const result = $('#sttTestResult');
+    const engine = state.settings.sttEngine || 'webspeech';
+
+    btn.classList.add('testing');
+    btn.textContent = '...';
+    result.textContent = '';
+    result.className = 'stt-test-result';
+
+    if (engine === 'deepgram') {
+      try {
+        const resp = await fetch('/api/stt-token');
+        if (!resp.ok) throw new Error('API key not configured');
+        const data = await resp.json();
+        if (!data.key) throw new Error('Empty key');
+
+        // Try WebSocket connection
+        const lang = state.settings.language || 'ko';
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true`;
+        const ws = new WebSocket(wsUrl, ['token', data.key]);
+        const timeout = setTimeout(() => { ws.close(); throw new Error('timeout'); }, 5000);
+
+        await new Promise((resolve, reject) => {
+          ws.onopen = () => { clearTimeout(timeout); ws.close(); resolve(); };
+          ws.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket connection failed')); };
+          ws.onclose = (e) => {
+            clearTimeout(timeout);
+            if (e.code !== 1000 && e.code !== 1005) reject(new Error(`Connection closed: ${e.code} ${e.reason}`));
+          };
+        });
+
+        result.textContent = t('stt.test_success');
+        result.className = 'stt-test-result success';
+      } catch (err) {
+        result.textContent = t('stt.test_fail') + ' ' + (err.message || '');
+        result.className = 'stt-test-result error';
+      }
+    } else {
+      // Web Speech — check browser support
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SR) {
+        result.textContent = t('stt.test_success');
+        result.className = 'stt-test-result success';
+      } else {
+        result.textContent = t('stt.test_fail_browser');
+        result.className = 'stt-test-result error';
+      }
+    }
+
+    btn.classList.remove('testing');
+    btn.textContent = t('stt.test_connection');
   });
 
   // Auto Analysis toggle
