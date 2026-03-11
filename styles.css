@@ -1015,6 +1015,7 @@ h1, h2, h3 { font-weight: 600; }
 .settings-tab-content.active { display: block; }
 
 .settings-section { margin-bottom: 24px; }
+.settings-section + .settings-section { border-top: 1px solid var(--border-color); padding-top: 20px; }
 .settings-section h3 {
   font-size: 13px;
   font-weight: 600;

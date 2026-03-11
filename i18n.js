@@ -194,9 +194,8 @@ const translations = {
 
     // Settings tabs
     'settings.tab_language': 'Language',
-    'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
-    'settings.tab_integration': 'Integration',
+    'settings.tab_integration': 'Chat & Integration',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
@@ -313,6 +312,10 @@ const translations = {
     'settings.categories': 'Categories',
     'settings.add': 'Add',
     'settings.no_items': 'No items yet.',
+    'settings.placeholder_name': 'Name',
+    'settings.placeholder_company': 'Company',
+    'settings.placeholder_location': 'Location name',
+    'settings.placeholder_category': 'Category name',
 
     // History filters
     'history.filter_all_categories': 'All Categories',
@@ -538,9 +541,8 @@ const translations = {
 
     // Settings tabs
     'settings.tab_language': '언어',
-    'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
-    'settings.tab_integration': '연동',
+    'settings.tab_integration': '채팅 & 연동',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
@@ -657,6 +659,10 @@ const translations = {
     'settings.categories': '카테고리',
     'settings.add': '추가',
     'settings.no_items': '항목이 없습니다.',
+    'settings.placeholder_name': '이름',
+    'settings.placeholder_company': '회사',
+    'settings.placeholder_location': '장소 이름',
+    'settings.placeholder_category': '카테고리 이름',
 
     // History filters
     'history.filter_all_categories': '모든 카테고리',

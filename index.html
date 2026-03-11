@@ -194,15 +194,15 @@
     <div class="settings-body">
       <!-- Settings Tabs -->
       <div class="settings-tabs" id="settingsTabs">
-        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_language">Language</button>
+        <button class="settings-tab active" data-tab="language" data-i18n="settings.tab_language">Language</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="prompt" data-i18n="settings.tab_prompt">Prompt</button>
-        <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Integration</button>
+        <button class="settings-tab" data-tab="integration" data-i18n="settings.tab_integration">Chat &amp; Integration</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
       </div>
 
-      <!-- General Tab -->
-      <div class="settings-tab-content active" data-tab="general">
+      <!-- Language Tab -->
+      <div class="settings-tab-content active" data-tab="language">
         <section class="settings-section">
           <h3 data-i18n="settings.language">Language</h3>
           <div class="settings-row-2col">
@@ -348,15 +348,6 @@
           <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
         </section>
 
-        <section class="settings-section">
-          <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
-          <div class="chat-presets-list" id="chatPresetsList"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
-            <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
-          </div>
-          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
-        </section>
       </div>
 
       <!-- Integration Tab -->
@@ -369,12 +360,13 @@
           </label>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
-          <p class="text-muted"><span id="typoDictCount">0</span> <span data-i18n="settings.corrections_saved">corrections saved</span></p>
-          <div class="typo-dict-actions">
-            <button class="btn btn-sm" id="btnViewTypoDict" data-i18n="settings.view_dict">View</button>
-            <button class="btn btn-sm btn-danger" id="btnResetTypoDict" data-i18n="settings.reset_dict">Reset</button>
+          <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
+          <div class="chat-presets-list" id="chatPresetsList"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
+            <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
           </div>
+          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
         </section>
       </div>
 
@@ -384,8 +376,8 @@
           <h3 data-i18n="settings.participants">Participants</h3>
           <div class="data-list" id="dataParticipantsList"></div>
           <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewParticipantName" placeholder="Name">
-            <input type="text" class="settings-input" id="inputNewParticipantCompany" placeholder="Company">
+            <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
+            <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
             <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
           </div>
         </section>
@@ -393,7 +385,7 @@
           <h3 data-i18n="settings.locations">Locations</h3>
           <div class="data-list" id="dataLocationsList"></div>
           <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewLocation" placeholder="Location name">
+            <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
             <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
           </div>
         </section>
@@ -401,8 +393,16 @@
           <h3 data-i18n="settings.categories">Categories</h3>
           <div class="data-list" id="dataCategoriesList"></div>
           <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewCategory" placeholder="Category name">
+            <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
             <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
+          <p class="text-muted"><span id="typoDictCount">0</span> <span data-i18n="settings.corrections_saved">corrections saved</span></p>
+          <div class="typo-dict-actions">
+            <button class="btn btn-sm" id="btnViewTypoDict" data-i18n="settings.view_dict">View</button>
+            <button class="btn btn-sm btn-danger" id="btnResetTypoDict" data-i18n="settings.reset_dict">Reset</button>
           </div>
         </section>
       </div>
