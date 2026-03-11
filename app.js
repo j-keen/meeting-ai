@@ -557,21 +557,14 @@ async function runAnalysis() {
             ].filter(Boolean).join(''))
       : null;
 
-    // Guard 4: force smart strategy for long transcripts
-    let effectiveStrategy = state.settings.tokenStrategy || 'smart';
-    if (state.transcript.length > 200 && effectiveStrategy === 'full') {
-      effectiveStrategy = 'smart';
-      showToast(t('guard.strategy_fallback'), 'info');
-    }
-
     const result = await analyzeTranscript({
       transcript: state.transcript,
       prompt: state.settings.customPrompt,
       meetingContext: state.settings.meetingContext,
       meetingPreset: state.settings.meetingPreset,
       elapsedTime: getElapsedTimeStr(),
-      strategy: effectiveStrategy,
-      recentMinutes: state.settings.recentMinutes || 5,
+      strategy: 'full',
+      recentMinutes: 5,
       previousSummary,
       userInsights: state.userInsights,
       memos: state.memos,
@@ -1132,8 +1125,31 @@ function init() {
   // Compare STT engines
   $('#btnCompareEngines')?.addEventListener('click', () => startComparisonMode());
 
-  // Analyze now
-  $('#btnAnalyzeNow').addEventListener('click', () => runAnalysis());
+  // Analyze now (with 10s cooldown)
+  let lastManualAnalysisTime = 0;
+  const btnAnalyzeNow = $('#btnAnalyzeNow');
+  btnAnalyzeNow.addEventListener('click', () => {
+    const now = Date.now();
+    if (now - lastManualAnalysisTime < 10000) {
+      showToast(t('toast.analyze_cooldown'), 'warning');
+      return;
+    }
+    lastManualAnalysisTime = now;
+    btnAnalyzeNow.disabled = true;
+    let remaining = 10;
+    const origText = btnAnalyzeNow.textContent;
+    const cooldownTimer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(cooldownTimer);
+        btnAnalyzeNow.disabled = false;
+        btnAnalyzeNow.textContent = origText;
+      } else {
+        btnAnalyzeNow.textContent = `${remaining}s`;
+      }
+    }, 1000);
+    runAnalysis();
+  });
 
   // Copy analysis as markdown
   $('#btnCopyAnalysis').addEventListener('click', () => {
@@ -1181,8 +1197,8 @@ function init() {
       mod.openSettings();
       document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-      const promptTab = document.querySelector('.settings-tab[data-tab="prompt"]');
-      const promptContent = document.querySelector('.settings-tab-content[data-tab="prompt"]');
+      const promptTab = document.querySelector('.settings-tab[data-tab="analysis"]');
+      const promptContent = document.querySelector('.settings-tab-content[data-tab="analysis"]');
       if (promptTab) promptTab.classList.add('active');
       if (promptContent) promptContent.classList.add('active');
     });

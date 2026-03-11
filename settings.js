@@ -223,31 +223,14 @@ export function initSettings() {
     markDirty();
   });
 
-  // Analysis Interval (number input)
-  $('#inputAnalysisInterval').addEventListener('change', (e) => {
-    const val = parseInt(e.target.value) || 30;
-    state.settings.analysisInterval = val;
-    markDirty();
-  });
-
-  // Token strategy (radio cards)
-  document.querySelectorAll('input[name="tokenStrategy"]').forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      state.settings.tokenStrategy = e.target.value;
+  // Analysis Interval (toggle buttons)
+  document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.interval-toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.settings.analysisInterval = parseInt(btn.dataset.interval);
       markDirty();
-    });
-  });
-
-  // Recent minutes - inline number inputs in strategy cards
-  document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(input => {
-    input.addEventListener('change', (e) => {
-      const val = parseInt(e.target.value) || 5;
-      state.settings.recentMinutes = val;
-      markDirty();
-      // Sync both inputs
-      document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(inp => {
-        inp.value = val;
-      });
+      highlightField(btn);
     });
   });
 
@@ -478,8 +461,8 @@ export function initSettings() {
     // Switch to Prompt tab
     document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-    const promptTab = document.querySelector('.settings-tab[data-tab="prompt"]');
-    const promptContent = document.querySelector('.settings-tab-content[data-tab="prompt"]');
+    const promptTab = document.querySelector('.settings-tab[data-tab="analysis"]');
+    const promptContent = document.querySelector('.settings-tab-content[data-tab="analysis"]');
     if (promptTab) promptTab.classList.add('active');
     if (promptContent) promptContent.classList.add('active');
   });
@@ -514,8 +497,6 @@ function saveAllSettings() {
     sttEngine: s.sttEngine,
     autoAnalysis: s.autoAnalysis,
     analysisInterval: s.analysisInterval,
-    tokenStrategy: s.tokenStrategy,
-    recentMinutes: s.recentMinutes,
     meetingPreset: s.meetingPreset,
     meetingContext: s.meetingContext,
     customPrompt: s.customPrompt,
@@ -584,8 +565,6 @@ function resetAllSettings() {
   s.autoAnalysis = true;
   s.analysisInterval = 30;
   s.autoCorrection = true;
-  s.tokenStrategy = 'smart';
-  s.recentMinutes = 5;
   s.meetingPreset = 'general';
   s.meetingContext = '';
   s.customPrompt = getDefaultPrompt();
@@ -616,16 +595,14 @@ function applySettingsToForm() {
   $('#selectLanguage').value = s.language;
   $('#selectSttEngine').value = s.sttEngine || 'webspeech';
   $('#checkAutoAnalysis').checked = s.autoAnalysis;
-  $('#inputAnalysisInterval').value = s.analysisInterval;
+  // Set interval toggle button active state
+  const intervals = [30, 60, 120];
+  const closest = intervals.reduce((prev, curr) => Math.abs(curr - s.analysisInterval) < Math.abs(prev - s.analysisInterval) ? curr : prev);
+  document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.interval) === closest);
+  });
   const checkAutoCorrection = $('#checkAutoCorrection');
   if (checkAutoCorrection) checkAutoCorrection.checked = s.autoCorrection !== false;
-
-  const strategyRadio = document.querySelector(`input[name="tokenStrategy"][value="${s.tokenStrategy}"]`);
-  if (strategyRadio) strategyRadio.checked = true;
-
-  document.querySelectorAll('.settings-number-sm[data-strategy]').forEach(inp => {
-    inp.value = s.recentMinutes;
-  });
 
   const select = $('#selectMeetingPreset');
   Object.keys(s.customPresets || {}).forEach(name => addPresetOption(name));
@@ -689,8 +666,6 @@ function loadSavedSettings() {
   s.autoAnalysis = saved.autoAnalysis !== false;
   s.analysisInterval = saved.analysisInterval || 30;
   s.autoCorrection = saved.autoCorrection !== false;
-  s.tokenStrategy = saved.tokenStrategy || 'smart';
-  s.recentMinutes = saved.recentMinutes || 5;
   s.meetingPreset = saved.meetingPreset || 'general';
   s.meetingContext = saved.meetingContext || '';
   s.customPrompt = saved.customPrompt || getDefaultPrompt();

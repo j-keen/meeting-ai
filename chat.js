@@ -173,6 +173,14 @@ async function sendChatMessage(userText) {
   const systemPrompt = buildChatSystemPrompt();
   const contents = buildContents(systemPrompt, userText);
 
+  // Show typing indicator
+  const container = $('#chatMessages');
+  const typingEl = document.createElement('div');
+  typingEl.className = 'chat-message model typing-indicator';
+  typingEl.innerHTML = '<div class="chat-message-content"><span class="typing-dots"><span></span><span></span><span></span></span></div>';
+  container.appendChild(typingEl);
+  container.scrollTop = container.scrollHeight;
+
   try {
     const body = {
       contents,
@@ -181,6 +189,7 @@ async function sendChatMessage(userText) {
     };
 
     const data = await callGemini(model, body);
+    typingEl.remove();
     const candidate = data.candidates?.[0];
     if (!candidate) throw new Error('No response from AI');
 
@@ -195,6 +204,7 @@ async function sendChatMessage(userText) {
       }
     }
   } catch (err) {
+    typingEl.remove();
     renderChatMessage('system', t('chat.error') + ': ' + err.message);
   }
 }
