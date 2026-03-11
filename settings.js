@@ -135,6 +135,12 @@ export function initSettings() {
     markDirty();
   });
 
+  // STT Engine
+  $('#selectSttEngine').addEventListener('change', (e) => {
+    state.settings.sttEngine = e.target.value;
+    markDirty();
+  });
+
   // Auto Analysis toggle
   $('#checkAutoAnalysis').addEventListener('change', (e) => {
     state.settings.autoAnalysis = e.target.checked;
@@ -363,6 +369,7 @@ function saveAllSettings() {
     geminiModel: s.geminiModel,
     chatModel: s.chatModel,
     language: s.language,
+    sttEngine: s.sttEngine,
     autoAnalysis: s.autoAnalysis,
     analysisInterval: s.analysisInterval,
     tokenStrategy: s.tokenStrategy,
@@ -427,6 +434,7 @@ function resetAllSettings() {
   s.geminiModel = 'gemini-2.5-flash';
   s.chatModel = 'gemini-2.5-flash';
   s.language = 'ko';
+  s.sttEngine = 'webspeech';
   s.autoAnalysis = true;
   s.analysisInterval = 30;
   s.tokenStrategy = 'smart';
@@ -457,6 +465,7 @@ function applySettingsToForm() {
   $('#selectAiLanguage').value = s.aiLanguage;
   $('#selectGeminiModel').value = s.geminiModel;
   $('#selectLanguage').value = s.language;
+  $('#selectSttEngine').value = s.sttEngine || 'webspeech';
   $('#checkAutoAnalysis').checked = s.autoAnalysis;
   $('#inputAnalysisInterval').value = s.analysisInterval;
 
@@ -525,6 +534,7 @@ function loadSavedSettings() {
   s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
   s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';
+  s.sttEngine = saved.sttEngine || 'webspeech';
   s.autoAnalysis = saved.autoAnalysis !== false;
   s.analysisInterval = saved.analysisInterval || 30;
   s.tokenStrategy = saved.tokenStrategy || 'smart';

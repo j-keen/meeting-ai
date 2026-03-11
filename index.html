@@ -227,6 +227,13 @@
         <section class="settings-section">
           <h3 data-i18n="settings.stt">STT Settings</h3>
           <label class="settings-label">
+            <span data-i18n="stt.engine">STT Engine</span>
+            <select class="settings-select" id="selectSttEngine">
+              <option value="webspeech" data-i18n="stt.engine_webspeech">Web Speech (Free)</option>
+              <option value="deepgram" data-i18n="stt.engine_deepgram">Deepgram Nova-2 (Paid, High Accuracy)</option>
+            </select>
+          </label>
+          <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
             <select class="settings-select" id="selectLanguage">
               <option value="ko" data-i18n="settings.lang_ko">Korean</option>

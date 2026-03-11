@@ -114,6 +114,7 @@ async function startRecording() {
   try {
     await stt.start({
       language: state.settings.language || 'ko',
+      engineType: state.settings.sttEngine || 'webspeech',
       onInterim: (text) => {
         showInterim(text);
       },
@@ -135,6 +136,12 @@ async function startRecording() {
         showToast(err, 'error');
       },
     });
+
+    // Update STT engine label
+    const engineLabel = document.getElementById('sttEngineLabel');
+    if (engineLabel) {
+      engineLabel.textContent = (state.settings.sttEngine === 'deepgram') ? 'Deepgram' : 'Web Speech';
+    }
 
     // Set recording state only AFTER stt.start() succeeds
     state.isRecording = true;
@@ -333,7 +340,13 @@ async function runAnalysis() {
   }
 
   isAnalyzing = true;
-  showAnalysisSkeletons();
+  if (state.currentAnalysis) {
+    // Keep previous result visible, just dim it
+    const container = document.querySelector('#aiSections');
+    if (container) container.classList.add('ai-updating');
+  } else {
+    showAnalysisSkeletons();
+  }
 
   try {
     const lastAnalysis = state.analysisHistory.length > 0
@@ -381,10 +394,14 @@ async function runAnalysis() {
     emit('analysis:complete', result);
   } catch (err) {
     showToast(t('toast.analysis_fail') + err.message, 'error');
-    renderAnalysis(state.currentAnalysis || {
-      summary: '', context: '', openQuestions: [],
-      actionItems: [], suggestions: [],
-    });
+    const container = document.querySelector('#aiSections');
+    if (container) container.classList.remove('ai-updating');
+    if (!state.currentAnalysis) {
+      renderAnalysis({
+        summary: '', context: '', openQuestions: [],
+        actionItems: [], suggestions: [],
+      });
+    }
   } finally {
     isAnalyzing = false;
     hideAnalyzingState();

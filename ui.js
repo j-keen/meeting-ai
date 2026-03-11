@@ -372,6 +372,7 @@ export function renderAnalysis(analysis) {
   const container = $('#aiSections');
   const empty = $('#aiEmpty');
   if (empty) empty.style.display = 'none';
+  container.classList.remove('ai-updating');
   container.innerHTML = '';
 
   getSectionConfig().forEach(({ key, icon, title }) => {
