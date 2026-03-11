@@ -15,6 +15,7 @@ const translations = {
     // Transcript panel
     'panel.transcript': 'Transcript',
     'panel.highlights': 'Highlights',
+    'panel.correct': 'Correct',
     'panel.export': 'Export',
     'transcript.empty': 'Start recording to see the transcript here.',
     'transcript.empty_hint': 'Press the record button or Ctrl+R to begin.',
@@ -78,6 +79,7 @@ const translations = {
     'settings.lang_zh': 'Chinese',
     'settings.ai_analysis': 'AI Analysis',
     'settings.auto_analysis': 'Auto Analysis',
+    'settings.auto_correction': 'AI Correction',
     'settings.analysis_interval': 'Analysis Interval:',
     'settings.token_strategy': 'Token Strategy',
     'settings.strategy_smart': 'Smart (Summary + Recent)',
@@ -174,6 +176,8 @@ const translations = {
     'toast.slack_sent': 'Sent to Slack!',
     'toast.slack_fail': 'Failed to send to Slack: ',
     'toast.slack_no_url': 'Slack webhook URL not set.',
+    'toast.correcting': 'AI correcting transcript...',
+    'toast.correction_done': 'Correction complete.',
     'toast.meeting_resumed': 'Meeting resumed.',
     'confirm.delete_meeting': 'Delete this meeting?',
 
@@ -386,6 +390,7 @@ const translations = {
     // Transcript panel
     'panel.transcript': '회의록',
     'panel.highlights': '하이라이트',
+    'panel.correct': '교정',
     'panel.export': '내보내기',
     'transcript.empty': '녹음을 시작하면 여기에 회의록이 표시됩니다.',
     'transcript.empty_hint': '녹음 버튼 또는 Ctrl+R을 눌러 시작하세요.',
@@ -449,6 +454,7 @@ const translations = {
     'settings.lang_zh': '중국어',
     'settings.ai_analysis': 'AI 분석',
     'settings.auto_analysis': '자동 분석',
+    'settings.auto_correction': 'AI 교정',
     'settings.analysis_interval': '분석 주기:',
     'settings.token_strategy': '토큰 전략',
     'settings.strategy_smart': '스마트 (요약 + 최근)',
@@ -545,6 +551,8 @@ const translations = {
     'toast.slack_sent': 'Slack으로 전송 완료!',
     'toast.slack_fail': 'Slack 전송 실패: ',
     'toast.slack_no_url': 'Slack webhook URL이 설정되지 않았습니다.',
+    'toast.correcting': 'AI가 회의록을 교정 중...',
+    'toast.correction_done': '교정이 완료되었습니다.',
     'toast.meeting_resumed': '회의가 재개되었습니다.',
     'confirm.delete_meeting': '이 회의를 삭제하시겠습니까?',
 

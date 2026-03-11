@@ -221,20 +221,25 @@ Return ONLY valid JSON:
   }
 }
 
-// AI-powered typo correction
-export async function correctTypos({ corrections, recentText, model = 'gemini-2.5-flash' }) {
-  if (!isProxyAvailable() || !recentText) return {};
+// AI-powered sentence correction
+export async function correctSentences({ lines, model = 'gemini-2.5-flash' }) {
+  if (!isProxyAvailable() || !lines || lines.length === 0) return [];
 
-  const existingDict = Object.entries(corrections || {}).map(([k, v]) => `"${k}" -> "${v}"`).join(', ');
   const lang = getAiLanguage();
   const langLabel = lang === 'ko' ? 'Korean' : 'English';
-  const prompt = `You are a meeting transcript typo corrector for ${langLabel} text.
-Existing corrections: ${existingDict || 'none'}
+  const numbered = lines.map((l, i) => `${i}: ${l.text}`).join('\n');
 
-Recent transcript text:
-${recentText}
+  const prompt = `You are a meeting transcript corrector for ${langLabel} STT output.
 
-Find any obvious typos, misheard words, or STT errors. Return a JSON object where keys are the wrong words and values are the corrected words. Only include clear mistakes. Return empty object {} if no corrections needed.`;
+Correct ONLY:
+- STT misrecognition errors (wrong words from similar pronunciation)
+- Obvious typos and grammatical errors
+- Do NOT change meaning, style, or rephrase sentences
+
+Numbered sentences:
+${numbered}
+
+Return a JSON array of objects with "index" (number) and "corrected" (string) for lines that need correction ONLY. Return empty array [] if no corrections needed.`;
 
   try {
     const data = await callGemini(model, {
@@ -243,9 +248,9 @@ Find any obvious typos, misheard words, or STT errors. Return a JSON object wher
     });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
-    if (typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
-    return {};
+    if (Array.isArray(parsed)) return parsed.filter(c => typeof c.index === 'number' && typeof c.corrected === 'string');
+    return [];
   } catch {
-    return {};
+    return [];
   }
 }

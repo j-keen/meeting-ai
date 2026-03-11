@@ -43,6 +43,7 @@
       <div class="panel-header">
         <h2 data-i18n="panel.transcript">Transcript</h2>
         <div class="panel-actions">
+          <button class="btn btn-sm" id="btnCorrectNow" title="AI Correction">&#9998; <span data-i18n="panel.correct">Correct</span></button>
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
           <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Export</span></button>
         </div>
@@ -282,6 +283,17 @@
               <span class="number-unit">sec</span>
             </div>
           </div>
+          <div class="settings-inline-row">
+            <span data-i18n="settings.auto_correction">AI Correction</span>
+            <div class="toggle-wrap">
+              <input type="checkbox" id="checkAutoCorrection" checked>
+              <span class="toggle-slider"></span>
+            </div>
+            <div class="number-input-wrap">
+              <input type="number" class="settings-number" id="inputCorrectionInterval" min="30" max="300" value="60" step="10">
+              <span class="number-unit">sec</span>
+            </div>
+          </div>
         </section>
 
         <section class="settings-section">
@@ -429,14 +441,6 @@
           <div class="data-add-row">
             <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
             <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
-          </div>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
-          <p class="text-muted"><span id="typoDictCount">0</span> <span data-i18n="settings.corrections_saved">corrections saved</span></p>
-          <div class="typo-dict-actions">
-            <button class="btn btn-sm" id="btnViewTypoDict" data-i18n="settings.view_dict">View</button>
-            <button class="btn btn-sm btn-danger" id="btnResetTypoDict" data-i18n="settings.reset_dict">Reset</button>
           </div>
         </section>
       </div>
@@ -654,19 +658,6 @@
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Typo Dictionary Modal -->
-  <div class="modal-overlay" id="typoDictModal" hidden>
-    <div class="modal">
-      <div class="modal-header">
-        <h3 data-i18n="settings.typo_dict">Typo Dictionary</h3>
-        <button class="btn btn-icon modal-close" data-close="typoDictModal">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="typoDictList"></div>
       </div>
     </div>
   </div>

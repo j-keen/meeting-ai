@@ -2,7 +2,6 @@
 
 import { state, emit, on } from './app.js';
 import { t, getDateLocale } from './i18n.js';
-import { loadTypoDict } from './storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -80,48 +79,6 @@ export function initPanelTabs() {
   });
 }
 
-// ===== Typo Dictionary =====
-let typoDict = {};
-
-export function refreshTypoDict() {
-  const raw = loadTypoDict();
-  const clean = {};
-  for (const [before, after] of Object.entries(raw)) {
-    if (before !== after && before.length > 1) clean[before] = after;
-  }
-  typoDict = clean;
-}
-
-export function applyTypoCorrections(text) {
-  if (!typoDict || Object.keys(typoDict).length === 0) return { text, corrections: [] };
-  const tokens = text.split(' ');
-  const corrections = [];
-  for (let i = 0; i < tokens.length; i++) {
-    if (typoDict[tokens[i]] && typoDict[tokens[i]] !== tokens[i]) {
-      corrections.push({ index: i, before: tokens[i], after: typoDict[tokens[i]] });
-      tokens[i] = typoDict[tokens[i]];
-    }
-  }
-  return { text: tokens.join(' '), corrections };
-}
-
-// Render text with typo highlights (returns HTML string)
-function renderTextWithTypoHighlights(text, corrections) {
-  if (!corrections || corrections.length === 0) return escapeHtml(text);
-  const correctionMap = new Map(corrections.map(c => [c.index, c]));
-  return text.split(' ').map((token, i) => {
-    const escaped = escapeHtml(token);
-    const c = correctionMap.get(i);
-    return c ? `<span class="typo-corrected" data-original="${escapeHtml(c.before)}">${escaped}</span>` : escaped;
-  }).join(' ');
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 // ===== Transcript Rendering =====
 function formatTime(timestamp) {
   if (!state.meetingStartTime) return '00:00';
@@ -131,7 +88,7 @@ function formatTime(timestamp) {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-export function addTranscriptLine(line, corrections) {
+export function addTranscriptLine(line) {
   const list = $('#transcriptList');
   const empty = $('#transcriptEmpty');
   if (empty) empty.style.display = 'none';
@@ -143,11 +100,7 @@ export function addTranscriptLine(line, corrections) {
   el.querySelector('.transcript-time').textContent = formatTime(line.timestamp);
 
   const textEl = el.querySelector('.transcript-text');
-  if (corrections && corrections.length > 0) {
-    textEl.innerHTML = renderTextWithTypoHighlights(line.text, corrections);
-  } else {
-    textEl.textContent = line.text;
-  }
+  textEl.textContent = line.text;
 
   if (line.bookmarked) el.classList.add('bookmarked');
   el.querySelector('[data-action="bookmark"]').title = t('transcript.bookmark_tooltip');
@@ -343,6 +296,7 @@ export function updateTranscriptLineUI(id) {
 
   el.querySelector('.transcript-text').textContent = line.text;
   el.classList.toggle('bookmarked', !!line.bookmarked);
+  el.classList.toggle('ai-corrected', !!line.originalText);
 }
 
 export function removeTranscriptLineUI(id) {
@@ -372,13 +326,12 @@ export function showAnalysisSkeletons() {
   }
 }
 
-export function renderAnalysis(analysis) {
-  const container = $('#aiSections');
-  const empty = $('#aiEmpty');
-  if (empty) empty.style.display = 'none';
-  container.classList.remove('ai-updating');
-  container.innerHTML = '';
+// ===== Analysis Navigator =====
+let analysisNavIndex = -1; // -1 = latest (live)
+let analysisNavInitialized = false;
 
+function renderAnalysisContent(container, analysis) {
+  container.innerHTML = '';
   getSectionConfig().forEach(({ key, icon, title }) => {
     const tmpl = $('#tmplAiSection');
     const section = tmpl.content.cloneNode(true).querySelector('.ai-section');
@@ -405,6 +358,76 @@ export function renderAnalysis(analysis) {
 
     container.appendChild(section);
   });
+}
+
+export function updateAnalysisNav() {
+  const nav = $('#analysisNav');
+  const history = state.analysisHistory;
+  if (!nav || history.length < 2) {
+    if (nav) nav.style.display = 'none';
+    return;
+  }
+  nav.style.display = '';
+
+  const total = history.length;
+  const viewIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
+  const isLatest = viewIdx === total - 1;
+
+  const label = $('#analysisNavLabel');
+  const hint = $('#analysisNavHint');
+  const prevBtn = $('#analysisNavPrev');
+  const nextBtn = $('#analysisNavNext');
+
+  label.innerHTML = isLatest
+    ? `#${viewIdx + 1} / ${total} <span class="nav-live">LIVE</span>`
+    : `#${viewIdx + 1} / ${total}`;
+  hint.textContent = '← →';
+  prevBtn.disabled = viewIdx <= 0;
+  nextBtn.disabled = isLatest;
+
+  if (!analysisNavInitialized) {
+    analysisNavInitialized = true;
+    prevBtn.addEventListener('click', () => navigateAnalysis(-1));
+    nextBtn.addEventListener('click', () => navigateAnalysis(1));
+
+    const panel = $('#panelCenter');
+    panel.setAttribute('tabindex', '-1');
+    panel.style.outline = 'none';
+    panel.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea, [contenteditable]')) return;
+      if (state.analysisHistory.length < 2) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); navigateAnalysis(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); navigateAnalysis(1); }
+    });
+  }
+}
+
+function navigateAnalysis(direction) {
+  const history = state.analysisHistory;
+  if (history.length < 2) return;
+
+  const total = history.length;
+  const currentIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
+  const newIdx = Math.max(0, Math.min(total - 1, currentIdx + direction));
+  if (newIdx === currentIdx) return;
+
+  analysisNavIndex = newIdx;
+  const container = $('#aiSections');
+  container.classList.remove('ai-updating');
+  renderAnalysisContent(container, history[newIdx]);
+  updateAnalysisNav();
+}
+
+export function renderAnalysis(analysis) {
+  const container = $('#aiSections');
+  const empty = $('#aiEmpty');
+  if (empty) empty.style.display = 'none';
+  container.classList.remove('ai-updating');
+
+  // Always jump to latest on new analysis
+  analysisNavIndex = -1;
+  renderAnalysisContent(container, analysis);
+  updateAnalysisNav();
 }
 
 // ===== Highlights =====

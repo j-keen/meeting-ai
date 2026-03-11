@@ -1,12 +1,11 @@
 // app.js - State management, pub/sub, initialization
 
 import { createSTT } from './stt.js';
-import { analyzeTranscript, getDefaultPrompt, generateTags, correctTypos, generateMeetingTitle } from './ai.js';
+import { analyzeTranscript, getDefaultPrompt, generateTags, correctSentences, generateMeetingTitle } from './ai.js';
 import { checkProxyAvailable, isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
-  loadTypoDict, saveTypoDict, addTypoCorrection,
   loadContacts, addContact, loadLocations, addLocation, loadCategories,
 } from './storage.js';
 import {
@@ -15,12 +14,12 @@ import {
   renderAnalysisHistory, renderHistoryGrid, renderMeetingViewer,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
-  refreshTypoDict, applyTypoCorrections,
   showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
+  updateAnalysisNav,
 } from './ui.js';
-import { initSettings, closeSettings, tryCloseSettings, updateTypoDictCount } from './settings.js';
+import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
@@ -66,7 +65,8 @@ let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
 let isAnalysisPaused = false;
-let aiTypoCorrectionTimer = null;
+let aiCorrectionTimer = null;
+let isCorrecting = false;
 let countdownTimer = null;
 let countdownEnd = 0;
 let countdownIntervalMs = 0;
@@ -114,9 +114,6 @@ function setSttBadgeStatus(status, label) {
 async function startRecording() {
   if (state.isRecording) return;
 
-  // Load typo dictionary
-  refreshTypoDict();
-
   stt = createSTT();
 
   const isDeepgram = state.settings.sttEngine === 'deepgram';
@@ -145,17 +142,14 @@ async function startRecording() {
           setSttBadgeStatus('active', 'Deepgram');
         }
 
-        // Apply typo corrections
-        const { text: correctedText, corrections } = applyTypoCorrections(text);
-
         const line = {
           id: generateId(),
-          text: correctedText,
+          text,
           timestamp: Date.now(),
           bookmarked: false,
         };
         state.transcript.push(line);
-        addTranscriptLine(line, corrections);
+        addTranscriptLine(line);
         emit('transcript:add', line);
       },
       onError: (err) => {
@@ -186,7 +180,7 @@ async function startRecording() {
     timerInterval = setInterval(updateTimer, 1000);
     autoSaveInterval = setInterval(() => autoSave(), 30000);
     startAutoAnalysis();
-    startAiTypoCorrection();
+    startAiCorrection();
     updatePauseButtonVisibility(true);
 
     const btn = $('#btnRecord');
@@ -221,7 +215,7 @@ function stopRecording() {
   clearInterval(timerInterval);
   clearInterval(autoSaveInterval);
   clearInterval(autoAnalysisInterval);
-  clearInterval(aiTypoCorrectionTimer);
+  clearInterval(aiCorrectionTimer);
   stopAnalysisCountdown();
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
@@ -337,31 +331,40 @@ function showPausedState() {
   if (text) text.textContent = t('analysis.paused');
 }
 
-// Periodic AI typo correction (hybrid approach)
-function startAiTypoCorrection() {
-  clearInterval(aiTypoCorrectionTimer);
-  aiTypoCorrectionTimer = setInterval(async () => {
-    if (!isProxyAvailable() || state.transcript.length < 5) return;
-    const recentText = state.transcript.slice(-10).map(l => l.text).join('\n');
-    const currentDict = loadTypoDict();
-    try {
-      const newCorrections = await correctTypos({
-        corrections: currentDict,
-        recentText,
+// AI sentence correction
+function startAiCorrection() {
+  clearInterval(aiCorrectionTimer);
+  if (!state.settings.autoCorrection) return;
+  const intervalMs = (state.settings.correctionInterval || 60) * 1000;
+  aiCorrectionTimer = setInterval(() => runCorrection(true), intervalMs);
+}
+
+async function runCorrection(uncorrectedOnly) {
+  if (isCorrecting || !isProxyAvailable()) return;
+  isCorrecting = true;
+  try {
+    const lines = uncorrectedOnly
+      ? state.transcript.filter(l => !l.originalText)
+      : state.transcript;
+    if (lines.length === 0) return;
+
+    const batchSize = 20;
+    for (let i = 0; i < lines.length; i += batchSize) {
+      const batch = lines.slice(i, i + batchSize);
+      const corrections = await correctSentences({
+        lines: batch,
         model: state.settings.geminiModel || 'gemini-2.5-flash',
       });
-      if (newCorrections && Object.keys(newCorrections).length > 0) {
-        const filtered = {};
-        for (const [before, after] of Object.entries(newCorrections)) {
-          if (before !== after && before.length > 1) filtered[before] = after;
-        }
-        const merged = { ...currentDict, ...filtered };
-        saveTypoDict(merged);
-        refreshTypoDict();
-        updateTypoDictCount();
+      for (const c of corrections) {
+        const line = batch[c.index];
+        if (!line || c.corrected === line.text) continue;
+        if (!line.originalText) line.originalText = line.text;
+        line.text = c.corrected;
+        updateTranscriptLineUI(line.id);
       }
-    } catch { /* silent */ }
-  }, 120000); // Every 2 minutes
+    }
+  } catch { /* silent */ }
+  finally { isCorrecting = false; }
 }
 
 async function runAnalysis() {
@@ -917,7 +920,17 @@ function init() {
   initContextPopup();
   initKeyboardShortcuts();
   initChat();
-  refreshTypoDict();
+
+  // Correct Now button
+  const btnCorrectNow = $('#btnCorrectNow');
+  if (btnCorrectNow) {
+    btnCorrectNow.addEventListener('click', async () => {
+      if (state.transcript.length === 0) { showToast(t('toast.no_transcript'), 'warning'); return; }
+      showToast(t('toast.correcting'), 'info');
+      await runCorrection(false);
+      showToast(t('toast.correction_done'), 'success');
+    });
+  }
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable().then(available => {
@@ -1125,22 +1138,8 @@ function init() {
     removeTranscriptLineUI(id);
   });
 
-  // Transcript edit - detect typo corrections
   on('transcript:edit', ({ id, text, original }) => {
-    if (original && text !== original) {
-      // Detect word-level changes for typo dictionary
-      const origWords = original.split(/\s+/);
-      const newWords = text.split(/\s+/);
-      if (origWords.length === newWords.length) {
-        for (let i = 0; i < origWords.length; i++) {
-          if (origWords[i] !== newWords[i] && origWords[i].length > 1) {
-            addTypoCorrection(origWords[i], newWords[i]);
-          }
-        }
-        refreshTypoDict();
-        updateTypoDictCount();
-      }
-    }
+    // Manual edits are preserved as-is
   });
 
   // Language change

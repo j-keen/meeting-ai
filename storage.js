@@ -1,4 +1,4 @@
-// storage.js - localStorage CRUD for meetings, settings, typo dictionary, speaker presets
+// storage.js - localStorage CRUD for meetings, settings, speaker presets
 
 const STORAGE_KEY = 'meeting-ai-data';
 const MAX_MEETINGS = 50;
@@ -124,29 +124,6 @@ export function getApiKey(name) {
   const encoded = data.settings.keys?.[name];
   if (!encoded) return '';
   try { return atob(encoded); } catch { return ''; }
-}
-
-// Typo Dictionary
-export function loadTypoDict() {
-  const data = loadAll();
-  return data.settings.typoDict || {};
-}
-
-export function saveTypoDict(dict) {
-  const data = loadAll();
-  data.settings.typoDict = dict;
-  return saveAll(data);
-}
-
-export function addTypoCorrection(before, after) {
-  if (!before || !after || before === after || before.length <= 1) return;
-  const dict = loadTypoDict();
-  dict[before] = after;
-  return saveTypoDict(dict);
-}
-
-export function resetTypoDict() {
-  return saveTypoDict({});
 }
 
 // Contacts CRUD

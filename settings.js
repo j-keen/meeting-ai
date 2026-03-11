@@ -4,7 +4,6 @@ import { state, emit } from './app.js';
 import {
   saveSettings, loadSettings,
   listMeetings, getMeeting,
-  loadTypoDict, resetTypoDict,
   loadContacts, addContact, deleteContact,
   loadLocations, addLocation, deleteLocation,
   loadCategories, addCategory, deleteCategory,
@@ -367,19 +366,15 @@ export function initSettings() {
     highlightField($('#textChatPrompt'));
   });
 
-  // Typo Dictionary (immediate save - CRUD operation, not settings)
-  updateTypoDictCount();
-  $('#btnResetTypoDict').addEventListener('click', () => {
-    if (confirm(t('confirm.reset_typo_dict') || 'Reset typo dictionary?')) {
-      resetTypoDict();
-      updateTypoDictCount();
-      emit('toast', { message: 'Typo dictionary reset', type: 'success' });
-    }
+  // AI Correction
+  $('#checkAutoCorrection')?.addEventListener('change', (e) => {
+    state.settings.autoCorrection = e.target.checked;
+    markDirty();
   });
-
-  $('#btnViewTypoDict').addEventListener('click', () => {
-    renderTypoDictModal();
-    $('#typoDictModal').hidden = false;
+  $('#inputCorrectionInterval')?.addEventListener('change', (e) => {
+    const val = parseInt(e.target.value) || 60;
+    state.settings.correctionInterval = val;
+    markDirty();
   });
 
   // User Profile
@@ -457,6 +452,8 @@ function saveAllSettings() {
     meetingContext: s.meetingContext,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
+    autoCorrection: s.autoCorrection,
+    correctionInterval: s.correctionInterval,
     userProfile: s.userProfile,
     slackWebhook: s.slackWebhook,
     customPresets: s.customPresets,
@@ -517,6 +514,8 @@ function resetAllSettings() {
   s.sttEngine = 'webspeech';
   s.autoAnalysis = true;
   s.analysisInterval = 30;
+  s.autoCorrection = true;
+  s.correctionInterval = 60;
   s.tokenStrategy = 'smart';
   s.recentMinutes = 5;
   s.meetingPreset = 'general';
@@ -549,6 +548,10 @@ function applySettingsToForm() {
   $('#selectSttEngine').value = s.sttEngine || 'webspeech';
   $('#checkAutoAnalysis').checked = s.autoAnalysis;
   $('#inputAnalysisInterval').value = s.analysisInterval;
+  const checkAutoCorrection = $('#checkAutoCorrection');
+  if (checkAutoCorrection) checkAutoCorrection.checked = s.autoCorrection !== false;
+  const inputCorrectionInterval = $('#inputCorrectionInterval');
+  if (inputCorrectionInterval) inputCorrectionInterval.value = s.correctionInterval || 60;
 
   const strategyRadio = document.querySelector(`input[name="tokenStrategy"][value="${s.tokenStrategy}"]`);
   if (strategyRadio) strategyRadio.checked = true;
@@ -619,6 +622,8 @@ function loadSavedSettings() {
   s.sttEngine = saved.sttEngine || 'webspeech';
   s.autoAnalysis = saved.autoAnalysis !== false;
   s.analysisInterval = saved.analysisInterval || 30;
+  s.autoCorrection = saved.autoCorrection !== false;
+  s.correctionInterval = saved.correctionInterval || 60;
   s.tokenStrategy = saved.tokenStrategy || 'smart';
   s.recentMinutes = saved.recentMinutes || 5;
   s.meetingPreset = saved.meetingPreset || 'general';
@@ -637,55 +642,6 @@ function loadSavedSettings() {
 
   // Apply theme
   document.documentElement.setAttribute('data-theme', s.theme);
-}
-
-export function updateTypoDictCount() {
-  const dict = loadTypoDict();
-  const count = Object.keys(dict).length;
-  const el = $('#typoDictCount');
-  if (el) el.textContent = count;
-}
-
-function renderTypoDictModal() {
-  const dict = loadTypoDict();
-  const list = $('#typoDictList');
-  list.innerHTML = '';
-
-  const entries = Object.entries(dict);
-  if (entries.length === 0) {
-    list.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;">No corrections yet</p>';
-    return;
-  }
-
-  entries.forEach(([before, after]) => {
-    const item = document.createElement('div');
-    item.className = 'typo-dict-item';
-    const beforeSpan = document.createElement('span');
-    beforeSpan.className = 'typo-dict-before';
-    beforeSpan.textContent = before;
-    const arrowSpan = document.createElement('span');
-    arrowSpan.className = 'typo-dict-arrow';
-    arrowSpan.innerHTML = '&rarr;';
-    const afterSpan = document.createElement('span');
-    afterSpan.className = 'typo-dict-after';
-    afterSpan.textContent = after;
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-xs btn-danger';
-    delBtn.style.marginLeft = 'auto';
-    delBtn.textContent = '\u00d7';
-    item.append(beforeSpan, arrowSpan, afterSpan, delBtn);
-    delBtn.addEventListener('click', () => {
-      delete dict[before];
-      const { saveTypoDict } = require('./storage.js');
-      // Inline delete
-      import('./storage.js').then(mod => {
-        mod.saveTypoDict(dict);
-        updateTypoDictCount();
-        renderTypoDictModal();
-      });
-    });
-    list.appendChild(item);
-  });
 }
 
 // ===== Chat Presets =====
@@ -904,7 +860,6 @@ export function openSettings() {
   $('#settingsPanel').classList.add('open');
   $('#settingsOverlay').classList.add('visible');
   $('#settingsPanel').setAttribute('aria-hidden', 'false');
-  updateTypoDictCount();
   updatePresetPromptDisplay();
   snapshotSettings();
 }

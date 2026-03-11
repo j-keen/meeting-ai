@@ -571,26 +571,9 @@ h1, h2, h3 { font-weight: 600; }
   transition: opacity var(--transition-fast);
 }
 
-/* Typo highlight */
-.typo-corrected {
-  border-bottom: 2px dotted var(--warning);
-  cursor: help;
-  position: relative;
-}
-.typo-corrected:hover::after {
-  content: attr(data-original);
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  padding: 2px 6px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  box-shadow: var(--shadow-sm);
-  z-index: 10;
+/* AI corrected line */
+.transcript-line.ai-corrected {
+  border-left: 2px solid var(--accent);
 }
 
 /* Memo line */
@@ -652,8 +635,7 @@ h1, h2, h3 { font-weight: 600; }
   padding: 6px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-light);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  margin: 0 -16px 8px;
+  margin: 0;
   user-select: none;
 }
 .analysis-nav-btn {
@@ -1341,12 +1323,6 @@ h1, h2, h3 { font-weight: 600; }
 .toggle-wrap input:checked + .toggle-slider { background: var(--accent); }
 .toggle-wrap input:checked + .toggle-slider::before { transform: translateX(18px); }
 
-.typo-dict-actions {
-  display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-
 /* ===== Overlay ===== */
 .overlay {
   position: fixed;
@@ -1761,22 +1737,6 @@ h1, h2, h3 { font-weight: 600; }
 
 /* Export button */
 .export-btn { text-align: left; padding: 10px 14px; }
-
-/* Typo Dict List */
-.typo-dict-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-light);
-  font-size: 13px;
-}
-.typo-dict-before {
-  text-decoration: line-through;
-  color: var(--danger);
-}
-.typo-dict-arrow { color: var(--text-muted); }
-.typo-dict-after { color: var(--success); font-weight: 500; }
 
 /* ===== Accessibility ===== */
 :focus-visible {
