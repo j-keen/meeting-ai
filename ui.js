@@ -263,6 +263,16 @@ function showContextPopup(e, lineId) {
   popup.style.top = e.clientY + 'px';
   popup.dataset.lineId = lineId;
 
+  // Show engine info
+  const engineInfo = document.getElementById('contextEngineInfo');
+  if (engineInfo) {
+    const line = state.transcript.find(l => l.id === lineId);
+    const engineName = line?.engine === 'deepgram' ? 'Deepgram Nova-3'
+      : line?.engine === 'webspeech' ? 'Web Speech'
+      : line?.engine || 'Unknown';
+    engineInfo.textContent = `${t('context.engine')}: ${engineName}`;
+  }
+
   const close = (ev) => {
     if (!popup.contains(ev.target)) {
       popup.hidden = true;

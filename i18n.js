@@ -132,6 +132,12 @@ const translations = {
     'context.edit_text': 'Edit Text',
     'context.bookmark': 'Toggle Bookmark',
     'context.delete': 'Delete',
+    'context.engine': 'STT Engine',
+
+    // End meeting correction
+    'meeting.correct_all_prompt': 'Would you like to run AI correction on the full transcript before saving?',
+    'meeting.correct_all_yes': 'Correct & Save',
+    'meeting.correct_all_no': 'Save As-Is',
 
     // Export modal
     'export.title': 'Export Meeting',
@@ -548,6 +554,12 @@ const translations = {
     'context.edit_text': '텍스트 편집',
     'context.bookmark': '북마크 토글',
     'context.delete': '삭제',
+    'context.engine': 'STT 엔진',
+
+    // End meeting correction
+    'meeting.correct_all_prompt': '저장 전에 AI 전체 교정을 실행하시겠습니까?',
+    'meeting.correct_all_yes': '교정 후 저장',
+    'meeting.correct_all_no': '그대로 저장',
 
     // Export modal
     'export.title': '회의 내보내기',

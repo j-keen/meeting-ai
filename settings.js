@@ -135,7 +135,18 @@ export function initSettings() {
     markDirty();
   });
 
-  // STT Engine
+  // STT Engine - show toast when clicking disabled select during recording
+  const sttEngineRow = $('#selectSttEngine')?.closest('.settings-engine-row');
+  if (sttEngineRow) {
+    sttEngineRow.addEventListener('pointerdown', (e) => {
+      const sel = $('#selectSttEngine');
+      if (sel?.disabled) {
+        e.preventDefault();
+        import('./ui.js').then(m => m.showToast(t('stt.recording_locked'), 'warning'));
+      }
+    });
+  }
+
   $('#selectSttEngine').addEventListener('change', (e) => {
     state.settings.sttEngine = e.target.value;
     markDirty();
