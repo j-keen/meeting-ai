@@ -888,9 +888,26 @@ h1, h2, h3 { font-weight: 600; }
   background: var(--border-color);
 }
 .btn-end-meeting {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.stop-icon {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 2px;
 }
 .privacy-badge {
   display: inline-flex;
@@ -904,7 +921,7 @@ h1, h2, h3 { font-weight: 600; }
 .privacy-icon { font-size: 13px; }
 .privacy-label { font-weight: 500; }
 .btn-end-meeting:hover {
-  background: var(--danger-bg);
+  background: color-mix(in srgb, var(--danger) 85%, #000);
 }
 
 /* Record button */
@@ -945,11 +962,30 @@ h1, h2, h3 { font-weight: 600; }
   50% { opacity: 0.4; }
 }
 .btn-record.paused {
-  background: var(--bg-active);
-  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--warning, #f59e0b) 15%, transparent);
+  color: var(--warning, #f59e0b);
 }
 .btn-record.paused .record-dot {
+  width: 0;
+  height: 0;
+  background: transparent;
+  position: relative;
+}
+.btn-record.paused .record-dot::before,
+.btn-record.paused .record-dot::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  width: 3px;
+  height: 10px;
   background: var(--warning, #f59e0b);
+  border-radius: 1px;
+}
+.btn-record.paused .record-dot::before {
+  left: -4px;
+}
+.btn-record.paused .record-dot::after {
+  left: 1px;
 }
 /* STT Engine Badge */
 .stt-engine-badge {
