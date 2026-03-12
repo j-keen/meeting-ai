@@ -915,6 +915,7 @@ function resetMeeting() {
   $('#meetingStatus').textContent = '';
   const headerTitleInput = $('#meetingTitleInput');
   if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }
+  showLauncherModal();
 }
 
 // ===== Export =====
