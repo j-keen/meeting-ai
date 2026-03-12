@@ -1,9 +1,13 @@
-// meeting-prep.js - Meeting preparation chatbot flow
+// meeting-prep.js - Meeting preparation form (Google Forms style)
 
 import { emit } from './app.js';
-import { renderChatMessage, renderChatMessageWithButtons, clearChat, setChatInputHandler } from './chat.js';
-import { loadContacts, addContact, loadMeetingPrepPresets, saveMeetingPrepPreset } from './storage.js';
+import {
+  loadContacts, addContact, loadMeetingPrepPresets, saveMeetingPrepPreset,
+  deleteMeetingPrepPreset, savePreparedMeeting, listMeetings, getMeeting,
+} from './storage.js';
+import { callGemini } from './gemini-api.js';
 import { t } from './i18n.js';
+import { showToast } from './ui.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -28,9 +32,7 @@ function matchChosung(name, query) {
   if (!query) return true;
   const lower = name.toLowerCase();
   const lowerQ = query.toLowerCase();
-  // Regular substring match
   if (lower.includes(lowerQ)) return true;
-  // Chosung match (only if query is all chosung characters)
   if (isAllChosung(query)) {
     const nameChosung = extractChosung(name);
     return nameChosung.includes(query);
@@ -38,486 +40,495 @@ function matchChosung(name, query) {
   return false;
 }
 
-// ===== State =====
-let active = false;
-let currentStep = null;
-let config = {
+// ===== Form State =====
+let formConfig = {
   meetingType: 'general',
   agenda: '',
-  timeLimit: 0,
   attendees: [],
+  referenceMeetingId: null,
+  referenceAnalysis: '',
+  attachedFiles: [],
+  notes: '',
   customPrompt: '',
-  meetingContext: '',
 };
 
-const STEPS = ['type', 'agenda', 'time', 'attendees', 'prompt', 'standby'];
-
-const MEETING_TYPES = [
-  { key: 'general', icon: '&#128196;' },
-  { key: 'weekly', icon: '&#128197;' },
-  { key: 'brainstorm', icon: '&#128161;' },
-  { key: 'sales', icon: '&#129309;' },
-  { key: '1on1', icon: '&#128101;' },
-  { key: 'kickoff', icon: '&#127937;' },
-];
-
-const TIME_OPTIONS = [
-  { label: '15', value: 15 },
-  { label: '30', value: 30 },
-  { label: '45', value: 45 },
-  { label: '60', value: 60 },
-  { label: '90', value: 90 },
-];
+let contacts = [];
+let cameraStream = null;
 
 // ===== Public API =====
-export function startMeetingPrep(presetConfig) {
-  active = true;
-  config = {
+export function initMeetingPrepForm() {
+  bindFormEvents();
+}
+
+export function openMeetingPrepForm(presetConfig) {
+  // Reset form
+  formConfig = {
     meetingType: 'general',
     agenda: '',
-    timeLimit: 0,
     attendees: [],
+    referenceMeetingId: null,
+    referenceAnalysis: '',
+    attachedFiles: [],
+    notes: '',
     customPrompt: '',
-    meetingContext: '',
   };
 
-  // If preset provided, apply it
+  // Load contacts
+  contacts = loadContacts();
+
+  // If preset provided, prefill
   if (presetConfig) {
-    Object.assign(config, presetConfig);
+    fillFormFromConfig(presetConfig);
   }
 
-  // Clear chat and start the flow
-  clearChat();
-  setChatInputHandler(handleInput);
+  // Reset UI
+  resetFormUI();
 
-  // Activate chat panel on mobile
-  activateChatPanel();
+  // Populate presets dropdown
+  populatePresetDropdown();
 
-  // Check for saved presets
-  const presets = loadMeetingPrepPresets();
-  if (presets.length > 0 && !presetConfig) {
-    showPresetSelection(presets);
-  } else {
-    goToStep('type');
-  }
+  // Populate reference meetings dropdown
+  populateReferenceDropdown();
+
+  // Render contacts
+  renderContactList('');
+
+  // Show modal
+  $('#meetingPrepModal').hidden = false;
 }
 
 export function isMeetingPrepActive() {
-  return active;
+  const modal = $('#meetingPrepModal');
+  return modal ? !modal.hidden : false;
 }
 
-function endPrep() {
-  active = false;
-  currentStep = null;
-  setChatInputHandler(null);
-}
-
-// ===== Step Navigation =====
-function goToStep(step) {
-  currentStep = step;
-  switch (step) {
-    case 'type': renderTypeStep(); break;
-    case 'agenda': renderAgendaStep(); break;
-    case 'time': renderTimeStep(); break;
-    case 'attendees': renderAttendeesStep(); break;
-    case 'prompt': renderPromptStep(); break;
-    case 'standby': renderStandbyStep(); break;
-  }
-}
-
-function nextStep() {
-  const idx = STEPS.indexOf(currentStep);
-  if (idx < STEPS.length - 1) {
-    goToStep(STEPS[idx + 1]);
-  }
-}
-
-// ===== Input Handler =====
-function handleInput(text) {
-  // Show user message
-  renderChatMessage('user', text);
-
-  switch (currentStep) {
-    case 'type':
-      config.meetingType = text;
-      nextStep();
-      break;
-    case 'agenda':
-      config.agenda = text;
-      nextStep();
-      break;
-    case 'time':
-      config.timeLimit = parseTime(text);
-      nextStep();
-      break;
-    case 'attendees':
-      // Parse comma-separated names
-      const names = text.split(',').map(n => n.trim()).filter(Boolean);
-      names.forEach(name => {
-        if (!config.attendees.find(a => a.name === name)) {
-          config.attendees.push({ name, id: null });
-        }
-      });
-      nextStep();
-      break;
-    case 'prompt':
-      config.customPrompt = text;
-      nextStep();
-      break;
-  }
-}
-
-function parseTime(text) {
-  const num = parseInt(text);
-  if (!isNaN(num) && num > 0) return num;
-  return 0;
-}
-
-// ===== Preset Selection =====
-function showPresetSelection(presets) {
-  const buttons = presets.map((p, i) => ({
-    label: `${p.meetingType || 'Preset'} ${p.agenda ? '- ' + p.agenda.slice(0, 20) : ''}`,
-    value: () => {
-      Object.assign(config, p);
-      renderChatMessage('user', t('prep.load_preset') + ': ' + (p.meetingType || 'Preset'));
-      goToStep('standby');
-    }
-  }));
-  buttons.push({
-    label: '+ ' + t('prep.type_general'),
-    value: () => goToStep('type'),
+// ===== Form Reset =====
+function resetFormUI() {
+  // Type selection
+  const typeCards = document.querySelectorAll('.prep-type-card');
+  typeCards.forEach(card => {
+    card.classList.toggle('selected', card.dataset.type === formConfig.meetingType);
   });
 
-  renderChatMessageWithButtons('model', t('prep.load_preset'), buttons);
+  // Text fields
+  $('#prepAgendaInput').value = formConfig.agenda;
+  $('#prepNotesInput').value = formConfig.notes;
+
+  // Clear badges & file chips
+  $('#prepSelectedBadges').innerHTML = '';
+  $('#prepFileChips').innerHTML = '';
+  $('#prepCardResult').hidden = true;
+  $('#prepReferencePreview').hidden = true;
+  $('#prepReferenceSelect').value = '';
+
+  // Render attendee badges
+  renderSelectedBadges();
+  renderFileChips();
 }
 
-// ===== Step Renderers =====
-function renderTypeStep() {
-  const buttons = MEETING_TYPES.map(mt => ({
-    label: t('prep.type_' + mt.key),
-    value: () => {
-      config.meetingType = mt.key;
-      renderChatMessage('user', t('prep.type_' + mt.key));
-      nextStep();
-    }
-  }));
+// ===== Event Bindings =====
+function bindFormEvents() {
+  // Close button
+  $('#btnClosePrepForm').addEventListener('click', closeForm);
 
-  renderChatMessageWithButtons('model', t('prep.step_type'), buttons);
-  updatePlaceholder(t('prep.or_type'));
-}
-
-function renderAgendaStep() {
-  const buttons = [
-    { label: t('prep.skip'), value: () => { config.agenda = ''; renderChatMessage('user', t('prep.skip')); nextStep(); } },
-  ];
-
-  renderChatMessageWithButtons('model', t('prep.step_agenda'), buttons);
-  updatePlaceholder(t('prep.or_type'));
-}
-
-function renderTimeStep() {
-  const buttons = TIME_OPTIONS.map(opt => ({
-    label: t('prep.minutes', { n: opt.value }),
-    value: () => {
-      config.timeLimit = opt.value;
-      renderChatMessage('user', t('prep.minutes', { n: opt.value }));
-      nextStep();
-    }
-  }));
-  buttons.push({
-    label: t('prep.no_limit'),
-    value: () => {
-      config.timeLimit = 0;
-      renderChatMessage('user', t('prep.no_limit'));
-      nextStep();
-    }
+  // Meeting type selection
+  $('#prepTypeGrid').addEventListener('click', (e) => {
+    const card = e.target.closest('.prep-type-card');
+    if (!card) return;
+    document.querySelectorAll('.prep-type-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    formConfig.meetingType = card.dataset.type;
   });
 
-  renderChatMessageWithButtons('model', t('prep.step_time'), buttons);
-  updatePlaceholder(t('prep.or_type'));
-}
+  // Participant search
+  $('#prepParticipantSearch').addEventListener('input', (e) => {
+    renderContactList(e.target.value);
+  });
 
-function renderAttendeesStep() {
-  const contacts = loadContacts();
-  const container = $('#chatMessages');
-  const empty = $('#chatEmpty');
-  if (empty) empty.style.display = 'none';
-
-  // Create message element
-  const tmpl = $('#tmplChatMessage');
-  const el = tmpl.content.cloneNode(true).querySelector('.chat-message');
-  el.classList.add('model');
-  const content = el.querySelector('.chat-message-content');
-  content.textContent = t('prep.step_attendees');
-
-  // Contact picker UI
-  const picker = document.createElement('div');
-  picker.className = 'contact-picker';
-
-  // Selected badges area
-  const selectedArea = document.createElement('div');
-  selectedArea.className = 'contact-picker-selected';
-  picker.appendChild(selectedArea);
-
-  // Search input
-  const searchInput = document.createElement('input');
-  searchInput.className = 'contact-picker-search';
-  searchInput.placeholder = t('contacts.search');
-  picker.appendChild(searchInput);
-
-  // Contact list
-  const listEl = document.createElement('div');
-  listEl.className = 'contact-picker-list';
-  picker.appendChild(listEl);
-
-  // Manual name input row
-  const inputRow = document.createElement('div');
-  inputRow.className = 'contact-picker-input-row';
-  const nameInput = document.createElement('input');
-  nameInput.placeholder = t('prep.type_names');
-  inputRow.appendChild(nameInput);
-  picker.appendChild(inputRow);
-
-  // Confirm button
-  const btnWrap = document.createElement('div');
-  btnWrap.className = 'prep-quick-buttons';
-  const confirmBtn = document.createElement('button');
-  confirmBtn.className = 'prep-quick-btn selected';
-  confirmBtn.textContent = t('prep.confirm_attendees');
-  btnWrap.appendChild(confirmBtn);
-  const skipBtn = document.createElement('button');
-  skipBtn.className = 'prep-quick-btn';
-  skipBtn.textContent = t('prep.skip');
-  btnWrap.appendChild(skipBtn);
-  picker.appendChild(btnWrap);
-
-  content.appendChild(picker);
-  container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
-
-  // Render contact list
-  function renderContacts(query) {
-    listEl.innerHTML = '';
-    const filtered = contacts.filter(c => matchChosung(c.name, query));
-    filtered.forEach(c => {
-      const card = document.createElement('div');
-      card.className = 'contact-card' + (config.attendees.find(a => a.id === c.id) ? ' selected' : '');
-      card.innerHTML = `<span class="contact-card-name">${escapeHtml(c.name)}</span>` +
-        (c.company ? `<span class="contact-card-company">${escapeHtml(c.company)}</span>` : '');
-      card.addEventListener('click', () => {
-        toggleAttendee(c);
-        renderContacts(searchInput.value);
-        renderSelectedBadges();
-      });
-      listEl.appendChild(card);
-    });
-  }
-
-  function toggleAttendee(contact) {
-    const idx = config.attendees.findIndex(a => a.id === contact.id);
-    if (idx >= 0) {
-      config.attendees.splice(idx, 1);
-    } else {
-      config.attendees.push({ id: contact.id, name: contact.name });
-    }
-  }
-
-  function renderSelectedBadges() {
-    selectedArea.innerHTML = '';
-    config.attendees.forEach(a => {
-      const badge = document.createElement('span');
-      badge.className = 'contact-badge';
-      badge.innerHTML = `${escapeHtml(a.name)} <button class="contact-badge-remove">&times;</button>`;
-      badge.querySelector('.contact-badge-remove').addEventListener('click', (e) => {
-        e.stopPropagation();
-        config.attendees = config.attendees.filter(x => x.name !== a.name);
-        renderContacts(searchInput.value);
-        renderSelectedBadges();
-      });
-      selectedArea.appendChild(badge);
-    });
-  }
-
-  searchInput.addEventListener('input', () => renderContacts(searchInput.value));
-
-  nameInput.addEventListener('keydown', (e) => {
+  // Participant search - Enter to add manual name
+  $('#prepParticipantSearch').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-      const names = nameInput.value.split(',').map(n => n.trim()).filter(Boolean);
-      names.forEach(name => {
-        if (!config.attendees.find(a => a.name === name)) {
-          // Add as new contact too
-          const contact = addContact({ name, company: '' });
-          config.attendees.push({ id: contact.id, name: contact.name });
-          contacts.push(contact);
-        }
-      });
-      nameInput.value = '';
-      renderContacts(searchInput.value);
+      e.preventDefault();
+      const name = e.target.value.trim();
+      if (!name) return;
+      if (!formConfig.attendees.find(a => a.name === name)) {
+        const contact = addContact({ name, company: '' });
+        formConfig.attendees.push({ id: contact.id, name: contact.name });
+        contacts.push(contact);
+      }
+      e.target.value = '';
+      renderContactList('');
       renderSelectedBadges();
     }
   });
 
-  confirmBtn.addEventListener('click', () => {
-    // Also process manual input if any
-    const manualNames = nameInput.value.split(',').map(n => n.trim()).filter(Boolean);
-    manualNames.forEach(name => {
-      if (!config.attendees.find(a => a.name === name)) {
-        const contact = addContact({ name, company: '' });
-        config.attendees.push({ id: contact.id, name: contact.name });
-      }
+  // Scan card button
+  $('#btnScanCard').addEventListener('click', openCameraForCard);
+
+  // Camera capture
+  $('#btnCameraCapture').addEventListener('click', captureCard);
+  $('#btnCameraCancel').addEventListener('click', closeCamera);
+
+  // Save card contact
+  $('#btnSaveCardContact').addEventListener('click', saveCardContact);
+
+  // Reference meeting selection
+  $('#prepReferenceSelect').addEventListener('change', (e) => {
+    const id = e.target.value;
+    if (!id) {
+      formConfig.referenceMeetingId = null;
+      formConfig.referenceAnalysis = '';
+      $('#prepReferencePreview').hidden = true;
+      return;
+    }
+    const meeting = getMeeting(id);
+    if (meeting && meeting.analysisHistory?.length) {
+      const lastAnalysis = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+      const md = lastAnalysis.markdown || lastAnalysis.raw || '';
+      formConfig.referenceMeetingId = id;
+      formConfig.referenceAnalysis = md.slice(0, 3000);
+      const preview = $('#prepReferencePreview');
+      preview.textContent = formConfig.referenceAnalysis.slice(0, 500) + (formConfig.referenceAnalysis.length > 500 ? '...' : '');
+      preview.hidden = false;
+    }
+  });
+
+  // File drop zone
+  const dropZone = $('#prepFileDrop');
+  const fileInput = $('#prepFileInput');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    handleFiles(e.dataTransfer.files);
+  });
+  fileInput.addEventListener('change', (e) => {
+    handleFiles(e.target.files);
+    fileInput.value = '';
+  });
+
+  // Preset dropdown
+  $('#prepPresetSelect').addEventListener('change', (e) => {
+    const idx = parseInt(e.target.value);
+    if (isNaN(idx)) {
+      $('#btnDeletePrepPreset').style.display = 'none';
+      return;
+    }
+    const presets = loadMeetingPrepPresets();
+    if (presets[idx]) {
+      fillFormFromConfig(presets[idx]);
+      resetFormUI();
+      renderContactList('');
+      $('#btnDeletePrepPreset').style.display = '';
+    }
+  });
+
+  // Delete preset
+  $('#btnDeletePrepPreset').addEventListener('click', () => {
+    const idx = parseInt($('#prepPresetSelect').value);
+    if (isNaN(idx)) return;
+    deleteMeetingPrepPreset(idx);
+    populatePresetDropdown();
+    showToast(t('prep.preset_saved'), 'success');
+  });
+
+  // Save preset button
+  $('#btnPrepSavePreset').addEventListener('click', () => {
+    const name = prompt(t('prep.preset_name'));
+    if (!name) return;
+    collectFormConfig();
+    saveMeetingPrepPreset({
+      name,
+      meetingType: formConfig.meetingType,
+      agenda: formConfig.agenda,
+      attendees: formConfig.attendees,
+      notes: formConfig.notes,
+      customPrompt: formConfig.customPrompt,
     });
-    const display = config.attendees.map(a => a.name).join(', ') || t('prep.skip');
-    renderChatMessage('user', display);
-    nextStep();
+    populatePresetDropdown();
+    showToast(t('prep.preset_saved'), 'success');
   });
 
-  skipBtn.addEventListener('click', () => {
-    renderChatMessage('user', t('prep.skip'));
-    nextStep();
+  // Save for later
+  $('#btnPrepSaveForLater').addEventListener('click', () => {
+    collectFormConfig();
+    savePreparedMeeting(formConfig);
+    showToast(t('prep.prepared_saved'), 'success');
+    closeForm();
   });
 
-  renderContacts('');
-  renderSelectedBadges();
-  updatePlaceholder(t('prep.type_names'));
-}
-
-function renderPromptStep() {
-  const buttons = [
-    {
-      label: t('prep.use_default'),
-      value: () => {
-        config.customPrompt = '';
-        renderChatMessage('user', t('prep.use_default'));
-        nextStep();
-      }
-    },
-  ];
-
-  renderChatMessageWithButtons('model', t('prep.step_prompt'), buttons);
-  updatePlaceholder(t('prep.or_type'));
-}
-
-function renderStandbyStep() {
-  const container = $('#chatMessages');
-  const empty = $('#chatEmpty');
-  if (empty) empty.style.display = 'none';
-
-  // Create standby card
-  const tmpl = $('#tmplChatMessage');
-  const el = tmpl.content.cloneNode(true).querySelector('.chat-message');
-  el.classList.add('model');
-  const content = el.querySelector('.chat-message-content');
-
-  const typeLabel = MEETING_TYPES.find(mt => mt.key === config.meetingType)
-    ? t('prep.type_' + config.meetingType)
-    : config.meetingType;
-  const timeLabel = config.timeLimit > 0 ? t('prep.minutes', { n: config.timeLimit }) : t('prep.no_limit');
-  const attendeesLabel = config.attendees.length > 0
-    ? config.attendees.map(a => a.name).join(', ')
-    : '-';
-  const promptLabel = config.customPrompt || t('prep.use_default');
-
-  content.innerHTML = `
-    <div class="prep-standby">
-      <div class="prep-standby-title">${escapeHtml(t('prep.step_standby'))}</div>
-      <div class="prep-standby-row">
-        <span class="prep-standby-label">${escapeHtml(t('prep.summary_type'))}</span>
-        <span class="prep-standby-value">${escapeHtml(typeLabel)}</span>
-      </div>
-      <div class="prep-standby-row">
-        <span class="prep-standby-label">${escapeHtml(t('prep.summary_agenda'))}</span>
-        <span class="prep-standby-value">${escapeHtml(config.agenda || '-')}</span>
-      </div>
-      <div class="prep-standby-row">
-        <span class="prep-standby-label">${escapeHtml(t('prep.summary_time'))}</span>
-        <span class="prep-standby-value">${escapeHtml(timeLabel)}</span>
-      </div>
-      <div class="prep-standby-row">
-        <span class="prep-standby-label">${escapeHtml(t('prep.summary_attendees'))}</span>
-        <span class="prep-standby-value">${escapeHtml(attendeesLabel)}</span>
-      </div>
-      <div class="prep-standby-row">
-        <span class="prep-standby-label">${escapeHtml(t('prep.summary_prompt'))}</span>
-        <span class="prep-standby-value">${escapeHtml(promptLabel.slice(0, 80))}</span>
-      </div>
-      <div class="prep-standby-actions" id="prepStandbyActions"></div>
-    </div>
-  `;
-
-  container.appendChild(el);
-  container.scrollTop = container.scrollHeight;
-
-  // Add action buttons
-  const actionsEl = el.querySelector('#prepStandbyActions');
-
-  const startBtn = document.createElement('button');
-  startBtn.className = 'btn btn-primary';
-  startBtn.textContent = t('prep.start_meeting');
-  startBtn.addEventListener('click', () => completeMeetingPrep());
-  actionsEl.appendChild(startBtn);
-
-  const savePresetBtn = document.createElement('button');
-  savePresetBtn.className = 'btn btn-sm';
-  savePresetBtn.textContent = t('prep.save_preset');
-  savePresetBtn.addEventListener('click', () => saveCurrentPreset());
-  actionsEl.appendChild(savePresetBtn);
-
-  const editBtn = document.createElement('button');
-  editBtn.className = 'btn btn-sm';
-  editBtn.textContent = t('prep.edit_settings');
-  editBtn.addEventListener('click', () => {
-    clearChat();
-    goToStep('type');
+  // Start meeting
+  $('#btnPrepStart').addEventListener('click', () => {
+    collectFormConfig();
+    closeForm();
+    emit('meetingPrep:complete', { ...formConfig });
   });
-  actionsEl.appendChild(editBtn);
+
+  // Close on overlay click
+  $('#meetingPrepModal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeForm();
+  });
 }
 
-// ===== Actions =====
-function completeMeetingPrep() {
-  endPrep();
-  emit('meetingPrep:complete', { ...config });
+// ===== Collect form values =====
+function collectFormConfig() {
+  formConfig.agenda = $('#prepAgendaInput').value.trim();
+  formConfig.notes = $('#prepNotesInput').value.trim();
+  // meetingType and attendees are already tracked via events
 }
 
-function saveCurrentPreset() {
-  const name = prompt(t('prep.preset_name'));
+// ===== Close Form =====
+function closeForm() {
+  $('#meetingPrepModal').hidden = true;
+}
+
+// ===== Fill Form from Config =====
+function fillFormFromConfig(config) {
+  if (config.meetingType) formConfig.meetingType = config.meetingType;
+  if (config.agenda) formConfig.agenda = config.agenda;
+  if (config.attendees) formConfig.attendees = [...config.attendees];
+  if (config.notes) formConfig.notes = config.notes;
+  if (config.customPrompt) formConfig.customPrompt = config.customPrompt;
+  if (config.referenceMeetingId) formConfig.referenceMeetingId = config.referenceMeetingId;
+  if (config.referenceAnalysis) formConfig.referenceAnalysis = config.referenceAnalysis;
+  if (config.attachedFiles) formConfig.attachedFiles = [...config.attachedFiles];
+}
+
+// ===== Preset Dropdown =====
+function populatePresetDropdown() {
+  const select = $('#prepPresetSelect');
+  const presets = loadMeetingPrepPresets();
+  select.innerHTML = `<option value="">${t('prep.select_preset')}</option>`;
+  presets.forEach((p, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = p.name || `${p.meetingType || 'Preset'} ${p.agenda ? '- ' + p.agenda.slice(0, 20) : ''}`;
+    select.appendChild(opt);
+  });
+  $('#btnDeletePrepPreset').style.display = 'none';
+}
+
+// ===== Reference Meeting Dropdown =====
+function populateReferenceDropdown() {
+  const select = $('#prepReferenceSelect');
+  const meetings = listMeetings();
+  select.innerHTML = '<option value="">--</option>';
+  meetings.slice(0, 20).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    const date = new Date(m.createdAt).toLocaleDateString();
+    opt.textContent = `${m.title || 'Untitled'} (${date})`;
+    select.appendChild(opt);
+  });
+}
+
+// ===== Contact List =====
+function renderContactList(query) {
+  const listEl = $('#prepContactList');
+  listEl.innerHTML = '';
+  const filtered = contacts.filter(c => matchChosung(c.name, query));
+  filtered.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'contact-card' + (formConfig.attendees.find(a => a.id === c.id) ? ' selected' : '');
+    card.innerHTML = `<span class="contact-card-name">${escapeHtml(c.name)}</span>` +
+      (c.company ? `<span class="contact-card-company">${escapeHtml(c.company)}</span>` : '');
+    card.addEventListener('click', () => {
+      toggleAttendee(c);
+      renderContactList(query);
+      renderSelectedBadges();
+    });
+    listEl.appendChild(card);
+  });
+}
+
+function toggleAttendee(contact) {
+  const idx = formConfig.attendees.findIndex(a => a.id === contact.id);
+  if (idx >= 0) {
+    formConfig.attendees.splice(idx, 1);
+  } else {
+    formConfig.attendees.push({ id: contact.id, name: contact.name });
+  }
+}
+
+function renderSelectedBadges() {
+  const area = $('#prepSelectedBadges');
+  area.innerHTML = '';
+  formConfig.attendees.forEach(a => {
+    const badge = document.createElement('span');
+    badge.className = 'contact-badge';
+    badge.innerHTML = `${escapeHtml(a.name)} <button class="contact-badge-remove">&times;</button>`;
+    badge.querySelector('.contact-badge-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      formConfig.attendees = formConfig.attendees.filter(x => x.name !== a.name);
+      renderContactList($('#prepParticipantSearch').value);
+      renderSelectedBadges();
+    });
+    area.appendChild(badge);
+  });
+}
+
+// ===== File Handling =====
+function handleFiles(fileList) {
+  const MAX_FILES = 5;
+  const MAX_SIZE = 100 * 1024;
+  const files = Array.from(fileList);
+
+  for (const file of files) {
+    if (formConfig.attachedFiles.length >= MAX_FILES) {
+      showToast('Max 5 files', 'warning');
+      break;
+    }
+    if (file.size > MAX_SIZE) {
+      showToast(`${file.name}: too large (max 100KB)`, 'warning');
+      continue;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      formConfig.attachedFiles.push({ name: file.name, content: reader.result, size: file.size });
+      renderFileChips();
+    };
+    reader.readAsText(file);
+  }
+}
+
+function renderFileChips() {
+  const container = $('#prepFileChips');
+  container.innerHTML = '';
+  formConfig.attachedFiles.forEach((f, i) => {
+    const chip = document.createElement('span');
+    chip.className = 'prep-file-chip';
+    chip.innerHTML = `${escapeHtml(f.name)} <button class="prep-file-chip-remove" data-idx="${i}">&times;</button>`;
+    chip.querySelector('.prep-file-chip-remove').addEventListener('click', () => {
+      formConfig.attachedFiles.splice(i, 1);
+      renderFileChips();
+    });
+    container.appendChild(chip);
+  });
+}
+
+// ===== Camera / Business Card OCR =====
+async function openCameraForCard() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    const video = $('#cameraPreview');
+    video.srcObject = cameraStream;
+    $('#cameraModal').hidden = false;
+  } catch (err) {
+    showToast(t('prep.camera_permission'), 'error');
+  }
+}
+
+function closeCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  $('#cameraPreview').srcObject = null;
+  $('#cameraModal').hidden = true;
+}
+
+async function captureCard() {
+  const video = $('#cameraPreview');
+  const canvas = $('#cameraCanvas');
+
+  // Resize to 640px max width
+  const maxW = 640;
+  const scale = Math.min(maxW / video.videoWidth, 1);
+  canvas.width = video.videoWidth * scale;
+  canvas.height = video.videoHeight * scale;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+
+  closeCamera();
+
+  // Show scanning state
+  const scanBtn = $('#btnScanCard');
+  const origText = scanBtn.innerHTML;
+  scanBtn.innerHTML = `&#8987; ${t('prep.scanning')}`;
+  scanBtn.disabled = true;
+
+  try {
+    const result = await ocrBusinessCard(base64);
+    if (result) {
+      $('#prepCardName').value = result.name || '';
+      $('#prepCardCompany').value = result.company || '';
+      $('#prepCardTitle').value = result.title || '';
+      $('#prepCardEmail').value = result.email || '';
+      $('#prepCardPhone').value = result.phone || '';
+      $('#prepCardResult').hidden = false;
+    }
+  } catch (err) {
+    showToast(t('prep.scan_failed'), 'error');
+    console.error('OCR error:', err);
+  } finally {
+    scanBtn.innerHTML = origText;
+    scanBtn.disabled = false;
+  }
+}
+
+async function ocrBusinessCard(base64) {
+  const body = {
+    contents: [{
+      role: 'user',
+      parts: [
+        { inlineData: { mimeType: 'image/jpeg', data: base64 } },
+        { text: 'Extract business card info. Return ONLY valid JSON:\n{"name":"","company":"","title":"","email":"","phone":""}\nIf a field is not found, leave it as empty string.' }
+      ]
+    }],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      temperature: 0.1,
+    }
+  };
+
+  const response = await callGemini('gemini-2.5-flash-lite', body);
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  // Multi-stage JSON parse
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('Failed to parse OCR result');
+  }
+}
+
+function saveCardContact() {
+  const name = $('#prepCardName').value.trim();
   if (!name) return;
-  saveMeetingPrepPreset({
+
+  const contactData = {
     name,
-    meetingType: config.meetingType,
-    agenda: config.agenda,
-    timeLimit: config.timeLimit,
-    attendees: config.attendees,
-    customPrompt: config.customPrompt,
-    meetingContext: config.meetingContext,
-  });
-  renderChatMessage('system', t('prep.preset_saved'));
+    company: $('#prepCardCompany').value.trim(),
+    title: $('#prepCardTitle').value.trim(),
+    email: $('#prepCardEmail').value.trim(),
+    phone: $('#prepCardPhone').value.trim(),
+  };
+
+  const contact = addContact(contactData);
+  contacts.push(contact);
+
+  // Add to attendees
+  if (!formConfig.attendees.find(a => a.name === contact.name)) {
+    formConfig.attendees.push({ id: contact.id, name: contact.name });
+  }
+
+  renderContactList($('#prepParticipantSearch').value);
+  renderSelectedBadges();
+  $('#prepCardResult').hidden = true;
+  showToast(t('prep.card_saved'), 'success');
 }
 
 // ===== Helpers =====
-function activateChatPanel() {
-  // On mobile, switch to chat panel
-  const tabs = document.querySelectorAll('.panel-tab');
-  const panels = document.querySelectorAll('.panel');
-  tabs.forEach(tab => {
-    if (tab.dataset.panel === 'right') {
-      tab.classList.add('active');
-      tabs.forEach(t => { if (t !== tab) t.classList.remove('active'); });
-    }
-  });
-  panels.forEach(p => {
-    if (p.id === 'panelRight') {
-      p.classList.add('panel-active');
-    } else {
-      p.classList.remove('panel-active');
-    }
-  });
-}
-
-function updatePlaceholder(text) {
-  const input = $('#chatInput');
-  if (input) input.placeholder = text;
-}
-
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;

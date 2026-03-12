@@ -7,6 +7,7 @@ import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   loadContacts, addContact, loadLocations, addLocation, loadCategories,
+  loadPreparedMeeting, deletePreparedMeeting,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
@@ -23,7 +24,7 @@ import {
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
 import { exportPDF, exportWord } from './export-doc.js';
-import { startMeetingPrep } from './meeting-prep.js';
+import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, getPromptPresets } from './i18n.js';
 
 // ===== Pub/Sub =====
@@ -1197,6 +1198,7 @@ function init() {
   initContextPopup();
   initKeyboardShortcuts();
   initChat();
+  initMeetingPrepForm();
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -1514,7 +1516,7 @@ function init() {
   on('meetingPrep:start', () => {
     const modal = $('#launcherModal');
     if (modal) modal.hidden = true;
-    startMeetingPrep();
+    openMeetingPrepForm();
   });
 
   on('meetingPrep:complete', async (config) => {
@@ -1532,6 +1534,27 @@ function init() {
       state.settings.customPrompt = config.customPrompt;
       saveSettings({ customPrompt: config.customPrompt });
     }
+
+    // Attendees → state.participants
+    if (config.attendees?.length) {
+      state.participants = config.attendees;
+    }
+
+    // Reference + files + notes → state.analysisContext
+    const parts = [];
+    if (config.referenceAnalysis) {
+      parts.push('[Reference: Previous Meeting]\n' + config.referenceAnalysis);
+    }
+    if (config.attachedFiles?.length) {
+      config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));
+    }
+    if (config.notes) {
+      parts.push('[Prep Notes]\n' + config.notes);
+    }
+    if (parts.length) {
+      state.analysisContext = parts.join('\n\n');
+    }
+
     // Start recording
     await startRecording();
   });
@@ -1577,7 +1600,7 @@ function showLauncherModal() {
 
   $('#btnLauncherMeetingPrep').onclick = () => {
     close();
-    startMeetingPrep();
+    openMeetingPrepForm();
   };
 
   $('#btnLauncherMeetingSearch').onclick = () => {
@@ -1586,15 +1609,46 @@ function showLauncherModal() {
     refreshHistoryGrid();
   };
 
+  // 4th card: Prepared meeting (if exists)
+  const existingPrepCard = document.querySelector('.launcher-card-prepared');
+  if (existingPrepCard) existingPrepCard.remove();
+
+  const prepared = loadPreparedMeeting();
+  if (prepared) {
+    const grid = document.querySelector('.launcher-actions-grid');
+    const card = document.createElement('button');
+    card.className = 'launcher-card launcher-card-prepared';
+    card.id = 'btnLauncherPrepared';
+    const typeLabel = prepared.meetingType || 'general';
+    const nParticipants = prepared.attendees?.length || 0;
+    card.innerHTML = `
+      <span class="launcher-card-badge">4</span>
+      <span class="launcher-card-icon">&#128204;</span>
+      <span class="launcher-card-label">${t('prep.prepared_meeting')}</span>
+      <span class="launcher-card-desc">${typeLabel}${nParticipants ? ' · ' + t('prep.n_participants', { n: nParticipants }) : ''}</span>
+    `;
+    card.onclick = async () => {
+      close();
+      deletePreparedMeeting();
+      emit('meetingPrep:complete', prepared);
+    };
+    grid.appendChild(card);
+  }
+
   $('#launcherCloseBtn').onclick = close;
 
-  // Keyboard shortcuts: 1, 2, 3, ESC
+  // Keyboard shortcuts: 1, 2, 3, 4, ESC
   const keyHandler = (e) => {
     if (modal.hidden) return;
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
     else if (e.key === '3') { e.preventDefault(); $('#btnLauncherMeetingSearch').click(); }
+    else if (e.key === '4') {
+      e.preventDefault();
+      const prepBtn = $('#btnLauncherPrepared');
+      if (prepBtn) prepBtn.click();
+    }
     else if (e.key === 'Escape') { close(); }
   };
   document.addEventListener('keydown', keyHandler);

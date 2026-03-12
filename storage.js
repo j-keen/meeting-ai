@@ -249,4 +249,22 @@ export function deleteMeetingPrepPreset(index) {
   return saveAll(data);
 }
 
+// Prepared Meeting (save for later)
+export function savePreparedMeeting(config) {
+  const data = loadAll();
+  data.preparedMeeting = { ...config, savedAt: Date.now() };
+  return saveAll(data);
+}
+
+export function loadPreparedMeeting() {
+  const data = loadAll();
+  return data.preparedMeeting || null;
+}
+
+export function deletePreparedMeeting() {
+  const data = loadAll();
+  data.preparedMeeting = null;
+  return saveAll(data);
+}
+
 export { getStorageUsage };

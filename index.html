@@ -632,6 +632,110 @@
     </div>
   </div>
 
+  <!-- Meeting Prep Form Modal -->
+  <div class="modal-overlay" id="meetingPrepModal" hidden>
+    <div class="modal modal-large" style="max-width:640px;">
+      <div class="modal-header">
+        <h3 data-i18n="prep.form_title">Meeting Prep</h3>
+        <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
+      </div>
+      <div class="modal-body meeting-prep-form-body" id="prepFormBody">
+        <!-- Preset Row -->
+        <div class="prep-preset-row">
+          <select class="settings-select" id="prepPresetSelect" style="flex:1;">
+            <option value="" data-i18n="prep.select_preset">Select a preset...</option>
+          </select>
+          <button class="btn btn-xs" id="btnDeletePrepPreset" title="Delete" style="display:none">&times;</button>
+        </div>
+
+        <!-- Section: Meeting Type -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.summary_type">Type</label>
+          <div class="prep-type-grid" id="prepTypeGrid">
+            <button class="prep-type-card selected" data-type="general"><span class="prep-type-icon">&#128196;</span><span data-i18n="prep.type_general">General</span></button>
+            <button class="prep-type-card" data-type="weekly"><span class="prep-type-icon">&#128197;</span><span data-i18n="prep.type_weekly">Weekly</span></button>
+            <button class="prep-type-card" data-type="brainstorm"><span class="prep-type-icon">&#128161;</span><span data-i18n="prep.type_brainstorm">Brainstorm</span></button>
+            <button class="prep-type-card" data-type="sales"><span class="prep-type-icon">&#129309;</span><span data-i18n="prep.type_sales">Sales/Client</span></button>
+            <button class="prep-type-card" data-type="1on1"><span class="prep-type-icon">&#128101;</span><span data-i18n="prep.type_1on1">1-on-1</span></button>
+            <button class="prep-type-card" data-type="kickoff"><span class="prep-type-icon">&#127937;</span><span data-i18n="prep.type_kickoff">Kickoff</span></button>
+          </div>
+        </div>
+
+        <!-- Section: Agenda -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.summary_agenda">Agenda</label>
+          <textarea class="settings-textarea" id="prepAgendaInput" rows="3" data-i18n-placeholder="prep.agenda_placeholder" placeholder="What topics will be discussed?"></textarea>
+        </div>
+
+        <!-- Section: Participants -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.summary_attendees">Attendees</label>
+          <div class="prep-participants-row">
+            <input type="text" class="settings-input" id="prepParticipantSearch" data-i18n-placeholder="contacts.search" placeholder="Search contacts..." style="flex:1">
+            <button class="btn btn-sm" id="btnScanCard" title="Scan business card">&#128247; <span data-i18n="prep.scan_card">Scan</span></button>
+          </div>
+          <div class="prep-selected-badges" id="prepSelectedBadges"></div>
+          <div class="prep-contact-list" id="prepContactList"></div>
+          <!-- Card OCR result (hidden by default) -->
+          <div class="prep-card-result" id="prepCardResult" hidden>
+            <div class="prep-card-fields">
+              <input type="text" class="settings-input" id="prepCardName" placeholder="Name">
+              <input type="text" class="settings-input" id="prepCardCompany" placeholder="Company">
+              <input type="text" class="settings-input" id="prepCardTitle" placeholder="Title">
+              <input type="text" class="settings-input" id="prepCardEmail" placeholder="Email">
+              <input type="text" class="settings-input" id="prepCardPhone" placeholder="Phone">
+            </div>
+            <button class="btn btn-sm btn-primary" id="btnSaveCardContact" data-i18n="prep.save_to_contacts">Save to Contacts</button>
+          </div>
+        </div>
+
+        <!-- Section: Reference Meeting -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Meeting</label>
+          <select class="settings-select" id="prepReferenceSelect">
+            <option value="">--</option>
+          </select>
+          <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
+        </div>
+
+        <!-- Section: File Attachments -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.files_label">Files</label>
+          <div class="prep-file-drop" id="prepFileDrop">
+            <span data-i18n="prep.file_drop_hint">Drop files here or click to browse</span>
+            <input type="file" id="prepFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
+          </div>
+          <div class="prep-file-chips" id="prepFileChips"></div>
+        </div>
+
+        <!-- Section: Notes -->
+        <div class="prep-section">
+          <label class="prep-section-label" data-i18n="prep.notes_label">Notes</label>
+          <textarea class="settings-textarea" id="prepNotesInput" rows="2" data-i18n-placeholder="prep.notes_placeholder" placeholder="Additional notes or instructions for AI..."></textarea>
+        </div>
+      </div>
+      <div class="prep-form-footer">
+        <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as Preset</span></button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for Later</button>
+          <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Meeting</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Modal (for business card scan) -->
+  <div class="modal-overlay" id="cameraModal" hidden>
+    <div class="modal" style="max-width:400px;padding:16px;">
+      <video id="cameraPreview" autoplay playsinline style="width:100%;border-radius:var(--radius-md);background:#000;"></video>
+      <canvas id="cameraCanvas" hidden></canvas>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
+        <button class="btn btn-sm btn-primary" id="btnCameraCapture">&#128248; Capture</button>
+        <button class="btn btn-sm" id="btnCameraCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Launcher Modal -->
   <div class="modal-overlay" id="launcherModal" hidden>
     <div class="modal launcher-modal">
