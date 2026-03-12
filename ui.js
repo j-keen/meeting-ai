@@ -440,6 +440,7 @@ function renderMarkdownAnalysis(container, analysis) {
 // Enter edit mode for a single block
 function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
   const originalRaw = block.raw;
+  let done = false; // prevent double-fire from outside click + blur race
   blockEl.classList.add('editing');
   containerDiv.classList.add('has-editing-block');
 
@@ -460,8 +461,6 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
   `;
 
   // Replace block content with editor
-  const contentBackup = blockEl.innerHTML;
-  // Remove all children except we'll replace
   blockEl.innerHTML = '';
   blockEl.appendChild(textarea);
   blockEl.appendChild(toolbar);
@@ -475,11 +474,8 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
   textarea.addEventListener('input', autoResize);
   requestAnimationFrame(autoResize);
 
-  const cancel = () => {
-    blockEl.classList.remove('editing');
-    containerDiv.classList.remove('has-editing-block');
-    blockEl.innerHTML = renderMarkdown(originalRaw);
-    // Re-add edit button
+  // Helper: re-add edit button after cancel/save
+  const reattachEditBtn = () => {
     const editBtn = document.createElement('button');
     editBtn.className = 'ai-block-edit-btn';
     editBtn.innerHTML = '✎';
@@ -492,12 +488,31 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
     blockEl.appendChild(editBtn);
   };
 
+  // Cleanup outside-click listener
+  const removeOutsideListener = () => {
+    document.removeEventListener('mousedown', onOutsideClick, true);
+  };
+
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    removeOutsideListener();
+    blockEl.classList.remove('editing');
+    containerDiv.classList.remove('has-editing-block');
+    blockEl.innerHTML = renderMarkdown(originalRaw);
+    reattachEditBtn();
+  };
+
   const save = () => {
+    if (done) return;
     const newRaw = textarea.value.trim();
     if (!newRaw || newRaw === originalRaw) {
       cancel();
       return;
     }
+
+    done = true;
+    removeOutsideListener();
 
     // Track correction
     const oldContent = originalRaw.replace(/^#+\s*/, '').replace(/^[-*]\s*/gm, '').trim();
@@ -521,18 +536,7 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
     blockEl.classList.remove('editing');
     containerDiv.classList.remove('has-editing-block');
     blockEl.innerHTML = renderMarkdown(newRaw);
-
-    // Re-add edit button
-    const editBtn = document.createElement('button');
-    editBtn.className = 'ai-block-edit-btn';
-    editBtn.innerHTML = '✎';
-    editBtn.title = t('block_edit.edit');
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (containerDiv.querySelector('.ai-block.editing')) return;
-      startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv);
-    });
-    blockEl.appendChild(editBtn);
+    reattachEditBtn();
 
     emit('analysis:edited', analysis);
   };
@@ -549,6 +553,16 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
       e.preventDefault();
       save();
     }
+  });
+
+  // Auto-save on outside click (like transcript editing)
+  const onOutsideClick = (e) => {
+    if (!blockEl.contains(e.target)) {
+      save();
+    }
+  };
+  requestAnimationFrame(() => {
+    document.addEventListener('mousedown', onOutsideClick, true);
   });
 }
 

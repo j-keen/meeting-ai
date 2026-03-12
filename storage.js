@@ -267,4 +267,47 @@ export function deletePreparedMeeting() {
   return saveAll(data);
 }
 
+// Correction Dictionary (global, cross-meeting)
+export function loadCorrectionDict() {
+  const data = loadAll();
+  return data.correctionDict || [];
+}
+
+export function saveCorrectionDict(entries) {
+  const data = loadAll();
+  data.correctionDict = entries;
+  return saveAll(data);
+}
+
+export function addCorrectionEntry(original, corrected) {
+  const data = loadAll();
+  if (!data.correctionDict) data.correctionDict = [];
+  // Check for duplicate original
+  const existing = data.correctionDict.find(e => e.original === original);
+  if (existing) {
+    existing.corrected = corrected;
+    existing.count = (existing.count || 1) + 1;
+    existing.updatedAt = Date.now();
+  } else {
+    data.correctionDict.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      original,
+      corrected,
+      count: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
+  saveAll(data);
+  return data.correctionDict;
+}
+
+export function deleteCorrectionEntry(id) {
+  const data = loadAll();
+  if (!data.correctionDict) return [];
+  data.correctionDict = data.correctionDict.filter(e => e.id !== id);
+  saveAll(data);
+  return data.correctionDict;
+}
+
 export { getStorageUsage };

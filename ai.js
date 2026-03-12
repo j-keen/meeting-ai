@@ -187,7 +187,7 @@ export async function analyzeTranscript({
 }
 
 // Auto-generate tags from analysis
-export async function generateTags({ summary, transcript, model = 'gemini-3.1-flash-lite' }) {
+export async function generateTags({ summary, transcript, model = 'gemini-2.5-flash-lite' }) {
   if (!isProxyAvailable() || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
@@ -243,7 +243,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGemini('gemini-3.1-flash-lite', {
+    const data = await callGemini('gemini-2.5-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
     });
@@ -427,12 +427,19 @@ Rules:
 };
 
 // AI-powered sentence correction
-export async function correctSentences({ lines, model = 'gemini-2.5-flash' }) {
+export async function correctSentences({ lines, model = 'gemini-2.5-flash', correctionDict = [] }) {
   if (!isProxyAvailable() || !lines || lines.length === 0) return [];
 
   const lang = getAiLanguage();
   const langLabel = lang === 'ko' ? 'Korean' : 'English';
   const numbered = lines.map((l, i) => `${i}: ${l.text}`).join('\n');
+
+  let dictSection = '';
+  if (correctionDict.length > 0) {
+    const entries = correctionDict.map(e => `- "${e.original}" → "${e.corrected}"`).join('\n');
+    dictSection = `\n\nUser correction dictionary (apply these known corrections when matching patterns appear):
+${entries}\n`;
+  }
 
   const prompt = `You are a meeting transcript corrector for ${langLabel} STT output.
 
@@ -440,7 +447,7 @@ Correct ONLY:
 - STT misrecognition errors (wrong words from similar pronunciation)
 - Obvious typos and grammatical errors
 - Do NOT change meaning, style, or rephrase sentences
-
+${dictSection}
 Numbered sentences:
 ${numbered}
 

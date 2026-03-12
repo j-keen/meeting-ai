@@ -6,6 +6,7 @@ import {
   loadContacts, addContact, deleteContact,
   loadLocations, addLocation, deleteLocation,
   loadCategories, addCategory, deleteCategory,
+  loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
 } from './storage.js';
 import { getDefaultPrompt } from './ai.js';
 import { t, setLanguage, setAiLanguage, getPromptPresets } from './i18n.js';
@@ -373,6 +374,9 @@ export function initSettings() {
 
   // ===== Data Tab (immediate save - CRUD operations) =====
   initDataTab();
+
+  // ===== Correction Dictionary (Connect tab, immediate save) =====
+  initCorrectionDict();
 }
 
 // ===== Save / Revert / Reset =====
@@ -740,6 +744,58 @@ function renderDataCategories() {
       deleteCategory(cat);
       renderDataCategories();
     });
+    list.appendChild(item);
+  });
+}
+
+// ===== Correction Dictionary (Connect tab) =====
+function initCorrectionDict() {
+  renderCorrectionDict();
+
+  $('#btnAddCorrection')?.addEventListener('click', () => {
+    const original = $('#inputCorrectionOriginal')?.value.trim();
+    const corrected = $('#inputCorrectionCorrected')?.value.trim();
+    if (!original || !corrected || original === corrected) return;
+    addCorrectionEntry(original, corrected);
+    $('#inputCorrectionOriginal').value = '';
+    $('#inputCorrectionCorrected').value = '';
+    renderCorrectionDict();
+  });
+}
+
+function renderCorrectionDict() {
+  const list = $('#dataCorrectionDictList');
+  if (!list) return;
+  const entries = loadCorrectionDict();
+  list.innerHTML = '';
+  if (entries.length === 0) {
+    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
+    return;
+  }
+  // Sort by most recently updated
+  entries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  entries.forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'data-list-item';
+    const info = document.createElement('div');
+    info.className = 'data-list-item-info';
+    const mainText = document.createElement('span');
+    mainText.textContent = `"${entry.original}" → "${entry.corrected}"`;
+    info.appendChild(mainText);
+    if (entry.count > 1) {
+      const countSpan = document.createElement('span');
+      countSpan.className = 'data-list-item-sub';
+      countSpan.textContent = `×${entry.count}`;
+      info.appendChild(countSpan);
+    }
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn btn-xs btn-danger';
+    delBtn.textContent = '\u00d7';
+    delBtn.addEventListener('click', () => {
+      deleteCorrectionEntry(entry.id);
+      renderCorrectionDict();
+    });
+    item.append(info, delBtn);
     list.appendChild(item);
   });
 }
