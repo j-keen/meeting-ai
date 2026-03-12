@@ -231,6 +231,9 @@ const translations = {
     'chat.memo_added': 'Memo added to transcript.',
     'chat.rerunning_analysis': 'Re-running analysis with updated context...',
     'chat.waiting_hint': 'Ask questions about the meeting in progress.',
+    'chat.regenerate': 'Regenerate',
+    'chat.edit': 'Edit',
+    'chat.file_unsupported': 'Unsupported file type. Please attach text files (.txt, .md, .json, etc.)',
     'chat.suggestion_1': 'Summarize the discussion so far',
     'chat.suggestion_2': 'List action items',
     'chat.suggestion_3': 'What are the key decisions?',
@@ -314,6 +317,9 @@ const translations = {
     'contacts.no_contacts': 'No contacts yet.',
     'contacts.save': 'Save',
     'contacts.cancel': 'Cancel',
+
+    // Gemini model label
+    'settings.gemini_model': 'Gemini Model (Analysis)',
 
     // Model names
     'settings.model_flash': 'Gemini 2.5 Flash',
@@ -662,6 +668,9 @@ const translations = {
     'chat.memo_added': '메모가 회의록에 추가되었습니다.',
     'chat.rerunning_analysis': '업데이트된 맥락으로 재분석 중...',
     'chat.waiting_hint': '진행 중인 회의에 대해 질문해보세요.',
+    'chat.regenerate': '다시 생성',
+    'chat.edit': '수정',
+    'chat.file_unsupported': '지원되지 않는 파일 형식입니다. 텍스트 파일(.txt, .md, .json 등)을 사용해주세요.',
     'chat.suggestion_1': '지금까지 논의를 요약해줘',
     'chat.suggestion_2': '액션 아이템을 정리해줘',
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
@@ -746,10 +755,13 @@ const translations = {
     'contacts.save': '저장',
     'contacts.cancel': '취소',
 
+    // Gemini model label
+    'settings.gemini_model': 'Gemini 분석 모델',
+
     // Model names
-    'settings.model_flash': '빠르고 균형 잡힌 모델',
-    'settings.model_flash_lite': '가장 빠르고 가벼운 모델',
-    'settings.model_pro': '가장 정확한 모델',
+    'settings.model_flash': 'Gemini 2.5 Flash — 빠르고 균형 잡힌 모델',
+    'settings.model_flash_lite': 'Gemini 2.5 Flash Lite — 가장 빠르고 가벼운 모델',
+    'settings.model_pro': 'Gemini 2.5 Pro — 가장 정확한 모델',
 
     // AI correction hint
     'settings.auto_correction_hint': '녹음 중 AI가 오타와 음성인식 오류를 자동 교정합니다.',

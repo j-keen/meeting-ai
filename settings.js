@@ -178,18 +178,19 @@ export function initSettings() {
         const data = await resp.json();
         if (!data.key) throw new Error('Empty key');
 
-        // Try WebSocket connection
+        // Try WebSocket connection with same params as recording
         const lang = state.settings.language || 'ko';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true`;
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
+        console.log(`[Settings] Testing Deepgram URL: ${wsUrl}`);
         const ws = new WebSocket(wsUrl, ['token', data.key]);
-        const timeout = setTimeout(() => { ws.close(); throw new Error('timeout'); }, 5000);
+        const timeout = setTimeout(() => { ws.close(); }, 5000);
 
         await new Promise((resolve, reject) => {
           ws.onopen = () => { clearTimeout(timeout); ws.close(); resolve(); };
           ws.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket connection failed')); };
           ws.onclose = (e) => {
             clearTimeout(timeout);
-            if (e.code !== 1000 && e.code !== 1005) reject(new Error(`Connection closed: ${e.code} ${e.reason}`));
+            if (e.code !== 1000 && e.code !== 1005) reject(new Error(`Connection closed: code=${e.code} reason="${e.reason || 'none'}"`));
           };
         });
 
@@ -215,18 +216,19 @@ export function initSettings() {
     btn.textContent = t('stt.test_connection');
   });
 
-  // Auto Analysis toggle
-  $('#checkAutoAnalysis').addEventListener('change', (e) => {
-    state.settings.autoAnalysis = e.target.checked;
-    markDirty();
-  });
-
-  // Analysis Interval (toggle buttons)
+  // Analysis Interval (toggle buttons — includes OFF)
   document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.interval-toggle-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      state.settings.analysisInterval = parseInt(btn.dataset.interval);
+      const interval = parseInt(btn.dataset.interval);
+      if (interval === 0) {
+        state.settings.autoAnalysis = false;
+        state.settings.analysisInterval = 0;
+      } else {
+        state.settings.autoAnalysis = true;
+        state.settings.analysisInterval = interval;
+      }
       markDirty();
       highlightField(btn);
     });
@@ -449,7 +451,7 @@ function resetAllSettings() {
   s.language = 'ko';
   s.sttEngine = 'webspeech';
   s.autoAnalysis = true;
-  s.analysisInterval = 30;
+  s.analysisInterval = 180;
   s.autoCorrection = true;
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
@@ -477,10 +479,10 @@ function applySettingsToForm() {
   $('#selectGeminiModel').value = s.geminiModel;
   $('#selectLanguage').value = s.language;
   $('#selectSttEngine').value = s.sttEngine || 'webspeech';
-  $('#checkAutoAnalysis').checked = s.autoAnalysis;
-  // Set interval toggle button active state
-  const intervals = [30, 60, 120];
-  const closest = intervals.reduce((prev, curr) => Math.abs(curr - s.analysisInterval) < Math.abs(prev - s.analysisInterval) ? curr : prev);
+  // Set interval toggle button active state (includes OFF = 0)
+  const activeInterval = s.autoAnalysis === false ? 0 : s.analysisInterval;
+  const intervals = [0, 180, 300, 420];
+  const closest = intervals.reduce((prev, curr) => Math.abs(curr - activeInterval) < Math.abs(prev - activeInterval) ? curr : prev);
   document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.interval) === closest);
   });
@@ -509,7 +511,9 @@ function loadSavedSettings() {
   s.language = saved.language || 'ko';
   s.sttEngine = saved.sttEngine || 'webspeech';
   s.autoAnalysis = saved.autoAnalysis !== false;
-  s.analysisInterval = saved.analysisInterval || 30;
+  s.analysisInterval = saved.analysisInterval || 180;
+  // Migrate old short intervals to new minimum
+  if (s.analysisInterval > 0 && s.analysisInterval < 180) s.analysisInterval = 180;
   s.autoCorrection = saved.autoCorrection !== false;
   s.meetingPreset = saved.meetingPreset || 'general';
   s.meetingContext = saved.meetingContext || '';

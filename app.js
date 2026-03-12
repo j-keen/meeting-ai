@@ -1117,10 +1117,9 @@ function init() {
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
 
-  // ===== Welcome Modal =====
-  const saved = loadSettings();
-  if (!saved.welcomeDismissed) {
-    showWelcomeModal();
+  // ===== Launcher Modal =====
+  if (!state.isRecording) {
+    showLauncherModal();
   }
 
   // ===== Event Bindings =====
@@ -1192,22 +1191,6 @@ function init() {
     saveSettings({ theme: state.settings.theme });
   });
 
-  // Quick Start — start recording immediately
-  $('#btnQuickStart')?.addEventListener('click', async () => {
-    state.settings.meetingPreset = 'general';
-    await startRecording();
-  });
-
-  // Meeting Prep — guided setup flow
-  $('#btnMeetingPrep')?.addEventListener('click', () => {
-    startMeetingPrep();
-  });
-
-  // Meeting Search — open history modal
-  $('#btnMeetingSearch')?.addEventListener('click', () => {
-    $('#historyModal').hidden = false;
-    refreshHistoryGrid();
-  });
 
   // Meeting title input binding
   $('#meetingTitleInput')?.addEventListener('input', (e) => {
@@ -1400,7 +1383,7 @@ function init() {
 
   // Meeting prep events
   on('meetingPrep:start', () => {
-    const modal = $('#welcomeModal');
+    const modal = $('#launcherModal');
     if (modal) modal.hidden = true;
     startMeetingPrep();
   });
@@ -1436,26 +1419,54 @@ function init() {
   }
 }
 
-// ===== Welcome Modal =====
-function showWelcomeModal() {
-  const modal = $('#welcomeModal');
+// ===== Launcher Modal =====
+function showLauncherModal() {
+  const modal = $('#launcherModal');
   if (!modal) return;
+
+  // Show welcome section for first visit
+  const welcome = $('#launcherWelcome');
+  if (welcome) welcome.hidden = !!state.settings.welcomeDismissed;
+
   modal.hidden = false;
 
   const close = () => {
     modal.hidden = true;
-    state.settings.welcomeDismissed = true;
-    saveSettings(state.settings);
+    if (!state.settings.welcomeDismissed) {
+      state.settings.welcomeDismissed = true;
+      saveSettings(state.settings);
+    }
+    document.removeEventListener('keydown', keyHandler);
   };
 
-  $('#welcomeClose').addEventListener('click', close);
+  // Card click handlers
+  $('#btnLauncherQuickStart').onclick = async () => {
+    close();
+    state.settings.meetingPreset = 'general';
+    await startRecording();
+  };
 
+  $('#btnLauncherMeetingPrep').onclick = () => {
+    close();
+    startMeetingPrep();
+  };
+
+  $('#btnLauncherMeetingSearch').onclick = () => {
+    close();
+    $('#historyModal').hidden = false;
+    refreshHistoryGrid();
+  };
+
+  $('#launcherCloseBtn').onclick = close;
+
+  // Keyboard shortcuts: 1, 2, 3, ESC
   const keyHandler = (e) => {
     if (modal.hidden) return;
-    if (e.key === 'Escape' || e.key === 'Enter') {
-      close();
-      document.removeEventListener('keydown', keyHandler);
-    }
+    if (e.target.matches('input, textarea, [contenteditable]')) return;
+    if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
+    else if (e.key === '2') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
+    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherMeetingSearch').click(); }
+    else if (e.key === 'Escape') { close(); }
   };
   document.addEventListener('keydown', keyHandler);
 }

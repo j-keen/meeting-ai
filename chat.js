@@ -6,6 +6,16 @@ import { callGemini, isProxyAvailable } from './gemini-api.js';
 
 const $ = (sel) => document.querySelector(sel);
 
+const ALLOWED_EXTENSIONS = new Set([
+  '.txt','.md','.csv','.json','.js','.ts','.py','.html','.css',
+  '.xml','.log','.yaml','.yml','.toml','.ini','.cfg','.env','.sh','.bat'
+]);
+
+function isAllowedFile(file) {
+  const ext = '.' + file.name.split('.').pop().toLowerCase();
+  return ALLOWED_EXTENSIONS.has(ext);
+}
+
 const FUNCTION_DECLARATIONS = [
   {
     name: 'add_context',
@@ -60,6 +70,11 @@ export function initChat() {
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (!isAllowedFile(file)) {
+      emit('toast', { message: t('chat.file_unsupported'), type: 'warning' });
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       attachedFileContent = reader.result;
@@ -68,6 +83,33 @@ export function initChat() {
     };
     reader.readAsText(file);
     e.target.value = '';
+  });
+
+  // Drag & drop on chat input area
+  const chatInputWrap = document.querySelector('.chat-input-wrap');
+  chatInputWrap.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    chatInputWrap.classList.add('drag-over');
+  });
+  chatInputWrap.addEventListener('dragleave', () => {
+    chatInputWrap.classList.remove('drag-over');
+  });
+  chatInputWrap.addEventListener('drop', (e) => {
+    e.preventDefault();
+    chatInputWrap.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (!isAllowedFile(file)) {
+      emit('toast', { message: t('chat.file_unsupported'), type: 'warning' });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      attachedFileContent = reader.result;
+      attachedFileName = file.name;
+      renderSystemMessage(t('chat.file_attached', { name: file.name }));
+    };
+    reader.readAsText(file);
   });
 }
 
@@ -376,14 +418,107 @@ export function renderChatMessage(role, text) {
   const tmpl = $('#tmplChatMessage');
   const el = tmpl.content.cloneNode(true).querySelector('.chat-message');
   el.classList.add(role);
+  el.dataset.text = text;
   const content = el.querySelector('.chat-message-content');
   if (role === 'model') {
     content.innerHTML = renderMarkdown(text);
   } else {
     content.textContent = text;
   }
+
+  // Add action buttons
+  const actions = el.querySelector('.chat-message-actions');
+  if (role === 'model') {
+    const btn = document.createElement('button');
+    btn.textContent = '↻';
+    btn.title = t('chat.regenerate');
+    btn.addEventListener('click', () => handleRegenerate(el));
+    actions.appendChild(btn);
+  } else if (role === 'user') {
+    const btn = document.createElement('button');
+    btn.textContent = '✎';
+    btn.title = t('chat.edit');
+    btn.addEventListener('click', () => handleEdit(el));
+    actions.appendChild(btn);
+  }
+
   container.appendChild(el);
   container.scrollTop = container.scrollHeight;
+}
+
+function handleRegenerate(messageEl) {
+  // Don't regenerate if already waiting for response
+  if ($('.typing-indicator')) return;
+
+  // Find last user message text from chatHistory
+  let lastUserText = null;
+  for (let i = state.chatHistory.length - 1; i >= 0; i--) {
+    if (state.chatHistory[i].role === 'user') {
+      lastUserText = state.chatHistory[i].text;
+      break;
+    }
+  }
+  if (!lastUserText) return;
+
+  // Remove last model entry from chatHistory
+  for (let i = state.chatHistory.length - 1; i >= 0; i--) {
+    if (state.chatHistory[i].role === 'model') {
+      state.chatHistory.splice(i, 1);
+      break;
+    }
+  }
+
+  // Remove DOM element
+  messageEl.remove();
+
+  // Re-send
+  sendChatMessage(lastUserText);
+}
+
+function handleEdit(messageEl) {
+  const originalText = messageEl.dataset.text;
+
+  // Find index in chatHistory by matching timestamp approach — remove this and all after
+  const allMessages = Array.from($('#chatMessages').querySelectorAll('.chat-message'));
+  const idx = allMessages.indexOf(messageEl);
+
+  // Remove from chatHistory: find corresponding entry and remove it + everything after
+  // Count user/model messages up to this element to find chatHistory index
+  let historyIdx = -1;
+  let userCount = 0;
+  let modelCount = 0;
+  for (let i = 0; i < allMessages.length; i++) {
+    const msg = allMessages[i];
+    if (msg.classList.contains('system')) continue;
+    if (i === idx) {
+      historyIdx = userCount + modelCount;
+      break;
+    }
+    if (msg.classList.contains('user')) userCount++;
+    else if (msg.classList.contains('model')) modelCount++;
+  }
+
+  // Simpler approach: just count non-system messages before this one
+  if (historyIdx >= 0 && historyIdx < state.chatHistory.length) {
+    state.chatHistory.splice(historyIdx);
+  }
+
+  // Remove this message and all after from DOM
+  for (let i = allMessages.length - 1; i >= idx; i--) {
+    allMessages[i].remove();
+  }
+
+  // Show empty state if no messages left
+  const container = $('#chatMessages');
+  if (!container.querySelector('.chat-message')) {
+    const empty = $('#chatEmpty');
+    if (empty) empty.style.display = '';
+  }
+
+  // Put text back in input
+  const input = $('#chatInput');
+  input.value = originalText;
+  input.focus();
 }
 
 function renderSystemMessage(text) {

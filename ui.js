@@ -1059,9 +1059,9 @@ export function initKeyboardShortcuts() {
 
 // ===== Transcript Waiting State =====
 export function showTranscriptWaiting() {
-  const quickStart = $('#quickStartSection');
+  const placeholder = $('#transcriptEmptyPlaceholder');
   const waiting = $('#transcriptWaiting');
-  if (quickStart) quickStart.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'none';
   if (waiting) waiting.style.display = '';
 }
 
@@ -1071,9 +1071,9 @@ export function hideTranscriptWaiting() {
 }
 
 export function resetTranscriptEmpty() {
-  const quickStart = $('#quickStartSection');
+  const placeholder = $('#transcriptEmptyPlaceholder');
   const waiting = $('#transcriptWaiting');
-  if (quickStart) quickStart.style.display = '';
+  if (placeholder) placeholder.style.display = '';
   if (waiting) waiting.style.display = 'none';
 }
 

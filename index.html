@@ -55,25 +55,9 @@
       </div>
       <div class="transcript-list" id="transcriptList">
         <div class="transcript-empty" id="transcriptEmpty">
-          <div class="quick-start-section" id="quickStartSection">
-            <p class="quick-start-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
-            <div class="quick-start-actions-grid">
-              <button class="quick-action-card" id="btnQuickStart">
-                <span class="quick-action-icon">&#9889;</span>
-                <span class="quick-action-label" data-i18n="meeting.quick_start">Quick Start</span>
-                <span class="quick-action-desc" data-i18n="meeting.quick_start_desc">Start recording immediately</span>
-              </button>
-              <button class="quick-action-card" id="btnMeetingPrep">
-                <span class="quick-action-icon">&#128221;</span>
-                <span class="quick-action-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
-                <span class="quick-action-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
-              </button>
-              <button class="quick-action-card" id="btnMeetingSearch">
-                <span class="quick-action-icon">&#128269;</span>
-                <span class="quick-action-label" data-i18n="meeting.meeting_search">Search Meetings</span>
-                <span class="quick-action-desc" data-i18n="meeting.meeting_search_desc">Browse past meeting records</span>
-              </button>
-            </div>
+          <div class="transcript-empty-placeholder" id="transcriptEmptyPlaceholder">
+            <p data-i18n="transcript.empty">No transcript yet</p>
+            <p class="text-muted" data-i18n="transcript.empty_hint">Start recording to begin</p>
           </div>
           <div class="transcript-waiting" id="transcriptWaiting" style="display:none">
             <div class="waiting-indicator"></div>
@@ -162,7 +146,7 @@
         <div class="chat-input-actions">
           <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
             &#128206;
-            <input type="file" id="chatFileInput" accept=".txt,.md" hidden>
+            <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
           </label>
           <select class="chat-model-select" id="chatModelSelect">
             <option value="gemini-2.5-flash">Flash 2.5</option>
@@ -271,14 +255,11 @@
           </div>
           <div class="settings-inline-row">
             <span data-i18n="settings.auto_analysis">Auto Analysis</span>
-            <div class="toggle-wrap">
-              <input type="checkbox" id="checkAutoAnalysis" checked>
-              <span class="toggle-slider"></span>
-            </div>
             <div class="interval-toggle-group" id="intervalToggleGroup">
-              <button class="interval-toggle-btn active" data-interval="30">30s</button>
-              <button class="interval-toggle-btn" data-interval="60">1min</button>
-              <button class="interval-toggle-btn" data-interval="120">2min</button>
+              <button class="interval-toggle-btn" data-interval="0">OFF</button>
+              <button class="interval-toggle-btn active" data-interval="180">3min</button>
+              <button class="interval-toggle-btn" data-interval="300">5min</button>
+              <button class="interval-toggle-btn" data-interval="420">7min</button>
             </div>
           </div>
           <div class="settings-inline-row">
@@ -637,15 +618,41 @@
     </div>
   </div>
 
-  <!-- Welcome Modal -->
-  <div class="welcome-modal" id="welcomeModal" hidden>
-    <div class="welcome-modal-content">
-      <h2 class="welcome-modal-title" data-i18n="welcome.title">Meeting AI</h2>
-      <p class="welcome-modal-subtitle" data-i18n="welcome.privacy_desc">Your data is safe.</p>
-      <div class="welcome-privacy-info">
-        <p data-i18n="welcome.privacy_detail">All meeting data is stored locally on your device.<br>AI analysis is powered by Google Vertex AI,<br>which does not use your data for training.</p>
+  <!-- Launcher Modal -->
+  <div class="modal-overlay" id="launcherModal" hidden>
+    <div class="modal launcher-modal">
+      <!-- Welcome section (first visit only) -->
+      <div class="launcher-welcome" id="launcherWelcome" hidden>
+        <h2 data-i18n="welcome.title">Meeting AI</h2>
+        <p class="launcher-subtitle" data-i18n="welcome.privacy_desc">Your data is safe.</p>
+        <div class="launcher-privacy-info">
+          <p data-i18n="welcome.privacy_detail">All meeting data is stored locally on your device.<br>AI analysis is powered by Google Vertex AI,<br>which does not use your data for training.</p>
+        </div>
+        <hr class="launcher-divider">
       </div>
-      <button class="btn btn-primary welcome-start-btn" id="welcomeClose" data-i18n="welcome.get_started">Get Started</button>
+      <!-- 3 action cards -->
+      <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
+      <div class="launcher-actions-grid">
+        <button class="launcher-card" id="btnLauncherQuickStart">
+          <span class="launcher-card-badge">1</span>
+          <span class="launcher-card-icon">&#9889;</span>
+          <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
+          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Start recording immediately</span>
+        </button>
+        <button class="launcher-card" id="btnLauncherMeetingPrep">
+          <span class="launcher-card-badge">2</span>
+          <span class="launcher-card-icon">&#128221;</span>
+          <span class="launcher-card-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
+          <span class="launcher-card-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
+        </button>
+        <button class="launcher-card" id="btnLauncherMeetingSearch">
+          <span class="launcher-card-badge">3</span>
+          <span class="launcher-card-icon">&#128269;</span>
+          <span class="launcher-card-label" data-i18n="meeting.meeting_search">Search Meetings</span>
+          <span class="launcher-card-desc" data-i18n="meeting.meeting_search_desc">Browse past meeting records</span>
+        </button>
+      </div>
+      <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
     </div>
   </div>
 
@@ -730,6 +737,7 @@
   <template id="tmplChatMessage">
     <div class="chat-message">
       <div class="chat-message-content"></div>
+      <div class="chat-message-actions"></div>
     </div>
   </template>
 

@@ -306,59 +306,17 @@ h1, h2, h3 { font-weight: 600; }
   background: var(--bg-secondary);
 }
 .meeting-title-input[hidden] { display: none; }
-/* ===== Quick Start ===== */
-.quick-start-section {
+/* ===== Transcript Empty Placeholder ===== */
+.transcript-empty-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   padding: 40px 20px;
-}
-.quick-start-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.quick-start-actions-grid {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  max-width: 480px;
-}
-.quick-action-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 20px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  cursor: pointer;
-  transition: all var(--transition-fast);
   text-align: center;
-}
-.quick-action-card:hover {
-  border-color: var(--accent);
-  background: var(--accent-bg);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-.quick-action-icon {
-  font-size: 24px;
-  line-height: 1;
-}
-.quick-action-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.quick-action-desc {
-  font-size: 11px;
   color: var(--text-muted);
-  line-height: 1.3;
 }
+.transcript-empty-placeholder p { margin: 0; }
 
 /* ===== Transcript Waiting State ===== */
 .transcript-waiting {
@@ -839,6 +797,17 @@ h1, h2, h3 { font-weight: 600; }
 .chat-message.model .chat-message-content ul,
 .chat-message.model .chat-message-content ol { margin: 4px 0; padding-left: 18px; }
 .chat-message.model .chat-message-content li { margin-bottom: 2px; }
+/* Chat message actions (regenerate / edit) */
+.chat-message-actions { display: none; gap: 4px; margin-top: 4px; }
+.chat-message:hover .chat-message-actions { display: flex; }
+.chat-message-actions button {
+  background: none; border: none; cursor: pointer;
+  opacity: 0.4; font-size: 13px; padding: 2px 6px;
+  color: var(--text-muted); border-radius: var(--radius-sm);
+}
+.chat-message-actions button:hover { opacity: 1; background: var(--bg-hover); }
+.chat-message.user .chat-message-actions button { color: var(--text-inverse); }
+.chat-message.user .chat-message-actions button:hover { background: rgba(255,255,255,0.2); }
 /* Settings Hint */
 .settings-hint {
   font-size: 11px;
@@ -910,6 +879,11 @@ h1, h2, h3 { font-weight: 600; }
   padding: 8px 12px;
   background: var(--bg-primary);
   flex-shrink: 0;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.chat-input-wrap.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-bg);
 }
 .chat-input-row { display: flex; gap: 8px; }
 .chat-input-row textarea {
@@ -2037,55 +2011,124 @@ h1, h2, h3 { font-weight: 600; }
   outline-offset: 2px;
 }
 
-/* ===== Welcome Modal ===== */
-.welcome-modal {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  z-index: 250;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.welcome-modal[hidden] { display: none; }
-.welcome-modal-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  max-width: 560px;
+/* ===== Launcher Modal ===== */
+.launcher-modal {
+  max-width: 520px;
   width: 100%;
-  padding: 32px 28px 24px;
+  padding: 28px 24px 20px;
   text-align: center;
 }
-.welcome-modal-title {
+.launcher-welcome h2 {
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
-  margin-bottom: 4px;
+  margin: 0 0 4px;
 }
-.welcome-modal-subtitle {
+.launcher-subtitle {
   font-size: 16px;
   color: var(--text-secondary);
-  margin-bottom: 16px;
+  margin: 0 0 16px;
   font-weight: 600;
 }
-.welcome-privacy-info {
+.launcher-privacy-info {
   font-size: 14px;
   color: var(--text-muted);
   line-height: 1.7;
-  margin-bottom: 24px;
+  margin-bottom: 0;
   padding: 16px;
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
   text-align: center;
 }
-.welcome-privacy-info p { margin: 0; }
-.welcome-start-btn {
-  padding: 12px 40px;
-  font-size: 15px;
-  border-radius: var(--radius-full);
+.launcher-privacy-info p { margin: 0; }
+.launcher-divider {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 20px 0;
+}
+.launcher-actions-title {
+  font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+.launcher-actions-grid {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.launcher-card {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+  font-family: var(--font-sans);
+}
+.launcher-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.launcher-card-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.launcher-card:hover .launcher-card-badge {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+.launcher-card-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.launcher-card-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.launcher-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+.launcher-close-btn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 4px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.launcher-close-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 /* ===== Meeting Prep Chat Buttons ===== */
