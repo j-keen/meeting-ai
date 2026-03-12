@@ -315,12 +315,6 @@ export function initSettings() {
 
 
 
-  // Slack webhook
-  $('#inputSlackWebhook').addEventListener('change', (e) => {
-    state.settings.slackWebhook = e.target.value;
-    markDirty();
-  });
-
   // Prompt settings shortcut (from AI panel header)
   $('#btnPromptSettings')?.addEventListener('click', () => {
     openSettings();
@@ -349,7 +343,7 @@ export function initSettings() {
   // ===== Data Tab (immediate save - CRUD operations) =====
   initDataTab();
 
-  // ===== Correction Dictionary (Connect tab, immediate save) =====
+  // ===== Correction Dictionary (modal, immediate save) =====
   initCorrectionDict();
 }
 
@@ -367,7 +361,6 @@ function saveAllSettings() {
     chatSystemPrompt: s.chatSystemPrompt,
     userProfile: s.userProfile,
     welcomeDismissed: s.welcomeDismissed,
-    slackWebhook: s.slackWebhook,
     customPromptPresets: s.customPromptPresets,
     chatPresets: s.chatPresets,
   });
@@ -431,7 +424,6 @@ function resetAllSettings() {
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
   s.userProfile = '';
-  s.slackWebhook = '';
   s.customPromptPresets = {};
   s.chatPresets = null;
 
@@ -456,7 +448,6 @@ function applySettingsToForm() {
 
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
-  $('#inputSlackWebhook').value = s.slackWebhook;
 
   const chatModelSelect = $('#chatModelSelect');
   if (chatModelSelect) chatModelSelect.value = s.chatModel;
@@ -485,7 +476,6 @@ function loadSavedSettings() {
   s.chatSystemPrompt = saved.chatSystemPrompt || '';
   s.userProfile = saved.userProfile || '';
   s.welcomeDismissed = saved.welcomeDismissed || false;
-  s.slackWebhook = saved.slackWebhook || '';
   s.theme = saved.theme || 'light';
   s.uiLanguage = saved.uiLanguage || 'auto';
   s.aiLanguage = saved.aiLanguage || 'auto';
@@ -820,10 +810,28 @@ function renderDataCategories() {
   });
 }
 
-// ===== Correction Dictionary (Connect tab) =====
-function initCorrectionDict() {
-  renderCorrectionDict();
+// ===== Correction Dictionary (Modal) =====
+let correctionSearchQuery = '';
 
+function initCorrectionDict() {
+  updateCorrectionBadge();
+
+  // Open modal
+  $('#btnOpenCorrectionDict')?.addEventListener('click', () => {
+    $('#correctionDictModal').hidden = false;
+    correctionSearchQuery = '';
+    const searchInput = $('#inputCorrectionSearch');
+    if (searchInput) searchInput.value = '';
+    renderCorrectionDict();
+  });
+
+  // Close modal
+  $('#btnCloseCorrectionDict')?.addEventListener('click', closeCorrectionModal);
+  $('#correctionDictModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeCorrectionModal();
+  });
+
+  // Add entry
   $('#btnAddCorrection')?.addEventListener('click', () => {
     const original = $('#inputCorrectionOriginal')?.value.trim();
     const corrected = $('#inputCorrectionCorrected')?.value.trim();
@@ -832,14 +840,88 @@ function initCorrectionDict() {
     $('#inputCorrectionOriginal').value = '';
     $('#inputCorrectionCorrected').value = '';
     renderCorrectionDict();
+    updateCorrectionBadge();
   });
+
+  // Search
+  $('#inputCorrectionSearch')?.addEventListener('input', (e) => {
+    correctionSearchQuery = e.target.value.trim().toLowerCase();
+    renderCorrectionDict();
+  });
+
+  // Export
+  $('#btnCorrectionDictExport')?.addEventListener('click', () => {
+    const entries = loadCorrectionDict();
+    if (entries.length === 0) {
+      emit('toast', { message: t('settings.correction_dict_empty_export'), type: 'warning' });
+      return;
+    }
+    const blob = new Blob([JSON.stringify(entries, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `correction-dict-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Import
+  $('#btnCorrectionDictImport')?.addEventListener('click', () => {
+    $('#correctionDictFileInput')?.click();
+  });
+  $('#correctionDictFileInput')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!Array.isArray(data)) throw new Error('not array');
+        let count = 0;
+        data.forEach(entry => {
+          if (entry.original && entry.corrected) {
+            addCorrectionEntry(entry.original, entry.corrected);
+            count++;
+          }
+        });
+        renderCorrectionDict();
+        updateCorrectionBadge();
+        emit('toast', { message: t('settings.correction_dict_imported').replace('{count}', count), type: 'success' });
+      } catch {
+        emit('toast', { message: t('settings.correction_dict_import_error'), type: 'error' });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+}
+
+function closeCorrectionModal() {
+  $('#correctionDictModal').hidden = true;
+}
+
+function updateCorrectionBadge() {
+  const badge = $('#correctionDictBadge');
+  if (!badge) return;
+  const count = loadCorrectionDict().length;
+  badge.textContent = count > 0 ? count : '';
+  badge.style.display = count > 0 ? '' : 'none';
 }
 
 function renderCorrectionDict() {
   const list = $('#dataCorrectionDictList');
   if (!list) return;
-  const entries = loadCorrectionDict();
+  let entries = loadCorrectionDict();
   list.innerHTML = '';
+
+  // Filter by search
+  if (correctionSearchQuery) {
+    entries = entries.filter(e =>
+      e.original.toLowerCase().includes(correctionSearchQuery) ||
+      e.corrected.toLowerCase().includes(correctionSearchQuery)
+    );
+  }
+
   if (entries.length === 0) {
     list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
     return;
@@ -866,6 +948,7 @@ function renderCorrectionDict() {
     delBtn.addEventListener('click', () => {
       deleteCorrectionEntry(entry.id);
       renderCorrectionDict();
+      updateCorrectionBadge();
     });
     item.append(info, delBtn);
     list.appendChild(item);
