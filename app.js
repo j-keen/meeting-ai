@@ -828,6 +828,12 @@ function cancelEndMeeting() {
 }
 
 function showPostEndButtons() {
+  // 기존 버튼이 있으면 먼저 제거 (중복 방지)
+  const existingResume = $('#btnResumeMeeting');
+  const existingNew = $('#btnNewMeeting');
+  if (existingResume) existingResume.remove();
+  if (existingNew) existingNew.remove();
+
   const endBtn = $('#btnEndMeeting');
   const btnResume = document.createElement('button');
   btnResume.className = 'btn btn-sm';
