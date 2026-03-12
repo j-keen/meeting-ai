@@ -10,11 +10,13 @@ function createWebSpeechEngine(language) {
   let restartFailCount = 0;
   let abortCount = 0;
   let lastResultTime = 0;
+  let lastFinalText = '';
+  let lastFinalTime = 0;
 
   return {
     name: 'webspeech',
 
-    start(onInterim, onFinal, onError) {
+    start(onInterim, onFinal, onError, onReplace) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         onError(t('stt.unsupported'));
@@ -36,7 +38,16 @@ function createWebSpeechEngine(language) {
           const text = result[0].transcript;
           console.log(`[STT] Result[${i}] isFinal=${result.isFinal} confidence=${result[0].confidence} text="${text}"`);
           if (result.isFinal) {
-            onFinal(text);
+            const now = Date.now();
+            // Mobile browsers may send progressive final results (each a superset of the previous).
+            // Detect this and replace the last line instead of creating a new one.
+            if (onReplace && lastFinalText && (now - lastFinalTime) < 2000 && text.startsWith(lastFinalText)) {
+              onReplace(text);
+            } else {
+              onFinal(text);
+            }
+            lastFinalText = text;
+            lastFinalTime = now;
           } else {
             onInterim(text);
           }
@@ -197,15 +208,31 @@ function createDeepgramEngine(language) {
         return;
       }
 
+      // API key pre-validation
+      if (!apiKey || typeof apiKey !== 'string' || apiKey.trim().length === 0) {
+        console.error('[STT:Deepgram] API key is invalid:', typeof apiKey, apiKey ? `length=${apiKey.length}` : 'empty');
+        onError(t('stt.deepgram_key_missing'));
+        return;
+      }
+
+      let useFallbackUrl = false;
+
       const connectWebSocket = () => {
         const lang = langMap[language] || 'en';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=${TARGET_SAMPLE_RATE}&channels=1&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
+        const fullUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=${TARGET_SAMPLE_RATE}&channels=1&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
+        const minimalUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=${TARGET_SAMPLE_RATE}&channels=1&smart_format=true&interim_results=true`;
+        const wsUrl = useFallbackUrl ? minimalUrl : fullUrl;
+
+        const maskedKey = `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`;
+        console.log(`[STT:Deepgram] Connecting... key=${maskedKey} fallback=${useFallbackUrl}`);
+        console.log(`[STT:Deepgram] URL: ${wsUrl}`);
 
         ws = new WebSocket(wsUrl, ['token', apiKey]);
 
         ws.onopen = () => {
-          console.log('[STT:Deepgram] WebSocket connected');
+          console.log('[STT:Deepgram] ✅ WebSocket connected successfully');
           reconnectAttempts = 0;
+          useFallbackUrl = false;
 
           // Set up AudioContext for raw PCM capture
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -249,15 +276,23 @@ function createDeepgramEngine(language) {
         };
 
         ws.onerror = (e) => {
-          console.error('[STT:Deepgram] WebSocket error:', e);
+          const maskedKey = `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`;
+          console.error(`[STT:Deepgram] ❌ WebSocket error — readyState=${ws?.readyState} key=${maskedKey}`, e);
         };
 
         ws.onclose = (e) => {
-          console.warn(`[STT:Deepgram] WebSocket closed: code=${e.code} reason="${e.reason}"`);
+          console.warn(`[STT:Deepgram] ⚠️ WebSocket closed: code=${e.code} reason="${e.reason}" wasClean=${e.wasClean}`);
           cleanupAudio();
-          if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
+
+          // On first failure, try fallback URL with minimal params
+          if (shouldReconnect && !useFallbackUrl && reconnectAttempts === 0 && e.code !== 1000) {
+            console.log('[STT:Deepgram] Trying fallback URL with minimal parameters...');
+            useFallbackUrl = true;
             reconnectAttempts++;
-            console.log(`[STT:Deepgram] Reconnecting... attempt ${reconnectAttempts}`);
+            setTimeout(connectWebSocket, 500);
+          } else if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
+            reconnectAttempts++;
+            console.log(`[STT:Deepgram] Reconnecting... attempt ${reconnectAttempts}/${MAX_RECONNECT}`);
             setTimeout(connectWebSocket, 1000 * reconnectAttempts);
           } else if (shouldReconnect) {
             const detail = e.code !== 1000 ? ` (code=${e.code}${e.reason ? ': ' + e.reason : ''})` : '';
@@ -293,7 +328,7 @@ export function createSTT() {
   return {
     get isRunning() { return isRunning; },
 
-    async start({ language, engineType, onInterim, onFinal, onError, onEngineChange }) {
+    async start({ language, engineType, onInterim, onFinal, onError, onEngineChange, onReplace }) {
       if (isRunning) return;
       isRunning = true;
 
@@ -319,18 +354,18 @@ export function createSTT() {
             // On Deepgram error, fall back to WebSpeech
             console.warn('[STT] Deepgram error, falling back to WebSpeech:', err);
             currentEngine = createWebSpeechEngine(language);
-            currentEngine.start(onInterim, safeFinal, onError);
+            currentEngine.start(onInterim, safeFinal, onError, onReplace);
             if (onEngineChange) onEngineChange('webspeech');
           });
         } catch (err) {
           console.warn('[STT] Deepgram failed, falling back to WebSpeech:', err);
           currentEngine = createWebSpeechEngine(language);
-          currentEngine.start(onInterim, safeFinal, onError);
+          currentEngine.start(onInterim, safeFinal, onError, onReplace);
           if (onEngineChange) onEngineChange('webspeech');
         }
       } else {
         currentEngine = createWebSpeechEngine(language);
-        currentEngine.start(onInterim, safeFinal, onError);
+        currentEngine.start(onInterim, safeFinal, onError, onReplace);
       }
     },
 

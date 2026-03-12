@@ -274,6 +274,16 @@ async function startRecording() {
         lastTranscriptTime = Date.now();
         idleWarningShown = false;
       },
+      onReplace: (text) => {
+        // Mobile: replace last transcript line instead of creating a new one
+        const lastLine = state.transcript[state.transcript.length - 1];
+        if (lastLine) {
+          lastLine.text = text;
+          lastLine.timestamp = Date.now();
+          updateTranscriptLineUI(lastLine.id);
+          lastTranscriptTime = Date.now();
+        }
+      },
       onError: (err) => {
         logSttEvent('error', err);
         showToast(err, 'error');
@@ -324,7 +334,7 @@ async function startRecording() {
     $('#btnEndMeeting').hidden = false;
 
     showTranscriptWaiting();
-    showAiWaiting(state.settings.analysisInterval || 30);
+    showAiWaiting(state.settings.analysisInterval || 180);
     showChatWaiting();
     showToast(t('toast.recording_started'), 'success');
 
@@ -389,7 +399,7 @@ function startAutoAnalysis() {
   clearInterval(autoAnalysisInterval);
   stopAnalysisCountdown();
   if (!state.settings.autoAnalysis) return;
-  const intervalMs = (state.settings.analysisInterval || 30) * 1000;
+  const intervalMs = (state.settings.analysisInterval || 180) * 1000;
   autoAnalysisInterval = setInterval(() => {
     if (state.isRecording && state.transcript.length > 0) runAnalysis();
   }, intervalMs);
@@ -445,7 +455,7 @@ function hideAnalyzingState() {
     return;
   }
   if (state.settings.autoAnalysis && state.isRecording) {
-    const intervalMs = (state.settings.analysisInterval || 30) * 1000;
+    const intervalMs = (state.settings.analysisInterval || 180) * 1000;
     startAnalysisCountdown(intervalMs);
   } else {
     stopAnalysisCountdown();
