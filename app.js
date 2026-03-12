@@ -1528,9 +1528,6 @@ function init() {
     if (config.attachedFiles?.length) {
       config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));
     }
-    if (config.notes) {
-      parts.push('[Prep Notes]\n' + config.notes);
-    }
     if (parts.length) {
       state.analysisContext = parts.join('\n\n');
     }

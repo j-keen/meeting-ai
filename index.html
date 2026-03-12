@@ -187,7 +187,6 @@
         <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
-        <button class="settings-tab" data-tab="connect" data-i18n="settings.tab_connect">Connect</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
       </div>
 
@@ -282,27 +281,6 @@
         </section>
       </div>
 
-      <!-- Connect Tab -->
-      <div class="settings-tab-content" data-tab="connect">
-        <section class="settings-section">
-          <h3 data-i18n="settings.integrations">Integrations</h3>
-          <label class="settings-label">
-            <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
-            <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
-          </label>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
-          <p class="text-muted" style="font-size:12px;margin-bottom:8px;" data-i18n="settings.correction_dict_hint">Corrections from your transcript edits are saved here and used by AI auto-correction.</p>
-          <div class="data-list" id="dataCorrectionDictList"></div>
-          <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputCorrectionOriginal" data-i18n-placeholder="settings.correction_original" placeholder="Original (STT)">
-            <input type="text" class="settings-input" id="inputCorrectionCorrected" data-i18n-placeholder="settings.correction_corrected" placeholder="Corrected">
-            <button class="btn btn-sm" id="btnAddCorrection" data-i18n="settings.add">Add</button>
-          </div>
-        </section>
-      </div>
-
       <!-- Data Tab -->
       <div class="settings-tab-content" data-tab="data">
         <section class="settings-section">
@@ -349,6 +327,38 @@
             <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
           </div>
         </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
+          <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
+            <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
+            <span class="correction-dict-badge" id="correctionDictBadge"></span>
+          </button>
+        </section>
+      </div>
+
+      <!-- Correction Dictionary Modal -->
+      <div class="modal-overlay correction-dict-modal-overlay" id="correctionDictModal" hidden>
+        <div class="modal" style="max-width:520px;">
+          <div class="modal-header">
+            <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <button class="btn btn-sm" id="btnCorrectionDictImport" data-i18n="settings.correction_dict_import">Import</button>
+              <button class="btn btn-sm" id="btnCorrectionDictExport" data-i18n="settings.correction_dict_export">Export</button>
+              <button class="btn btn-icon" id="btnCloseCorrectionDict" aria-label="Close">&times;</button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <input type="text" class="settings-input correction-dict-search" id="inputCorrectionSearch" data-i18n-placeholder="settings.correction_dict_search" placeholder="Search corrections...">
+            <p class="text-muted" style="font-size:12px;margin:8px 0;" data-i18n="settings.correction_dict_hint">Corrections from your transcript edits are saved here and used by AI auto-correction.</p>
+            <div class="data-list" id="dataCorrectionDictList" style="max-height:300px;overflow-y:auto;"></div>
+            <div class="data-add-row" style="margin-top:8px;">
+              <input type="text" class="settings-input" id="inputCorrectionOriginal" data-i18n-placeholder="settings.correction_original" placeholder="Original (STT)">
+              <input type="text" class="settings-input" id="inputCorrectionCorrected" data-i18n-placeholder="settings.correction_corrected" placeholder="Corrected">
+              <button class="btn btn-sm" id="btnAddCorrection" data-i18n="settings.add">Add</button>
+            </div>
+          </div>
+        </div>
+        <input type="file" id="correctionDictFileInput" accept=".json" hidden>
       </div>
     </div>
     <div class="settings-footer" id="settingsFooter">

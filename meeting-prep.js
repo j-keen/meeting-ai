@@ -1,4 +1,4 @@
-// meeting-prep.js - Meeting preparation form (Google Forms style)
+// meeting-prep.js - Meeting preparation wizard (5-step)
 
 import { emit } from './app.js';
 import {
@@ -40,6 +40,11 @@ function matchChosung(name, query) {
   return false;
 }
 
+// ===== Wizard State =====
+let currentStep = 1;
+const TOTAL_STEPS = 5;
+let maxVisitedStep = 1;
+
 // ===== Form State =====
 let formConfig = {
   meetingType: 'general',
@@ -48,12 +53,10 @@ let formConfig = {
   referenceMeetingId: null,
   referenceAnalysis: '',
   attachedFiles: [],
-  notes: '',
   customPrompt: '',
 };
 
 let contacts = [];
-let cameraStream = null;
 
 // ===== Public API =====
 export function initMeetingPrepForm() {
@@ -61,7 +64,6 @@ export function initMeetingPrepForm() {
 }
 
 export function openMeetingPrepForm(presetConfig) {
-  // Reset form
   formConfig = {
     meetingType: 'general',
     agenda: '',
@@ -69,25 +71,17 @@ export function openMeetingPrepForm(presetConfig) {
     referenceMeetingId: null,
     referenceAnalysis: '',
     attachedFiles: [],
-    notes: '',
     customPrompt: '',
   };
 
-  // Load contacts
   contacts = loadContacts();
 
-  // If preset provided, prefill
   if (presetConfig) {
     fillFormFromConfig(presetConfig);
   }
 
-  // Reset UI
   resetFormUI();
-
-  // Render contacts
-  renderContactList('');
-
-  // Show modal
+  goToStep(1);
   $('#meetingPrepModal').hidden = false;
 }
 
@@ -96,25 +90,73 @@ export function isMeetingPrepActive() {
   return modal ? !modal.hidden : false;
 }
 
+// ===== Wizard Navigation =====
+function goToStep(step) {
+  if (step < 1 || step > TOTAL_STEPS) return;
+  currentStep = step;
+  if (step > maxVisitedStep) maxVisitedStep = step;
+
+  // Show/hide panels
+  document.querySelectorAll('.prep-step-panel').forEach(p => {
+    p.classList.toggle('active', parseInt(p.dataset.step) === step);
+  });
+
+  // Update step indicator
+  document.querySelectorAll('.prep-step-dot').forEach(dot => {
+    const s = parseInt(dot.dataset.step);
+    const numEl = dot.querySelector('.prep-step-num');
+    dot.classList.remove('active', 'completed');
+    dot.disabled = s > maxVisitedStep;
+    if (s === step) {
+      dot.classList.add('active');
+      numEl.textContent = s;
+    } else if (s < step) {
+      dot.classList.add('completed');
+      numEl.textContent = '\u2713';
+    } else {
+      numEl.textContent = s;
+    }
+  });
+
+  // Update step lines
+  document.querySelectorAll('.prep-step-line').forEach((line, i) => {
+    line.classList.toggle('completed', (i + 1) < step);
+  });
+
+  // Nav buttons
+  const backBtn = $('#btnPrepBack');
+  const nextBtn = $('#btnPrepNext');
+  backBtn.hidden = step === 1;
+  nextBtn.hidden = step === TOTAL_STEPS;
+
+  // Load step-specific data
+  if (step === 4) {
+    loadReferenceStep();
+  }
+}
+
 // ===== Form Reset =====
 function resetFormUI() {
-  // Type selection (radio list)
-  const typeRadios = document.querySelectorAll('.prep-type-radio');
-  typeRadios.forEach(radio => {
+  currentStep = 1;
+  maxVisitedStep = 1;
+
+  // Type selection
+  document.querySelectorAll('.prep-type-radio').forEach(radio => {
     radio.classList.toggle('selected', radio.dataset.type === formConfig.meetingType);
   });
 
-  // Q&A fields — parse agenda into fields
+  // Agenda fields
   fillAgendaFields(formConfig.agenda);
-  $('#prepNotesInput').value = formConfig.notes;
 
-  // Hide reference submodal
-  $('#prepRefSubmodal').hidden = true;
-
-  // Clear badges & file chips
+  // Clear participant input & badges
+  $('#prepParticipantSearch').value = '';
   $('#prepSelectedBadges').innerHTML = '';
+  $('#prepAutocompleteDropdown').hidden = true;
+
+  // Clear file chips
   $('#prepFileChips').innerHTML = '';
-  $('#prepCardResult').hidden = true;
+
+  // Reference
   $('#prepReferencePreview').hidden = true;
   $('#prepReferenceChip').hidden = true;
   $('#prepAgendaSuggestions').hidden = true;
@@ -132,7 +174,6 @@ function fillAgendaFields(agenda) {
     $('#prepAgendaOutcomes').value = '';
     return;
   }
-  // Try to parse structured format
   const goalMatch = agenda.match(/\[목표\]\s*([\s\S]*?)(?=\[배경\]|\[안건\]|\[기대결과\]|$)/);
   const ctxMatch = agenda.match(/\[배경\]\s*([\s\S]*?)(?=\[목표\]|\[안건\]|\[기대결과\]|$)/);
   const topicsMatch = agenda.match(/\[안건\]\s*([\s\S]*?)(?=\[목표\]|\[배경\]|\[기대결과\]|$)/);
@@ -144,7 +185,6 @@ function fillAgendaFields(agenda) {
     $('#prepAgendaTopics').value = (topicsMatch?.[1] || '').trim();
     $('#prepAgendaOutcomes').value = (outcomesMatch?.[1] || '').trim();
   } else {
-    // Unstructured: put everything in topics
     $('#prepAgendaGoal').value = '';
     $('#prepAgendaContext').value = '';
     $('#prepAgendaTopics').value = agenda;
@@ -157,92 +197,84 @@ function bindFormEvents() {
   // Close button
   $('#btnClosePrepForm').addEventListener('click', closeForm);
 
-  // Meeting type selection (radio list)
+  // Step indicator clicks
+  $('#prepWizardSteps').addEventListener('click', (e) => {
+    const dot = e.target.closest('.prep-step-dot');
+    if (!dot || dot.disabled) return;
+    goToStep(parseInt(dot.dataset.step));
+  });
+
+  // Wizard nav
+  $('#btnPrepBack').addEventListener('click', () => goToStep(currentStep - 1));
+  $('#btnPrepNext').addEventListener('click', () => goToStep(currentStep + 1));
+
+  // Step 1: Meeting type selection — auto-advance
   $('#prepTypeGrid').addEventListener('click', (e) => {
     const radio = e.target.closest('.prep-type-radio');
     if (!radio) return;
     document.querySelectorAll('.prep-type-radio').forEach(r => r.classList.remove('selected'));
     radio.classList.add('selected');
     formConfig.meetingType = radio.dataset.type;
+    setTimeout(() => goToStep(2), 250);
   });
 
-  // Participant search
-  $('#prepParticipantSearch').addEventListener('input', (e) => {
-    renderContactList(e.target.value);
-  });
-
-  // Participant search - Enter to add manual name
-  $('#prepParticipantSearch').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
+  // Step 3: Participant input — spacebar to create badge
+  const participantInput = $('#prepParticipantSearch');
+  participantInput.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      const text = e.target.value.trim();
+      if (!text) return; // allow normal space if empty
       e.preventDefault();
-      const name = e.target.value.trim();
-      if (!name) return;
-      if (!formConfig.attendees.find(a => a.name === name)) {
-        const contact = addContact({ name, company: '' });
-        formConfig.attendees.push({ id: contact.id, name: contact.name });
-        contacts.push(contact);
-      }
+      addAttendeeFromText(text);
       e.target.value = '';
-      renderContactList('');
-      renderSelectedBadges();
+      hideAutocomplete();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const text = e.target.value.trim();
+      if (!text) return;
+      // If autocomplete is showing and has a highlighted item, select it
+      const highlighted = $('#prepAutocompleteDropdown .prep-autocomplete-item.highlighted');
+      if (highlighted) {
+        highlighted.click();
+      } else {
+        addAttendeeFromText(text);
+        e.target.value = '';
+        hideAutocomplete();
+      }
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const dropdown = $('#prepAutocompleteDropdown');
+      if (dropdown.hidden) return;
+      e.preventDefault();
+      navigateAutocomplete(e.key === 'ArrowDown' ? 1 : -1);
+    } else if (e.key === 'Escape') {
+      hideAutocomplete();
     }
   });
 
-  // Photo button — popup toggle
-  $('#btnScanCard').addEventListener('click', (e) => {
-    e.stopPropagation();
-    const popup = $('#prepPhotoPopup');
-    popup.hidden = !popup.hidden;
-  });
-  $('#btnPhotoUpload').addEventListener('click', () => {
-    $('#prepPhotoPopup').hidden = true;
-    $('#prepImageFileInput').click();
-  });
-  $('#btnPhotoCamera').addEventListener('click', () => {
-    $('#prepPhotoPopup').hidden = true;
-    openCameraForCard();
-  });
-  $('#prepImageFileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result.split(',')[1];
-      processOcrImage(base64);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  });
-  // Close photo popup on outside click
-  document.addEventListener('click', (e) => {
-    const popup = $('#prepPhotoPopup');
-    if (popup && !popup.hidden && !e.target.closest('#btnScanCard') && !popup.contains(e.target)) {
-      popup.hidden = true;
+  // Autocomplete on input
+  participantInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    if (query.length > 0) {
+      showAutocomplete(query);
+    } else {
+      hideAutocomplete();
     }
   });
 
-  // Camera capture
-  $('#btnCameraCapture').addEventListener('click', captureCard);
-  $('#btnCameraCancel').addEventListener('click', closeCamera);
+  // Hide autocomplete on blur (with delay for click)
+  participantInput.addEventListener('blur', () => {
+    setTimeout(() => hideAutocomplete(), 200);
+  });
 
-  // Save card contact
-  $('#btnSaveCardContact').addEventListener('click', saveCardContact);
-
-  // Reference meeting — open submodal
-  $('#btnOpenRefModal').addEventListener('click', openReferenceSubmodal);
-  $('#btnCloseRefSubmodal').addEventListener('click', () => { $('#prepRefSubmodal').hidden = true; });
-  $('#btnConfirmReference').addEventListener('click', confirmReferenceSelection);
-  $('#btnRemoveReference').addEventListener('click', clearReference);
-  // Submodal filters
+  // Step 4: Reference meeting filters
   $('#refSearchInput').addEventListener('input', renderRefMeetingList);
   $('#refFilterType').addEventListener('change', renderRefMeetingList);
-  $('#refFilterDateFrom').addEventListener('change', renderRefMeetingList);
-  $('#refFilterDateTo').addEventListener('change', renderRefMeetingList);
+  $('#btnConfirmReference').addEventListener('click', confirmReferenceSelection);
+  $('#btnRemoveReference').addEventListener('click', clearReference);
 
-  // File drop zone
+  // Step 5: File drop zone
   const dropZone = $('#prepFileDrop');
   const fileInput = $('#prepFileInput');
-
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
   dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -256,7 +288,7 @@ function bindFormEvents() {
     fileInput.value = '';
   });
 
-  // Save preset button
+  // Save preset
   $('#btnPrepSavePreset').addEventListener('click', () => {
     const name = prompt(t('prep.preset_name'));
     if (!name) return;
@@ -266,7 +298,6 @@ function bindFormEvents() {
       meetingType: formConfig.meetingType,
       agenda: formConfig.agenda,
       attendees: formConfig.attendees,
-      notes: formConfig.notes,
       customPrompt: formConfig.customPrompt,
     });
     showToast(t('prep.preset_saved'), 'success');
@@ -293,6 +324,99 @@ function bindFormEvents() {
   });
 }
 
+// ===== Participant Input =====
+function addAttendeeFromText(text) {
+  // Parse "이름/직함" format
+  let name, title;
+  if (text.includes('/')) {
+    const parts = text.split('/');
+    name = parts[0].trim();
+    title = parts.slice(1).join('/').trim();
+  } else {
+    name = text;
+    title = '';
+  }
+  if (!name) return;
+
+  // Check if already added
+  if (formConfig.attendees.find(a => a.name === name)) return;
+
+  // Check if matches existing contact
+  const existing = contacts.find(c => c.name === name);
+  if (existing) {
+    formConfig.attendees.push({ id: existing.id, name: existing.name, title: title || existing.title || '' });
+  } else {
+    // Create new contact
+    const contact = addContact({ name, title, company: '' });
+    contacts.push(contact);
+    formConfig.attendees.push({ id: contact.id, name: contact.name, title });
+  }
+
+  renderSelectedBadges();
+}
+
+function showAutocomplete(query) {
+  const dropdown = $('#prepAutocompleteDropdown');
+  const filtered = contacts.filter(c =>
+    matchChosung(c.name, query) && !formConfig.attendees.find(a => a.id === c.id)
+  );
+
+  if (filtered.length === 0) {
+    dropdown.hidden = true;
+    return;
+  }
+
+  dropdown.innerHTML = '';
+  filtered.slice(0, 8).forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'prep-autocomplete-item';
+    const label = c.title ? `${escapeHtml(c.name)} · ${escapeHtml(c.title)}` : escapeHtml(c.name);
+    const sub = c.company ? `<span class="prep-autocomplete-sub">${escapeHtml(c.company)}</span>` : '';
+    item.innerHTML = `<span>${label}</span>${sub}`;
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // prevent blur
+      formConfig.attendees.push({ id: c.id, name: c.name, title: c.title || '' });
+      $('#prepParticipantSearch').value = '';
+      hideAutocomplete();
+      renderSelectedBadges();
+    });
+    dropdown.appendChild(item);
+  });
+  dropdown.hidden = false;
+}
+
+function hideAutocomplete() {
+  $('#prepAutocompleteDropdown').hidden = true;
+}
+
+function navigateAutocomplete(direction) {
+  const items = [...document.querySelectorAll('.prep-autocomplete-item')];
+  if (!items.length) return;
+  const current = items.findIndex(i => i.classList.contains('highlighted'));
+  items.forEach(i => i.classList.remove('highlighted'));
+  let next = current + direction;
+  if (next < 0) next = items.length - 1;
+  if (next >= items.length) next = 0;
+  items[next].classList.add('highlighted');
+}
+
+function renderSelectedBadges() {
+  const area = $('#prepSelectedBadges');
+  area.innerHTML = '';
+  formConfig.attendees.forEach(a => {
+    const badge = document.createElement('span');
+    badge.className = 'contact-badge';
+    const display = a.title ? `${escapeHtml(a.name)} ${escapeHtml(a.title)}` : escapeHtml(a.name);
+    badge.innerHTML = `${display} <button class="contact-badge-remove">&times;</button>`;
+    badge.querySelector('.contact-badge-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      formConfig.attendees = formConfig.attendees.filter(x => x.id !== a.id);
+      renderSelectedBadges();
+    });
+    area.appendChild(badge);
+  });
+}
+
 // ===== Collect form values =====
 function collectFormConfig() {
   const goal = $('#prepAgendaGoal').value.trim();
@@ -305,8 +429,6 @@ function collectFormConfig() {
   if (topics) parts.push(`[안건] ${topics}`);
   if (outcomes) parts.push(`[기대결과] ${outcomes}`);
   formConfig.agenda = parts.join('\n');
-  formConfig.notes = $('#prepNotesInput').value.trim();
-  // meetingType and attendees are already tracked via events
 }
 
 // ===== Close Form =====
@@ -319,41 +441,33 @@ function fillFormFromConfig(config) {
   if (config.meetingType) formConfig.meetingType = config.meetingType;
   if (config.agenda) formConfig.agenda = config.agenda;
   if (config.attendees) formConfig.attendees = [...config.attendees];
-  if (config.notes) formConfig.notes = config.notes;
   if (config.customPrompt) formConfig.customPrompt = config.customPrompt;
   if (config.referenceMeetingId) formConfig.referenceMeetingId = config.referenceMeetingId;
   if (config.referenceAnalysis) formConfig.referenceAnalysis = config.referenceAnalysis;
   if (config.attachedFiles) formConfig.attachedFiles = [...config.attachedFiles];
 }
 
-// ===== Reference Meeting Submodal =====
+// ===== Reference Meeting (Step 4) =====
 let refMeetings = [];
 let selectedRefId = null;
 
-function openReferenceSubmodal() {
+function loadReferenceStep() {
   refMeetings = listMeetings();
   selectedRefId = null;
   $('#refSearchInput').value = '';
   $('#refFilterType').value = '';
-  $('#refFilterDateFrom').value = '';
-  $('#refFilterDateTo').value = '';
   $('#refMeetingPreview').hidden = true;
   $('#btnConfirmReference').disabled = true;
   renderRefMeetingList();
-  $('#prepRefSubmodal').hidden = false;
 }
 
 function renderRefMeetingList() {
   const query = $('#refSearchInput').value.trim().toLowerCase();
   const typeFilter = $('#refFilterType').value;
-  const dateFrom = $('#refFilterDateFrom').value;
-  const dateTo = $('#refFilterDateTo').value;
 
   let filtered = refMeetings;
   if (query) filtered = filtered.filter(m => (m.title || '').toLowerCase().includes(query));
   if (typeFilter) filtered = filtered.filter(m => m.preset === typeFilter);
-  if (dateFrom) filtered = filtered.filter(m => new Date(m.createdAt) >= new Date(dateFrom));
-  if (dateTo) filtered = filtered.filter(m => new Date(m.createdAt) <= new Date(dateTo + 'T23:59:59'));
 
   const listEl = $('#refMeetingList');
   listEl.innerHTML = '';
@@ -375,16 +489,13 @@ function renderRefMeetingList() {
 
 function selectRefMeeting(id) {
   selectedRefId = id;
-  // Highlight card
   document.querySelectorAll('.prep-ref-meeting-card').forEach(c => c.classList.remove('selected'));
-  const cards = document.querySelectorAll('.prep-ref-meeting-card');
-  cards.forEach(c => {
+  document.querySelectorAll('.prep-ref-meeting-card').forEach(c => {
     const title = c.querySelector('.prep-ref-meeting-card-title')?.textContent;
     const meeting = refMeetings.find(m => m.id === id);
     if (meeting && title === (meeting.title || 'Untitled')) c.classList.add('selected');
   });
 
-  // Show preview
   const meeting = getMeeting(id);
   const previewEl = $('#refMeetingPreview');
   if (meeting && meeting.analysisHistory?.length) {
@@ -408,20 +519,14 @@ function confirmReferenceSelection() {
     formConfig.referenceMeetingId = selectedRefId;
     formConfig.referenceAnalysis = md.slice(0, 3000);
 
-    // Show chip
     const chip = $('#prepReferenceChip');
     $('#prepReferenceChipText').textContent = meeting.title || 'Untitled';
     chip.hidden = false;
 
-    // Show preview
     const preview = $('#prepReferencePreview');
     preview.textContent = formConfig.referenceAnalysis.slice(0, 500) + (formConfig.referenceAnalysis.length > 500 ? '...' : '');
     preview.hidden = false;
 
-    // Close submodal
-    $('#prepRefSubmodal').hidden = true;
-
-    // Suggest follow-up agenda
     suggestFollowUpAgenda(formConfig.referenceAnalysis);
   }
 }
@@ -432,6 +537,11 @@ function clearReference() {
   $('#prepReferenceChip').hidden = true;
   $('#prepReferencePreview').hidden = true;
   $('#prepAgendaSuggestions').hidden = true;
+  selectedRefId = null;
+  // Re-enable selection
+  document.querySelectorAll('.prep-ref-meeting-card').forEach(c => c.classList.remove('selected'));
+  $('#btnConfirmReference').disabled = true;
+  $('#refMeetingPreview').hidden = true;
 }
 
 // ===== Auto Agenda Suggestions =====
@@ -469,6 +579,8 @@ ${analysisText.slice(0, 3000)}`
         input.value = input.value ? input.value + '\n' + s.text : s.text;
         chip.remove();
         if (!el.children.length) el.hidden = true;
+        // Jump to agenda step
+        goToStep(2);
       };
       el.appendChild(chip);
     });
@@ -476,51 +588,6 @@ ${analysisText.slice(0, 3000)}`
     console.error('Suggestion error:', err);
     el.hidden = true;
   }
-}
-
-// ===== Contact List =====
-function renderContactList(query) {
-  const listEl = $('#prepContactList');
-  listEl.innerHTML = '';
-  const filtered = contacts.filter(c => matchChosung(c.name, query));
-  filtered.forEach(c => {
-    const card = document.createElement('div');
-    card.className = 'contact-card' + (formConfig.attendees.find(a => a.id === c.id) ? ' selected' : '');
-    card.innerHTML = `<span class="contact-card-name">${escapeHtml(c.name)}</span>` +
-      (c.company ? `<span class="contact-card-company">${escapeHtml(c.company)}</span>` : '');
-    card.addEventListener('click', () => {
-      toggleAttendee(c);
-      renderContactList(query);
-      renderSelectedBadges();
-    });
-    listEl.appendChild(card);
-  });
-}
-
-function toggleAttendee(contact) {
-  const idx = formConfig.attendees.findIndex(a => a.id === contact.id);
-  if (idx >= 0) {
-    formConfig.attendees.splice(idx, 1);
-  } else {
-    formConfig.attendees.push({ id: contact.id, name: contact.name });
-  }
-}
-
-function renderSelectedBadges() {
-  const area = $('#prepSelectedBadges');
-  area.innerHTML = '';
-  formConfig.attendees.forEach(a => {
-    const badge = document.createElement('span');
-    badge.className = 'contact-badge';
-    badge.innerHTML = `${escapeHtml(a.name)} <button class="contact-badge-remove">&times;</button>`;
-    badge.querySelector('.contact-badge-remove').addEventListener('click', (e) => {
-      e.stopPropagation();
-      formConfig.attendees = formConfig.attendees.filter(x => x.name !== a.name);
-      renderContactList($('#prepParticipantSearch').value);
-      renderSelectedBadges();
-    });
-    area.appendChild(badge);
-  });
 }
 
 // ===== File Handling =====
@@ -562,74 +629,8 @@ function renderFileChips() {
   });
 }
 
-// ===== Camera / Business Card OCR =====
-async function openCameraForCard() {
-  try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
-    });
-    const video = $('#cameraPreview');
-    video.srcObject = cameraStream;
-    $('#cameraModal').hidden = false;
-  } catch (err) {
-    showToast(t('prep.camera_permission'), 'error');
-  }
-}
-
-function closeCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(track => track.stop());
-    cameraStream = null;
-  }
-  $('#cameraPreview').srcObject = null;
-  $('#cameraModal').hidden = true;
-}
-
-async function captureCard() {
-  const video = $('#cameraPreview');
-  const canvas = $('#cameraCanvas');
-
-  // Resize to 640px max width
-  const maxW = 640;
-  const scale = Math.min(maxW / video.videoWidth, 1);
-  canvas.width = video.videoWidth * scale;
-  canvas.height = video.videoHeight * scale;
-
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-
-  closeCamera();
-  processOcrImage(base64);
-}
-
-async function processOcrImage(base64) {
-  const scanBtn = $('#btnScanCard');
-  const origText = scanBtn.innerHTML;
-  scanBtn.innerHTML = `&#8987; ${t('prep.scanning')}`;
-  scanBtn.disabled = true;
-
-  try {
-    const result = await ocrBusinessCard(base64);
-    if (result) {
-      $('#prepCardName').value = result.name || '';
-      $('#prepCardCompany').value = result.company || '';
-      $('#prepCardTitle').value = result.title || '';
-      $('#prepCardEmail').value = result.email || '';
-      $('#prepCardPhone').value = result.phone || '';
-      $('#prepCardResult').hidden = false;
-    }
-  } catch (err) {
-    showToast(t('prep.scan_failed'), 'error');
-    console.error('OCR error:', err);
-  } finally {
-    scanBtn.innerHTML = origText;
-    scanBtn.disabled = false;
-  }
-}
-
-async function ocrBusinessCard(base64) {
+// ===== Business Card OCR (shared, called from settings) =====
+export async function ocrBusinessCard(base64) {
   const body = {
     contents: [{
       role: 'user',
@@ -647,7 +648,6 @@ async function ocrBusinessCard(base64) {
   const response = await callGemini('gemini-2.5-flash-lite', body);
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-  // Multi-stage JSON parse
   try {
     return JSON.parse(text);
   } catch {
@@ -655,32 +655,6 @@ async function ocrBusinessCard(base64) {
     if (match) return JSON.parse(match[0]);
     throw new Error('Failed to parse OCR result');
   }
-}
-
-function saveCardContact() {
-  const name = $('#prepCardName').value.trim();
-  if (!name) return;
-
-  const contactData = {
-    name,
-    company: $('#prepCardCompany').value.trim(),
-    title: $('#prepCardTitle').value.trim(),
-    email: $('#prepCardEmail').value.trim(),
-    phone: $('#prepCardPhone').value.trim(),
-  };
-
-  const contact = addContact(contactData);
-  contacts.push(contact);
-
-  // Add to attendees
-  if (!formConfig.attendees.find(a => a.name === contact.name)) {
-    formConfig.attendees.push({ id: contact.id, name: contact.name });
-  }
-
-  renderContactList($('#prepParticipantSearch').value);
-  renderSelectedBadges();
-  $('#prepCardResult').hidden = true;
-  showToast(t('prep.card_saved'), 'success');
 }
 
 // ===== Helpers =====
