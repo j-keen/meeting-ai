@@ -74,11 +74,11 @@ let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
 let isAnalysisPaused = false;
-let aiCorrectionTimer = null;
 let isCorrecting = false;
-let countdownTimer = null;
-let countdownEnd = 0;
-let countdownIntervalMs = 0;
+let charsSinceLastAnalysis = 0;
+let linesSinceLastAnalysis = 0;
+let lastAnalysisTimestamp = 0;
+let charsSinceLastCorrection = 0;
 
 // Guard: idle detection + max duration
 const IDLE_WARNING_MS = 15 * 60 * 1000;
@@ -275,6 +275,7 @@ async function startRecording() {
         state.transcript.push(line);
         addTranscriptLine(line);
         emit('transcript:add', line);
+        checkCharThreshold(text);
         lastTranscriptTime = Date.now();
         idleWarningShown = false;
       },
@@ -338,7 +339,7 @@ async function startRecording() {
     $('#btnEndMeeting').hidden = false;
 
     showTranscriptWaiting();
-    showAiWaiting(state.settings.analysisInterval || 180);
+    showAiWaiting(state.settings.analysisCharThreshold || 1000);
     showChatWaiting();
     showToast(t('toast.recording_started'), 'success');
 
@@ -366,10 +367,11 @@ function stopRecording() {
   clearInterval(timerInterval);
   clearInterval(autoSaveInterval);
   clearInterval(autoAnalysisInterval);
-  clearInterval(aiCorrectionTimer);
   clearInterval(idleCheckInterval);
   clearTimeout(maxDurationTimeout);
-  stopAnalysisCountdown();
+  charsSinceLastAnalysis = 0;
+  linesSinceLastAnalysis = 0;
+  charsSinceLastCorrection = 0;
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
 
@@ -401,51 +403,59 @@ function checkIdle() {
 
 function startAutoAnalysis() {
   clearInterval(autoAnalysisInterval);
-  stopAnalysisCountdown();
   if (!state.settings.autoAnalysis) return;
-  const intervalMs = (state.settings.analysisInterval || 180) * 1000;
+  charsSinceLastAnalysis = 0;
+  linesSinceLastAnalysis = 0;
+  lastAnalysisTimestamp = Date.now();
+  charsSinceLastCorrection = 0;
+  // 10-minute fallback timer: run analysis if at least 3 lines accumulated
   autoAnalysisInterval = setInterval(() => {
-    if (state.isRecording && state.transcript.length > 0) runAnalysis();
-  }, intervalMs);
-  startAnalysisCountdown(intervalMs);
+    if (state.isRecording && linesSinceLastAnalysis >= 3) runAnalysis();
+  }, 10 * 60 * 1000);
+  updateCharCountChip();
 }
 
-function startAnalysisCountdown(intervalMs) {
-  stopAnalysisCountdown();
-  const { chip } = getChipEls();
-  if (!chip) return;
-  const { icon } = getChipEls();
-  countdownIntervalMs = intervalMs;
-  countdownEnd = Date.now() + intervalMs;
-  chip.className = 'analysis-chip counting';
-  if (icon) icon.textContent = '⏸';
-  updateCountdownText();
-  countdownTimer = setInterval(() => updateCountdownText(), 1000);
+function checkCharThreshold(newLineText) {
+  if (!state.settings.autoAnalysis || isAnalysisPaused) return;
+  charsSinceLastAnalysis += newLineText.length;
+  linesSinceLastAnalysis++;
+  charsSinceLastCorrection += newLineText.length;
+  updateCharCountChip();
+
+  const threshold = state.settings.analysisCharThreshold || 1000;
+  // Analysis trigger: enough chars AND at least 5 lines
+  if (charsSinceLastAnalysis >= threshold && linesSinceLastAnalysis >= 5) {
+    charsSinceLastAnalysis = 0;
+    linesSinceLastAnalysis = 0;
+    lastAnalysisTimestamp = Date.now();
+    runAnalysis();
+  }
+
+  // Correction trigger: every 2000 chars
+  if (charsSinceLastCorrection >= 2000 && state.settings.autoCorrection) {
+    charsSinceLastCorrection = 0;
+    runCorrection(true);
+  }
 }
 
-function updateCountdownText() {
-  const { icon, text } = getChipEls();
-  if (!icon || !text) return;
-  const remaining = Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000));
-  text.textContent = t('analysis.countdown', { n: remaining });
-}
-
-function stopAnalysisCountdown() {
-  clearInterval(countdownTimer);
-  countdownTimer = null;
+function updateCharCountChip() {
   const { chip, icon, text } = getChipEls();
-  if (chip) {
+  if (!chip) return;
+  if (!state.settings.autoAnalysis) {
     chip.className = 'analysis-chip';
     if (icon) icon.textContent = '';
     if (text) text.textContent = '';
+    return;
   }
+  const threshold = state.settings.analysisCharThreshold || 1000;
+  chip.className = 'analysis-chip counting';
+  if (icon) icon.textContent = '⏸';
+  if (text) text.textContent = t('analysis.char_count', { current: charsSinceLastAnalysis, threshold });
 }
 
 function showAnalyzingState() {
   const { chip, icon, text } = getChipEls();
   if (!chip) return;
-  clearInterval(countdownTimer);
-  countdownTimer = null;
   chip.className = 'analysis-chip analyzing';
   if (icon) icon.textContent = '⏳';
   if (text) text.textContent = t('analysis.analyzing');
@@ -458,19 +468,17 @@ function hideAnalyzingState() {
     showPausedState();
     return;
   }
-  if (state.settings.autoAnalysis && state.isRecording) {
-    const intervalMs = (state.settings.analysisInterval || 180) * 1000;
-    startAnalysisCountdown(intervalMs);
-  } else {
-    stopAnalysisCountdown();
-  }
+  // Reset counters after analysis completes
+  charsSinceLastAnalysis = 0;
+  linesSinceLastAnalysis = 0;
+  lastAnalysisTimestamp = Date.now();
+  updateCharCountChip();
 }
 
 function toggleAnalysisPause() {
   isAnalysisPaused = !isAnalysisPaused;
   if (isAnalysisPaused) {
     clearInterval(autoAnalysisInterval);
-    stopAnalysisCountdown();
     showPausedState();
   } else {
     startAutoAnalysis();
@@ -483,26 +491,25 @@ function updatePauseButtonVisibility(show) {
   chip.style.display = show ? '' : 'none';
   if (!show) {
     isAnalysisPaused = false;
-    stopAnalysisCountdown();
+    // Reset chip
+    const { icon, text } = getChipEls();
+    if (icon) icon.textContent = '';
+    if (text) text.textContent = '';
+    chip.className = 'analysis-chip';
   }
 }
 
 function showPausedState() {
   const { chip, icon, text } = getChipEls();
   if (!chip) return;
-  clearInterval(countdownTimer);
-  countdownTimer = null;
   chip.className = 'analysis-chip paused';
   if (icon) icon.textContent = '▶';
   if (text) text.textContent = t('analysis.paused');
 }
 
-// AI sentence correction (runs silently in background)
+// AI sentence correction (triggered by char threshold in checkCharThreshold)
 function startAiCorrection() {
-  clearInterval(aiCorrectionTimer);
-  if (!state.settings.autoCorrection) return;
-  const intervalMs = 5 * 60 * 1000; // 5 minutes
-  aiCorrectionTimer = setInterval(() => runCorrection(true), intervalMs);
+  charsSinceLastCorrection = 0;
 }
 
 async function runCorrection(uncorrectedOnly) {
@@ -519,7 +526,7 @@ async function runCorrection(uncorrectedOnly) {
       const batch = lines.slice(i, i + batchSize);
       const corrections = await correctSentences({
         lines: batch,
-        model: state.settings.geminiModel || 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-lite',
       });
       for (const c of corrections) {
         const line = batch[c.index];
@@ -534,7 +541,6 @@ async function runCorrection(uncorrectedOnly) {
 }
 
 async function runAnalysis() {
-  stopAnalysisCountdown();
   showAnalyzingState();
   if (isAnalyzing) return;
   if (!isProxyAvailable()) {
@@ -615,7 +621,7 @@ async function runAnalysis() {
       generateTags({
         summary: result.summary,
         transcript: state.transcript,
-        model: state.settings.geminiModel || 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-lite',
       }).then(tags => {
         if (tags.length > 0) state.tags = tags;
       });
@@ -900,8 +906,10 @@ function cancelEndMeeting() {
 function showPostEndButtons() {
   // 기존 버튼이 있으면 먼저 제거 (중복 방지)
   const existingResume = $('#btnResumeMeeting');
+  const existingExport = $('#btnPostExport');
   const existingNew = $('#btnNewMeeting');
   if (existingResume) existingResume.remove();
+  if (existingExport) existingExport.remove();
   if (existingNew) existingNew.remove();
 
   const endBtn = $('#btnEndMeeting');
@@ -912,6 +920,13 @@ function showPostEndButtons() {
   btnResume.style.color = 'var(--accent)';
   btnResume.style.borderColor = 'var(--accent)';
 
+  const btnExport = document.createElement('button');
+  btnExport.className = 'btn btn-sm';
+  btnExport.id = 'btnPostExport';
+  btnExport.innerHTML = '&#128196; ' + t('meeting.export');
+  btnExport.style.color = 'var(--accent)';
+  btnExport.style.borderColor = 'var(--accent)';
+
   const btnNew = document.createElement('button');
   btnNew.className = 'btn btn-sm';
   btnNew.id = 'btnNewMeeting';
@@ -919,9 +934,11 @@ function showPostEndButtons() {
 
   endBtn.hidden = true;
   endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
-  endBtn.parentNode.insertBefore(btnNew, btnResume.nextSibling);
+  endBtn.parentNode.insertBefore(btnExport, btnResume.nextSibling);
+  endBtn.parentNode.insertBefore(btnNew, btnExport.nextSibling);
 
   btnResume.addEventListener('click', () => resumeMeeting());
+  btnExport.addEventListener('click', () => { $('#exportModal').hidden = false; });
   btnNew.addEventListener('click', () => {
     resetMeeting();
     restoreEndButton(false);

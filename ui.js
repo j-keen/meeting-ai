@@ -331,46 +331,140 @@ function isMarkdownAnalysis(analysis) {
   return !!(analysis && analysis.markdown);
 }
 
-// Render markdown analysis as a single rich content block
+// Parse markdown into blocks for block-level editing
+function parseMarkdownBlocks(markdown) {
+  const lines = markdown.split('\n');
+  const blocks = [];
+  let currentBlock = null;
+
+  const flushBlock = () => {
+    if (currentBlock) {
+      currentBlock.raw = currentBlock.raw.replace(/\n+$/, '');
+      if (currentBlock.raw) blocks.push(currentBlock);
+      currentBlock = null;
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Code block
+    if (line.startsWith('```')) {
+      flushBlock();
+      let codeRaw = line + '\n';
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeRaw += lines[i] + '\n';
+        i++;
+      }
+      if (i < lines.length) codeRaw += lines[i];
+      blocks.push({ type: 'code', raw: codeRaw });
+      continue;
+    }
+
+    // Heading
+    if (/^#{2,4}\s/.test(line)) {
+      flushBlock();
+      blocks.push({ type: 'heading', raw: line });
+      continue;
+    }
+
+    // List item (unordered or ordered)
+    if (/^[-*]\s/.test(line) || /^\d+\.\s/.test(line)) {
+      const isOrdered = /^\d+\.\s/.test(line);
+      const listType = isOrdered ? 'ol' : 'ul';
+      if (currentBlock && currentBlock.type === listType) {
+        currentBlock.raw += '\n' + line;
+      } else {
+        flushBlock();
+        currentBlock = { type: listType, raw: line };
+      }
+      continue;
+    }
+
+    // Empty line
+    if (!line.trim()) {
+      flushBlock();
+      continue;
+    }
+
+    // Paragraph (merge consecutive non-empty lines)
+    if (currentBlock && currentBlock.type === 'paragraph') {
+      currentBlock.raw += '\n' + line;
+    } else {
+      flushBlock();
+      currentBlock = { type: 'paragraph', raw: line };
+    }
+  }
+  flushBlock();
+  return blocks;
+}
+
+// Reconstruct full markdown from blocks array
+function blocksToMarkdown(blocks) {
+  return blocks.map(b => b.raw).join('\n\n');
+}
+
+// Render markdown analysis with block-level editing support
 function renderMarkdownAnalysis(container, analysis) {
   container.innerHTML = '';
   const div = document.createElement('div');
   div.className = 'ai-markdown-content';
-  div.innerHTML = renderMarkdown(analysis.markdown);
 
-  // Double-click to edit analysis
-  div.addEventListener('dblclick', (e) => {
-    if (div.classList.contains('editing')) return;
-    e.preventDefault();
-    startAnalysisEdit(div, analysis);
+  const blocks = parseMarkdownBlocks(analysis.markdown);
+
+  blocks.forEach((block, index) => {
+    const blockEl = document.createElement('div');
+    blockEl.className = 'ai-block';
+    blockEl.dataset.blockIndex = index;
+    blockEl.innerHTML = renderMarkdown(block.raw);
+
+    // Edit icon (shown on hover via CSS)
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ai-block-edit-btn';
+    editBtn.innerHTML = '✎';
+    editBtn.title = t('block_edit.edit');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (div.querySelector('.ai-block.editing')) return;
+      startBlockEdit(blockEl, block, index, blocks, analysis, div);
+    });
+    blockEl.appendChild(editBtn);
+
+    div.appendChild(blockEl);
   });
 
   container.appendChild(div);
 }
 
-// Enter edit mode for analysis content
-function startAnalysisEdit(div, analysis) {
-  const originalMarkdown = analysis.markdown;
-  div.classList.add('editing');
+// Enter edit mode for a single block
+function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
+  const originalRaw = block.raw;
+  blockEl.classList.add('editing');
+  containerDiv.classList.add('has-editing-block');
 
-  // Replace rendered HTML with editable textarea
+  // Create textarea for editing
   const textarea = document.createElement('textarea');
-  textarea.className = 'analysis-edit-textarea';
-  textarea.value = originalMarkdown;
+  textarea.className = 'ai-block-textarea';
+  textarea.value = originalRaw;
 
+  // Mini toolbar
   const toolbar = document.createElement('div');
-  toolbar.className = 'analysis-edit-toolbar';
+  toolbar.className = 'ai-block-toolbar';
   toolbar.innerHTML = `
-    <span class="analysis-edit-hint">${t('analysis_edit.hint')}</span>
-    <div class="analysis-edit-actions">
-      <button class="btn btn-xs" data-action="cancel">${t('analysis_edit.cancel')}</button>
-      <button class="btn btn-xs btn-primary" data-action="save">${t('analysis_edit.save')}</button>
+    <span class="ai-block-hint">${t('block_edit.hint')}</span>
+    <div class="ai-block-actions">
+      <button class="btn btn-xs" data-action="cancel" title="${t('block_edit.cancel')}">✕</button>
+      <button class="btn btn-xs btn-primary" data-action="save" title="${t('block_edit.done')}">✓</button>
     </div>
   `;
 
-  div.innerHTML = '';
-  div.appendChild(textarea);
-  div.appendChild(toolbar);
+  // Replace block content with editor
+  const contentBackup = blockEl.innerHTML;
+  // Remove all children except we'll replace
+  blockEl.innerHTML = '';
+  blockEl.appendChild(textarea);
+  blockEl.appendChild(toolbar);
   textarea.focus();
 
   // Auto-resize textarea
@@ -382,47 +476,69 @@ function startAnalysisEdit(div, analysis) {
   requestAnimationFrame(autoResize);
 
   const cancel = () => {
-    div.classList.remove('editing');
-    div.innerHTML = renderMarkdown(originalMarkdown);
-    // Re-attach dblclick
-    div.addEventListener('dblclick', (e) => {
-      if (div.classList.contains('editing')) return;
-      e.preventDefault();
-      startAnalysisEdit(div, analysis);
+    blockEl.classList.remove('editing');
+    containerDiv.classList.remove('has-editing-block');
+    blockEl.innerHTML = renderMarkdown(originalRaw);
+    // Re-add edit button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ai-block-edit-btn';
+    editBtn.innerHTML = '✎';
+    editBtn.title = t('block_edit.edit');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (containerDiv.querySelector('.ai-block.editing')) return;
+      startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv);
     });
+    blockEl.appendChild(editBtn);
   };
 
   const save = () => {
-    const newMarkdown = textarea.value.trim();
-    if (!newMarkdown || newMarkdown === originalMarkdown) {
+    const newRaw = textarea.value.trim();
+    if (!newRaw || newRaw === originalRaw) {
       cancel();
       return;
     }
-    // Track corrections (diff) for next analysis
-    const corrections = extractCorrections(originalMarkdown, newMarkdown);
-    if (corrections.length > 0) {
-      emit('analysis:userCorrections', corrections);
+
+    // Track correction
+    const oldContent = originalRaw.replace(/^#+\s*/, '').replace(/^[-*]\s*/gm, '').trim();
+    const newContent = newRaw.replace(/^#+\s*/, '').replace(/^[-*]\s*/gm, '').trim();
+    if (oldContent !== newContent) {
+      emit('analysis:userCorrections', [{ before: originalRaw.slice(0, 120), after: newRaw.slice(0, 120) }]);
     }
-    // Update analysis object
+
+    // Update block
+    block.raw = newRaw;
+    blocks[index] = block;
+
+    // Rebuild full markdown
+    const newMarkdown = blocksToMarkdown(blocks);
     analysis.markdown = newMarkdown;
     analysis.summary = newMarkdown;
     analysis.flow = extractHeadlineFromMarkdown(newMarkdown);
     analysis.userEdited = true;
 
-    div.classList.remove('editing');
-    div.innerHTML = renderMarkdown(newMarkdown);
-    // Re-attach dblclick
-    div.addEventListener('dblclick', (e) => {
-      if (div.classList.contains('editing')) return;
-      e.preventDefault();
-      startAnalysisEdit(div, analysis);
+    // Re-render just this block
+    blockEl.classList.remove('editing');
+    containerDiv.classList.remove('has-editing-block');
+    blockEl.innerHTML = renderMarkdown(newRaw);
+
+    // Re-add edit button
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ai-block-edit-btn';
+    editBtn.innerHTML = '✎';
+    editBtn.title = t('block_edit.edit');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (containerDiv.querySelector('.ai-block.editing')) return;
+      startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv);
     });
+    blockEl.appendChild(editBtn);
 
     emit('analysis:edited', analysis);
   };
 
   toolbar.addEventListener('click', (e) => {
-    const action = e.target.dataset.action;
+    const action = e.target.closest('[data-action]')?.dataset.action;
     if (action === 'cancel') cancel();
     if (action === 'save') save();
   });
@@ -1207,7 +1323,7 @@ export function resetTranscriptEmpty() {
 }
 
 // ===== AI Analysis Waiting State =====
-export function showAiWaiting(intervalSec) {
+export function showAiWaiting(charThreshold) {
   const aiEmpty = $('#aiEmpty');
   if (!aiEmpty) return;
   // Hide existing empty text
@@ -1217,7 +1333,7 @@ export function showAiWaiting(intervalSec) {
   if (waiting) {
     waiting.style.display = '';
     const hint = $('#aiWaitingHint');
-    if (hint) hint.textContent = t('ai.waiting_hint', { n: intervalSec });
+    if (hint) hint.textContent = t('ai.waiting_hint_chars', { n: charThreshold });
   }
 }
 

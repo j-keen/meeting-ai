@@ -187,7 +187,7 @@ export async function analyzeTranscript({
 }
 
 // Auto-generate tags from analysis
-export async function generateTags({ summary, transcript, model = 'gemini-2.5-flash' }) {
+export async function generateTags({ summary, transcript, model = 'gemini-3.1-flash-lite' }) {
   if (!isProxyAvailable() || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
@@ -243,7 +243,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGemini('gemini-2.5-flash-lite', {
+    const data = await callGemini('gemini-3.1-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
     });

@@ -224,10 +224,10 @@ export function initSettings() {
       const interval = parseInt(btn.dataset.interval);
       if (interval === 0) {
         state.settings.autoAnalysis = false;
-        state.settings.analysisInterval = 0;
+        state.settings.analysisCharThreshold = 0;
       } else {
         state.settings.autoAnalysis = true;
-        state.settings.analysisInterval = interval;
+        state.settings.analysisCharThreshold = interval;
       }
       markDirty();
       highlightField(btn);
@@ -388,6 +388,7 @@ function saveAllSettings() {
     sttEngine: s.sttEngine,
     autoAnalysis: s.autoAnalysis,
     analysisInterval: s.analysisInterval,
+    analysisCharThreshold: s.analysisCharThreshold,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
     autoCorrection: s.autoCorrection,
@@ -452,6 +453,7 @@ function resetAllSettings() {
   s.sttEngine = 'webspeech';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
+  s.analysisCharThreshold = 1000;
   s.autoCorrection = true;
   s.customPrompt = getDefaultPrompt();
   s.chatSystemPrompt = '';
@@ -480,9 +482,9 @@ function applySettingsToForm() {
   $('#selectLanguage').value = s.language;
   $('#selectSttEngine').value = s.sttEngine || 'webspeech';
   // Set interval toggle button active state (includes OFF = 0)
-  const activeInterval = s.autoAnalysis === false ? 0 : s.analysisInterval;
-  const intervals = [0, 180, 300, 420];
-  const closest = intervals.reduce((prev, curr) => Math.abs(curr - activeInterval) < Math.abs(prev - activeInterval) ? curr : prev);
+  const activeThreshold = s.autoAnalysis === false ? 0 : (s.analysisCharThreshold || 1000);
+  const thresholds = [0, 500, 1000, 1500];
+  const closest = thresholds.reduce((prev, curr) => Math.abs(curr - activeThreshold) < Math.abs(prev - activeThreshold) ? curr : prev);
   document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.interval) === closest);
   });
@@ -514,6 +516,7 @@ function loadSavedSettings() {
   s.analysisInterval = saved.analysisInterval || 180;
   // Migrate old short intervals to new minimum
   if (s.analysisInterval > 0 && s.analysisInterval < 180) s.analysisInterval = 180;
+  s.analysisCharThreshold = saved.analysisCharThreshold || 1000;
   s.autoCorrection = saved.autoCorrection !== false;
   s.meetingPreset = saved.meetingPreset || 'general';
   s.meetingContext = saved.meetingContext || '';

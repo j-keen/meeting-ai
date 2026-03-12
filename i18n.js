@@ -35,12 +35,17 @@ const translations = {
     'analysis_edit.hint': 'Editing analysis (Ctrl+S to save, Esc to cancel)',
     'analysis_edit.save': 'Save',
     'analysis_edit.cancel': 'Cancel',
+    'block_edit.edit': 'Edit this block',
+    'block_edit.hint': 'Ctrl+S save · Esc cancel',
+    'block_edit.done': 'Save',
+    'block_edit.cancel': 'Cancel',
     'toast.context_saved': 'Analysis context saved',
     'toast.context_cleared': 'Analysis context cleared',
     'ai.empty': 'AI analysis results will appear here.',
     'ai.empty_hint': 'Analysis runs automatically during recording.',
     'ai.waiting': 'Please wait...',
     'ai.waiting_hint': 'Auto-analyzes every {n}s during recording.',
+    'ai.waiting_hint_chars': 'Auto-analyzes every {n} characters during recording.',
 
     // Bottom bar
     'record.label': 'REC',
@@ -382,6 +387,7 @@ const translations = {
 
     // Analysis countdown
     'analysis.countdown': '{n}s',
+    'analysis.char_count': '{current} / {threshold}',
     'analysis.analyzing': 'Analyzing...',
     'analysis.paused': 'Paused',
     'panel.pause_analysis': 'Pause',
@@ -508,12 +514,17 @@ const translations = {
     'analysis_edit.hint': '분석 편집 중 (Ctrl+S 저장, Esc 취소)',
     'analysis_edit.save': '저장',
     'analysis_edit.cancel': '취소',
+    'block_edit.edit': '이 블록 편집',
+    'block_edit.hint': 'Ctrl+S 저장 · Esc 취소',
+    'block_edit.done': '저장',
+    'block_edit.cancel': '취소',
     'toast.context_saved': '분석 맥락이 저장되었습니다',
     'toast.context_cleared': '분석 맥락이 삭제되었습니다',
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
     'ai.waiting': '잠시만 기다려주세요...',
     'ai.waiting_hint': '녹음 중 {n}초마다 자동으로 분석됩니다.',
+    'ai.waiting_hint_chars': '녹음 중 {n}자마다 자동으로 분석됩니다.',
 
     // Bottom bar
     'record.label': 'REC',
@@ -855,6 +866,7 @@ const translations = {
 
     // Analysis countdown
     'analysis.countdown': '{n}초',
+    'analysis.char_count': '{current} / {threshold}',
     'analysis.analyzing': '분석 중...',
     'analysis.paused': '일시정지',
     'panel.pause_analysis': '일시정지',
