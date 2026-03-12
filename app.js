@@ -864,7 +864,7 @@ function showPostEndButtons() {
   btnResume.addEventListener('click', () => resumeMeeting());
   btnNew.addEventListener('click', () => {
     resetMeeting();
-    restoreEndButton();
+    restoreEndButton(false);
   });
 }
 
@@ -875,9 +875,9 @@ async function resumeMeeting() {
   showToast(t('toast.meeting_resumed'), 'success');
 }
 
-function restoreEndButton() {
+function restoreEndButton(showEnd = true) {
   const endBtn = $('#btnEndMeeting');
-  endBtn.hidden = false;
+  endBtn.hidden = !showEnd;
   const resume = $('#btnResumeMeeting');
   const newBtn = $('#btnNewMeeting');
   if (resume) resume.remove();
