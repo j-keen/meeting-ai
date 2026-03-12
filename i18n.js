@@ -107,8 +107,6 @@ const translations = {
     'settings.lang_ja': 'Japanese',
     'settings.lang_zh': 'Chinese',
     'settings.ai_analysis': 'AI Analysis',
-    'settings.auto_analysis': 'Auto Analysis',
-    'settings.auto_correction': 'AI Correction',
     'settings.analysis_interval': 'Analysis Interval:',
     'settings.token_strategy': 'Token Strategy',
     'settings.strategy_smart': 'Smart (Summary + Recent)',
@@ -296,6 +294,15 @@ const translations = {
     'welcome.get_started': 'Get Started',
 
     // Meeting prep
+    'prep.wizard_type': 'Type',
+    'prep.wizard_agenda': 'Agenda',
+    'prep.wizard_attendees': 'Attendees',
+    'prep.wizard_reference': 'Reference',
+    'prep.wizard_files': 'Files',
+    'prep.btn_next': 'Next \u2192',
+    'prep.btn_back': '\u2190 Back',
+    'prep.participant_hint': 'Name/Title then space (e.g. John/Manager)',
+    'prep.file_guide': 'Attach meeting materials, reference docs, or previous meeting notes.',
     'prep.step_type': 'What kind of meeting is this?',
     'prep.step_agenda': 'What\'s on the agenda today?',
     'prep.step_time': 'How long will this meeting be?',
@@ -381,16 +388,6 @@ const translations = {
     'contacts.save': 'Save',
     'contacts.cancel': 'Cancel',
 
-    // Gemini model label
-    'settings.gemini_model': 'Gemini Model (Analysis)',
-
-    // Model names
-    'settings.model_flash': 'Gemini 2.5 Flash',
-    'settings.model_flash_lite': 'Gemini 2.5 Flash Lite',
-    'settings.model_pro': 'Gemini 2.5 Pro',
-
-    // AI correction hint
-    'settings.auto_correction_hint': 'AI automatically corrects typos and speech recognition errors during recording.',
 
     // Analyze cooldown
     'toast.analyze_cooldown': 'Please wait before analyzing again.',
@@ -439,6 +436,9 @@ const translations = {
     // Settings Data tab
     'settings.tab_data': 'Data',
     'settings.participants': 'Participants',
+    'settings.contacts_title': 'Contacts',
+    'settings.scan_card': 'Scan Business Card',
+    'settings.placeholder_title': 'Title/Position',
     'settings.locations': 'Locations',
     'settings.categories': 'Categories',
     'settings.add': 'Add',
@@ -611,8 +611,6 @@ const translations = {
     'settings.lang_ja': '일본어',
     'settings.lang_zh': '중국어',
     'settings.ai_analysis': 'AI 분석',
-    'settings.auto_analysis': '자동 분석',
-    'settings.auto_correction': 'AI 교정',
     'settings.analysis_interval': '분석 주기:',
     'settings.token_strategy': '토큰 전략',
     'settings.strategy_smart': '스마트 (요약 + 최근)',
@@ -800,6 +798,15 @@ const translations = {
     'welcome.get_started': '시작하기',
 
     // Meeting prep
+    'prep.wizard_type': '유형',
+    'prep.wizard_agenda': '안건',
+    'prep.wizard_attendees': '참석자',
+    'prep.wizard_reference': '참조',
+    'prep.wizard_files': '파일',
+    'prep.btn_next': '다음 \u2192',
+    'prep.btn_back': '\u2190 이전',
+    'prep.participant_hint': '이름/직함 입력 후 스페이스 (예: 홍길동/부장)',
+    'prep.file_guide': '회의 자료, 참고 문서, 이전 회의록 등을 첨부하세요.',
     'prep.step_type': '어떤 종류의 회의인가요?',
     'prep.step_agenda': '오늘 안건은 무엇인가요?',
     'prep.step_time': '회의 시간은 얼마나 되나요?',
@@ -885,16 +892,6 @@ const translations = {
     'contacts.save': '저장',
     'contacts.cancel': '취소',
 
-    // Gemini model label
-    'settings.gemini_model': 'Gemini 분석 모델',
-
-    // Model names
-    'settings.model_flash': 'Gemini 2.5 Flash — 빠르고 균형 잡힌 모델',
-    'settings.model_flash_lite': 'Gemini 2.5 Flash Lite — 가장 빠르고 가벼운 모델',
-    'settings.model_pro': 'Gemini 2.5 Pro — 가장 정확한 모델',
-
-    // AI correction hint
-    'settings.auto_correction_hint': '녹음 중 AI가 오타와 음성인식 오류를 자동 교정합니다.',
 
     // Analyze cooldown
     'toast.analyze_cooldown': '잠시 후 다시 분석해주세요.',
@@ -943,6 +940,9 @@ const translations = {
     // Settings Data tab
     'settings.tab_data': '데이터',
     'settings.participants': '참석자',
+    'settings.contacts_title': '연락처 관리',
+    'settings.scan_card': '명함 스캔',
+    'settings.placeholder_title': '직함/직급',
     'settings.locations': '장소',
     'settings.categories': '카테고리',
     'settings.add': '추가',

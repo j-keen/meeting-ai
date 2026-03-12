@@ -236,14 +236,6 @@
           <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
           <div class="settings-row-2col">
             <label class="settings-label">
-              <span data-i18n="settings.gemini_model">Gemini Model (Analysis)</span>
-              <select class="settings-select" id="selectGeminiModel">
-                <option value="gemini-2.5-flash" data-i18n="settings.model_flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.5-flash-lite" data-i18n="settings.model_flash_lite">Gemini 2.5 Flash Lite</option>
-                <option value="gemini-2.5-pro" data-i18n="settings.model_pro">Gemini 2.5 Pro</option>
-              </select>
-            </label>
-            <label class="settings-label">
               <span data-i18n="settings.ai_language">AI Analysis Language</span>
               <select class="settings-select" id="selectAiLanguage">
                 <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
@@ -252,23 +244,6 @@
               </select>
             </label>
           </div>
-          <div class="settings-inline-row">
-            <span data-i18n="settings.auto_analysis">Auto Analysis</span>
-            <div class="interval-toggle-group" id="intervalToggleGroup">
-              <button class="interval-toggle-btn" data-interval="0">OFF</button>
-              <button class="interval-toggle-btn" data-interval="500">500자</button>
-              <button class="interval-toggle-btn active" data-interval="1000">1000자</button>
-              <button class="interval-toggle-btn" data-interval="1500">1500자</button>
-            </div>
-          </div>
-          <div class="settings-inline-row">
-            <span data-i18n="settings.auto_correction">AI Correction</span>
-            <div class="toggle-wrap">
-              <input type="checkbox" id="checkAutoCorrection" checked>
-              <span class="toggle-slider"></span>
-            </div>
-          </div>
-          <p class="settings-hint" data-i18n="settings.auto_correction_hint">AI automatically corrects typos and speech recognition errors during recording.</p>
         </section>
 
         <section class="settings-section">
@@ -331,12 +306,31 @@
       <!-- Data Tab -->
       <div class="settings-tab-content" data-tab="data">
         <section class="settings-section">
-          <h3 data-i18n="settings.participants">Participants</h3>
+          <h3 data-i18n="settings.contacts_title">Contacts</h3>
           <div class="data-list" id="dataParticipantsList"></div>
           <div class="data-add-row">
             <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
+            <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
             <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
             <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
+          </div>
+          <div class="data-add-row" style="margin-top:8px;">
+            <button class="btn btn-sm" id="btnSettingsScanCard">&#128247; <span data-i18n="settings.scan_card">Scan Business Card</span></button>
+            <div class="prep-photo-popup" id="settingsPhotoPopup" hidden>
+              <button class="prep-photo-option" id="btnSettingsPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
+              <button class="prep-photo-option" id="btnSettingsPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
+            </div>
+            <input type="file" id="settingsImageFileInput" accept="image/*" hidden>
+          </div>
+          <div class="prep-card-result" id="settingsCardResult" hidden>
+            <div class="prep-card-fields">
+              <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">
+              <input type="text" class="settings-input" id="settingsCardTitle" placeholder="Title">
+              <input type="text" class="settings-input" id="settingsCardCompany" placeholder="Company">
+              <input type="text" class="settings-input" id="settingsCardEmail" placeholder="Email">
+              <input type="text" class="settings-input" id="settingsCardPhone" placeholder="Phone">
+            </div>
+            <button class="btn btn-sm btn-primary" id="btnSettingsSaveCard" data-i18n="prep.save_to_contacts">Save to Contacts</button>
           </div>
         </section>
         <section class="settings-section">
@@ -647,158 +641,155 @@
         <h3 data-i18n="prep.form_title">Meeting Prep</h3>
         <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
       </div>
+
+      <!-- Step Indicator -->
+      <div class="prep-wizard-steps" id="prepWizardSteps">
+        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="prep.wizard_type">Type</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="prep.wizard_agenda">Agenda</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="prep.wizard_attendees">Attendees</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="prep.wizard_reference">Reference</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="5" disabled><span class="prep-step-num">5</span><span class="prep-step-label" data-i18n="prep.wizard_files">Files</span></button>
+      </div>
+
       <div class="modal-body meeting-prep-form-body" id="prepFormBody">
-        <!-- Section: Meeting Type (Radio List) -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.summary_type">Type</label>
-          <div class="prep-type-list" id="prepTypeGrid">
-            <label class="prep-type-radio selected" data-type="general">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_general">General</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_general_desc">Free-form meeting</span>
-            </label>
-            <label class="prep-type-radio" data-type="weekly">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_weekly">Weekly</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_weekly_desc">Regular weekly report</span>
-            </label>
-            <label class="prep-type-radio" data-type="brainstorm">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_brainstorm">Brainstorm</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_brainstorm_desc">Idea brainstorming</span>
-            </label>
-            <label class="prep-type-radio" data-type="sales">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_sales">Sales/Client</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_sales_desc">Sales/client meeting</span>
-            </label>
-            <label class="prep-type-radio" data-type="1on1">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_1on1">1-on-1</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_1on1_desc">1:1 coaching/review</span>
-            </label>
-            <label class="prep-type-radio" data-type="kickoff">
-              <span class="prep-type-radio-indicator"></span>
-              <span class="prep-type-radio-label" data-i18n="prep.type_kickoff">Kickoff</span>
-              <span class="prep-type-radio-desc" data-i18n="prep.type_kickoff_desc">Project kickoff</span>
-            </label>
+        <!-- Step 1: Meeting Type -->
+        <div class="prep-step-panel active" data-step="1" id="prepStep1">
+          <div class="prep-section">
+            <label class="prep-section-label" data-i18n="prep.step_type">What kind of meeting is this?</label>
+            <div class="prep-type-list" id="prepTypeGrid">
+              <label class="prep-type-radio selected" data-type="general">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_general">General</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_general_desc">Free-form meeting</span>
+              </label>
+              <label class="prep-type-radio" data-type="weekly">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_weekly">Weekly</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_weekly_desc">Regular weekly report</span>
+              </label>
+              <label class="prep-type-radio" data-type="brainstorm">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_brainstorm">Brainstorm</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_brainstorm_desc">Idea brainstorming</span>
+              </label>
+              <label class="prep-type-radio" data-type="sales">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_sales">Sales/Client</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_sales_desc">Sales/client meeting</span>
+              </label>
+              <label class="prep-type-radio" data-type="1on1">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_1on1">1-on-1</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_1on1_desc">1:1 coaching/review</span>
+              </label>
+              <label class="prep-type-radio" data-type="kickoff">
+                <span class="prep-type-radio-indicator"></span>
+                <span class="prep-type-radio-label" data-i18n="prep.type_kickoff">Kickoff</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_kickoff_desc">Project kickoff</span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <!-- Section: Agenda (Q&A 4 fields) -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.summary_agenda">Agenda</label>
-          <div class="prep-agenda-fields">
-            <div class="prep-agenda-field">
-              <label data-i18n="prep.agenda_goal">What is the goal?</label>
-              <input class="settings-input" id="prepAgendaGoal" data-i18n-placeholder="prep.agenda_goal_hint" placeholder="Goals to achieve...">
+        <!-- Step 2: Agenda -->
+        <div class="prep-step-panel" data-step="2" id="prepStep2">
+          <div class="prep-section">
+            <label class="prep-section-label" data-i18n="prep.step_agenda">What's on the agenda today?</label>
+            <div class="prep-agenda-fields">
+              <div class="prep-agenda-field">
+                <label data-i18n="prep.agenda_goal">What is the goal?</label>
+                <input class="settings-input" id="prepAgendaGoal" data-i18n-placeholder="prep.agenda_goal_hint" placeholder="Goals to achieve...">
+              </div>
+              <div class="prep-agenda-field">
+                <label data-i18n="prep.agenda_context">Background/context?</label>
+                <input class="settings-input" id="prepAgendaContext" data-i18n-placeholder="prep.agenda_context_hint" placeholder="Relevant background info...">
+              </div>
+              <div class="prep-agenda-field">
+                <label data-i18n="prep.agenda_topics">Key topics?</label>
+                <textarea class="settings-textarea" id="prepAgendaTopics" rows="2" data-i18n-placeholder="prep.agenda_topics_hint" placeholder="List main agenda items..."></textarea>
+              </div>
+              <div class="prep-agenda-field">
+                <label data-i18n="prep.agenda_outcomes">Expected outcomes?</label>
+                <input class="settings-input" id="prepAgendaOutcomes" data-i18n-placeholder="prep.agenda_outcomes_hint" placeholder="Expected decisions or conclusions...">
+              </div>
             </div>
-            <div class="prep-agenda-field">
-              <label data-i18n="prep.agenda_context">Background/context?</label>
-              <input class="settings-input" id="prepAgendaContext" data-i18n-placeholder="prep.agenda_context_hint" placeholder="Relevant background info...">
-            </div>
-            <div class="prep-agenda-field">
-              <label data-i18n="prep.agenda_topics">Key topics?</label>
-              <textarea class="settings-textarea" id="prepAgendaTopics" rows="2" data-i18n-placeholder="prep.agenda_topics_hint" placeholder="List main agenda items..."></textarea>
-            </div>
-            <div class="prep-agenda-field">
-              <label data-i18n="prep.agenda_outcomes">Expected outcomes?</label>
-              <input class="settings-input" id="prepAgendaOutcomes" data-i18n-placeholder="prep.agenda_outcomes_hint" placeholder="Expected decisions or conclusions...">
-            </div>
-          </div>
-          <div class="prep-agenda-suggestions" id="prepAgendaSuggestions" hidden></div>
-        </div>
-
-        <!-- Section: Participants -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.summary_attendees">Attendees</label>
-          <div class="prep-participants-row">
-            <input type="text" class="settings-input" id="prepParticipantSearch" data-i18n-placeholder="contacts.search" placeholder="Search contacts..." style="flex:1">
-            <button class="btn btn-sm" id="btnScanCard" title="Scan business card">📷 <span data-i18n="prep.photo_card">Photo</span></button>
-            <div class="prep-photo-popup" id="prepPhotoPopup" hidden>
-              <button class="prep-photo-option" id="btnPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
-              <button class="prep-photo-option" id="btnPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
-            </div>
-            <input type="file" id="prepImageFileInput" accept="image/*" hidden>
-          </div>
-          <div class="prep-selected-badges" id="prepSelectedBadges"></div>
-          <div class="prep-contact-list" id="prepContactList"></div>
-          <!-- Card OCR result (hidden by default) -->
-          <div class="prep-card-result" id="prepCardResult" hidden>
-            <div class="prep-card-fields">
-              <input type="text" class="settings-input" id="prepCardName" placeholder="Name">
-              <input type="text" class="settings-input" id="prepCardCompany" placeholder="Company">
-              <input type="text" class="settings-input" id="prepCardTitle" placeholder="Title">
-              <input type="text" class="settings-input" id="prepCardEmail" placeholder="Email">
-              <input type="text" class="settings-input" id="prepCardPhone" placeholder="Phone">
-            </div>
-            <button class="btn btn-sm btn-primary" id="btnSaveCardContact" data-i18n="prep.save_to_contacts">Save to Contacts</button>
+            <div class="prep-agenda-suggestions" id="prepAgendaSuggestions" hidden></div>
           </div>
         </div>
 
-        <!-- Section: Reference Meeting -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Meeting</label>
-          <button class="btn btn-sm" id="btnOpenRefModal">📎 <span data-i18n="prep.find_reference">Find past meeting</span></button>
-          <div class="prep-reference-chip" id="prepReferenceChip" hidden>
-            <span id="prepReferenceChipText"></span>
-            <button class="prep-reference-chip-remove" id="btnRemoveReference">&times;</button>
+        <!-- Step 3: Participants -->
+        <div class="prep-step-panel" data-step="3" id="prepStep3">
+          <div class="prep-section">
+            <label class="prep-section-label" data-i18n="prep.step_attendees">Who's attending?</label>
+            <div class="prep-participant-input-wrap">
+              <input type="text" class="settings-input" id="prepParticipantSearch" data-i18n-placeholder="prep.participant_hint" placeholder="이름/직함 입력 후 스페이스 (예: 홍길동/부장)">
+              <div class="prep-autocomplete-dropdown" id="prepAutocompleteDropdown" hidden></div>
+            </div>
+            <div class="prep-selected-badges" id="prepSelectedBadges"></div>
           </div>
-          <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
         </div>
 
-        <!-- Section: File Attachments -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.files_label">Files</label>
-          <div class="prep-file-drop" id="prepFileDrop">
-            <span data-i18n="prep.file_drop_hint">Drop files here or click to browse</span>
-            <input type="file" id="prepFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
+        <!-- Step 4: Reference Meeting -->
+        <div class="prep-step-panel" data-step="4" id="prepStep4">
+          <div class="prep-section">
+            <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Meeting</label>
+            <div class="prep-reference-chip" id="prepReferenceChip" hidden>
+              <span id="prepReferenceChipText"></span>
+              <button class="prep-reference-chip-remove" id="btnRemoveReference">&times;</button>
+            </div>
+            <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
+            <div class="prep-ref-inline">
+              <div class="prep-ref-filters">
+                <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title..." style="flex:1">
+                <select class="settings-select" id="refFilterType">
+                  <option value="">All</option>
+                  <option value="general">General</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="brainstorm">Brainstorm</option>
+                  <option value="sales">Sales</option>
+                  <option value="1on1">1-on-1</option>
+                  <option value="kickoff">Kickoff</option>
+                </select>
+              </div>
+              <div class="prep-ref-meeting-list" id="refMeetingList"></div>
+              <div class="prep-ref-preview" id="refMeetingPreview" hidden></div>
+              <div class="prep-ref-actions">
+                <button class="btn btn-sm btn-primary" id="btnConfirmReference" disabled data-i18n="prep.ref_confirm">Select</button>
+              </div>
+            </div>
           </div>
-          <div class="prep-file-chips" id="prepFileChips"></div>
         </div>
 
-        <!-- Section: Notes -->
-        <div class="prep-section">
-          <label class="prep-section-label" data-i18n="prep.notes_label">Notes</label>
-          <textarea class="settings-textarea" id="prepNotesInput" rows="2" data-i18n-placeholder="prep.notes_placeholder" placeholder="Additional notes or instructions for AI..."></textarea>
+        <!-- Step 5: File Attachments + Actions -->
+        <div class="prep-step-panel" data-step="5" id="prepStep5">
+          <div class="prep-section">
+            <label class="prep-section-label" data-i18n="prep.files_label">Files</label>
+            <p class="prep-file-guide" data-i18n="prep.file_guide">회의 자료, 참고 문서, 이전 회의록 등을 첨부하세요</p>
+            <div class="prep-file-drop" id="prepFileDrop">
+              <span data-i18n="prep.file_drop_hint">Drop files here or click to browse</span>
+              <input type="file" id="prepFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
+            </div>
+            <div class="prep-file-chips" id="prepFileChips"></div>
+          </div>
+          <div class="prep-form-footer">
+            <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as Preset</span></button>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for Later</button>
+              <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Meeting</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Reference Meeting Submodal -->
-      <div class="prep-ref-submodal-overlay" id="prepRefSubmodal" hidden>
-        <div class="prep-ref-submodal">
-          <div class="prep-ref-submodal-header">
-            <h4 data-i18n="prep.ref_search_title">Find past meeting</h4>
-            <button class="btn btn-icon" id="btnCloseRefSubmodal">&times;</button>
-          </div>
-          <div class="prep-ref-submodal-filters">
-            <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title..." style="flex:1">
-            <select class="settings-select" id="refFilterType">
-              <option value="">All</option>
-              <option value="general">General</option>
-              <option value="weekly">Weekly</option>
-              <option value="brainstorm">Brainstorm</option>
-              <option value="sales">Sales</option>
-              <option value="1on1">1-on-1</option>
-              <option value="kickoff">Kickoff</option>
-            </select>
-            <input type="date" class="settings-input" id="refFilterDateFrom" style="width:auto">
-            <span>~</span>
-            <input type="date" class="settings-input" id="refFilterDateTo" style="width:auto">
-          </div>
-          <div class="prep-ref-submodal-list" id="refMeetingList"></div>
-          <div class="prep-ref-submodal-preview" id="refMeetingPreview" hidden></div>
-          <div class="prep-ref-submodal-footer">
-            <button class="btn btn-sm btn-primary" id="btnConfirmReference" disabled data-i18n="prep.ref_confirm">Select</button>
-          </div>
-        </div>
-      </div>
-      <div class="prep-form-footer">
-        <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as Preset</span></button>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for Later</button>
-          <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Meeting</button>
-        </div>
+      <!-- Wizard Navigation -->
+      <div class="prep-wizard-nav" id="prepWizardNav">
+        <button class="btn btn-sm" id="btnPrepBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-primary" id="btnPrepNext" data-i18n="prep.btn_next">Next &#8594;</button>
       </div>
     </div>
   </div>

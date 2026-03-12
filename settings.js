@@ -3,7 +3,7 @@
 import { state, emit } from './app.js';
 import {
   saveSettings, loadSettings,
-  loadContacts, addContact, deleteContact,
+  loadContacts, addContact, updateContact, deleteContact,
   loadLocations, addLocation, deleteLocation,
   loadCategories, addCategory, deleteCategory,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
@@ -11,6 +11,7 @@ import {
 import { getDefaultPrompt } from './ai.js';
 import { t, setLanguage, setAiLanguage, getPromptPresets } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
+import { ocrBusinessCard } from './meeting-prep.js';
 
 
 const $ = (sel) => document.querySelector(sel);
@@ -122,11 +123,6 @@ export function initSettings() {
     markDirty();
   });
 
-  // Gemini Model (Analysis)
-  $('#selectGeminiModel').addEventListener('change', (e) => {
-    state.settings.geminiModel = e.target.value;
-    markDirty();
-  });
 
   // STT language
   $('#selectLanguage').addEventListener('change', (e) => {
@@ -215,24 +211,6 @@ export function initSettings() {
 
     btn.classList.remove('testing');
     btn.textContent = t('stt.test_connection');
-  });
-
-  // Analysis Interval (toggle buttons — includes OFF)
-  document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.interval-toggle-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const interval = parseInt(btn.dataset.interval);
-      if (interval === 0) {
-        state.settings.autoAnalysis = false;
-        state.settings.analysisCharThreshold = 0;
-      } else {
-        state.settings.autoAnalysis = true;
-        state.settings.analysisCharThreshold = interval;
-      }
-      markDirty();
-      highlightField(btn);
-    });
   });
 
   // Prompt presets
@@ -335,11 +313,7 @@ export function initSettings() {
     highlightField($('#textChatPrompt'));
   });
 
-  // AI Correction
-  $('#checkAutoCorrection')?.addEventListener('change', (e) => {
-    state.settings.autoCorrection = e.target.checked;
-    markDirty();
-  });
+
 
   // Slack webhook
   $('#inputSlackWebhook').addEventListener('change', (e) => {
@@ -386,16 +360,11 @@ function saveAllSettings() {
   saveSettings({
     uiLanguage: s.uiLanguage,
     aiLanguage: s.aiLanguage,
-    geminiModel: s.geminiModel,
     chatModel: s.chatModel,
     language: s.language,
     sttEngine: s.sttEngine,
-    autoAnalysis: s.autoAnalysis,
-    analysisInterval: s.analysisInterval,
-    analysisCharThreshold: s.analysisCharThreshold,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
-    autoCorrection: s.autoCorrection,
     userProfile: s.userProfile,
     welcomeDismissed: s.welcomeDismissed,
     slackWebhook: s.slackWebhook,
@@ -482,18 +451,8 @@ function applySettingsToForm() {
   const s = state.settings;
   $('#selectUiLanguage').value = s.uiLanguage;
   $('#selectAiLanguage').value = s.aiLanguage;
-  $('#selectGeminiModel').value = s.geminiModel;
   $('#selectLanguage').value = s.language;
   $('#selectSttEngine').value = s.sttEngine || 'webspeech';
-  // Set interval toggle button active state (includes OFF = 0)
-  const activeThreshold = s.autoAnalysis === false ? 0 : (s.analysisCharThreshold || 1000);
-  const thresholds = [0, 500, 1000, 1500];
-  const closest = thresholds.reduce((prev, curr) => Math.abs(curr - activeThreshold) < Math.abs(prev - activeThreshold) ? curr : prev);
-  document.querySelectorAll('.interval-toggle-btn').forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.dataset.interval) === closest);
-  });
-  const checkAutoCorrection = $('#checkAutoCorrection');
-  if (checkAutoCorrection) checkAutoCorrection.checked = s.autoCorrection !== false;
 
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
@@ -512,16 +471,14 @@ function loadSavedSettings() {
   const saved = loadSettings();
   const s = state.settings;
 
-  s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
+  s.geminiModel = 'gemini-2.5-flash';
   s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';
   s.sttEngine = saved.sttEngine || 'webspeech';
-  s.autoAnalysis = saved.autoAnalysis !== false;
-  s.analysisInterval = saved.analysisInterval || 180;
-  // Migrate old short intervals to new minimum
-  if (s.analysisInterval > 0 && s.analysisInterval < 180) s.analysisInterval = 180;
-  s.analysisCharThreshold = saved.analysisCharThreshold || 1000;
-  s.autoCorrection = saved.autoCorrection !== false;
+  s.autoAnalysis = true;
+  s.analysisInterval = 180;
+  s.analysisCharThreshold = 1000;
+  s.autoCorrection = true;
   s.meetingPreset = saved.meetingPreset || 'general';
   s.meetingContext = saved.meetingContext || '';
   s.customPrompt = saved.customPrompt || getDefaultPrompt();
@@ -626,6 +583,8 @@ function renderChatPresets() {
 }
 
 // ===== Data Tab (Participants, Locations, Categories) =====
+let settingsCameraStream = null;
+
 function initDataTab() {
   renderDataParticipants();
   renderDataLocations();
@@ -635,11 +594,76 @@ function initDataTab() {
   $('#btnAddParticipant')?.addEventListener('click', () => {
     const name = $('#inputNewParticipantName')?.value.trim();
     if (!name) return;
+    const title = $('#inputNewParticipantTitle')?.value.trim() || '';
     const company = $('#inputNewParticipantCompany')?.value.trim() || '';
-    addContact({ name, company });
+    addContact({ name, title, company });
     $('#inputNewParticipantName').value = '';
+    $('#inputNewParticipantTitle').value = '';
     $('#inputNewParticipantCompany').value = '';
     renderDataParticipants();
+  });
+
+  // Business card scan
+  $('#btnSettingsScanCard')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const popup = $('#settingsPhotoPopup');
+    popup.hidden = !popup.hidden;
+  });
+  $('#btnSettingsPhotoUpload')?.addEventListener('click', () => {
+    $('#settingsPhotoPopup').hidden = true;
+    $('#settingsImageFileInput').click();
+  });
+  $('#btnSettingsPhotoCamera')?.addEventListener('click', () => {
+    $('#settingsPhotoPopup').hidden = true;
+    openSettingsCamera();
+  });
+  $('#settingsImageFileInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      processSettingsOcr(base64);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+  // Close photo popup on outside click
+  document.addEventListener('click', (e) => {
+    const popup = $('#settingsPhotoPopup');
+    if (popup && !popup.hidden && !e.target.closest('#btnSettingsScanCard') && !popup.contains(e.target)) {
+      popup.hidden = true;
+    }
+  });
+  // Camera modal buttons (shared with meeting prep camera modal)
+  $('#btnCameraCapture')?.addEventListener('click', () => {
+    const video = $('#cameraPreview');
+    const canvas = $('#cameraCanvas');
+    const maxW = 640;
+    const scale = Math.min(maxW / video.videoWidth, 1);
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+    closeSettingsCamera();
+    processSettingsOcr(base64);
+  });
+  $('#btnCameraCancel')?.addEventListener('click', closeSettingsCamera);
+
+  // Save card contact
+  $('#btnSettingsSaveCard')?.addEventListener('click', () => {
+    const name = $('#settingsCardName').value.trim();
+    if (!name) return;
+    addContact({
+      name,
+      title: $('#settingsCardTitle').value.trim(),
+      company: $('#settingsCardCompany').value.trim(),
+      email: $('#settingsCardEmail').value.trim(),
+      phone: $('#settingsCardPhone').value.trim(),
+    });
+    $('#settingsCardResult').hidden = true;
+    renderDataParticipants();
+    emit('toast', { message: t('prep.card_saved'), type: 'success' });
   });
 
   // Add location
@@ -661,6 +685,53 @@ function initDataTab() {
   });
 }
 
+async function openSettingsCamera() {
+  try {
+    settingsCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+    const video = $('#cameraPreview');
+    video.srcObject = settingsCameraStream;
+    $('#cameraModal').hidden = false;
+  } catch {
+    emit('toast', { message: t('prep.camera_permission'), type: 'error' });
+  }
+}
+
+function closeSettingsCamera() {
+  if (settingsCameraStream) {
+    settingsCameraStream.getTracks().forEach(track => track.stop());
+    settingsCameraStream = null;
+  }
+  $('#cameraPreview').srcObject = null;
+  $('#cameraModal').hidden = true;
+}
+
+async function processSettingsOcr(base64) {
+  const btn = $('#btnSettingsScanCard');
+  const origText = btn.innerHTML;
+  btn.innerHTML = `&#8987; ${t('prep.scanning')}`;
+  btn.disabled = true;
+
+  try {
+    const result = await ocrBusinessCard(base64);
+    if (result) {
+      $('#settingsCardName').value = result.name || '';
+      $('#settingsCardTitle').value = result.title || '';
+      $('#settingsCardCompany').value = result.company || '';
+      $('#settingsCardEmail').value = result.email || '';
+      $('#settingsCardPhone').value = result.phone || '';
+      $('#settingsCardResult').hidden = false;
+    }
+  } catch (err) {
+    emit('toast', { message: t('prep.scan_failed'), type: 'error' });
+    console.error('OCR error:', err);
+  } finally {
+    btn.innerHTML = origText;
+    btn.disabled = false;
+  }
+}
+
 function renderDataParticipants() {
   const list = $('#dataParticipantsList');
   if (!list) return;
@@ -678,17 +749,18 @@ function renderDataParticipants() {
     const nameSpan = document.createElement('span');
     nameSpan.textContent = c.name;
     info.appendChild(nameSpan);
-    if (c.company) {
-      const compSpan = document.createElement('span');
-      compSpan.className = 'data-list-item-sub';
-      compSpan.textContent = c.company;
-      info.appendChild(compSpan);
+    const sub = [c.title, c.company].filter(Boolean).join(' · ');
+    if (sub) {
+      const subSpan = document.createElement('span');
+      subSpan.className = 'data-list-item-sub';
+      subSpan.textContent = sub;
+      info.appendChild(subSpan);
     }
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-xs btn-danger';
     delBtn.textContent = '\u00d7';
     item.append(info, delBtn);
-    item.querySelector('button').addEventListener('click', () => {
+    delBtn.addEventListener('click', () => {
       deleteContact(c.id);
       renderDataParticipants();
     });
