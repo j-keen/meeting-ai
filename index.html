@@ -91,7 +91,6 @@
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-          <button class="btn btn-sm" id="btnAnalysisContext" title="Add analysis context">📝 <span data-i18n="panel.analysis_context">Context</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
         </div>
       </div>
@@ -99,13 +98,6 @@
         <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
         <span class="analysis-nav-label" id="analysisNavLabel"></span>
         <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
-      </div>
-      <div class="analysis-context-bar" id="analysisContextBar" hidden>
-        <textarea class="analysis-context-input" id="analysisContextInput" rows="2" data-i18n-placeholder="panel.context_placeholder" placeholder="Add context for better analysis (e.g. meeting goals, key topics, background info)..."></textarea>
-        <div class="analysis-context-actions">
-          <button class="btn btn-xs btn-primary" id="btnContextSave" data-i18n="panel.context_save">Save</button>
-          <button class="btn btn-xs" id="btnContextClear" data-i18n="panel.context_clear">Clear</button>
-        </div>
       </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
@@ -159,8 +151,6 @@
             <option value="gemini-2.5-flash">Flash 2.5</option>
             <option value="gemini-2.5-flash-lite">Flash 2.5 Lite</option>
             <option value="gemini-2.5-pro">Pro 2.5</option>
-            <option value="gemini-3.1-flash-lite">Flash 3.1 Lite</option>
-            <option value="gemini-3.1-pro">Pro 3.1</option>
           </select>
         </div>
       </div>
@@ -171,10 +161,10 @@
   <footer class="bottom-bar">
     <div class="bottom-center">
       <button class="btn btn-record" id="btnRecord" title="Start/Stop recording (Ctrl+R)" aria-label="Toggle recording">
-        <span class="record-dot"></span>
+        <span class="record-icon record-dot"></span>
         <span class="record-label">REC</span>
       </button>
-      <button class="btn btn-end-meeting" id="btnEndMeeting" data-i18n="meeting.end_short" title="End meeting" hidden><span class="stop-icon"></span> End Meeting</button>
+      <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
@@ -251,8 +241,6 @@
                 <option value="gemini-2.5-flash" data-i18n="settings.model_flash">Gemini 2.5 Flash</option>
                 <option value="gemini-2.5-flash-lite" data-i18n="settings.model_flash_lite">Gemini 2.5 Flash Lite</option>
                 <option value="gemini-2.5-pro" data-i18n="settings.model_pro">Gemini 2.5 Pro</option>
-                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                <option value="gemini-3.1-pro">Gemini 3.1 Pro</option>
               </select>
             </label>
             <label class="settings-label">
@@ -327,6 +315,16 @@
             <span data-i18n="settings.slack_webhook">Slack Webhook URL</span>
             <input type="url" class="settings-input" id="inputSlackWebhook" placeholder="https://hooks.slack.com/...">
           </label>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
+          <p class="text-muted" style="font-size:12px;margin-bottom:8px;" data-i18n="settings.correction_dict_hint">Corrections from your transcript edits are saved here and used by AI auto-correction.</p>
+          <div class="data-list" id="dataCorrectionDictList"></div>
+          <div class="data-add-row">
+            <input type="text" class="settings-input" id="inputCorrectionOriginal" data-i18n-placeholder="settings.correction_original" placeholder="Original (STT)">
+            <input type="text" class="settings-input" id="inputCorrectionCorrected" data-i18n-placeholder="settings.correction_corrected" placeholder="Corrected">
+            <button class="btn btn-sm" id="btnAddCorrection" data-i18n="settings.add">Add</button>
+          </div>
         </section>
       </div>
 
@@ -431,28 +429,34 @@
             <input type="search" class="history-search-input" id="historySearch" data-i18n-placeholder="history.search" placeholder="Search meetings...">
           </div>
           <div class="history-filters">
-            <select class="settings-select history-filter-select" id="historyFilterType">
-              <option value="" data-i18n="history.filter_all">All Types</option>
-              <option value="general" data-i18n="settings.preset_general">General</option>
-              <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
-              <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
-              <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
-              <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
-              <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
-            </select>
-            <select class="settings-select history-filter-select" id="historyFilterCategory">
-              <option value="" data-i18n="history.filter_all_categories">All Categories</option>
-            </select>
-            <select class="settings-select history-filter-select" id="historyFilterRating">
-              <option value="" data-i18n="history.filter_all_ratings">All Ratings</option>
-              <option value="3">&#9733;3+</option>
-              <option value="4">&#9733;4+</option>
-              <option value="5">&#9733;5</option>
-            </select>
-            <input type="text" class="settings-input history-filter-tag" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
-            <input type="date" class="settings-input history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
-            <span class="history-filter-sep">~</span>
-            <input type="date" class="settings-input history-filter-date" id="historyFilterDateTo" data-i18n-title="history.filter_date_to" title="To date">
+            <div class="history-filter-row">
+              <select class="history-filter-control" id="historyFilterType">
+                <option value="" data-i18n="history.filter_all">All Types</option>
+                <option value="general" data-i18n="settings.preset_general">General</option>
+                <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
+                <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
+                <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+                <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+                <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+              </select>
+              <select class="history-filter-control" id="historyFilterCategory">
+                <option value="" data-i18n="history.filter_all_categories">All Categories</option>
+              </select>
+              <select class="history-filter-control" id="historyFilterRating">
+                <option value="" data-i18n="history.filter_all_ratings">All Ratings</option>
+                <option value="3">&#9733;3+</option>
+                <option value="4">&#9733;4+</option>
+                <option value="5">&#9733;5</option>
+              </select>
+            </div>
+            <div class="history-filter-row">
+              <input type="text" class="history-filter-control" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
+              <div class="history-date-range">
+                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
+                <span class="history-filter-sep">~</span>
+                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateTo" data-i18n-title="history.filter_date_to" title="To date">
+              </div>
+            </div>
           </div>
         </div>
         <div class="history-grid" id="historyGrid"></div>

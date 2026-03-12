@@ -8,6 +8,7 @@ import {
   loadSettings, saveSettings, getStorageUsage,
   loadContacts, addContact, loadLocations, addLocation, loadCategories,
   loadPreparedMeeting, deletePreparedMeeting, loadMeetingPrepPresets,
+  loadCorrectionDict, addCorrectionEntry,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
@@ -521,12 +522,14 @@ async function runCorrection(uncorrectedOnly) {
       : state.transcript;
     if (lines.length === 0) return;
 
+    const correctionDict = loadCorrectionDict();
     const batchSize = 20;
     for (let i = 0; i < lines.length; i += batchSize) {
       const batch = lines.slice(i, i + batchSize);
       const corrections = await correctSentences({
         lines: batch,
-        model: 'gemini-3.1-flash-lite',
+        model: 'gemini-2.5-flash-lite',
+        correctionDict,
       });
       for (const c of corrections) {
         const line = batch[c.index];
@@ -621,7 +624,7 @@ async function runAnalysis() {
       generateTags({
         summary: result.summary,
         transcript: state.transcript,
-        model: 'gemini-3.1-flash-lite',
+        model: 'gemini-2.5-flash-lite',
       }).then(tags => {
         if (tags.length > 0) state.tags = tags;
       });
@@ -1393,51 +1396,6 @@ function init() {
     });
   });
 
-  // Analysis Context toggle
-  const contextBar = $('#analysisContextBar');
-  const contextInput = $('#analysisContextInput');
-  const btnContext = $('#btnAnalysisContext');
-  btnContext.addEventListener('click', () => {
-    const isHidden = contextBar.hidden;
-    contextBar.hidden = !isHidden;
-    if (isHidden) {
-      contextInput.value = state.analysisContext || '';
-      contextInput.focus();
-      btnContext.classList.add('active');
-    } else {
-      btnContext.classList.remove('active');
-    }
-  });
-  const updateContextIndicator = () => {
-    btnContext.classList.toggle('has-context', !!state.analysisContext);
-  };
-  $('#btnContextSave').addEventListener('click', () => {
-    state.analysisContext = contextInput.value.trim();
-    contextBar.hidden = true;
-    btnContext.classList.remove('active');
-    updateContextIndicator();
-    if (state.analysisContext) {
-      showToast(t('toast.context_saved'), 'success');
-    }
-  });
-  $('#btnContextClear').addEventListener('click', () => {
-    state.analysisContext = '';
-    contextInput.value = '';
-    contextBar.hidden = true;
-    btnContext.classList.remove('active');
-    updateContextIndicator();
-    showToast(t('toast.context_cleared'), 'success');
-  });
-  contextInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      $('#btnContextSave').click();
-    }
-    if (e.key === 'Escape') {
-      contextBar.hidden = true;
-      btnContext.classList.remove('active');
-    }
-  });
 
   // Analysis user corrections (one-shot for next analysis)
   on('analysis:userCorrections', (corrections) => {
@@ -1481,7 +1439,10 @@ function init() {
   });
 
   on('transcript:edit', ({ id, text, original }) => {
-    // Manual edits are preserved as-is
+    // Register user correction to the global correction dictionary
+    if (original && text && original !== text) {
+      addCorrectionEntry(original, text);
+    }
   });
 
   // Language change
