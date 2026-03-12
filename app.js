@@ -1,7 +1,7 @@
 // app.js - State management, pub/sub, initialization
 
 import { createSTT, startSTTComparison } from './stt.js';
-import { analyzeTranscript, getDefaultPrompt, generateTags, correctSentences, generateMeetingTitle } from './ai.js';
+import { analyzeTranscript, getDefaultPrompt, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes } from './ai.js';
 import { checkProxyAvailable, isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
@@ -11,7 +11,7 @@ import {
 import {
   initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
   addMemoLine, showAnalysisSkeletons, renderAnalysis, renderHighlights,
-  renderAnalysisHistory, renderHistoryGrid, renderMeetingViewer,
+  renderHistoryGrid, renderMeetingViewer,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
   showToast, updateTranscriptLineUI, removeTranscriptLineUI,
   showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
@@ -55,6 +55,8 @@ export const state = {
   starRating: 3,
   categories: [],
   participants: [],
+  analysisContext: '',
+  analysisCorrections: [], // [{before, after}] — user edits to include in next analysis only
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -567,10 +569,23 @@ async function runAnalysis() {
             ].filter(Boolean).join(''))
       : null;
 
+    // Build combined meeting context: settings context + user analysis context
+    let combinedContext = state.settings.meetingContext || '';
+    if (state.analysisContext) {
+      combinedContext = combinedContext
+        ? combinedContext + '\n\n[User Analysis Context]\n' + state.analysisContext
+        : state.analysisContext;
+    }
+
+    // Include user corrections from previous analysis (one-shot)
+    const corrections = state.analysisCorrections.length > 0
+      ? [...state.analysisCorrections]
+      : [];
+
     const result = await analyzeTranscript({
       transcript: state.transcript,
       prompt: state.settings.customPrompt,
-      meetingContext: state.settings.meetingContext,
+      meetingContext: combinedContext,
       meetingPreset: state.settings.meetingPreset,
       elapsedTime: getElapsedTimeStr(),
       strategy: 'full',
@@ -580,7 +595,13 @@ async function runAnalysis() {
       memos: state.memos,
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
+      userCorrections: corrections,
     });
+
+    // Clear corrections after they've been sent (one-shot)
+    if (corrections.length > 0) {
+      state.analysisCorrections = [];
+    }
 
     state.currentAnalysis = result;
     result.transcriptLength = state.transcript.length;
@@ -626,6 +647,7 @@ function autoSave() {
     preset: state.settings.meetingPreset || 'general',
     location: state.meetingLocation || '',
     meetingContext: state.settings.meetingContext || '',
+    analysisContext: state.analysisContext || '',
     transcript: state.transcript,
     memos: state.memos,
     analysisHistory: state.analysisHistory,
@@ -831,6 +853,42 @@ async function finalizeEndMeeting() {
   const titleInput = $('#meetingTitleInput');
   if (titleInput) titleInput.hidden = true;
   showToast(t('toast.meeting_saved'), 'success');
+
+  // Generate final meeting minutes
+  if (isProxyAvailable() && state.transcript.length > 0) {
+    generateFinalMeetingMinutes();
+  }
+}
+
+async function generateFinalMeetingMinutes() {
+  showToast(t('toast.generating_final_minutes'), 'info');
+  showAnalysisSkeletons();
+
+  try {
+    const result = await generateFinalMinutes({
+      transcript: state.transcript,
+      analysisHistory: state.analysisHistory,
+      meetingContext: state.settings.meetingContext,
+      meetingPreset: state.settings.meetingPreset,
+      elapsedTime: getElapsedTimeStr(),
+      memos: state.memos,
+      userProfile: buildFullProfile(),
+      model: state.settings.geminiModel || 'gemini-2.5-flash',
+    });
+
+    state.currentAnalysis = result;
+    result.transcriptLength = state.transcript.length;
+    state.analysisHistory.push(result);
+    renderAnalysis(result);
+    autoSave();
+
+    showToast(t('toast.final_minutes_done'), 'success');
+    emit('analysis:complete', result);
+  } catch (err) {
+    showToast(t('toast.final_minutes_fail') + err.message, 'error');
+    const container = document.querySelector('#aiSections');
+    if (container) container.classList.remove('ai-updating');
+  }
 }
 
 function cancelEndMeeting() {
@@ -905,6 +963,8 @@ function resetMeeting() {
   state.chatHistory = [];
   state.userInsights = [];
   state.tags = [];
+  state.analysisContext = '';
+  state.analysisCorrections = [];
   $('#transcriptList').innerHTML = '';
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';
@@ -1289,10 +1349,55 @@ function init() {
     });
   });
 
-  // Analysis History
-  $('#btnAnalysisHistory').addEventListener('click', () => {
-    renderAnalysisHistory();
-    $('#analysisHistoryModal').hidden = false;
+  // Analysis Context toggle
+  const contextBar = $('#analysisContextBar');
+  const contextInput = $('#analysisContextInput');
+  const btnContext = $('#btnAnalysisContext');
+  btnContext.addEventListener('click', () => {
+    const isHidden = contextBar.hidden;
+    contextBar.hidden = !isHidden;
+    if (isHidden) {
+      contextInput.value = state.analysisContext || '';
+      contextInput.focus();
+      btnContext.classList.add('active');
+    } else {
+      btnContext.classList.remove('active');
+    }
+  });
+  const updateContextIndicator = () => {
+    btnContext.classList.toggle('has-context', !!state.analysisContext);
+  };
+  $('#btnContextSave').addEventListener('click', () => {
+    state.analysisContext = contextInput.value.trim();
+    contextBar.hidden = true;
+    btnContext.classList.remove('active');
+    updateContextIndicator();
+    if (state.analysisContext) {
+      showToast(t('toast.context_saved'), 'success');
+    }
+  });
+  $('#btnContextClear').addEventListener('click', () => {
+    state.analysisContext = '';
+    contextInput.value = '';
+    contextBar.hidden = true;
+    btnContext.classList.remove('active');
+    updateContextIndicator();
+    showToast(t('toast.context_cleared'), 'success');
+  });
+  contextInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      $('#btnContextSave').click();
+    }
+    if (e.key === 'Escape') {
+      contextBar.hidden = true;
+      btnContext.classList.remove('active');
+    }
+  });
+
+  // Analysis user corrections (one-shot for next analysis)
+  on('analysis:userCorrections', (corrections) => {
+    state.analysisCorrections.push(...corrections);
   });
 
   // Meeting History

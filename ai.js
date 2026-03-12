@@ -85,6 +85,7 @@ export async function analyzeTranscript({
   memos = [],
   userProfile = '',
   model = 'gemini-2.5-flash',
+  userCorrections = [],
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
@@ -116,6 +117,14 @@ export async function analyzeTranscript({
     memos.forEach(m => {
       const time = new Date(m.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
       messageParts.push(`- [${time}] ${m.text}`);
+    });
+  }
+
+  if (userCorrections && userCorrections.length > 0) {
+    messageParts.push('');
+    messageParts.push('[User Corrections - The user manually edited parts of the previous analysis. Please take these corrections into account and adjust your analysis accordingly. These are one-time hints, so incorporate the intent naturally rather than repeating them verbatim.]');
+    userCorrections.forEach(c => {
+      messageParts.push(`- Changed: "${c.before}" → "${c.after}"`);
     });
   }
 
@@ -249,6 +258,173 @@ Return ONLY valid JSON:
     return null;
   }
 }
+
+// Generate final meeting minutes at meeting end
+export async function generateFinalMinutes({
+  transcript,
+  analysisHistory = [],
+  meetingContext,
+  meetingPreset,
+  elapsedTime,
+  memos = [],
+  userProfile = '',
+  model = 'gemini-2.5-flash',
+}) {
+  if (!isProxyAvailable()) throw new Error('Proxy not available');
+  if (!transcript || transcript.length === 0) throw new Error('No transcript');
+
+  const contextText = meetingContext || getAiPresetContext(meetingPreset || 'general');
+  const transcriptText = buildTranscriptText(transcript, 'full', 0, null);
+
+  // Gather previous analysis summaries for context
+  const prevAnalyses = analysisHistory
+    .filter(a => a.markdown || a.summary)
+    .map(a => a.markdown || a.summary)
+    .slice(-3) // last 3 analyses
+    .join('\n---\n');
+
+  const lang = getAiLanguage();
+  const prompt = lang === 'ko' ? FINAL_MINUTES_PROMPT.ko : FINAL_MINUTES_PROMPT.en;
+
+  const messageParts = [
+    `Meeting Context: ${contextText}`,
+    `Total Duration: ${elapsedTime || 'unknown'}`,
+    `Total Lines: ${transcript.length}`,
+  ];
+
+  if (userProfile) {
+    messageParts.push('', '[User Profile]', userProfile);
+  }
+
+  if (memos && memos.length > 0) {
+    messageParts.push('', '[User Memos]');
+    memos.forEach(m => {
+      const time = new Date(m.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+      messageParts.push(`- [${time}] ${m.text}`);
+    });
+  }
+
+  if (prevAnalyses) {
+    messageParts.push('', '[Previous Interim Analyses]', prevAnalyses);
+  }
+
+  messageParts.push('', 'Full Transcript:', transcriptText);
+
+  const langReminder = lang === 'ko'
+    ? '\n\n[IMPORTANT] 반드시 한국어로 작성하세요.'
+    : '\n\n[IMPORTANT] Respond ONLY in English.';
+  messageParts.push(langReminder);
+
+  const body = {
+    contents: [{
+      parts: [{ text: prompt + '\n\n' + messageParts.join('\n') }]
+    }],
+    generationConfig: { temperature: 0.2 }
+  };
+
+  const data = await callGemini(model, body);
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+  return {
+    markdown: rawText,
+    flow: extractHeadline(rawText),
+    summary: rawText,
+    timestamp: Date.now(),
+    isFinalMinutes: true,
+  };
+}
+
+const FINAL_MINUTES_PROMPT = {
+  en: `You are an expert meeting secretary producing the FINAL, DEFINITIVE meeting minutes. This is the complete record generated after the meeting has ended — it must be thorough and comprehensive.
+
+Respond in well-structured **Markdown**. Use the following structure:
+
+# Final Meeting Minutes
+
+## Overview
+- **Date/Time**: (from transcript timestamps)
+- **Duration**: (from provided duration)
+- **Key Result**: One sentence — the most important outcome.
+
+## Executive Summary
+3-5 sentence high-level summary covering all major topics and outcomes.
+
+## Detailed Discussion
+Chronological, detailed account of ALL topics discussed. For each topic:
+- What was discussed (specific details, numbers, names)
+- Key arguments or perspectives raised
+- Outcome: [DECIDED] or [PENDING]
+
+## Decisions Made
+Numbered list of all confirmed decisions with context.
+
+## Action Items
+- **[Owner]** Task description — Deadline (if known)
+
+## Unresolved Issues
+Items without conclusion — what's blocking, who needs to follow up.
+
+## Risks & Concerns
+Potential issues flagged during the meeting.
+
+## Next Steps
+What needs to happen before the next meeting.
+
+## Key Takeaways
+3-5 bullet points — the most important things to remember.
+
+Rules:
+- This is the FINAL record — be exhaustive, do not omit any discussed topic
+- Use exact numbers, dates, names, and technical terms as stated
+- Describe actual content, not abstract references like "discussed X"
+- Organize chronologically within each section
+- If memos are provided, incorporate the user's personal notes/observations`,
+
+  ko: `당신은 전문 회의 비서입니다. 회의가 끝난 후 생성하는 **최종 확정 회의록**을 작성합니다. 빠짐없이 철저하고 포괄적으로 작성하세요.
+
+잘 구조화된 **Markdown** 형식으로 응답하세요:
+
+# 최종 회의록
+
+## 개요
+- **일시**: (트랜스크립트 타임스탬프 기반)
+- **소요 시간**: (제공된 시간 정보)
+- **핵심 결과**: 한 문장 — 가장 중요한 결론.
+
+## 요약 (Executive Summary)
+주요 주제와 결과를 포괄하는 3-5문장 요약.
+
+## 상세 논의 내용
+모든 논의 주제를 시간순으로 상세히 기술. 각 주제별:
+- 무엇이 논의되었는지 (구체적 세부사항, 수치, 이름)
+- 제기된 주요 의견이나 관점
+- 결과: [결정] 또는 [미결]
+
+## 결정사항
+확정된 모든 결정 사항을 번호 목록으로 (맥락 포함).
+
+## 실행 항목 (Action Items)
+- **[담당자]** 할 일 — 기한 (파악 가능한 경우)
+
+## 미결 사항
+결론이 나지 않은 항목 — 차단 요소, 후속 담당자.
+
+## 리스크 및 우려사항
+회의 중 제기된 잠재적 문제.
+
+## 다음 단계
+다음 회의 전 해야 할 일.
+
+## 핵심 요점 (Key Takeaways)
+가장 중요한 3-5가지 사항.
+
+규칙:
+- 이것은 **최종 기록**입니다 — 빠뜨리는 주제 없이 철저하게 작성
+- 구체적 수치, 날짜, 이름, 기술 용어는 그대로 기록
+- "~에 대해 논의함" 같은 추상적 표현 대신 실제 구체적 내용을 서술
+- 각 섹션 내에서 시간순으로 정리
+- 메모가 제공된 경우, 사용자의 개인 메모/관찰을 반영`
+};
 
 // AI-powered sentence correction
 export async function correctSentences({ lines, model = 'gemini-2.5-flash' }) {

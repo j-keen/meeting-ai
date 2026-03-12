@@ -337,7 +337,136 @@ function renderMarkdownAnalysis(container, analysis) {
   const div = document.createElement('div');
   div.className = 'ai-markdown-content';
   div.innerHTML = renderMarkdown(analysis.markdown);
+
+  // Double-click to edit analysis
+  div.addEventListener('dblclick', (e) => {
+    if (div.classList.contains('editing')) return;
+    e.preventDefault();
+    startAnalysisEdit(div, analysis);
+  });
+
   container.appendChild(div);
+}
+
+// Enter edit mode for analysis content
+function startAnalysisEdit(div, analysis) {
+  const originalMarkdown = analysis.markdown;
+  div.classList.add('editing');
+
+  // Replace rendered HTML with editable textarea
+  const textarea = document.createElement('textarea');
+  textarea.className = 'analysis-edit-textarea';
+  textarea.value = originalMarkdown;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'analysis-edit-toolbar';
+  toolbar.innerHTML = `
+    <span class="analysis-edit-hint">${t('analysis_edit.hint')}</span>
+    <div class="analysis-edit-actions">
+      <button class="btn btn-xs" data-action="cancel">${t('analysis_edit.cancel')}</button>
+      <button class="btn btn-xs btn-primary" data-action="save">${t('analysis_edit.save')}</button>
+    </div>
+  `;
+
+  div.innerHTML = '';
+  div.appendChild(textarea);
+  div.appendChild(toolbar);
+  textarea.focus();
+
+  // Auto-resize textarea
+  const autoResize = () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+  textarea.addEventListener('input', autoResize);
+  requestAnimationFrame(autoResize);
+
+  const cancel = () => {
+    div.classList.remove('editing');
+    div.innerHTML = renderMarkdown(originalMarkdown);
+    // Re-attach dblclick
+    div.addEventListener('dblclick', (e) => {
+      if (div.classList.contains('editing')) return;
+      e.preventDefault();
+      startAnalysisEdit(div, analysis);
+    });
+  };
+
+  const save = () => {
+    const newMarkdown = textarea.value.trim();
+    if (!newMarkdown || newMarkdown === originalMarkdown) {
+      cancel();
+      return;
+    }
+    // Track corrections (diff) for next analysis
+    const corrections = extractCorrections(originalMarkdown, newMarkdown);
+    if (corrections.length > 0) {
+      emit('analysis:userCorrections', corrections);
+    }
+    // Update analysis object
+    analysis.markdown = newMarkdown;
+    analysis.summary = newMarkdown;
+    analysis.flow = extractHeadlineFromMarkdown(newMarkdown);
+    analysis.userEdited = true;
+
+    div.classList.remove('editing');
+    div.innerHTML = renderMarkdown(newMarkdown);
+    // Re-attach dblclick
+    div.addEventListener('dblclick', (e) => {
+      if (div.classList.contains('editing')) return;
+      e.preventDefault();
+      startAnalysisEdit(div, analysis);
+    });
+
+    emit('analysis:edited', analysis);
+  };
+
+  toolbar.addEventListener('click', (e) => {
+    const action = e.target.dataset.action;
+    if (action === 'cancel') cancel();
+    if (action === 'save') save();
+  });
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cancel();
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      save();
+    }
+  });
+}
+
+// Extract meaningful corrections by comparing old and new markdown line by line
+function extractCorrections(oldMd, newMd) {
+  const oldLines = oldMd.split('\n');
+  const newLines = newMd.split('\n');
+  const corrections = [];
+  const maxLen = Math.max(oldLines.length, newLines.length);
+
+  for (let i = 0; i < maxLen; i++) {
+    const oldLine = (oldLines[i] || '').trim();
+    const newLine = (newLines[i] || '').trim();
+    if (oldLine !== newLine && oldLine && newLine) {
+      // Skip pure heading/formatting changes
+      const oldContent = oldLine.replace(/^#+\s*/, '').replace(/^\*+\s*/, '').replace(/^-\s*/, '');
+      const newContent = newLine.replace(/^#+\s*/, '').replace(/^\*+\s*/, '').replace(/^-\s*/, '');
+      if (oldContent !== newContent) {
+        corrections.push({ before: oldLine.slice(0, 120), after: newLine.slice(0, 120) });
+      }
+    }
+  }
+  // Limit to 5 most meaningful corrections
+  return corrections.slice(0, 5);
+}
+
+// Extract headline from markdown (mirror of ai.js logic)
+function extractHeadlineFromMarkdown(markdown) {
+  const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
+  if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
+  const firstH2 = markdown.match(/^##\s+(.+)/m);
+  if (firstH2) return firstH2[1].trim().slice(0, 80);
+  const firstLine = markdown.split('\n').find(l => l.trim());
+  return (firstLine || '').replace(/^#+\s*/, '').trim().slice(0, 80);
 }
 
 // Render legacy JSON-based analysis with section cards

@@ -91,7 +91,7 @@
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-          <button class="btn btn-sm" id="btnAnalysisHistory" title="Analysis history">🕐 <span data-i18n="panel.analysis_history">History</span></button>
+          <button class="btn btn-sm" id="btnAnalysisContext" title="Add analysis context">📝 <span data-i18n="panel.analysis_context">Context</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
         </div>
       </div>
@@ -99,6 +99,13 @@
         <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
         <span class="analysis-nav-label" id="analysisNavLabel"></span>
         <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
+      </div>
+      <div class="analysis-context-bar" id="analysisContextBar" hidden>
+        <textarea class="analysis-context-input" id="analysisContextInput" rows="2" data-i18n-placeholder="panel.context_placeholder" placeholder="Add context for better analysis (e.g. meeting goals, key topics, background info)..."></textarea>
+        <div class="analysis-context-actions">
+          <button class="btn btn-xs btn-primary" id="btnContextSave" data-i18n="panel.context_save">Save</button>
+          <button class="btn btn-xs" id="btnContextClear" data-i18n="panel.context_clear">Clear</button>
+        </div>
       </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">

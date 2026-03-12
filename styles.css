@@ -684,6 +684,9 @@ h1, h2, h3 { font-weight: 600; }
   line-height: 1.7;
   color: var(--text-primary);
   padding: 8px 4px;
+  cursor: default;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
 }
 .ai-markdown-content h2 {
   font-size: 15px;
@@ -724,6 +727,98 @@ h1, h2, h3 { font-weight: 600; }
   border-radius: 6px;
   overflow-x: auto;
   margin: 8px 0;
+}
+
+/* Analysis Context Bar */
+.analysis-context-bar {
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+}
+.analysis-context-input {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 6px 8px;
+  resize: vertical;
+  font-family: var(--font-sans);
+  min-height: 40px;
+}
+.analysis-context-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+.analysis-context-input::placeholder { color: var(--text-muted); }
+.analysis-context-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+#btnAnalysisContext.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+#btnAnalysisContext.has-context {
+  color: var(--accent);
+  position: relative;
+}
+#btnAnalysisContext.has-context::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Analysis Edit Mode */
+.ai-markdown-content:hover:not(.editing) {
+  background: var(--bg-hover);
+}
+.ai-markdown-content.editing {
+  background: none;
+  padding: 0;
+}
+.analysis-edit-textarea {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px;
+  resize: none;
+  font-family: var(--font-mono);
+  overflow-y: auto;
+}
+.analysis-edit-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+.analysis-edit-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+}
+.analysis-edit-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.analysis-edit-actions {
+  display: flex;
+  gap: 6px;
 }
 
 /* Skeleton */
