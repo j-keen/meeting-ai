@@ -108,6 +108,9 @@ function resetFormUI() {
   fillAgendaFields(formConfig.agenda);
   $('#prepNotesInput').value = formConfig.notes;
 
+  // Hide reference submodal
+  $('#prepRefSubmodal').hidden = true;
+
   // Clear badges & file chips
   $('#prepSelectedBadges').innerHTML = '';
   $('#prepFileChips').innerHTML = '';
