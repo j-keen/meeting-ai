@@ -780,46 +780,96 @@ h1, h2, h3 { font-weight: 600; }
   background: var(--accent);
 }
 
-/* Analysis Edit Mode */
-.ai-markdown-content:hover:not(.editing) {
+/* Block-level editing */
+.ai-block {
+  position: relative;
+  border-left: 3px solid transparent;
+  padding-left: 8px;
+  margin-left: -11px;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.ai-block:hover:not(.editing) {
+  border-left-color: var(--accent);
   background: var(--bg-hover);
 }
-.ai-markdown-content.editing {
-  background: none;
-  padding: 0;
+.ai-block-edit-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
 }
-.analysis-edit-textarea {
+.ai-block:hover:not(.editing) .ai-block-edit-btn {
+  opacity: 1;
+}
+.ai-block-edit-btn:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+/* Dim sibling blocks when one is being edited */
+.ai-markdown-content.has-editing-block .ai-block:not(.editing) {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+/* Active editing block */
+.ai-block.editing {
+  border-left-color: var(--accent);
+  background: var(--accent-bg);
+  padding: 8px;
+  margin-left: -11px;
+  border-radius: var(--radius-sm);
+}
+.ai-block-textarea {
   width: 100%;
-  min-height: 200px;
+  min-height: 40px;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 13px;
   line-height: 1.6;
-  padding: 12px;
+  padding: 8px 10px;
   resize: none;
-  font-family: var(--font-mono);
-  overflow-y: auto;
+  font-family: var(--font-sans);
+  overflow-y: hidden;
 }
-.analysis-edit-textarea:focus {
+.ai-block-textarea:focus {
   outline: none;
   box-shadow: 0 0 0 2px var(--accent-bg);
 }
-.analysis-edit-toolbar {
+.ai-block-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 4px 0 0 0;
 }
-.analysis-edit-hint {
+.ai-block-hint {
   font-size: 11px;
   color: var(--text-muted);
 }
-.analysis-edit-actions {
+.ai-block-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
+/* Remove extra margins inside blocks */
+.ai-block > *:first-child { margin-top: 0; }
+.ai-block > *:last-child { margin-bottom: 0; }
+.ai-block h2 { margin-top: 8px; }
+.ai-block:first-child h2 { margin-top: 0; }
 
 /* Skeleton */
 .skeleton-section { pointer-events: none; }

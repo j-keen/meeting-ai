@@ -956,8 +956,10 @@ function restoreEndButton(showEnd = true) {
   const endBtn = $('#btnEndMeeting');
   endBtn.hidden = !showEnd;
   const resume = $('#btnResumeMeeting');
+  const exportBtn = $('#btnPostExport');
   const newBtn = $('#btnNewMeeting');
   if (resume) resume.remove();
+  if (exportBtn) exportBtn.remove();
   if (newBtn) newBtn.remove();
 }
 

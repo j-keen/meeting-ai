@@ -4,7 +4,7 @@ import { renderMarkdown } from './chat.js';
 
 const CDN = {
   html2pdf: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js',
-  docx: 'https://unpkg.com/docx@9.1.1/build/index.umd.js',
+  docx: 'https://cdn.jsdelivr.net/npm/docx@9.1.1/dist/index.iife.js',
 };
 
 function loadScript(url) {
@@ -45,6 +45,8 @@ export async function exportPDF(markdown, filename) {
   });
 
   document.body.appendChild(container);
+  // Wait for DOM paint so html2canvas captures rendered content
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
   try {
     await window.html2pdf().set({

@@ -50,7 +50,7 @@
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
-          <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Export</span></button>
+          <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
         </div>
       </div>
       <div class="transcript-list" id="transcriptList">
@@ -395,7 +395,7 @@
   <div class="modal-overlay" id="exportModal" hidden>
     <div class="modal">
       <div class="modal-header">
-        <h3 data-i18n="export.title">Export Meeting</h3>
+        <h3 data-i18n="export.title">AI Transcript Export</h3>
         <button class="btn btn-icon modal-close" data-close="exportModal">&times;</button>
       </div>
       <div class="modal-body">
@@ -644,31 +644,65 @@
         <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
       </div>
       <div class="modal-body meeting-prep-form-body" id="prepFormBody">
-        <!-- Preset Row -->
-        <div class="prep-preset-row">
-          <select class="settings-select" id="prepPresetSelect" style="flex:1;">
-            <option value="" data-i18n="prep.select_preset">Select a preset...</option>
-          </select>
-          <button class="btn btn-xs" id="btnDeletePrepPreset" title="Delete" style="display:none">&times;</button>
-        </div>
-
-        <!-- Section: Meeting Type -->
+        <!-- Section: Meeting Type (Radio List) -->
         <div class="prep-section">
           <label class="prep-section-label" data-i18n="prep.summary_type">Type</label>
-          <div class="prep-type-grid" id="prepTypeGrid">
-            <button class="prep-type-card selected" data-type="general"><span class="prep-type-icon">&#128196;</span><span data-i18n="prep.type_general">General</span></button>
-            <button class="prep-type-card" data-type="weekly"><span class="prep-type-icon">&#128197;</span><span data-i18n="prep.type_weekly">Weekly</span></button>
-            <button class="prep-type-card" data-type="brainstorm"><span class="prep-type-icon">&#128161;</span><span data-i18n="prep.type_brainstorm">Brainstorm</span></button>
-            <button class="prep-type-card" data-type="sales"><span class="prep-type-icon">&#129309;</span><span data-i18n="prep.type_sales">Sales/Client</span></button>
-            <button class="prep-type-card" data-type="1on1"><span class="prep-type-icon">&#128101;</span><span data-i18n="prep.type_1on1">1-on-1</span></button>
-            <button class="prep-type-card" data-type="kickoff"><span class="prep-type-icon">&#127937;</span><span data-i18n="prep.type_kickoff">Kickoff</span></button>
+          <div class="prep-type-list" id="prepTypeGrid">
+            <label class="prep-type-radio selected" data-type="general">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_general">General</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_general_desc">Free-form meeting</span>
+            </label>
+            <label class="prep-type-radio" data-type="weekly">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_weekly">Weekly</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_weekly_desc">Regular weekly report</span>
+            </label>
+            <label class="prep-type-radio" data-type="brainstorm">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_brainstorm">Brainstorm</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_brainstorm_desc">Idea brainstorming</span>
+            </label>
+            <label class="prep-type-radio" data-type="sales">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_sales">Sales/Client</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_sales_desc">Sales/client meeting</span>
+            </label>
+            <label class="prep-type-radio" data-type="1on1">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_1on1">1-on-1</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_1on1_desc">1:1 coaching/review</span>
+            </label>
+            <label class="prep-type-radio" data-type="kickoff">
+              <span class="prep-type-radio-indicator"></span>
+              <span class="prep-type-radio-label" data-i18n="prep.type_kickoff">Kickoff</span>
+              <span class="prep-type-radio-desc" data-i18n="prep.type_kickoff_desc">Project kickoff</span>
+            </label>
           </div>
         </div>
 
-        <!-- Section: Agenda -->
+        <!-- Section: Agenda (Q&A 4 fields) -->
         <div class="prep-section">
           <label class="prep-section-label" data-i18n="prep.summary_agenda">Agenda</label>
-          <textarea class="settings-textarea" id="prepAgendaInput" rows="3" data-i18n-placeholder="prep.agenda_placeholder" placeholder="What topics will be discussed?"></textarea>
+          <div class="prep-agenda-fields">
+            <div class="prep-agenda-field">
+              <label data-i18n="prep.agenda_goal">What is the goal?</label>
+              <input class="settings-input" id="prepAgendaGoal" data-i18n-placeholder="prep.agenda_goal_hint" placeholder="Goals to achieve...">
+            </div>
+            <div class="prep-agenda-field">
+              <label data-i18n="prep.agenda_context">Background/context?</label>
+              <input class="settings-input" id="prepAgendaContext" data-i18n-placeholder="prep.agenda_context_hint" placeholder="Relevant background info...">
+            </div>
+            <div class="prep-agenda-field">
+              <label data-i18n="prep.agenda_topics">Key topics?</label>
+              <textarea class="settings-textarea" id="prepAgendaTopics" rows="2" data-i18n-placeholder="prep.agenda_topics_hint" placeholder="List main agenda items..."></textarea>
+            </div>
+            <div class="prep-agenda-field">
+              <label data-i18n="prep.agenda_outcomes">Expected outcomes?</label>
+              <input class="settings-input" id="prepAgendaOutcomes" data-i18n-placeholder="prep.agenda_outcomes_hint" placeholder="Expected decisions or conclusions...">
+            </div>
+          </div>
+          <div class="prep-agenda-suggestions" id="prepAgendaSuggestions" hidden></div>
         </div>
 
         <!-- Section: Participants -->
@@ -676,7 +710,12 @@
           <label class="prep-section-label" data-i18n="prep.summary_attendees">Attendees</label>
           <div class="prep-participants-row">
             <input type="text" class="settings-input" id="prepParticipantSearch" data-i18n-placeholder="contacts.search" placeholder="Search contacts..." style="flex:1">
-            <button class="btn btn-sm" id="btnScanCard" title="Scan business card">&#128247; <span data-i18n="prep.scan_card">Scan</span></button>
+            <button class="btn btn-sm" id="btnScanCard" title="Scan business card">📷 <span data-i18n="prep.photo_card">Photo</span></button>
+            <div class="prep-photo-popup" id="prepPhotoPopup" hidden>
+              <button class="prep-photo-option" id="btnPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
+              <button class="prep-photo-option" id="btnPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
+            </div>
+            <input type="file" id="prepImageFileInput" accept="image/*" hidden>
           </div>
           <div class="prep-selected-badges" id="prepSelectedBadges"></div>
           <div class="prep-contact-list" id="prepContactList"></div>
@@ -696,9 +735,11 @@
         <!-- Section: Reference Meeting -->
         <div class="prep-section">
           <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Meeting</label>
-          <select class="settings-select" id="prepReferenceSelect">
-            <option value="">--</option>
-          </select>
+          <button class="btn btn-sm" id="btnOpenRefModal">📎 <span data-i18n="prep.find_reference">Find past meeting</span></button>
+          <div class="prep-reference-chip" id="prepReferenceChip" hidden>
+            <span id="prepReferenceChipText"></span>
+            <button class="prep-reference-chip-remove" id="btnRemoveReference">&times;</button>
+          </div>
           <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
         </div>
 
@@ -716,6 +757,36 @@
         <div class="prep-section">
           <label class="prep-section-label" data-i18n="prep.notes_label">Notes</label>
           <textarea class="settings-textarea" id="prepNotesInput" rows="2" data-i18n-placeholder="prep.notes_placeholder" placeholder="Additional notes or instructions for AI..."></textarea>
+        </div>
+      </div>
+
+      <!-- Reference Meeting Submodal -->
+      <div class="prep-ref-submodal-overlay" id="prepRefSubmodal" hidden>
+        <div class="prep-ref-submodal">
+          <div class="prep-ref-submodal-header">
+            <h4 data-i18n="prep.ref_search_title">Find past meeting</h4>
+            <button class="btn btn-icon" id="btnCloseRefSubmodal">&times;</button>
+          </div>
+          <div class="prep-ref-submodal-filters">
+            <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title..." style="flex:1">
+            <select class="settings-select" id="refFilterType">
+              <option value="">All</option>
+              <option value="general">General</option>
+              <option value="weekly">Weekly</option>
+              <option value="brainstorm">Brainstorm</option>
+              <option value="sales">Sales</option>
+              <option value="1on1">1-on-1</option>
+              <option value="kickoff">Kickoff</option>
+            </select>
+            <input type="date" class="settings-input" id="refFilterDateFrom" style="width:auto">
+            <span>~</span>
+            <input type="date" class="settings-input" id="refFilterDateTo" style="width:auto">
+          </div>
+          <div class="prep-ref-submodal-list" id="refMeetingList"></div>
+          <div class="prep-ref-submodal-preview" id="refMeetingPreview" hidden></div>
+          <div class="prep-ref-submodal-footer">
+            <button class="btn btn-sm btn-primary" id="btnConfirmReference" disabled data-i18n="prep.ref_confirm">Select</button>
+          </div>
         </div>
       </div>
       <div class="prep-form-footer">
@@ -767,11 +838,12 @@
           <span class="launcher-card-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
           <span class="launcher-card-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
         </button>
-        <button class="launcher-card" id="btnLauncherMeetingSearch">
+        <button class="launcher-card" id="btnLauncherPreset">
           <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon">&#128269;</span>
-          <span class="launcher-card-label" data-i18n="meeting.meeting_search">Search Meetings</span>
-          <span class="launcher-card-desc" data-i18n="meeting.meeting_search_desc">Browse past meeting records</span>
+          <span class="launcher-card-icon">&#128203;</span>
+          <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
+          <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
+          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
