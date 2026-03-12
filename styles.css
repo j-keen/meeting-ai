@@ -2621,6 +2621,49 @@ h1, h2, h3 { font-weight: 600; }
   padding: 5px 8px;
 }
 
+/* ===== Correction Dictionary Modal ===== */
+.correction-dict-modal-overlay {
+  z-index: 300;
+}
+.btn-correction-dict-open {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px dashed var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-correction-dict-open:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.correction-dict-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+.correction-dict-search {
+  width: 100%;
+  margin-bottom: 4px;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
   .panel-tabs { display: flex; }
