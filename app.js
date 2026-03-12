@@ -22,6 +22,7 @@ import {
 } from './ui.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat } from './chat.js';
+import { exportPDF, exportWord } from './export-doc.js';
 import { startMeetingPrep } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, getPromptPresets } from './i18n.js';
 
@@ -1118,15 +1119,37 @@ function sendEmail(subject, body) {
   window.open(mailto);
 }
 
-function handleExport(format) {
+async function handleExport(format) {
   const dateStr = new Date().toISOString().slice(0, 10);
-  switch (format) {
-    case 'md-full': downloadFile(generateMarkdownFull(), `meeting-${dateStr}.md`); break;
-    case 'md-summary': downloadFile(generateMarkdownSummary(), `meeting-summary-${dateStr}.md`); break;
-    case 'md-highlights': downloadFile(generateMarkdownHighlights(), `meeting-highlights-${dateStr}.md`); break;
-    case 'json': downloadFile(generateJSON(), `meeting-${dateStr}.json`, 'application/json'); break;
-    case 'slack': sendToSlack(generateMarkdownSummary()); break;
-    case 'email': sendEmail(t('md.meeting_notes').replace('# ', '') + ' ' + dateStr, generateMarkdownSummary()); break;
+  const btn = document.querySelector(`.export-btn[data-format="${format}"]`);
+  const isAsync = format.startsWith('pdf-') || format.startsWith('docx-');
+
+  if (isAsync && btn) {
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = t('export.generating');
+    try {
+      switch (format) {
+        case 'pdf-full': await exportPDF(generateMarkdownFull(), `meeting-${dateStr}.pdf`); break;
+        case 'pdf-summary': await exportPDF(generateMarkdownSummary(), `meeting-summary-${dateStr}.pdf`); break;
+        case 'docx-full': await exportWord(generateMarkdownFull(), `meeting-${dateStr}.docx`); break;
+        case 'docx-summary': await exportWord(generateMarkdownSummary(), `meeting-summary-${dateStr}.docx`); break;
+      }
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  } else {
+    switch (format) {
+      case 'md-full': downloadFile(generateMarkdownFull(), `meeting-${dateStr}.md`); break;
+      case 'md-summary': downloadFile(generateMarkdownSummary(), `meeting-summary-${dateStr}.md`); break;
+      case 'md-highlights': downloadFile(generateMarkdownHighlights(), `meeting-highlights-${dateStr}.md`); break;
+      case 'json': downloadFile(generateJSON(), `meeting-${dateStr}.json`, 'application/json'); break;
+      case 'slack': sendToSlack(generateMarkdownSummary()); break;
+      case 'email': sendEmail(t('md.meeting_notes').replace('# ', '') + ' ' + dateStr, generateMarkdownSummary()); break;
+    }
   }
   $('#exportModal').hidden = true;
 }

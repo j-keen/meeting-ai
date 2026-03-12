@@ -152,9 +152,14 @@ const translations = {
     'export.md_full': 'Markdown - Full Report',
     'export.md_summary': 'Markdown - Summary',
     'export.md_highlights': 'Markdown - Highlights & Memos',
+    'export.pdf_full': 'PDF - Full Report',
+    'export.pdf_summary': 'PDF - Summary',
+    'export.docx_full': 'Word - Full Report',
+    'export.docx_summary': 'Word - Summary',
     'export.json': 'JSON - Full Data',
     'export.slack': 'Send to Slack',
     'export.email': 'Send via Email',
+    'export.generating': 'Generating...',
 
     // History modal
     'history.title': 'Meeting History',
@@ -601,9 +606,14 @@ const translations = {
     'export.md_full': 'Markdown - 전체 보고서',
     'export.md_summary': 'Markdown - 요약',
     'export.md_highlights': 'Markdown - 하이라이트 & 메모',
+    'export.pdf_full': 'PDF - 전체 보고서',
+    'export.pdf_summary': 'PDF - 요약',
+    'export.docx_full': 'Word - 전체 보고서',
+    'export.docx_summary': 'Word - 요약',
     'export.json': 'JSON - 전체 데이터',
     'export.slack': 'Slack으로 전송',
     'export.email': '이메일로 전송',
+    'export.generating': '생성 중...',
 
     // History modal
     'history.title': '회의 기록',
