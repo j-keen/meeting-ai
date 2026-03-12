@@ -2845,6 +2845,9 @@ h1, h2, h3 { font-weight: 600; }
   align-items: center;
   justify-content: center;
 }
+.prep-ref-submodal-overlay[hidden] {
+  display: none;
+}
 .prep-ref-submodal {
   width: 90%;
   max-width: 560px;
