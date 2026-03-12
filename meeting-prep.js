@@ -2,8 +2,8 @@
 
 import { emit } from './app.js';
 import {
-  loadContacts, addContact, loadMeetingPrepPresets, saveMeetingPrepPreset,
-  deleteMeetingPrepPreset, savePreparedMeeting, listMeetings, getMeeting,
+  loadContacts, addContact, saveMeetingPrepPreset,
+  savePreparedMeeting, listMeetings, getMeeting,
 } from './storage.js';
 import { callGemini } from './gemini-api.js';
 import { t } from './i18n.js';
@@ -84,12 +84,6 @@ export function openMeetingPrepForm(presetConfig) {
   // Reset UI
   resetFormUI();
 
-  // Populate presets dropdown
-  populatePresetDropdown();
-
-  // Populate reference meetings dropdown
-  populateReferenceDropdown();
-
   // Render contacts
   renderContactList('');
 
@@ -104,14 +98,14 @@ export function isMeetingPrepActive() {
 
 // ===== Form Reset =====
 function resetFormUI() {
-  // Type selection
-  const typeCards = document.querySelectorAll('.prep-type-card');
-  typeCards.forEach(card => {
-    card.classList.toggle('selected', card.dataset.type === formConfig.meetingType);
+  // Type selection (radio list)
+  const typeRadios = document.querySelectorAll('.prep-type-radio');
+  typeRadios.forEach(radio => {
+    radio.classList.toggle('selected', radio.dataset.type === formConfig.meetingType);
   });
 
-  // Text fields
-  $('#prepAgendaInput').value = formConfig.agenda;
+  // Q&A fields — parse agenda into fields
+  fillAgendaFields(formConfig.agenda);
   $('#prepNotesInput').value = formConfig.notes;
 
   // Clear badges & file chips
@@ -119,11 +113,40 @@ function resetFormUI() {
   $('#prepFileChips').innerHTML = '';
   $('#prepCardResult').hidden = true;
   $('#prepReferencePreview').hidden = true;
-  $('#prepReferenceSelect').value = '';
+  $('#prepReferenceChip').hidden = true;
+  $('#prepAgendaSuggestions').hidden = true;
 
   // Render attendee badges
   renderSelectedBadges();
   renderFileChips();
+}
+
+function fillAgendaFields(agenda) {
+  if (!agenda) {
+    $('#prepAgendaGoal').value = '';
+    $('#prepAgendaContext').value = '';
+    $('#prepAgendaTopics').value = '';
+    $('#prepAgendaOutcomes').value = '';
+    return;
+  }
+  // Try to parse structured format
+  const goalMatch = agenda.match(/\[목표\]\s*([\s\S]*?)(?=\[배경\]|\[안건\]|\[기대결과\]|$)/);
+  const ctxMatch = agenda.match(/\[배경\]\s*([\s\S]*?)(?=\[목표\]|\[안건\]|\[기대결과\]|$)/);
+  const topicsMatch = agenda.match(/\[안건\]\s*([\s\S]*?)(?=\[목표\]|\[배경\]|\[기대결과\]|$)/);
+  const outcomesMatch = agenda.match(/\[기대결과\]\s*([\s\S]*?)(?=\[목표\]|\[배경\]|\[안건\]|$)/);
+
+  if (goalMatch || ctxMatch || topicsMatch || outcomesMatch) {
+    $('#prepAgendaGoal').value = (goalMatch?.[1] || '').trim();
+    $('#prepAgendaContext').value = (ctxMatch?.[1] || '').trim();
+    $('#prepAgendaTopics').value = (topicsMatch?.[1] || '').trim();
+    $('#prepAgendaOutcomes').value = (outcomesMatch?.[1] || '').trim();
+  } else {
+    // Unstructured: put everything in topics
+    $('#prepAgendaGoal').value = '';
+    $('#prepAgendaContext').value = '';
+    $('#prepAgendaTopics').value = agenda;
+    $('#prepAgendaOutcomes').value = '';
+  }
 }
 
 // ===== Event Bindings =====
@@ -131,13 +154,13 @@ function bindFormEvents() {
   // Close button
   $('#btnClosePrepForm').addEventListener('click', closeForm);
 
-  // Meeting type selection
+  // Meeting type selection (radio list)
   $('#prepTypeGrid').addEventListener('click', (e) => {
-    const card = e.target.closest('.prep-type-card');
-    if (!card) return;
-    document.querySelectorAll('.prep-type-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    formConfig.meetingType = card.dataset.type;
+    const radio = e.target.closest('.prep-type-radio');
+    if (!radio) return;
+    document.querySelectorAll('.prep-type-radio').forEach(r => r.classList.remove('selected'));
+    radio.classList.add('selected');
+    formConfig.meetingType = radio.dataset.type;
   });
 
   // Participant search
@@ -162,8 +185,38 @@ function bindFormEvents() {
     }
   });
 
-  // Scan card button
-  $('#btnScanCard').addEventListener('click', openCameraForCard);
+  // Photo button — popup toggle
+  $('#btnScanCard').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const popup = $('#prepPhotoPopup');
+    popup.hidden = !popup.hidden;
+  });
+  $('#btnPhotoUpload').addEventListener('click', () => {
+    $('#prepPhotoPopup').hidden = true;
+    $('#prepImageFileInput').click();
+  });
+  $('#btnPhotoCamera').addEventListener('click', () => {
+    $('#prepPhotoPopup').hidden = true;
+    openCameraForCard();
+  });
+  $('#prepImageFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(',')[1];
+      processOcrImage(base64);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  });
+  // Close photo popup on outside click
+  document.addEventListener('click', (e) => {
+    const popup = $('#prepPhotoPopup');
+    if (popup && !popup.hidden && !e.target.closest('#btnScanCard') && !popup.contains(e.target)) {
+      popup.hidden = true;
+    }
+  });
 
   // Camera capture
   $('#btnCameraCapture').addEventListener('click', captureCard);
@@ -172,26 +225,16 @@ function bindFormEvents() {
   // Save card contact
   $('#btnSaveCardContact').addEventListener('click', saveCardContact);
 
-  // Reference meeting selection
-  $('#prepReferenceSelect').addEventListener('change', (e) => {
-    const id = e.target.value;
-    if (!id) {
-      formConfig.referenceMeetingId = null;
-      formConfig.referenceAnalysis = '';
-      $('#prepReferencePreview').hidden = true;
-      return;
-    }
-    const meeting = getMeeting(id);
-    if (meeting && meeting.analysisHistory?.length) {
-      const lastAnalysis = meeting.analysisHistory[meeting.analysisHistory.length - 1];
-      const md = lastAnalysis.markdown || lastAnalysis.raw || '';
-      formConfig.referenceMeetingId = id;
-      formConfig.referenceAnalysis = md.slice(0, 3000);
-      const preview = $('#prepReferencePreview');
-      preview.textContent = formConfig.referenceAnalysis.slice(0, 500) + (formConfig.referenceAnalysis.length > 500 ? '...' : '');
-      preview.hidden = false;
-    }
-  });
+  // Reference meeting — open submodal
+  $('#btnOpenRefModal').addEventListener('click', openReferenceSubmodal);
+  $('#btnCloseRefSubmodal').addEventListener('click', () => { $('#prepRefSubmodal').hidden = true; });
+  $('#btnConfirmReference').addEventListener('click', confirmReferenceSelection);
+  $('#btnRemoveReference').addEventListener('click', clearReference);
+  // Submodal filters
+  $('#refSearchInput').addEventListener('input', renderRefMeetingList);
+  $('#refFilterType').addEventListener('change', renderRefMeetingList);
+  $('#refFilterDateFrom').addEventListener('change', renderRefMeetingList);
+  $('#refFilterDateTo').addEventListener('change', renderRefMeetingList);
 
   // File drop zone
   const dropZone = $('#prepFileDrop');
@@ -210,31 +253,6 @@ function bindFormEvents() {
     fileInput.value = '';
   });
 
-  // Preset dropdown
-  $('#prepPresetSelect').addEventListener('change', (e) => {
-    const idx = parseInt(e.target.value);
-    if (isNaN(idx)) {
-      $('#btnDeletePrepPreset').style.display = 'none';
-      return;
-    }
-    const presets = loadMeetingPrepPresets();
-    if (presets[idx]) {
-      fillFormFromConfig(presets[idx]);
-      resetFormUI();
-      renderContactList('');
-      $('#btnDeletePrepPreset').style.display = '';
-    }
-  });
-
-  // Delete preset
-  $('#btnDeletePrepPreset').addEventListener('click', () => {
-    const idx = parseInt($('#prepPresetSelect').value);
-    if (isNaN(idx)) return;
-    deleteMeetingPrepPreset(idx);
-    populatePresetDropdown();
-    showToast(t('prep.preset_saved'), 'success');
-  });
-
   // Save preset button
   $('#btnPrepSavePreset').addEventListener('click', () => {
     const name = prompt(t('prep.preset_name'));
@@ -248,7 +266,6 @@ function bindFormEvents() {
       notes: formConfig.notes,
       customPrompt: formConfig.customPrompt,
     });
-    populatePresetDropdown();
     showToast(t('prep.preset_saved'), 'success');
   });
 
@@ -275,7 +292,16 @@ function bindFormEvents() {
 
 // ===== Collect form values =====
 function collectFormConfig() {
-  formConfig.agenda = $('#prepAgendaInput').value.trim();
+  const goal = $('#prepAgendaGoal').value.trim();
+  const ctx = $('#prepAgendaContext').value.trim();
+  const topics = $('#prepAgendaTopics').value.trim();
+  const outcomes = $('#prepAgendaOutcomes').value.trim();
+  const parts = [];
+  if (goal) parts.push(`[목표] ${goal}`);
+  if (ctx) parts.push(`[배경] ${ctx}`);
+  if (topics) parts.push(`[안건] ${topics}`);
+  if (outcomes) parts.push(`[기대결과] ${outcomes}`);
+  formConfig.agenda = parts.join('\n');
   formConfig.notes = $('#prepNotesInput').value.trim();
   // meetingType and attendees are already tracked via events
 }
@@ -297,32 +323,156 @@ function fillFormFromConfig(config) {
   if (config.attachedFiles) formConfig.attachedFiles = [...config.attachedFiles];
 }
 
-// ===== Preset Dropdown =====
-function populatePresetDropdown() {
-  const select = $('#prepPresetSelect');
-  const presets = loadMeetingPrepPresets();
-  select.innerHTML = `<option value="">${t('prep.select_preset')}</option>`;
-  presets.forEach((p, i) => {
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = p.name || `${p.meetingType || 'Preset'} ${p.agenda ? '- ' + p.agenda.slice(0, 20) : ''}`;
-    select.appendChild(opt);
-  });
-  $('#btnDeletePrepPreset').style.display = 'none';
+// ===== Reference Meeting Submodal =====
+let refMeetings = [];
+let selectedRefId = null;
+
+function openReferenceSubmodal() {
+  refMeetings = listMeetings();
+  selectedRefId = null;
+  $('#refSearchInput').value = '';
+  $('#refFilterType').value = '';
+  $('#refFilterDateFrom').value = '';
+  $('#refFilterDateTo').value = '';
+  $('#refMeetingPreview').hidden = true;
+  $('#btnConfirmReference').disabled = true;
+  renderRefMeetingList();
+  $('#prepRefSubmodal').hidden = false;
 }
 
-// ===== Reference Meeting Dropdown =====
-function populateReferenceDropdown() {
-  const select = $('#prepReferenceSelect');
-  const meetings = listMeetings();
-  select.innerHTML = '<option value="">--</option>';
-  meetings.slice(0, 20).forEach(m => {
-    const opt = document.createElement('option');
-    opt.value = m.id;
+function renderRefMeetingList() {
+  const query = $('#refSearchInput').value.trim().toLowerCase();
+  const typeFilter = $('#refFilterType').value;
+  const dateFrom = $('#refFilterDateFrom').value;
+  const dateTo = $('#refFilterDateTo').value;
+
+  let filtered = refMeetings;
+  if (query) filtered = filtered.filter(m => (m.title || '').toLowerCase().includes(query));
+  if (typeFilter) filtered = filtered.filter(m => m.preset === typeFilter);
+  if (dateFrom) filtered = filtered.filter(m => new Date(m.createdAt) >= new Date(dateFrom));
+  if (dateTo) filtered = filtered.filter(m => new Date(m.createdAt) <= new Date(dateTo + 'T23:59:59'));
+
+  const listEl = $('#refMeetingList');
+  listEl.innerHTML = '';
+  filtered.slice(0, 30).forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'prep-ref-meeting-card' + (m.id === selectedRefId ? ' selected' : '');
     const date = new Date(m.createdAt).toLocaleDateString();
-    opt.textContent = `${m.title || 'Untitled'} (${date})`;
-    select.appendChild(opt);
+    card.innerHTML = `
+      <div class="prep-ref-meeting-card-title">${escapeHtml(m.title || 'Untitled')}</div>
+      <div class="prep-ref-meeting-card-meta">${date} · ${m.preset || 'general'}</div>
+    `;
+    card.addEventListener('click', () => selectRefMeeting(m.id));
+    listEl.appendChild(card);
   });
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<p class="text-muted" style="padding:16px;text-align:center;">No meetings found</p>';
+  }
+}
+
+function selectRefMeeting(id) {
+  selectedRefId = id;
+  // Highlight card
+  document.querySelectorAll('.prep-ref-meeting-card').forEach(c => c.classList.remove('selected'));
+  const cards = document.querySelectorAll('.prep-ref-meeting-card');
+  cards.forEach(c => {
+    const title = c.querySelector('.prep-ref-meeting-card-title')?.textContent;
+    const meeting = refMeetings.find(m => m.id === id);
+    if (meeting && title === (meeting.title || 'Untitled')) c.classList.add('selected');
+  });
+
+  // Show preview
+  const meeting = getMeeting(id);
+  const previewEl = $('#refMeetingPreview');
+  if (meeting && meeting.analysisHistory?.length) {
+    const lastAnalysis = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+    const md = lastAnalysis.markdown || lastAnalysis.raw || '';
+    previewEl.textContent = md.slice(0, 500) + (md.length > 500 ? '...' : '');
+    previewEl.hidden = false;
+  } else {
+    previewEl.textContent = 'No analysis available';
+    previewEl.hidden = false;
+  }
+  $('#btnConfirmReference').disabled = false;
+}
+
+function confirmReferenceSelection() {
+  if (!selectedRefId) return;
+  const meeting = getMeeting(selectedRefId);
+  if (meeting && meeting.analysisHistory?.length) {
+    const lastAnalysis = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+    const md = lastAnalysis.markdown || lastAnalysis.raw || '';
+    formConfig.referenceMeetingId = selectedRefId;
+    formConfig.referenceAnalysis = md.slice(0, 3000);
+
+    // Show chip
+    const chip = $('#prepReferenceChip');
+    $('#prepReferenceChipText').textContent = meeting.title || 'Untitled';
+    chip.hidden = false;
+
+    // Show preview
+    const preview = $('#prepReferencePreview');
+    preview.textContent = formConfig.referenceAnalysis.slice(0, 500) + (formConfig.referenceAnalysis.length > 500 ? '...' : '');
+    preview.hidden = false;
+
+    // Close submodal
+    $('#prepRefSubmodal').hidden = true;
+
+    // Suggest follow-up agenda
+    suggestFollowUpAgenda(formConfig.referenceAnalysis);
+  }
+}
+
+function clearReference() {
+  formConfig.referenceMeetingId = null;
+  formConfig.referenceAnalysis = '';
+  $('#prepReferenceChip').hidden = true;
+  $('#prepReferencePreview').hidden = true;
+  $('#prepAgendaSuggestions').hidden = true;
+}
+
+// ===== Auto Agenda Suggestions =====
+async function suggestFollowUpAgenda(analysisText) {
+  const el = $('#prepAgendaSuggestions');
+  el.hidden = false;
+  el.innerHTML = `<span class="text-muted">${t('prep.ref_suggest_loading')}</span>`;
+
+  try {
+    const body = {
+      contents: [{ role: 'user', parts: [{ text:
+        `Based on this meeting analysis, suggest 3-5 follow-up agenda items.
+Return JSON: [{"text":"...","field":"goal|topics|outcomes"}]
+
+${analysisText.slice(0, 3000)}`
+      }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
+    };
+
+    const res = await callGemini('gemini-2.5-flash-lite', body);
+    const text = res.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+    let items;
+    try { items = JSON.parse(text); } catch { items = []; }
+
+    el.innerHTML = '';
+    if (!items.length) { el.hidden = true; return; }
+
+    items.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'prep-agenda-suggestion-chip';
+      chip.textContent = s.text;
+      chip.onclick = () => {
+        const target = { goal: '#prepAgendaGoal', topics: '#prepAgendaTopics', outcomes: '#prepAgendaOutcomes' }[s.field] || '#prepAgendaTopics';
+        const input = $(target);
+        input.value = input.value ? input.value + '\n' + s.text : s.text;
+        chip.remove();
+        if (!el.children.length) el.hidden = true;
+      };
+      el.appendChild(chip);
+    });
+  } catch (err) {
+    console.error('Suggestion error:', err);
+    el.hidden = true;
+  }
 }
 
 // ===== Contact List =====
@@ -448,8 +598,10 @@ async function captureCard() {
   const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
 
   closeCamera();
+  processOcrImage(base64);
+}
 
-  // Show scanning state
+async function processOcrImage(base64) {
   const scanBtn = $('#btnScanCard');
   const origText = scanBtn.innerHTML;
   scanBtn.innerHTML = `&#8987; ${t('prep.scanning')}`;

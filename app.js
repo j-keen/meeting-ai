@@ -7,7 +7,7 @@ import {
   saveMeeting, listMeetings, getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   loadContacts, addContact, loadLocations, addLocation, loadCategories,
-  loadPreparedMeeting, deletePreparedMeeting,
+  loadPreparedMeeting, deletePreparedMeeting, loadMeetingPrepPresets,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine, showInterim, clearInterim,
@@ -1622,10 +1622,22 @@ function showLauncherModal() {
     openMeetingPrepForm();
   };
 
-  $('#btnLauncherMeetingSearch').onclick = () => {
-    close();
-    $('#historyModal').hidden = false;
-    refreshHistoryGrid();
+  // Card 3: Preset
+  const presets = loadMeetingPrepPresets();
+  const presetCard = $('#btnLauncherPreset');
+  const presetHint = presetCard.querySelector('.launcher-card-hint');
+  if (!presets.length) {
+    presetCard.classList.add('launcher-card-disabled');
+    presetCard.disabled = true;
+    if (presetHint) presetHint.hidden = false;
+  } else {
+    presetCard.classList.remove('launcher-card-disabled');
+    presetCard.disabled = false;
+    if (presetHint) presetHint.hidden = true;
+  }
+  presetCard.onclick = () => {
+    if (!presets.length) return;
+    showPresetDropdown(presets, close);
   };
 
   // 4th card: Prepared meeting (if exists)
@@ -1662,7 +1674,7 @@ function showLauncherModal() {
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
-    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherMeetingSearch').click(); }
+    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
     else if (e.key === '4') {
       e.preventDefault();
       const prepBtn = $('#btnLauncherPrepared');
@@ -1671,6 +1683,47 @@ function showLauncherModal() {
     else if (e.key === 'Escape') { close(); }
   };
   document.addEventListener('keydown', keyHandler);
+}
+
+function showPresetDropdown(presets, closeFn) {
+  // Remove existing dropdown
+  const existing = document.querySelector('.launcher-preset-list');
+  if (existing) { existing.remove(); return; }
+
+  const card = $('#btnLauncherPreset');
+  card.style.position = 'relative';
+  const list = document.createElement('div');
+  list.className = 'launcher-preset-list';
+  presets.forEach((p, i) => {
+    const item = document.createElement('div');
+    item.className = 'launcher-preset-item';
+    const name = p.name || `Preset ${i + 1}`;
+    const typeBadge = p.meetingType ? `<span class="launcher-preset-item-type">${p.meetingType}</span>` : '';
+    item.innerHTML = `<span>${escapeHtml(name)}</span>${typeBadge}`;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      list.remove();
+      closeFn();
+      openMeetingPrepForm(p);
+    });
+    list.appendChild(item);
+  });
+  card.appendChild(list);
+
+  // Close on outside click
+  const outsideHandler = (e) => {
+    if (!list.contains(e.target) && e.target !== card) {
+      list.remove();
+      document.removeEventListener('click', outsideHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('click', outsideHandler), 0);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ===== Demo Data =====
