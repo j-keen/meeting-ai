@@ -266,11 +266,7 @@ function showContextPopup(e, lineId) {
   // Show engine info
   const engineInfo = document.getElementById('contextEngineInfo');
   if (engineInfo) {
-    const line = state.transcript.find(l => l.id === lineId);
-    const engineName = line?.engine === 'deepgram' ? 'Deepgram Nova-3'
-      : line?.engine === 'webspeech' ? 'Web Speech'
-      : line?.engine || 'Unknown';
-    engineInfo.textContent = `${t('context.engine')}: ${engineName}`;
+    engineInfo.textContent = `${t('context.engine')}: Web Speech`;
   }
 
   const close = (ev) => {

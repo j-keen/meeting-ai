@@ -130,89 +130,6 @@ export function initSettings() {
     markDirty();
   });
 
-  // STT Engine - show inline warning when clicking disabled select during recording
-  const sttEngineRow = $('#selectSttEngine')?.closest('.settings-engine-row');
-  if (sttEngineRow) {
-    sttEngineRow.addEventListener('pointerdown', (e) => {
-      const sel = $('#selectSttEngine');
-      if (sel?.disabled) {
-        e.preventDefault();
-        const label = sel.closest('.settings-label');
-        if (label && !label.querySelector('.stt-engine-inline-warning')) {
-          const warn = document.createElement('span');
-          warn.className = 'stt-engine-inline-warning';
-          warn.textContent = t('stt.recording_locked');
-          sttEngineRow.insertAdjacentElement('beforebegin', warn);
-          setTimeout(() => warn.remove(), 2000);
-        }
-      }
-    });
-  }
-
-  $('#selectSttEngine').addEventListener('change', (e) => {
-    state.settings.sttEngine = e.target.value;
-    markDirty();
-    // Clear previous test result when engine changes
-    const result = $('#sttTestResult');
-    if (result) { result.textContent = ''; result.className = 'stt-test-result'; }
-  });
-
-  // STT Connection Test
-  $('#btnTestStt')?.addEventListener('click', async () => {
-    const btn = $('#btnTestStt');
-    const result = $('#sttTestResult');
-    const engine = state.settings.sttEngine || 'webspeech';
-
-    btn.classList.add('testing');
-    btn.textContent = '...';
-    result.textContent = '';
-    result.className = 'stt-test-result';
-
-    if (engine === 'deepgram') {
-      try {
-        const resp = await fetch('/api/stt-token');
-        if (!resp.ok) throw new Error('API key not configured');
-        const data = await resp.json();
-        if (!data.key) throw new Error('Empty key');
-
-        // Try WebSocket connection with same params as recording
-        const lang = state.settings.language || 'ko';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&encoding=linear16&sample_rate=16000&channels=1&smart_format=true&interim_results=true&utterance_end_ms=500&vad_events=true`;
-        console.log(`[Settings] Testing Deepgram URL: ${wsUrl}`);
-        const ws = new WebSocket(wsUrl, ['token', data.key]);
-        const timeout = setTimeout(() => { ws.close(); }, 5000);
-
-        await new Promise((resolve, reject) => {
-          ws.onopen = () => { clearTimeout(timeout); ws.close(); resolve(); };
-          ws.onerror = () => { clearTimeout(timeout); reject(new Error('WebSocket connection failed')); };
-          ws.onclose = (e) => {
-            clearTimeout(timeout);
-            if (e.code !== 1000 && e.code !== 1005) reject(new Error(`Connection closed: code=${e.code} reason="${e.reason || 'none'}"`));
-          };
-        });
-
-        result.textContent = t('stt.test_success');
-        result.className = 'stt-test-result success';
-      } catch (err) {
-        result.textContent = t('stt.test_fail') + ' ' + (err.message || '');
-        result.className = 'stt-test-result error';
-      }
-    } else {
-      // Web Speech — check browser support
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SR) {
-        result.textContent = t('stt.test_success');
-        result.className = 'stt-test-result success';
-      } else {
-        result.textContent = t('stt.test_fail_browser');
-        result.className = 'stt-test-result error';
-      }
-    }
-
-    btn.classList.remove('testing');
-    btn.textContent = t('stt.test_connection');
-  });
-
   // Prompt presets
   function populatePromptPresets() {
     const select = $('#selectPromptPreset');
@@ -356,7 +273,6 @@ function saveAllSettings() {
     aiLanguage: s.aiLanguage,
     chatModel: s.chatModel,
     language: s.language,
-    sttEngine: s.sttEngine,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
     userProfile: s.userProfile,
@@ -416,7 +332,6 @@ function resetAllSettings() {
   s.geminiModel = 'gemini-2.5-flash';
   s.chatModel = 'gemini-2.5-flash';
   s.language = 'ko';
-  s.sttEngine = 'webspeech';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
   s.analysisCharThreshold = 1000;
@@ -444,7 +359,6 @@ function applySettingsToForm() {
   $('#selectUiLanguage').value = s.uiLanguage;
   $('#selectAiLanguage').value = s.aiLanguage;
   $('#selectLanguage').value = s.language;
-  $('#selectSttEngine').value = s.sttEngine || 'webspeech';
 
   $('#textPrompt').value = s.customPrompt;
   $('#textChatPrompt').value = s.chatSystemPrompt;
@@ -465,7 +379,6 @@ function loadSavedSettings() {
   s.geminiModel = 'gemini-2.5-flash';
   s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';
-  s.sttEngine = saved.sttEngine || 'webspeech';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
   s.analysisCharThreshold = 1000;
@@ -953,11 +866,6 @@ function renderCorrectionDict() {
     item.append(info, delBtn);
     list.appendChild(item);
   });
-}
-
-export function syncSttEngineUI(engine) {
-  const select = $('#selectSttEngine');
-  if (select) select.value = engine;
 }
 
 export function openSettings() {

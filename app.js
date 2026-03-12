@@ -1,6 +1,6 @@
 // app.js - State management, pub/sub, initialization
 
-import { createSTT, startSTTComparison } from './stt.js';
+import { createSTT } from './stt.js';
 import { analyzeTranscript, getDefaultPrompt, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes } from './ai.js';
 import { checkProxyAvailable, isProxyAvailable } from './gemini-api.js';
 import {
@@ -123,155 +123,23 @@ function getElapsedTimeStr() {
   return t('minutes', { n: mins });
 }
 
-// STT Engine Badge status helper
-function setSttBadgeStatus(status, label) {
-  const badge = document.getElementById('sttEngineBadge');
-  const nameEl = document.getElementById('sttEngineLabel');
-  if (badge) badge.dataset.status = status;
-  if (nameEl && label) nameEl.textContent = label;
-}
-
-// ===== STT Event Log =====
-const sttEventLog = [];
-const MAX_STT_LOG = 20;
-
-function logSttEvent(type, message) {
-  const entry = {
-    time: new Date(),
-    type, // 'connect' | 'error' | 'fallback' | 'info' | 'disconnect'
-    message,
-  };
-  sttEventLog.unshift(entry);
-  if (sttEventLog.length > MAX_STT_LOG) sttEventLog.pop();
-}
-
-function getSttLogIcon(type) {
-  switch (type) {
-    case 'connect': return '<span style="color:var(--success)">&#9679;</span>';
-    case 'error': return '<span style="color:var(--danger)">&#10005;</span>';
-    case 'fallback': return '<span style="color:var(--warning)">&#9888;</span>';
-    case 'disconnect': return '<span style="color:var(--text-muted)">&#9675;</span>';
-    default: return '<span style="color:var(--accent)">&#8505;</span>';
-  }
-}
-
-// ===== STT Comparison Mode =====
-let stopComparison = null;
-
-function startComparisonMode() {
-  if (state.isRecording) {
-    showToast(t('stt.recording_locked'), 'warning');
-    return;
-  }
-
-  const overlay = document.getElementById('sttCompareOverlay');
-  if (!overlay) return;
-
-  // Reset UI
-  document.getElementById('compareWsResults').innerHTML = '';
-  document.getElementById('compareDgResults').innerHTML = '';
-  document.getElementById('compareWsInterim').textContent = '';
-  document.getElementById('compareDgInterim').textContent = '';
-  document.getElementById('compareWsCount').textContent = '0';
-  document.getElementById('compareDgCount').textContent = '0';
-  document.getElementById('compareWsDot').style.background = 'var(--text-muted)';
-  document.getElementById('compareDgDot').style.background = 'var(--text-muted)';
-
-  let wsCount = 0, dgCount = 0;
-
-  overlay.hidden = false;
-  logSttEvent('info', t('stt.log_compare_start'));
-
-  stopComparison = startSTTComparison({
-    language: state.settings.language || 'ko',
-    onResult: (engine, text, isFinal) => {
-      const prefix = engine === 'webspeech' ? 'Ws' : 'Dg';
-      if (isFinal) {
-        const resultsEl = document.getElementById(`compare${prefix}Results`);
-        const p = document.createElement('p');
-        p.textContent = text;
-        resultsEl.appendChild(p);
-        resultsEl.scrollTop = resultsEl.scrollHeight;
-        document.getElementById(`compare${prefix}Interim`).textContent = '';
-
-        if (engine === 'webspeech') wsCount++;
-        else dgCount++;
-        document.getElementById(`compare${prefix}Count`).textContent = engine === 'webspeech' ? wsCount : dgCount;
-      } else {
-        document.getElementById(`compare${prefix}Interim`).textContent = text;
-      }
-    },
-    onError: (engine, err) => {
-      const prefix = engine === 'webspeech' ? 'Ws' : 'Dg';
-      const resultsEl = document.getElementById(`compare${prefix}Results`);
-      const p = document.createElement('p');
-      p.style.color = 'var(--danger)';
-      p.textContent = `Error: ${err}`;
-      resultsEl.appendChild(p);
-      logSttEvent('error', `[${engine}] ${err}`);
-    },
-    onStatusChange: (engine, status) => {
-      const dotId = engine === 'webspeech' ? 'compareWsDot' : 'compareDgDot';
-      const dot = document.getElementById(dotId);
-      if (dot) {
-        const colors = { connecting: 'var(--warning)', active: 'var(--success)', error: 'var(--danger)' };
-        dot.style.background = colors[status] || 'var(--text-muted)';
-      }
-    },
-  });
-}
-
-function stopComparisonMode() {
-  if (stopComparison) {
-    stopComparison();
-    stopComparison = null;
-  }
-  const overlay = document.getElementById('sttCompareOverlay');
-  if (overlay) overlay.hidden = true;
-  logSttEvent('info', t('stt.log_compare_end'));
-}
-
 async function startRecording() {
   if (state.isRecording) return;
 
   stt = createSTT();
 
-  const isDeepgram = state.settings.sttEngine === 'deepgram';
-  setSttBadgeStatus(isDeepgram ? 'connecting' : 'active', isDeepgram ? 'Deepgram' : 'Web Speech');
-
-  // Lock STT engine select during recording
-  const sttSelect = document.getElementById('selectSttEngine');
-  if (sttSelect) sttSelect.disabled = true;
-
-  logSttEvent('connect', t('stt.log_starting', { engine: isDeepgram ? 'Deepgram' : 'Web Speech' }));
-
   try {
     await stt.start({
       language: state.settings.language || 'ko',
-      engineType: state.settings.sttEngine || 'webspeech',
       onInterim: (text) => {
         showInterim(text);
-        // First result: mark badge as active (Deepgram connected successfully)
-        const badge = document.getElementById('sttEngineBadge');
-        if (badge && badge.dataset.status === 'connecting') {
-          setSttBadgeStatus('active', 'Deepgram');
-          logSttEvent('connect', 'Deepgram connected');
-        }
       },
       onFinal: (text) => {
-        // First result: mark badge as active
-        const badge = document.getElementById('sttEngineBadge');
-        if (badge && badge.dataset.status === 'connecting') {
-          setSttBadgeStatus('active', 'Deepgram');
-          logSttEvent('connect', 'Deepgram connected');
-        }
-
         const line = {
           id: generateId(),
           text,
           timestamp: Date.now(),
           bookmarked: false,
-          engine: stt?.engineName || 'unknown',
         };
         state.transcript.push(line);
         addTranscriptLine(line);
@@ -291,15 +159,7 @@ async function startRecording() {
         }
       },
       onError: (err) => {
-        logSttEvent('error', err);
         showToast(err, 'error');
-      },
-      onEngineChange: (newEngine) => {
-        // Fallback occurred — update badge to fallback state (don't change settings)
-        setSttBadgeStatus('fallback', 'Web Speech (fallback)');
-        logSttEvent('fallback', t('stt.fallback_warning'));
-        // Show warning toast
-        showToast(t('stt.fallback_warning'), 'warning');
       },
     });
 
@@ -348,10 +208,6 @@ async function startRecording() {
     stt?.stop();
     stt = null;
     state.isRecording = false;
-    setSttBadgeStatus('error', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
-    logSttEvent('error', err.message);
-    const sttSelect = document.getElementById('selectSttEngine');
-    if (sttSelect) sttSelect.disabled = false;
     showToast(t('toast.record_fail') + err.message, 'error');
   }
 }
@@ -363,7 +219,6 @@ function stopRecording() {
   stt = null;
   state.isRecording = false;
   clearInterim();
-  logSttEvent('disconnect', t('stt.log_stopped'));
 
   clearInterval(timerInterval);
   clearInterval(autoSaveInterval);
@@ -375,11 +230,6 @@ function stopRecording() {
   charsSinceLastCorrection = 0;
   isAnalysisPaused = false;
   updatePauseButtonVisibility(false);
-
-  // Reset badge and unlock engine select
-  setSttBadgeStatus('idle', state.settings.sttEngine === 'deepgram' ? 'Deepgram' : 'Web Speech');
-  const sttSelect = document.getElementById('selectSttEngine');
-  if (sttSelect) sttSelect.disabled = false;
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -1245,9 +1095,6 @@ function init() {
   // Pause/resume analysis (chip toggle)
   $('#analysisChip').addEventListener('click', () => toggleAnalysisPause());
 
-  // Compare STT engines
-  $('#btnCompareEngines')?.addEventListener('click', () => startComparisonMode());
-
   // Analyze now (with 10s cooldown)
   let lastManualAnalysisTime = 0;
   const btnAnalyzeNow = $('#btnAnalyzeNow');
@@ -1313,10 +1160,6 @@ function init() {
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {
     btn.addEventListener('click', () => updateStarRating(parseInt(btn.dataset.star)));
   });
-
-  // Close comparison
-  document.getElementById('btnCloseCompare')?.addEventListener('click', stopComparisonMode);
-  document.getElementById('btnStopCompare')?.addEventListener('click', stopComparisonMode);
 
   // Tag input (Enter to add)
   $('#endMeetingTagInput').addEventListener('keydown', (e) => {

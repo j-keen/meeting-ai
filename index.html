@@ -43,10 +43,6 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.transcript">Transcript</h2>
-          <span class="stt-engine-badge" id="sttEngineBadge">
-            <span class="stt-engine-dot" id="sttEngineDot"></span>
-            <span class="stt-engine-name" id="sttEngineLabel">Web Speech</span>
-          </span>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
@@ -205,18 +201,6 @@
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.stt">STT Settings</h3>
-          <label class="settings-label">
-            <span data-i18n="stt.engine">STT Engine</span>
-            <div class="settings-engine-row">
-              <select class="settings-select" id="selectSttEngine">
-                <option value="webspeech" data-i18n="stt.engine_webspeech">Web Speech (Free)</option>
-                <option value="deepgram" data-i18n="stt.engine_deepgram">Deepgram Nova-3 (Paid, High Accuracy)</option>
-              </select>
-              <button class="btn btn-sm btn-test-connection" id="btnTestStt" data-i18n="stt.test_connection">Test</button>
-              <button class="btn btn-sm btn-test-connection" id="btnCompareEngines" data-i18n="stt.compare_mode">Compare Engines</button>
-            </div>
-            <span class="stt-test-result" id="sttTestResult"></span>
-          </label>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
             <select class="settings-select" id="selectLanguage">
@@ -938,41 +922,6 @@
       <div class="chat-message-actions"></div>
     </div>
   </template>
-
-  <!-- STT Comparison Modal -->
-  <div class="modal-overlay" id="sttCompareOverlay" hidden>
-    <div class="modal stt-compare-modal">
-      <div class="modal-header">
-        <h3 data-i18n="stt.compare_title">Engine Comparison</h3>
-        <button class="btn btn-icon" id="btnCloseCompare">&times;</button>
-      </div>
-      <div class="stt-compare-body">
-        <div class="stt-compare-col">
-          <div class="stt-compare-col-header">
-            <span class="stt-engine-dot" id="compareWsDot"></span>
-            <strong>Web Speech</strong>
-            <span class="stt-compare-count" id="compareWsCount">0</span>
-          </div>
-          <div class="stt-compare-results" id="compareWsResults"></div>
-          <div class="stt-compare-interim" id="compareWsInterim"></div>
-        </div>
-        <div class="stt-compare-divider"></div>
-        <div class="stt-compare-col">
-          <div class="stt-compare-col-header">
-            <span class="stt-engine-dot" id="compareDgDot"></span>
-            <strong>Deepgram Nova-3</strong>
-            <span class="stt-compare-count" id="compareDgCount">0</span>
-          </div>
-          <div class="stt-compare-results" id="compareDgResults"></div>
-          <div class="stt-compare-interim" id="compareDgInterim"></div>
-        </div>
-      </div>
-      <div class="stt-compare-footer">
-        <span class="stt-compare-hint" data-i18n="stt.compare_hint">Speak to compare recognition results</span>
-        <button class="btn btn-primary" id="btnStopCompare" data-i18n="stt.compare_stop">Stop Comparison</button>
-      </div>
-    </div>
-  </div>
 
   <script type="module" src="app.js"></script>
 </body>
