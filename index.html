@@ -29,6 +29,12 @@
     </div>
   </header>
 
+  <!-- Restore Banner -->
+  <div class="restore-banner" id="restoreBanner" hidden>
+    <span class="restore-banner-text" id="restoreBannerText"></span>
+    <button class="btn btn-xs" id="btnRestoreBack"></button>
+  </div>
+
   <!-- Mobile Panel Tabs -->
   <div class="panel-tabs" id="panelTabs">
     <button class="panel-tab active" data-panel="left" data-i18n="panel.transcript">Transcript</button>
@@ -522,6 +528,7 @@
     <div class="modal modal-fullscreen">
       <div class="modal-header">
         <h3 id="viewerTitle" data-i18n="viewer.title">Meeting Details</h3>
+        <button class="btn btn-sm" id="btnViewerOpenInMain" data-i18n="viewer.open_in_main" style="margin-right:8px;">Open in Main</button>
         <button class="btn btn-icon modal-close" data-close="viewerModal">&times;</button>
       </div>
       <div class="modal-body viewer-body">
@@ -629,43 +636,6 @@
     </div>
   </div>
 
-  <!-- Minutes Generation Modal -->
-  <div class="modal-overlay" id="minutesGenModal" hidden>
-    <div class="modal" style="max-width:480px;">
-      <div class="modal-header">
-        <h3 data-i18n="minutes.title">Generating Meeting Minutes</h3>
-      </div>
-      <div class="modal-body minutes-gen-body">
-        <div class="minutes-gen-spinner" id="minutesGenSpinner">
-          <div class="spinner-ring"></div>
-          <p class="minutes-gen-status" id="minutesGenStatus" data-i18n="minutes.generating">AI is writing the meeting minutes...</p>
-        </div>
-        <div class="minutes-gen-done" id="minutesGenDone" hidden>
-          <span class="minutes-gen-check">&#10003;</span>
-          <p data-i18n="minutes.done">Meeting minutes generated successfully!</p>
-        </div>
-        <!-- Model Selection -->
-        <div class="end-meeting-section" style="margin-top:16px;">
-          <label class="end-meeting-label" data-i18n="end_meeting.model">AI Model</label>
-          <div class="end-meeting-model-select">
-            <label class="end-meeting-model-option">
-              <input type="radio" name="minutesModel" value="gemini-2.5-flash" checked>
-              <span class="end-meeting-model-chip">Flash <span class="end-meeting-model-desc" data-i18n="end_meeting.model_flash_desc">Fast</span></span>
-            </label>
-            <label class="end-meeting-model-option">
-              <input type="radio" name="minutesModel" value="gemini-2.5-pro">
-              <span class="end-meeting-model-chip">Pro <span class="end-meeting-model-desc" data-i18n="end_meeting.model_pro_desc">High quality</span></span>
-            </label>
-          </div>
-        </div>
-        <div class="minutes-gen-actions">
-          <button class="btn" id="btnMinutesSkip" data-i18n="minutes.skip">Skip</button>
-          <button class="btn btn-primary" id="btnMinutesGenerate" data-i18n="minutes.generate">Generate</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- End Meeting Modal -->
   <div class="modal-overlay" id="endMeetingModal" hidden>
     <div class="modal modal-large">
@@ -684,6 +654,22 @@
             <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
             <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
             <datalist id="locationDatalist"></datalist>
+          </div>
+        </div>
+        <!-- Minutes Model Selection (card style) -->
+        <div class="end-meeting-section" id="minutesModelSection">
+          <label class="end-meeting-label" data-i18n="end_meeting.minutes_model">Minutes</label>
+          <div class="minutes-model-cards" id="minutesModelCards">
+            <button class="minutes-model-card" data-model="gemini-2.5-flash">
+              <span class="minutes-model-icon">&#9889;</span>
+              <span class="minutes-model-name">Light</span>
+              <span class="minutes-model-hint" data-i18n="end_meeting.model_light_hint">Fast, concise summary</span>
+            </button>
+            <button class="minutes-model-card" data-model="gemini-2.5-pro">
+              <span class="minutes-model-icon">&#9733;</span>
+              <span class="minutes-model-name">Pro</span>
+              <span class="minutes-model-hint" data-i18n="end_meeting.model_pro_hint">Detailed, precise analysis</span>
+            </button>
           </div>
         </div>
         <!-- Title -->
@@ -731,6 +717,10 @@
         <!-- Actions -->
         <div class="end-meeting-actions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
+          <span class="minutes-gen-indicator" id="minutesGenIndicator" hidden>
+            <span class="spinner-ring-sm"></span>
+            <span data-i18n="end_meeting.generating_minutes">Generating...</span>
+          </span>
           <button class="btn" id="btnEndMeetingExport" disabled data-i18n="end_meeting.export_minutes">Export Minutes</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
@@ -1088,6 +1078,7 @@
       <div class="history-card-tags"></div>
       <div class="history-card-summary"></div>
       <div class="history-card-actions">
+        <button class="btn btn-xs btn-accent" data-action="restore" data-i18n="history.restore">Restore</button>
         <button class="btn btn-xs" data-action="view" data-i18n="history.view">View</button>
         <button class="btn btn-xs" data-action="export" data-i18n="history.export">Export</button>
         <button class="btn btn-xs btn-danger" data-action="delete" data-i18n="history.delete">Delete</button>
@@ -1121,6 +1112,53 @@
       <div class="chat-message-actions"></div>
     </div>
   </template>
+
+  <!-- Restore Confirm Dialog -->
+  <div class="modal-overlay" id="restoreConfirmModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 id="restoreConfirmTitle" data-i18n="restore.confirm_title">Restore Meeting</h3>
+        <button class="btn btn-icon modal-close" data-close="restoreConfirmModal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <div class="restore-options">
+          <button class="restore-option-btn" id="btnRestoreOverwrite">
+            <strong data-i18n="restore.overwrite">Overwrite Original</strong>
+            <span class="text-muted" data-i18n="restore.overwrite_desc">Changes will be saved to the original meeting.</span>
+          </button>
+          <button class="restore-option-btn" id="btnRestoreCopy">
+            <strong data-i18n="restore.copy">Save as Copy</strong>
+            <span class="text-muted" data-i18n="restore.copy_desc">A new copy will be created.</span>
+          </button>
+        </div>
+        <div style="text-align:center;margin-top:12px;">
+          <button class="btn btn-sm" id="btnRestoreCancel" data-i18n="restore.cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record on Restored Meeting Dialog -->
+  <div class="modal-overlay" id="restoreRecordModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="restore.record_title">Start Recording</h3>
+        <button class="btn btn-icon modal-close" data-close="restoreRecordModal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:16px;">
+        <div class="restore-options">
+          <button class="restore-option-btn" id="btnRestoreRecordContinue">
+            <strong data-i18n="restore.record_continue">Continue in this meeting</strong>
+            <span class="text-muted" data-i18n="restore.record_continue_desc">Append new recording to this meeting.</span>
+          </button>
+          <button class="restore-option-btn" id="btnRestoreRecordNew">
+            <strong data-i18n="restore.record_new">Start new meeting</strong>
+            <span class="text-muted" data-i18n="restore.record_new_desc">Save current state and start fresh.</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

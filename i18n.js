@@ -154,6 +154,23 @@ const translations = {
     'history.view': 'View',
     'history.export': 'Export',
     'history.delete': 'Delete',
+    'history.restore': 'Restore',
+    'restore.confirm_title': 'Restore Meeting',
+    'restore.overwrite': 'Overwrite Original',
+    'restore.copy': 'Save as Copy',
+    'restore.cancel': 'Cancel',
+    'restore.overwrite_desc': 'Changes will be saved to the original meeting.',
+    'restore.copy_desc': 'A new copy will be created. The original stays unchanged.',
+    'restore.recording_blocked': 'Cannot restore while recording is in progress.',
+    'restore.banner': 'Restored: {title}',
+    'restore.back': 'Back',
+    'restore.success': 'Meeting restored to workspace.',
+    'restore.record_title': 'Start Recording',
+    'restore.record_continue': 'Continue in this meeting',
+    'restore.record_new': 'Start new meeting',
+    'restore.record_continue_desc': 'Append new recording to this meeting.',
+    'restore.record_new_desc': 'Save current state and start fresh.',
+    'viewer.open_in_main': 'Open in Main',
     'history.no_meetings': 'No meetings found.',
     'history.untitled': 'Untitled Meeting',
     // Analysis history modal
@@ -423,9 +440,6 @@ const translations = {
     'end_meeting.participants': 'Participants',
     'end_meeting.location': 'Location',
     'end_meeting.datetime': 'Date / Time',
-    'end_meeting.model': 'AI Model',
-    'end_meeting.model_flash_desc': 'Fast',
-    'end_meeting.model_pro_desc': 'High quality',
     'end_meeting.export_minutes': 'Export Minutes',
     'end_meeting.save': 'Save',
     'end_meeting.cancel': 'Cancel',
@@ -433,14 +447,10 @@ const translations = {
     'end_meeting.add_tag': 'Add tag...',
     'end_meeting.add_participant': 'Add name...',
     'end_meeting.no_participants': 'No contacts registered.',
-
-    // Minutes Generation Modal
-    'minutes.title': 'Generating Meeting Minutes',
-    'minutes.generating': 'AI is writing the meeting minutes...',
-    'minutes.done': 'Meeting minutes generated successfully!',
-    'minutes.skip': 'Skip',
-    'minutes.generate': 'Generate',
-    'minutes.continue_in_bg': 'Continue in background',
+    'end_meeting.minutes_model': 'Minutes',
+    'end_meeting.model_light_hint': 'Fast, concise summary',
+    'end_meeting.model_pro_hint': 'Detailed, precise analysis',
+    'end_meeting.generating_minutes': 'Generating...',
 
     // Panel bookmarks
     'panel.bookmarks': 'Bookmarks',
@@ -676,6 +686,23 @@ const translations = {
     'history.view': '보기',
     'history.export': '내보내기',
     'history.delete': '삭제',
+    'history.restore': '불러오기',
+    'restore.confirm_title': '회의 불러오기',
+    'restore.overwrite': '원본에 덮어쓰기',
+    'restore.copy': '사본으로 저장',
+    'restore.cancel': '취소',
+    'restore.overwrite_desc': '변경 사항이 원본 회의에 저장됩니다.',
+    'restore.copy_desc': '새 사본이 생성됩니다. 원본은 그대로 유지됩니다.',
+    'restore.recording_blocked': '녹음 중에는 불러올 수 없습니다.',
+    'restore.banner': '불러온 회의: {title}',
+    'restore.back': '돌아가기',
+    'restore.success': '회의를 워크스페이스에 불러왔습니다.',
+    'restore.record_title': '녹음 시작',
+    'restore.record_continue': '이 회의에서 이어서 녹음',
+    'restore.record_new': '새 회의 시작',
+    'restore.record_continue_desc': '이 회의에 새 녹음을 추가합니다.',
+    'restore.record_new_desc': '현재 상태를 저장하고 새로 시작합니다.',
+    'viewer.open_in_main': '메인에서 열기',
     'history.no_meetings': '회의 기록이 없습니다.',
     'history.untitled': '제목 없는 회의',
     // Analysis history modal
@@ -945,9 +972,6 @@ const translations = {
     'end_meeting.participants': '참석자',
     'end_meeting.location': '장소',
     'end_meeting.datetime': '회의 일시',
-    'end_meeting.model': 'AI 모델',
-    'end_meeting.model_flash_desc': '빠름',
-    'end_meeting.model_pro_desc': '고품질',
     'end_meeting.export_minutes': '회의록 내보내기',
     'end_meeting.save': '저장',
     'end_meeting.cancel': '취소',
@@ -955,14 +979,10 @@ const translations = {
     'end_meeting.add_tag': '태그 추가...',
     'end_meeting.add_participant': '이름 추가...',
     'end_meeting.no_participants': '등록된 연락처가 없습니다.',
-
-    // Minutes Generation Modal
-    'minutes.title': '회의록 작성 중',
-    'minutes.generating': 'AI가 회의록을 작성하고 있습니다...',
-    'minutes.done': '회의록이 성공적으로 생성되었습니다!',
-    'minutes.skip': '건너뛰기',
-    'minutes.generate': '생성',
-    'minutes.continue_in_bg': '백그라운드에서 계속',
+    'end_meeting.minutes_model': '회의록',
+    'end_meeting.model_light_hint': '빠르고 간결한 요약',
+    'end_meeting.model_pro_hint': '상세하고 정밀한 분석',
+    'end_meeting.generating_minutes': '생성 중...',
 
     // Panel bookmarks
     'panel.bookmarks': '북마크',
@@ -1048,77 +1068,55 @@ const translations = {
 
 // AI-specific prompts per language (Markdown output)
 const AI_PROMPTS = {
-  en: `You are an expert AI meeting analyst. You MUST respond ONLY in English regardless of the transcript language.
+  en: `You are a real-time meeting tactical briefing AI. You MUST respond ONLY in English. Keep the ENTIRE output under 15 lines — this is read mid-meeting at a glance.
 
-## Core Principle: Zero Compression
-- Do NOT abbreviate or omit discussed content
-- Preserve specific numbers, names, dates, and technical terms exactly as mentioned
-- If a previous analysis is provided, RETAIN its content in full and APPEND new discussion points
+Respond in **Markdown**. Use ONLY these sections (omit any section with nothing to report):
 
-Respond in well-structured **Markdown** format. Use headings, bullet points, and bold text for clarity. Structure your analysis with the following sections (adapt freely as needed):
+## NOW
+One bold sentence: what is being discussed RIGHT NOW and the current status.
 
-## Headline
-One-line summary of the meeting result — focus on what was decided.
+## Decisions & Action Items
+- [DECIDED] Decision — owner/detail (one line each)
+- [TODO] **Owner:** task — deadline
+Only list items from this meeting. Max 5 items total.
 
-## Decisions
-What was confirmed/finalized in this meeting (irreversible-level decisions).
+## Flow
+2-3 sentences: what happened so far in this meeting. If previous summary exists, compress it into ONE sentence prefix, then describe recent discussion. Use specific names/numbers.
 
-## Summary
-Chronological account of the discussion flow. For each topic: who said what, decisions made, specific numbers/examples. If a previous summary exists, retain and append. Mark [DECIDED] or [PENDING] next to each topic. (Minimum 5-10 sentences)
-
-## Action Items
-- **[Assignee]** Task description — Deadline (if known)
-
-## Pending Issues
-Items without conclusion — why unresolved, who needs to resolve them.
-
-## Risks
-Things that could become problems if missed — be specific.
-
-## Next Steps
-What to prepare before the next meeting, or agenda items for follow-up.
+## Watch
+Only if something needs immediate attention: unresolved blocker, risk, or missed topic. Otherwise OMIT this section entirely.
 
 Rules:
-- Write summary as CUMULATIVE: preserve previous content and add new discussion
-- Record specific numbers, dates, names, and technical terms exactly as stated
-- Describe ACTUAL content instead of abstract statements like "discussed X"
-- CRITICAL: All output MUST be in English, REGARDLESS of transcript language.`,
+- BREVITY IS KING: this is a tactical briefing, not meeting minutes
+- Preserve exact numbers, names, dates, technical terms
+- Previous analysis content → compress to 1 sentence, do NOT copy in full
+- Detailed minutes are generated separately at meeting end — your job is REAL-TIME AWARENESS
+- CRITICAL: All output MUST be in English.`,
 
-  ko: `당신은 AI 회의 기록 전문가입니다. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요.
+  ko: `당신은 실시간 회의 전술 브리핑 AI입니다. 반드시 한국어로만 응답하세요. 전체 출력을 15줄 이내로 유지하세요 — 회의 중에 한눈에 읽는 용도입니다.
 
-## 핵심 원칙: 압축 금지 (Zero Compression)
-- 논의된 내용을 축약하거나 생략하지 마십시오
-- 참여자가 언급한 구체적 수치, 이름, 날짜, 기술 용어를 그대로 보존하십시오
-- 이전 분석 내용이 제공된 경우, 해당 내용을 그대로 유지하면서 새로운 내용을 추가하십시오
+**Markdown** 형식으로 응답하세요. 아래 섹션만 사용하세요 (보고할 내용이 없는 섹션은 생략):
 
-잘 구조화된 **Markdown** 형식으로 응답하세요. 제목, 불릿 포인트, 볼드체를 활용해 가독성을 높이세요. 아래 섹션을 기본으로 하되, 필요에 따라 자유롭게 조정하세요:
+## 지금
+굵은 글씨 한 문장: 지금 무엇이 논의되고 있고, 현재 상태는 어떤지.
 
-## 한줄 요약
-회의 결과를 한 줄로 — 무엇이 결정되었는지 중심으로.
+## 결정 & 할일
+- [결정] 결정 내용 — 담당자/세부사항 (한 줄씩)
+- [할일] **담당자:** 할 일 — 기한
+이번 회의에서 나온 것만 기록. 총 5개 이하.
 
-## 결정사항
-이번 회의에서 확정된 것들 (번복 불가 수준의 결정).
+## 흐름
+2-3문장: 이번 회의에서 지금까지 무슨 일이 있었는지. 이전 요약이 있으면 한 문장으로 압축해서 앞에 붙이고, 최근 논의를 서술. 구체적 이름/수치 사용.
 
-## 회의 요약
-논의 흐름을 시간순으로 상세히 기술. 각 주제별로 누가 무엇을 말했는지, 결정 내용, 구체적 수치/사례를 포함. 이전 요약이 있다면 유지하면서 새로운 논의를 추가. 각 주제에 [결정] 또는 [미결] 마커 표시. (최소 5-10문장)
-
-## 실행 항목 (To-Do)
-- **[담당자]** 할 일 — 기한 (파악 가능한 경우)
-
-## 미결 사항
-결론이 나지 않은 것들 — 왜 결론이 안 났는지, 누가 해결해야 하는지.
-
-## 리스크
-놓치면 문제될 것들 — 구체적 리스크를 서술.
-
-## 다음 단계
-다음 회의 전 준비사항 또는 다음 회의 안건.
+## 주의
+즉시 주의가 필요한 것이 있을 때만: 미해결 차단요소, 리스크, 놓친 주제. 없으면 이 섹션 자체를 생략.
 
 규칙:
-- 요약은 누적형으로 작성: 이전 내용을 보존하면서 새로운 논의를 추가
-- 구체적 수치, 날짜, 이름, 기술 용어는 반드시 그대로 기록
-- "~에 대해 논의함" 같은 추상적 요약 대신, 실제 논의된 구체적 내용을 서술
-- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.`
+- 간결함이 최우선: 이것은 전술 브리핑이지, 회의록이 아닙니다
+- 구체적 수치, 이름, 날짜, 기술 용어는 그대로 보존
+- 이전 분석 내용 → 1문장으로 압축, 전체 복사 금지
+- 상세 회의록은 회의 종료 시 별도 생성됩니다 — 당신의 역할은 실시간 상황 인식입니다
+- 중요: 모든 출력을 반드시 한국어로 작성하세요.`
 };
 
 // Prompt presets for quick selection
@@ -1142,98 +1140,65 @@ What still needs to be decided, and blockers.
 ## Risks & Dependencies
 What could go wrong, what depends on what.
 
-Rules: Be specific. Use exact numbers, names, dates. Cumulative — preserve previous content.` },
-    actionItems: { name: 'Action Items Only', prompt: `You are an AI meeting assistant focused on ACTION ITEMS. Respond in English using Markdown.
-
-## Meeting Summary
-2-3 sentence overview of what was discussed.
+Rules: Be specific. Use exact numbers, names, dates. Keep under 15 lines total.` },
+    actionItems: { name: 'Action Items Only', prompt: `You are a real-time meeting assistant focused on ACTION ITEMS. Respond in English Markdown. Keep under 12 lines.
 
 ## Action Items
-For each action item:
-- **[Owner]** Specific task description — **Deadline** (if mentioned)
-- Priority: High/Medium/Low (infer from context)
+- [TODO] **Owner:** task — deadline — priority (H/M/L)
 
 ## Blockers
-Issues preventing progress on any items.
+Only if something is actively blocked. Otherwise omit.
 
-## Follow-ups Needed
-Questions or topics that need follow-up.
+Rules: Be specific. Exact names, deadlines, numbers. Compress previous items into current list.` },
+    brainstorm: { name: 'Brainstorm / Ideas', prompt: `You are a real-time brainstorm analyst. Respond in English Markdown. Keep under 15 lines.
 
-Rules: Be specific. Include exact names, deadlines, numbers. Cumulative.` },
-    brainstorm: { name: 'Brainstorm / Ideas', prompt: `You are an AI meeting analyst for BRAINSTORMING sessions. Respond in English using Markdown.
+## Theme
+One sentence: what's being brainstormed.
 
-## Session Theme
-What problem/topic was being brainstormed.
+## Ideas (ranked by support)
+- Idea — who proposed — reception (supported/debated/rejected)
 
-## Ideas Generated
-Group and list all ideas discussed, with brief descriptions.
+## Watch
+Concerns or feasibility issues raised. Omit if none.
 
-## Top Ideas
-Which ideas got the most support or discussion — and why.
-
-## Concerns Raised
-Pushback, feasibility issues, or risks mentioned.
-
-## Next Steps
-How to evaluate or prototype the top ideas.
-
-Rules: Capture ALL ideas, even brief ones. Be specific. Cumulative.` },
+Rules: Capture ALL ideas, even brief ones. Be specific. Keep it scannable.` },
   },
   ko: {
     default: { name: '기본 (종합 분석)', prompt: null },
-    decision: { name: '의사결정 중심', prompt: `당신은 의사결정에 집중하는 AI 회의 분석가입니다. 한국어 마크다운으로 응답하세요.
+    decision: { name: '의사결정 중심', prompt: `당신은 의사결정에 집중하는 실시간 회의 브리핑 AI입니다. 한국어 마크다운, 15줄 이내로 응답하세요.
 
-## 한줄 요약
-오늘 무엇이 결정되었는지 한 문장.
+## 지금
+한 문장: 현재 논의 중인 결정 사항과 상태.
 
-## 주요 결정사항
-각 결정의 내용, 배경, 근거를 정리.
+## 결정사항
+- [결정] 내용 — 담당자/근거 (한 줄씩)
+- [미결] 아직 결정 안 된 것 — 원인
 
-## 실행 항목
-- **[담당자]** 할 일 — 기한
+## 할일
+- **담당자:** 할 일 — 기한
 
-## 미결 사항
-아직 결정되지 않은 것과 그 원인.
+규칙: 구체적으로. 수치, 이름, 날짜 정확히. 15줄 이내.` },
+    actionItems: { name: '액션아이템 중심', prompt: `당신은 실행 항목에 집중하는 실시간 회의 AI입니다. 한국어 마크다운, 12줄 이내로 응답하세요.
 
-## 리스크 & 의존성
-무엇이 잘못될 수 있는지, 무엇에 의존하는지.
+## 할일
+- [할일] **담당자:** 업무 내용 — 기한 — 우선순위(상/중/하)
 
-규칙: 구체적으로. 수치, 이름, 날짜 정확히. 누적형 작성.` },
-    actionItems: { name: '액션아이템 중심', prompt: `당신은 실행 항목에 집중하는 AI 회의 어시스턴트입니다. 한국어 마크다운으로 응답하세요.
+## 차단요소
+진행을 막는 것이 있을 때만. 없으면 생략.
 
-## 회의 요약
-2-3문장으로 논의 개요.
+규칙: 구체적으로. 이름, 기한, 수치 정확히. 이전 항목은 현재 목록에 압축 통합.` },
+    brainstorm: { name: '브레인스토밍', prompt: `당신은 실시간 브레인스토밍 분석 AI입니다. 한국어 마크다운, 15줄 이내로 응답하세요.
 
-## 실행 항목
-각 항목별:
-- **[담당자]** 구체적 업무 내용 — **기한** (언급된 경우)
-- 우선순위: 높음/보통/낮음 (맥락에서 추론)
+## 주제
+한 문장: 무엇을 브레인스토밍 중인지.
 
-## 장애 요소
-진행을 막는 이슈들.
+## 아이디어 (지지도 순)
+- 아이디어 — 제안자 — 반응(지지/논쟁/기각)
 
-## 후속 필요 사항
-후속 조치가 필요한 질문이나 주제.
+## 주의
+실현 가능성 이슈나 우려. 없으면 생략.
 
-규칙: 구체적으로. 이름, 기한, 수치 정확히. 누적형 작성.` },
-    brainstorm: { name: '브레인스토밍', prompt: `당신은 브레인스토밍 세션을 위한 AI 분석가입니다. 한국어 마크다운으로 응답하세요.
-
-## 세션 주제
-어떤 문제/주제를 브레인스토밍했는지.
-
-## 제안된 아이디어
-논의된 모든 아이디어를 그룹별로 정리.
-
-## 유력 아이디어
-가장 많은 지지/논의를 받은 아이디어와 그 이유.
-
-## 제기된 우려
-반대 의견, 실현 가능성 이슈, 리스크.
-
-## 다음 단계
-유력 아이디어를 평가하거나 프로토타입하는 방법.
-
-규칙: 짧은 것도 포함해 모든 아이디어를 포착. 구체적으로. 누적형 작성.` },
+규칙: 짧은 것도 포함해 모든 아이디어 포착. 구체적으로. 한눈에 스캔 가능하게.` },
   }
 };
 

@@ -8,7 +8,7 @@ import {
   getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   addContact, loadCategories,
-  addCorrectionEntry,
+  addCorrectionEntry, saveMeeting,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine,
@@ -20,7 +20,7 @@ import {
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
-import { initChat } from './chat.js';
+import { initChat, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
 import { handleExport, handleExportMeeting, getExportContent } from './export-md.js';
@@ -63,8 +63,18 @@ function init() {
   // Record button
   $('#btnRecord').addEventListener('click', () => emit('recording:toggle'));
   on('recording:toggle', async () => {
-    if (state.isRecording) stopRecording();
-    else await startRecording();
+    if (state.isRecording) {
+      stopRecording();
+      return;
+    }
+
+    // Q3: If restored meeting is loaded, ask what to do
+    if (restoredMeetingId && restoredMeetingId === state.meetingId && state.transcript.length > 0) {
+      showRestoreRecordDialog();
+      return;
+    }
+
+    await startRecording();
   });
 
   // End meeting (with confirmation)
@@ -292,6 +302,21 @@ function init() {
 
   on('meeting:export', ({ id }) => handleExportMeeting(id));
 
+  // Meeting Restore
+  on('meeting:restore', ({ id }) => {
+    // Q1: Block if recording
+    if (state.isRecording) {
+      showToast(t('restore.recording_blocked'), 'warning');
+      return;
+    }
+
+    const meeting = getMeeting(id);
+    if (!meeting) return;
+
+    // Q2: Show overwrite/copy dialog
+    showRestoreConfirmDialog(meeting);
+  });
+
   // Meeting tags
   on('meeting:addTag', ({ id, tag }) => {
     const meeting = getMeeting(id);
@@ -365,6 +390,176 @@ function init() {
   if (usage.ratio > 0.8) {
     showToast(t('toast.storage_usage', { pct: (usage.ratio * 100).toFixed(0) }), 'warning');
   }
+}
+
+// ===== Meeting Restore =====
+let restoredMeetingId = null;
+
+function showRestoreConfirmDialog(meeting) {
+  const modal = $('#restoreConfirmModal');
+  modal.hidden = false;
+
+  const cleanup = () => { modal.hidden = true; };
+
+  $('#btnRestoreOverwrite').onclick = () => {
+    cleanup();
+    restoreMeetingToWorkspace(meeting, false);
+  };
+  $('#btnRestoreCopy').onclick = () => {
+    cleanup();
+    restoreMeetingToWorkspace(meeting, true);
+  };
+  $('#btnRestoreCancel').onclick = cleanup;
+}
+
+function restoreMeetingToWorkspace(meeting, asCopy) {
+  // Close any open modals
+  $('#historyModal').hidden = true;
+  $('#viewerModal').hidden = true;
+
+  // Reset current state cleanly (inline reset without showing launcher)
+  state.meetingEnded = false;
+  state.isRecording = false;
+  state.meetingStartTime = null;
+  state.meetingId = null;
+  state.meetingLocation = '';
+  state.meetingTitle = '';
+  state.starRating = 3;
+  state.categories = [];
+  state.participants = [];
+  state.transcript = [];
+  state.memos = [];
+  state.analysisHistory = [];
+  state.currentAnalysis = null;
+  state.chatHistory = [];
+  state.userInsights = [];
+  state.tags = [];
+  state.analysisContext = '';
+  state.analysisCorrections = [];
+
+  // Clear UI
+  $('#transcriptList').textContent = '';
+  $('#aiSections').textContent = '';
+  $('#chatMessages').textContent = '';
+
+  // Remove post-end buttons if any
+  const resume = $('#btnResumeMeeting');
+  const newBtn = $('#btnNewMeeting');
+  if (resume) resume.remove();
+  if (newBtn) newBtn.remove();
+
+  // Load meeting data into state
+  if (asCopy) {
+    state.meetingId = generateId();
+    state.meetingTitle = (meeting.title || '') + ' (copy)';
+  } else {
+    state.meetingId = meeting.id;
+    state.meetingTitle = meeting.title || '';
+  }
+  state.meetingStartTime = meeting.startTime || meeting.createdAt;
+  state.meetingLocation = meeting.location || '';
+  state.transcript = [...(meeting.transcript || [])];
+  state.memos = [...(meeting.memos || [])];
+  state.analysisHistory = [...(meeting.analysisHistory || [])];
+  state.currentAnalysis = state.analysisHistory.length > 0
+    ? state.analysisHistory[state.analysisHistory.length - 1]
+    : null;
+  state.chatHistory = [...(meeting.chatHistory || [])];
+  state.userInsights = [...(meeting.userInsights || [])];
+  state.tags = [...(meeting.tags || [])];
+  state.starRating = meeting.starRating || 3;
+  state.categories = [...(meeting.categories || [])];
+  state.participants = [...(meeting.participants || [])];
+  state.settings.meetingPreset = meeting.preset || 'general';
+  if (meeting.meetingContext) state.settings.meetingContext = meeting.meetingContext;
+  if (meeting.analysisContext) state.analysisContext = meeting.analysisContext;
+
+  restoredMeetingId = state.meetingId;
+
+  // Render transcript
+  state.transcript.forEach(line => addTranscriptLine(line));
+
+  // Render memos
+  state.memos.forEach(memo => addMemoLine(memo));
+
+  // Render analysis
+  if (state.currentAnalysis) {
+    renderAnalysis(state.currentAnalysis);
+  }
+
+  // Render chat history — uses trusted app-generated markdown (same pattern as ui/history-view.js)
+  const chatContainer = $('#chatMessages');
+  state.chatHistory.forEach(msg => {
+    if (msg.text.startsWith('[add_context:') || msg.text.startsWith('[add_memo:') || msg.text === '[rerun_analysis]') return;
+    const tmpl = $('#tmplChatMessage');
+    const el = tmpl.content.cloneNode(true).querySelector('.chat-message');
+    el.classList.add(msg.role);
+    const content = el.querySelector('.chat-message-content');
+    if (msg.role === 'model') {
+      content.innerHTML = renderMarkdown(msg.text); // trusted app-generated content
+    } else {
+      content.textContent = msg.text;
+    }
+    chatContainer.appendChild(el);
+  });
+
+  // Show title in header
+  const titleInput = $('#meetingTitleInput');
+  if (titleInput) {
+    titleInput.hidden = false;
+    titleInput.value = state.meetingTitle;
+  }
+
+  // Update timer display (static, from saved meeting)
+  if (state.meetingStartTime && meeting.duration) {
+    $('#meetingTimer').textContent = meeting.duration;
+  }
+  $('#meetingStatus').textContent = '';
+  $('#btnEndMeeting').hidden = true;
+
+  // Show restore banner
+  showRestoreBanner(state.meetingTitle);
+
+  showToast(t('restore.success'), 'success');
+}
+
+function showRestoreBanner(title) {
+  const banner = $('#restoreBanner');
+  if (!banner) return;
+  $('#restoreBannerText').textContent = t('restore.banner', { title: title || '' });
+  $('#btnRestoreBack').textContent = t('restore.back');
+  $('#btnRestoreBack').onclick = () => {
+    hideRestoreBanner();
+    resetMeeting();
+  };
+  banner.hidden = false;
+}
+
+function hideRestoreBanner() {
+  const banner = $('#restoreBanner');
+  if (banner) banner.hidden = true;
+  restoredMeetingId = null;
+}
+
+function showRestoreRecordDialog() {
+  const modal = $('#restoreRecordModal');
+  modal.hidden = false;
+
+  $('#btnRestoreRecordContinue').onclick = async () => {
+    modal.hidden = true;
+    // Continue recording into the restored meeting
+    hideRestoreBanner();
+    await startRecording();
+  };
+
+  $('#btnRestoreRecordNew').onclick = () => {
+    modal.hidden = true;
+    // Save current restored state first
+    autoSave();
+    // Reset and start fresh
+    hideRestoreBanner();
+    resetMeeting();
+  };
 }
 
 // ===== Demo Data =====

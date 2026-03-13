@@ -407,87 +407,7 @@ export function autoSave() {
 export function endMeeting() {
   stopRecording();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
-  showMinutesGenModal();
-}
-
-function showMinutesGenModal() {
-  const modal = $('#minutesGenModal');
-  const spinner = $('#minutesGenSpinner');
-  const done = $('#minutesGenDone');
-  const btnGenerate = $('#btnMinutesGenerate');
-  const btnSkip = $('#btnMinutesSkip');
-
-  // Reset state
-  spinner.hidden = false;
-  done.hidden = true;
-  minutesGenerated = false;
-
-  // Set model radio to current setting
-  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
-  const modelRadio = document.querySelector(`input[name="minutesModel"][value="${currentModel}"]`);
-  if (modelRadio) modelRadio.checked = true;
-
-  // Disable model radios & show initial state
-  document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = false);
-  spinner.hidden = true;
-  done.hidden = true;
-
-  // Show if transcript exists & proxy available, otherwise skip straight to save
-  if (!isProxyAvailable() || state.transcript.length === 0) {
-    showEndMeetingModal();
-    return;
-  }
-
-  modal.hidden = false;
-
-  // Generate button
-  btnGenerate.onclick = async () => {
-    const selectedModel = document.querySelector('input[name="minutesModel"]:checked');
-    if (selectedModel) state.settings.geminiModel = selectedModel.value;
-
-    // Disable controls during generation
-    document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = true);
-    btnGenerate.disabled = true;
-    btnSkip.textContent = t('minutes.continue_in_bg');
-    spinner.hidden = false;
-
-    try {
-      await generateFinalMeetingMinutes();
-      minutesGenerated = true;
-      updateExportButton();
-
-      if (!modal.hidden) {
-        // Still on minutes modal — show success then proceed
-        spinner.hidden = true;
-        done.hidden = false;
-        setTimeout(() => {
-          modal.hidden = true;
-          showEndMeetingModal();
-        }, 1200);
-      } else {
-        // User already moved to save modal (clicked "continue in bg")
-        showToast(t('toast.final_minutes_done'), 'success');
-      }
-    } catch (err) {
-      if (!modal.hidden) {
-        spinner.hidden = true;
-        modal.hidden = true;
-        showEndMeetingModal();
-      }
-      showToast(t('toast.final_minutes_fail') + err.message, 'error');
-    }
-  };
-
-  // Skip / Continue in background button
-  btnSkip.onclick = () => {
-    modal.hidden = true;
-    showEndMeetingModal();
-    // If generation is still running, it will finish in the background
-    // and enable export when done
-  };
-
-  // Auto-start generation
-  btnGenerate.click();
+  showEndMeetingModal();
 }
 
 function updateExportButton() {
@@ -499,6 +419,7 @@ function updateExportButton() {
 function showEndMeetingModal() {
   const modal = $('#endMeetingModal');
   modal.hidden = false;
+  minutesGenerated = false;
 
   // Populate date/time (auto-generated from meeting start, editable)
   const meetingDate = new Date(state.meetingStartTime || Date.now());
@@ -565,6 +486,43 @@ function showEndMeetingModal() {
     });
   } else {
     suggestionsEl.hidden = true;
+  }
+
+  // Minutes model card selection
+  const modelSection = $('#minutesModelSection');
+  const indicator = $('#minutesGenIndicator');
+
+  if (!isProxyAvailable() || state.transcript.length === 0) {
+    if (modelSection) modelSection.hidden = true;
+  } else if (modelSection) {
+    modelSection.hidden = false;
+    const cards = modelSection.querySelectorAll('.minutes-model-card');
+    let locked = false;
+
+    cards.forEach(card => {
+      card.classList.remove('selected', 'locked');
+      card.onclick = async () => {
+        if (locked) return;
+        locked = true;
+        cards.forEach(c => c.classList.add('locked'));
+        card.classList.add('selected');
+        state.settings.geminiModel = card.dataset.model;
+        indicator.hidden = false;
+
+        try {
+          await generateFinalMeetingMinutes();
+          minutesGenerated = true;
+          updateExportButton();
+          indicator.hidden = true;
+          showToast(t('toast.final_minutes_done'), 'success');
+        } catch (err) {
+          indicator.hidden = true;
+          showToast(t('toast.final_minutes_fail') + err.message, 'error');
+          locked = false;
+          cards.forEach(c => c.classList.remove('locked', 'selected'));
+        }
+      };
+    });
   }
 }
 

@@ -300,7 +300,7 @@ function extractCorrections(oldMd, newMd) {
 
 // Extract headline from markdown (mirror of ai.js logic)
 function extractHeadlineFromMarkdown(markdown) {
-  const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
+  const headlineMatch = markdown.match(/^##\s+(?:NOW|지금|Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
   if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
   const firstH2 = markdown.match(/^##\s+(.+)/m);
   if (firstH2) return firstH2[1].trim().slice(0, 80);

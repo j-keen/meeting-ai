@@ -61,8 +61,8 @@ function parseGeminiResponse(text) {
 
 // Extract first heading or first line as a short flow/headline
 function extractHeadline(markdown) {
-  // Try ## Headline / ## 한줄 요약 content
-  const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
+  // Try ## NOW / ## 지금 / ## Headline / ## 한줄 요약 content
+  const headlineMatch = markdown.match(/^##\s+(?:NOW|지금|Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
   if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
   // Try first ## heading
   const firstH2 = markdown.match(/^##\s+(.+)/m);
