@@ -74,7 +74,6 @@ let timerInterval = null;
 let autoSaveInterval = null;
 let autoAnalysisInterval = null;
 let isAnalyzing = false;
-let isAnalysisPaused = false;
 let isCorrecting = false;
 let charsSinceLastAnalysis = 0;
 let linesSinceLastAnalysis = 0;
@@ -90,16 +89,6 @@ let idleCheckInterval = null;
 let idleWarningShown = false;
 let maxDurationTimeout = null;
 
-// Cached analysis chip elements (set after DOMContentLoaded)
-let chipEl = null, chipIconEl = null, chipTextEl = null;
-function getChipEls() {
-  if (!chipEl) {
-    chipEl = $('#analysisChip');
-    chipIconEl = $('#analysisChipIcon');
-    chipTextEl = $('#analysisChipText');
-  }
-  return { chip: chipEl, icon: chipIconEl, text: chipTextEl };
-}
 
 
 function generateId() {
@@ -181,7 +170,6 @@ async function startRecording() {
     autoSaveInterval = setInterval(() => autoSave(), 30000);
     startAutoAnalysis();
     startAiCorrection();
-    updatePauseButtonVisibility(true);
 
     // Guards: idle detection + max duration
     lastTranscriptTime = Date.now();
@@ -228,8 +216,6 @@ function stopRecording() {
   charsSinceLastAnalysis = 0;
   linesSinceLastAnalysis = 0;
   charsSinceLastCorrection = 0;
-  isAnalysisPaused = false;
-  updatePauseButtonVisibility(false);
 
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
@@ -267,11 +253,10 @@ function startAutoAnalysis() {
 }
 
 function checkCharThreshold(newLineText) {
-  if (!state.settings.autoAnalysis || isAnalysisPaused) return;
+  if (!state.settings.autoAnalysis) return;
   charsSinceLastAnalysis += newLineText.length;
   linesSinceLastAnalysis++;
   charsSinceLastCorrection += newLineText.length;
-  updateCharCountChip();
 
   const threshold = state.settings.analysisCharThreshold || 1000;
   // Analysis trigger: enough chars AND at least 5 lines
@@ -289,73 +274,10 @@ function checkCharThreshold(newLineText) {
   }
 }
 
-function updateCharCountChip() {
-  const { chip, icon, text } = getChipEls();
-  if (!chip) return;
-  if (!state.settings.autoAnalysis) {
-    chip.className = 'analysis-chip';
-    if (icon) icon.textContent = '';
-    if (text) text.textContent = '';
-    return;
-  }
-  const threshold = state.settings.analysisCharThreshold || 1000;
-  chip.className = 'analysis-chip counting';
-  if (icon) icon.textContent = '⏸';
-  if (text) text.textContent = t('analysis.char_count', { current: charsSinceLastAnalysis, threshold });
-}
-
-function showAnalyzingState() {
-  const { chip, icon, text } = getChipEls();
-  if (!chip) return;
-  chip.className = 'analysis-chip analyzing';
-  if (icon) icon.textContent = '⏳';
-  if (text) text.textContent = t('analysis.analyzing');
-}
-
-function hideAnalyzingState() {
-  const { chip } = getChipEls();
-  if (chip) chip.classList.remove('analyzing');
-  if (isAnalysisPaused) {
-    showPausedState();
-    return;
-  }
-  // Reset counters after analysis completes
+function onAnalysisComplete() {
   charsSinceLastAnalysis = 0;
   linesSinceLastAnalysis = 0;
   lastAnalysisTimestamp = Date.now();
-  updateCharCountChip();
-}
-
-function toggleAnalysisPause() {
-  isAnalysisPaused = !isAnalysisPaused;
-  if (isAnalysisPaused) {
-    clearInterval(autoAnalysisInterval);
-    showPausedState();
-  } else {
-    startAutoAnalysis();
-  }
-}
-
-function updatePauseButtonVisibility(show) {
-  const { chip } = getChipEls();
-  if (!chip) return;
-  chip.style.display = show ? '' : 'none';
-  if (!show) {
-    isAnalysisPaused = false;
-    // Reset chip
-    const { icon, text } = getChipEls();
-    if (icon) icon.textContent = '';
-    if (text) text.textContent = '';
-    chip.className = 'analysis-chip';
-  }
-}
-
-function showPausedState() {
-  const { chip, icon, text } = getChipEls();
-  if (!chip) return;
-  chip.className = 'analysis-chip paused';
-  if (icon) icon.textContent = '▶';
-  if (text) text.textContent = t('analysis.paused');
 }
 
 // AI sentence correction (triggered by char threshold in checkCharThreshold)
@@ -394,7 +316,6 @@ async function runCorrection(uncorrectedOnly) {
 }
 
 async function runAnalysis() {
-  showAnalyzingState();
   if (isAnalyzing) return;
   if (!isProxyAvailable()) {
     showToast(t('toast.no_api_key'), 'warning');
@@ -493,7 +414,7 @@ async function runAnalysis() {
     }
   } finally {
     isAnalyzing = false;
-    hideAnalyzingState();
+    onAnalysisComplete();
   }
 }
 
@@ -535,9 +456,15 @@ function showEndMeetingModal() {
   const modal = $('#endMeetingModal');
   modal.hidden = false;
 
+  // Populate date/time (auto-generated from meeting start, editable)
+  const meetingDate = new Date(state.meetingStartTime || Date.now());
+  const datetimeInput = $('#endMeetingDatetime');
+  const pad = n => String(n).padStart(2, '0');
+  datetimeInput.value = `${meetingDate.getFullYear()}-${pad(meetingDate.getMonth() + 1)}-${pad(meetingDate.getDate())}T${pad(meetingDate.getHours())}:${pad(meetingDate.getMinutes())}`;
+
   const defaultTitle = t('meeting_title', {
-    date: new Date(state.meetingStartTime || Date.now()).toLocaleDateString(getDateLocale()),
-    time: new Date(state.meetingStartTime || Date.now()).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
+    date: meetingDate.toLocaleDateString(getDateLocale()),
+    time: meetingDate.toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
   });
   const titleInput = $('#endMeetingTitle');
   titleInput.value = state.meetingTitle || defaultTitle;
@@ -556,6 +483,11 @@ function showEndMeetingModal() {
     opt.value = loc;
     datalist.appendChild(opt);
   });
+
+  // Set model radio to current setting
+  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
+  const modelRadio = document.querySelector(`input[name="endMeetingModel"][value="${currentModel}"]`);
+  if (modelRadio) modelRadio.checked = true;
 
   // AI title/tag generation
   const suggestionsEl = $('#aiTitleSuggestions');
@@ -691,6 +623,14 @@ async function finalizeEndMeeting() {
   state.meetingLocation = $('#endMeetingLocation').value.trim();
   if (state.meetingLocation) addLocation(state.meetingLocation);
 
+  // Save datetime
+  const dtVal = $('#endMeetingDatetime').value;
+  if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
+
+  // Save selected model
+  const selectedModel = document.querySelector('input[name="endMeetingModel"]:checked');
+  if (selectedModel) state.settings.geminiModel = selectedModel.value;
+
   // Auto-correct all uncorrected lines before saving
   const hasUncorrected = state.transcript.some(l => !l.originalText);
   if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
@@ -773,13 +713,6 @@ function showPostEndButtons() {
   btnResume.style.color = 'var(--accent)';
   btnResume.style.borderColor = 'var(--accent)';
 
-  const btnExport = document.createElement('button');
-  btnExport.className = 'btn btn-sm';
-  btnExport.id = 'btnPostExport';
-  btnExport.innerHTML = '&#128196; ' + t('meeting.export');
-  btnExport.style.color = 'var(--accent)';
-  btnExport.style.borderColor = 'var(--accent)';
-
   const btnNew = document.createElement('button');
   btnNew.className = 'btn btn-sm';
   btnNew.id = 'btnNewMeeting';
@@ -787,11 +720,9 @@ function showPostEndButtons() {
 
   endBtn.hidden = true;
   endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
-  endBtn.parentNode.insertBefore(btnExport, btnResume.nextSibling);
-  endBtn.parentNode.insertBefore(btnNew, btnExport.nextSibling);
+  endBtn.parentNode.insertBefore(btnNew, btnResume.nextSibling);
 
   btnResume.addEventListener('click', () => resumeMeeting());
-  btnExport.addEventListener('click', () => { $('#exportModal').hidden = false; });
   btnNew.addEventListener('click', () => {
     resetMeeting();
     restoreEndButton(false);
@@ -939,20 +870,6 @@ function generateMarkdownHighlights() {
   return md;
 }
 
-function generateJSON() {
-  return JSON.stringify({
-    id: state.meetingId,
-    startTime: state.meetingStartTime,
-    duration: getElapsedTimeStr(),
-    location: state.meetingLocation,
-    transcript: state.transcript,
-    memos: state.memos,
-    analysisHistory: state.analysisHistory,
-    chatHistory: state.chatHistory,
-    userInsights: state.userInsights,
-    tags: state.tags,
-  }, null, 2);
-}
 
 function formatTimeSimple(ts) {
   if (!state.meetingStartTime) return '00:00';
@@ -987,44 +904,55 @@ async function sendToSlack(text) {
   }
 }
 
-function sendEmail(subject, body) {
-  const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  window.open(mailto);
+function getExportContent() {
+  const selected = document.querySelector('input[name="exportContent"]:checked')?.value || 'full';
+  switch (selected) {
+    case 'summary': return generateMarkdownSummary();
+    case 'highlights': return generateMarkdownHighlights();
+    default: return generateMarkdownFull();
+  }
 }
 
-async function handleExport(format) {
+function getExportContentLabel() {
+  const selected = document.querySelector('input[name="exportContent"]:checked')?.value || 'full';
+  return selected === 'highlights' ? 'highlights' : selected === 'summary' ? 'summary' : 'meeting';
+}
+
+async function handleExport(format, triggerBtn) {
   const dateStr = new Date().toISOString().slice(0, 10);
-  const btn = document.querySelector(`.export-btn[data-format="${format}"]`);
-  const isAsync = format.startsWith('pdf-') || format.startsWith('docx-');
+  const content = getExportContent();
+  const label = getExportContentLabel();
+  const filename = `${label}-${dateStr}`;
+  const btn = triggerBtn || document.querySelector(`.export-fmt-btn[data-format="${format}"]`);
+  const isAsync = format === 'pdf' || format === 'docx';
 
   if (isAsync && btn) {
-    const origText = btn.textContent;
+    const origHTML = btn.innerHTML;
     btn.disabled = true;
-    btn.textContent = t('export.generating');
+    btn.querySelector('span:last-child').textContent = t('export.generating');
     try {
-      switch (format) {
-        case 'pdf-full': await exportPDF(generateMarkdownFull(), `meeting-${dateStr}.pdf`); break;
-        case 'pdf-summary': await exportPDF(generateMarkdownSummary(), `meeting-summary-${dateStr}.pdf`); break;
-        case 'docx-full': await exportWord(generateMarkdownFull(), `meeting-${dateStr}.docx`); break;
-        case 'docx-summary': await exportWord(generateMarkdownSummary(), `meeting-summary-${dateStr}.docx`); break;
-      }
+      if (format === 'pdf') await exportPDF(content, `${filename}.pdf`);
+      else await exportWord(content, `${filename}.docx`);
     } catch (err) {
       showToast(err.message, 'error');
     } finally {
       btn.disabled = false;
-      btn.textContent = origText;
+      btn.innerHTML = origHTML;
     }
-  } else {
-    switch (format) {
-      case 'md-full': downloadFile(generateMarkdownFull(), `meeting-${dateStr}.md`); break;
-      case 'md-summary': downloadFile(generateMarkdownSummary(), `meeting-summary-${dateStr}.md`); break;
-      case 'md-highlights': downloadFile(generateMarkdownHighlights(), `meeting-highlights-${dateStr}.md`); break;
-      case 'json': downloadFile(generateJSON(), `meeting-${dateStr}.json`, 'application/json'); break;
-      case 'slack': sendToSlack(generateMarkdownSummary()); break;
-      case 'email': sendEmail(t('md.meeting_notes').replace('# ', '') + ' ' + dateStr, generateMarkdownSummary()); break;
+  } else if (format === 'clipboard') {
+    try {
+      await navigator.clipboard.writeText(content);
+      showToast(t('export.copied'), 'success');
+    } catch {
+      showToast(t('export.copy_fail'), 'error');
     }
+  } else if (format === 'md') {
+    downloadFile(content, `${filename}.md`);
   }
-  $('#exportModal').hidden = true;
+  // Only close export modal if triggered from it
+  if (!triggerBtn || triggerBtn.closest('#exportModal')) {
+    $('#exportModal').hidden = true;
+  }
 }
 
 function handleExportMeeting(meetingId) {
@@ -1091,9 +1019,6 @@ function init() {
 
   // End meeting (with confirmation)
   $('#btnEndMeeting').addEventListener('click', () => endMeeting());
-
-  // Pause/resume analysis (chip toggle)
-  $('#analysisChip').addEventListener('click', () => toggleAnalysisPause());
 
   // Analyze now (with 10s cooldown)
   let lastManualAnalysisTime = 0;
@@ -1222,8 +1147,8 @@ function init() {
 
   // Export
   $('#btnExport').addEventListener('click', () => { $('#exportModal').hidden = false; });
-  document.querySelectorAll('.export-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleExport(btn.dataset.format));
+  document.querySelectorAll('.export-fmt-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleExport(btn.dataset.format, btn));
   });
 
   // Highlights

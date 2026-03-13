@@ -253,36 +253,12 @@ h1, h2, h3 { font-weight: 600; }
 .panel-header h2 { font-size: 14px; font-weight: 600; }
 .panel-actions { display: flex; gap: 6px; }
 
-/* Analysis Chip */
-.analysis-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 72px;
-  padding: 2px 10px;
-  margin-left: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  background: var(--bg-secondary);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.analysis-chip:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-primary); }
-.analysis-chip.counting { color: var(--text-secondary); }
-.analysis-chip.paused { color: var(--warning); border-color: var(--warning); }
-.analysis-chip.analyzing { color: var(--accent); border-color: var(--accent); cursor: default; pointer-events: none; animation: pulse-text 1.5s ease-in-out infinite; }
 @keyframes pulse-text {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
 
-/* Correction chip (reuses .analysis-chip base) */
+/* Correction chip */
 .correction-chip.correcting { color: var(--accent); border-color: var(--accent); cursor: default; pointer-events: none; animation: pulse-text 1.5s ease-in-out infinite; }
 
 /* ===== Meeting Title Input (Header) ===== */
@@ -1122,7 +1098,8 @@ h1, h2, h3 { font-weight: 600; }
 .btn-record.recording .record-icon::after {
   content: '';
   position: absolute;
-  top: 1px;
+  top: 50%;
+  transform: translateY(-50%);
   width: 3px;
   height: 10px;
   background: var(--text-primary);
@@ -2015,8 +1992,37 @@ h1, h2, h3 { font-weight: 600; }
   to { opacity: 0; transform: translateY(10px); }
 }
 
-/* Export button */
-.export-btn { text-align: left; padding: 10px 14px; }
+/* Export modal */
+.export-content-select {
+  display: flex; gap: 8px; margin-bottom: 14px;
+}
+.export-radio {
+  flex: 1; display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  border: 1.5px solid var(--border); font-size: 13px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.export-radio:has(input:checked) {
+  border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+.export-radio input { margin: 0; accent-color: var(--primary); }
+.export-format-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.export-fmt-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 16px 8px; border-radius: 10px; font-size: 12px;
+  border: 1.5px solid var(--border); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.export-fmt-btn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); transform: translateY(-1px); }
+.export-fmt-btn:active { transform: translateY(0); }
+.export-fmt-btn:disabled { opacity: 0.5; pointer-events: none; }
+.export-fmt-icon {
+  font-size: 20px; font-weight: 700; color: var(--primary);
+  width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
 
 /* ===== Accessibility ===== */
 :focus-visible {
@@ -2450,6 +2456,61 @@ h1, h2, h3 { font-weight: 600; }
 }
 .end-meeting-inline-add input {
   flex: 1;
+}
+
+/* Row layout for date/location */
+.end-meeting-row {
+  display: flex;
+  gap: 12px;
+}
+.end-meeting-flex-1 { flex: 1; }
+
+/* Model selection */
+.end-meeting-model-select {
+  display: flex;
+  gap: 8px;
+}
+.end-meeting-model-option {
+  cursor: pointer;
+}
+.end-meeting-model-option input[type="radio"] {
+  display: none;
+}
+.end-meeting-model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+.end-meeting-model-option input[type="radio"]:checked + .end-meeting-model-chip {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
+}
+.end-meeting-model-option:hover .end-meeting-model-chip {
+  border-color: var(--accent);
+}
+.end-meeting-model-desc {
+  font-size: 11px;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+/* Export grid in modal */
+.end-meeting-export-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.end-meeting-export-grid .btn {
+  font-size: 11px;
+  padding: 4px 10px;
 }
 
 /* Actions bar */

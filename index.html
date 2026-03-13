@@ -79,10 +79,6 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
-          <button class="analysis-chip" id="analysisChip" style="display:none">
-            <span class="analysis-chip-icon" id="analysisChipIcon"></span>
-            <span class="analysis-chip-text" id="analysisChipText"></span>
-          </button>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
@@ -391,23 +387,42 @@
   <div class="modal-overlay" id="exportModal" hidden>
     <div class="modal">
       <div class="modal-header">
-        <h3 data-i18n="export.title">AI Transcript Export</h3>
+        <h3 data-i18n="export.title">Transcript Export</h3>
         <button class="btn btn-icon modal-close" data-close="exportModal">&times;</button>
       </div>
       <div class="modal-body">
-        <button class="btn btn-block export-btn" data-format="md-full" data-i18n="export.md_full">Markdown - Full Report</button>
-        <button class="btn btn-block export-btn" data-format="md-summary" data-i18n="export.md_summary">Markdown - Summary</button>
-        <button class="btn btn-block export-btn" data-format="md-highlights" data-i18n="export.md_highlights">Markdown - Highlights & Memos</button>
-        <hr>
-        <button class="btn btn-block export-btn" data-format="pdf-full" data-i18n="export.pdf_full">PDF - Full Report</button>
-        <button class="btn btn-block export-btn" data-format="pdf-summary" data-i18n="export.pdf_summary">PDF - Summary</button>
-        <hr>
-        <button class="btn btn-block export-btn" data-format="docx-full" data-i18n="export.docx_full">Word - Full Report</button>
-        <button class="btn btn-block export-btn" data-format="docx-summary" data-i18n="export.docx_summary">Word - Summary</button>
-        <hr>
-        <button class="btn btn-block export-btn" data-format="json" data-i18n="export.json">JSON - Full Data</button>
-        <hr>
-        <button class="btn btn-block export-btn" data-format="email" data-i18n="export.email">Send via Email</button>
+        <div class="export-content-select">
+          <label class="export-radio">
+            <input type="radio" name="exportContent" value="full" checked>
+            <span data-i18n="export.content_full">Full Report</span>
+          </label>
+          <label class="export-radio">
+            <input type="radio" name="exportContent" value="summary">
+            <span data-i18n="export.content_summary">Summary</span>
+          </label>
+          <label class="export-radio">
+            <input type="radio" name="exportContent" value="highlights">
+            <span data-i18n="export.content_highlights">Highlights & Memos</span>
+          </label>
+        </div>
+        <div class="export-format-grid">
+          <button class="btn export-fmt-btn" data-format="md" title="Markdown">
+            <span class="export-fmt-icon">MD</span>
+            <span>Markdown</span>
+          </button>
+          <button class="btn export-fmt-btn" data-format="pdf" title="PDF">
+            <span class="export-fmt-icon">PDF</span>
+            <span>PDF</span>
+          </button>
+          <button class="btn export-fmt-btn" data-format="docx" title="Word">
+            <span class="export-fmt-icon">W</span>
+            <span>Word</span>
+          </button>
+          <button class="btn export-fmt-btn" data-format="clipboard" title="Clipboard">
+            <span class="export-fmt-icon">&#128203;</span>
+            <span data-i18n="export.clipboard">Copy</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -581,20 +596,16 @@
         <button class="btn btn-icon modal-close" data-close="endMeetingModal">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- Categories -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
-          <div class="end-meeting-categories" id="endMeetingCategories"></div>
-        </div>
-        <!-- Importance -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
-          <div class="star-rating" id="endMeetingStars">
-            <button class="star-btn" data-star="1">&#9733;</button>
-            <button class="star-btn" data-star="2">&#9733;</button>
-            <button class="star-btn" data-star="3">&#9733;</button>
-            <button class="star-btn" data-star="4">&#9733;</button>
-            <button class="star-btn" data-star="5">&#9733;</button>
+        <!-- Date/Time & Location (top row) -->
+        <div class="end-meeting-row">
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.datetime">Date / Time</label>
+            <input type="datetime-local" class="settings-input" id="endMeetingDatetime">
+          </div>
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
+            <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
+            <datalist id="locationDatalist"></datalist>
           </div>
         </div>
         <!-- Title -->
@@ -604,6 +615,23 @@
           <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
             <span class="ai-suggestions-label" data-i18n="end_meeting.generating">Generating AI suggestions...</span>
             <div class="ai-title-chips" id="aiTitleChips"></div>
+          </div>
+        </div>
+        <!-- Categories + Importance (same row) -->
+        <div class="end-meeting-row">
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
+            <div class="end-meeting-categories" id="endMeetingCategories"></div>
+          </div>
+          <div class="end-meeting-section">
+            <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
+            <div class="star-rating" id="endMeetingStars">
+              <button class="star-btn" data-star="1">&#9733;</button>
+              <button class="star-btn" data-star="2">&#9733;</button>
+              <button class="star-btn" data-star="3">&#9733;</button>
+              <button class="star-btn" data-star="4">&#9733;</button>
+              <button class="star-btn" data-star="5">&#9733;</button>
+            </div>
           </div>
         </div>
         <!-- Participants -->
@@ -622,16 +650,34 @@
           <div class="end-meeting-tags" id="endMeetingTags"></div>
           <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
         </div>
-        <!-- Location -->
+        <!-- Model Selection -->
         <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
-          <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
-          <datalist id="locationDatalist"></datalist>
+          <label class="end-meeting-label" data-i18n="end_meeting.model">AI Model</label>
+          <div class="end-meeting-model-select">
+            <label class="end-meeting-model-option">
+              <input type="radio" name="endMeetingModel" value="gemini-2.5-flash" checked>
+              <span class="end-meeting-model-chip">Flash <span class="end-meeting-model-desc" data-i18n="end_meeting.model_flash_desc">Fast</span></span>
+            </label>
+            <label class="end-meeting-model-option">
+              <input type="radio" name="endMeetingModel" value="gemini-2.5-pro">
+              <span class="end-meeting-model-chip">Pro <span class="end-meeting-model-desc" data-i18n="end_meeting.model_pro_desc">High quality</span></span>
+            </label>
+          </div>
+        </div>
+        <!-- Export -->
+        <div class="end-meeting-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.export">Export</label>
+          <div class="end-meeting-export-grid" id="endMeetingExportGrid">
+            <button class="btn btn-sm export-fmt-btn" data-format="md">MD</button>
+            <button class="btn btn-sm export-fmt-btn" data-format="pdf">PDF</button>
+            <button class="btn btn-sm export-fmt-btn" data-format="docx">Word</button>
+            <button class="btn btn-sm export-fmt-btn" data-format="clipboard" data-i18n="export.clipboard">Copy</button>
+          </div>
         </div>
         <!-- Actions -->
         <div class="end-meeting-actions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save_generate">Save &amp; Generate Minutes</button>
         </div>
       </div>
     </div>

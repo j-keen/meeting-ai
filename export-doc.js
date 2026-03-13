@@ -1,6 +1,5 @@
 // export-doc.js - PDF and Word export using CDN libraries
 
-import { renderMarkdown } from './chat.js';
 
 const CDN = {
   html2pdf: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js',
@@ -22,43 +21,59 @@ export async function exportPDF(markdown, filename) {
   await loadScript(CDN.html2pdf);
 
   const container = document.createElement('div');
-  container.innerHTML = renderMarkdown(markdown);
+  container.innerHTML = markdownToHTML(markdown);
   Object.assign(container.style, {
-    position: 'fixed', left: '-9999px', top: '0',
-    width: '210mm', padding: '15mm',
-    fontFamily: 'Pretendard, "Malgun Gothic", sans-serif',
+    position: 'absolute', left: '-9999px', top: '0',
+    width: '180mm', padding: '0',
+    fontFamily: 'Pretendard, "Malgun Gothic", Arial, sans-serif',
     fontSize: '11pt', lineHeight: '1.6', color: '#222',
-  });
-  // Style headers
-  container.querySelectorAll('h1, h2, h3, h4').forEach(h => {
-    h.style.color = '#4f6ef7';
-    h.style.marginTop = '1em';
-    h.style.marginBottom = '0.4em';
-  });
-  container.querySelectorAll('li').forEach(li => {
-    li.style.marginLeft = '1.5em';
-  });
-  container.querySelectorAll('hr').forEach(hr => {
-    hr.style.border = 'none';
-    hr.style.borderTop = '1px solid #ddd';
-    hr.style.margin = '1em 0';
+    background: '#fff',
   });
 
   document.body.appendChild(container);
-  // Wait for DOM paint so html2canvas captures rendered content
-  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // Wait for layout to settle
+  await new Promise(r => setTimeout(r, 100));
 
   try {
     await window.html2pdf().set({
       margin: [10, 15, 10, 15],
       filename: filename.endsWith('.pdf') ? filename : filename + '.pdf',
       image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: container.scrollWidth },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
     }).from(container).save();
   } finally {
     document.body.removeChild(container);
   }
+}
+
+/** Convert markdown to styled HTML for PDF export */
+function markdownToHTML(md) {
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Headers
+  html = html.replace(/^#### (.+)$/gm, '<h4 style="color:#4f6ef7;margin:0.8em 0 0.3em">$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3 style="color:#4f6ef7;margin:0.8em 0 0.3em">$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2 style="color:#4f6ef7;margin:1em 0 0.4em">$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1 style="color:#4f6ef7;margin:1em 0 0.4em;font-size:18pt">$1</h1>');
+  // Bold / italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Checkbox lists
+  html = html.replace(/^- \[ \] (.+)$/gm, '<li style="margin-left:1.5em;list-style:none">☐ $1</li>');
+  html = html.replace(/^- \[x\] (.+)$/gm, '<li style="margin-left:1.5em;list-style:none">☑ $1</li>');
+  // Bullet lists
+  html = html.replace(/^[-*] (.+)$/gm, '<li style="margin-left:1.5em">$1</li>');
+  // Numbered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-left:1.5em">$1</li>');
+  // HR
+  html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid #ddd;margin:1em 0">');
+  // Line breaks
+  html = html.replace(/\n/g, '<br>');
+  html = html.replace(/<br>\s*(<\/?(?:h[1-4]|li|hr|ul|ol))/g, '$1');
+  html = html.replace(/(<\/(?:h[1-4]|li|hr|ul|ol)>)\s*<br>/g, '$1');
+  return html;
 }
 
 export async function exportWord(markdown, filename) {

@@ -376,7 +376,7 @@ function loadSavedSettings() {
   const saved = loadSettings();
   const s = state.settings;
 
-  s.geminiModel = 'gemini-2.5-flash';
+  s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
   s.chatModel = saved.chatModel || 'gemini-2.5-flash';
   s.language = saved.language || 'ko';
   s.autoAnalysis = true;
