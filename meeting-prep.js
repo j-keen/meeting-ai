@@ -318,6 +318,9 @@ function bindFormEvents() {
   $('#btnCloseGroupManage').addEventListener('click', () => { $('#prepGroupManage').hidden = true; });
   $('#btnSaveGroup').addEventListener('click', saveGroupFromPanel);
   $('#btnDeleteGroup').addEventListener('click', deleteGroupFromPanel);
+  $('#btnAddContactFromGroup')?.addEventListener('click', () => {
+    emit('openContactsModal');
+  });
 
   // Step 4: Reference meeting filters
   $('#refSearchInput').addEventListener('input', renderRefMeetingList);

@@ -249,7 +249,6 @@ function startAutoAnalysis() {
   autoAnalysisInterval = setInterval(() => {
     if (state.isRecording && linesSinceLastAnalysis >= 3) runAnalysis();
   }, 10 * 60 * 1000);
-  updateCharCountChip();
 }
 
 function checkCharThreshold(newLineText) {
@@ -449,7 +448,95 @@ function autoSave() {
 function endMeeting() {
   stopRecording();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
-  showEndMeetingModal();
+  showMinutesGenModal();
+}
+
+let minutesGenerated = false;
+
+function showMinutesGenModal() {
+  const modal = $('#minutesGenModal');
+  const spinner = $('#minutesGenSpinner');
+  const done = $('#minutesGenDone');
+  const btnGenerate = $('#btnMinutesGenerate');
+  const btnSkip = $('#btnMinutesSkip');
+
+  // Reset state
+  spinner.hidden = false;
+  done.hidden = true;
+  minutesGenerated = false;
+
+  // Set model radio to current setting
+  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
+  const modelRadio = document.querySelector(`input[name="minutesModel"][value="${currentModel}"]`);
+  if (modelRadio) modelRadio.checked = true;
+
+  // Disable model radios & show initial state
+  document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = false);
+  spinner.hidden = true;
+  done.hidden = true;
+
+  // Show if transcript exists & proxy available, otherwise skip straight to save
+  if (!isProxyAvailable() || state.transcript.length === 0) {
+    showEndMeetingModal();
+    return;
+  }
+
+  modal.hidden = false;
+
+  // Generate button
+  btnGenerate.onclick = async () => {
+    const selectedModel = document.querySelector('input[name="minutesModel"]:checked');
+    if (selectedModel) state.settings.geminiModel = selectedModel.value;
+
+    // Disable controls during generation
+    document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = true);
+    btnGenerate.disabled = true;
+    btnSkip.textContent = t('minutes.continue_in_bg');
+    spinner.hidden = false;
+
+    try {
+      await generateFinalMeetingMinutes();
+      minutesGenerated = true;
+      updateExportButton();
+
+      if (!modal.hidden) {
+        // Still on minutes modal — show success then proceed
+        spinner.hidden = true;
+        done.hidden = false;
+        setTimeout(() => {
+          modal.hidden = true;
+          showEndMeetingModal();
+        }, 1200);
+      } else {
+        // User already moved to save modal (clicked "continue in bg")
+        showToast(t('toast.final_minutes_done'), 'success');
+      }
+    } catch (err) {
+      if (!modal.hidden) {
+        spinner.hidden = true;
+        modal.hidden = true;
+        showEndMeetingModal();
+      }
+      showToast(t('toast.final_minutes_fail') + err.message, 'error');
+    }
+  };
+
+  // Skip / Continue in background button
+  btnSkip.onclick = () => {
+    modal.hidden = true;
+    showEndMeetingModal();
+    // If generation is still running, it will finish in the background
+    // and enable export when done
+  };
+
+  // Auto-start generation
+  btnGenerate.click();
+}
+
+function updateExportButton() {
+  const btn = $('#btnEndMeetingExport');
+  if (!btn) return;
+  btn.disabled = !minutesGenerated;
 }
 
 function showEndMeetingModal() {
@@ -484,10 +571,8 @@ function showEndMeetingModal() {
     datalist.appendChild(opt);
   });
 
-  // Set model radio to current setting
-  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
-  const modelRadio = document.querySelector(`input[name="endMeetingModel"][value="${currentModel}"]`);
-  if (modelRadio) modelRadio.checked = true;
+  // Update export button state
+  updateExportButton();
 
   // AI title/tag generation
   const suggestionsEl = $('#aiTitleSuggestions');
@@ -627,10 +712,6 @@ async function finalizeEndMeeting() {
   const dtVal = $('#endMeetingDatetime').value;
   if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
 
-  // Save selected model
-  const selectedModel = document.querySelector('input[name="endMeetingModel"]:checked');
-  if (selectedModel) state.settings.geminiModel = selectedModel.value;
-
   // Auto-correct all uncorrected lines before saving
   const hasUncorrected = state.transcript.some(l => !l.originalText);
   if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
@@ -654,42 +735,29 @@ async function finalizeEndMeeting() {
   const titleInput = $('#meetingTitleInput');
   if (titleInput) titleInput.hidden = true;
   showToast(t('toast.meeting_saved'), 'success');
-
-  // Generate final meeting minutes
-  if (isProxyAvailable() && state.transcript.length > 0) {
-    generateFinalMeetingMinutes();
-  }
 }
 
 async function generateFinalMeetingMinutes() {
-  showToast(t('toast.generating_final_minutes'), 'info');
   showAnalysisSkeletons();
 
-  try {
-    const result = await generateFinalMinutes({
-      transcript: state.transcript,
-      analysisHistory: state.analysisHistory,
-      meetingContext: state.settings.meetingContext,
-      meetingPreset: state.settings.meetingPreset,
-      elapsedTime: getElapsedTimeStr(),
-      memos: state.memos,
-      userProfile: buildFullProfile(),
-      model: state.settings.geminiModel || 'gemini-2.5-flash',
-    });
+  const result = await generateFinalMinutes({
+    transcript: state.transcript,
+    analysisHistory: state.analysisHistory,
+    meetingContext: state.settings.meetingContext,
+    meetingPreset: state.settings.meetingPreset,
+    elapsedTime: getElapsedTimeStr(),
+    memos: state.memos,
+    userProfile: buildFullProfile(),
+    model: state.settings.geminiModel || 'gemini-2.5-flash',
+  });
 
-    state.currentAnalysis = result;
-    result.transcriptLength = state.transcript.length;
-    state.analysisHistory.push(result);
-    renderAnalysis(result);
-    autoSave();
+  state.currentAnalysis = result;
+  result.transcriptLength = state.transcript.length;
+  state.analysisHistory.push(result);
+  renderAnalysis(result);
+  autoSave();
 
-    showToast(t('toast.final_minutes_done'), 'success');
-    emit('analysis:complete', result);
-  } catch (err) {
-    showToast(t('toast.final_minutes_fail') + err.message, 'error');
-    const container = document.querySelector('#aiSections');
-    if (container) container.classList.remove('ai-updating');
-  }
+  emit('analysis:complete', result);
 }
 
 function cancelEndMeeting() {
@@ -1080,6 +1148,7 @@ function init() {
   // End Meeting Modal events
   $('#btnEndMeetingSave').addEventListener('click', () => finalizeEndMeeting());
   $('#btnEndMeetingCancel').addEventListener('click', () => cancelEndMeeting());
+  $('#btnEndMeetingExport').addEventListener('click', () => { $('#exportModal').hidden = false; });
 
   // Star rating clicks
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {

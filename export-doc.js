@@ -2,7 +2,7 @@
 
 
 const CDN = {
-  html2pdf: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.2/html2pdf.bundle.min.js',
+  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
   docx: 'https://cdn.jsdelivr.net/npm/docx@9.1.1/dist/index.iife.js',
 };
 
@@ -18,62 +18,175 @@ function loadScript(url) {
 }
 
 export async function exportPDF(markdown, filename) {
-  await loadScript(CDN.html2pdf);
+  await loadScript(CDN.jspdf);
 
-  const container = document.createElement('div');
-  container.innerHTML = markdownToHTML(markdown);
-  Object.assign(container.style, {
-    position: 'absolute', left: '-9999px', top: '0',
-    width: '180mm', padding: '0',
-    fontFamily: 'Pretendard, "Malgun Gothic", Arial, sans-serif',
-    fontSize: '11pt', lineHeight: '1.6', color: '#222',
-    background: '#fff',
-  });
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
-  document.body.appendChild(container);
-  // Wait for layout to settle
-  await new Promise(r => setTimeout(r, 100));
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = { top: 15, bottom: 15, left: 15, right: 15 };
+  const contentW = pageW - margin.left - margin.right;
+  let y = margin.top;
 
-  try {
-    await window.html2pdf().set({
-      margin: [10, 15, 10, 15],
-      filename: filename.endsWith('.pdf') ? filename : filename + '.pdf',
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, logging: false, windowWidth: container.scrollWidth },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(container).save();
-  } finally {
-    document.body.removeChild(container);
+  const COLORS = { heading: [79, 110, 247], text: [34, 34, 34], muted: [120, 120, 120], hr: [200, 200, 200] };
+  const FONT_SIZES = { h1: 16, h2: 14, h3: 12, h4: 11, body: 10, small: 9 };
+
+  function checkPage(needed) {
+    if (y + needed > pageH - margin.bottom) {
+      doc.addPage();
+      y = margin.top;
+    }
   }
-}
 
-/** Convert markdown to styled HTML for PDF export */
-function markdownToHTML(md) {
-  let html = md
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  // Headers
-  html = html.replace(/^#### (.+)$/gm, '<h4 style="color:#4f6ef7;margin:0.8em 0 0.3em">$1</h4>');
-  html = html.replace(/^### (.+)$/gm, '<h3 style="color:#4f6ef7;margin:0.8em 0 0.3em">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="color:#4f6ef7;margin:1em 0 0.4em">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 style="color:#4f6ef7;margin:1em 0 0.4em;font-size:18pt">$1</h1>');
-  // Bold / italic
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Checkbox lists
-  html = html.replace(/^- \[ \] (.+)$/gm, '<li style="margin-left:1.5em;list-style:none">☐ $1</li>');
-  html = html.replace(/^- \[x\] (.+)$/gm, '<li style="margin-left:1.5em;list-style:none">☑ $1</li>');
-  // Bullet lists
-  html = html.replace(/^[-*] (.+)$/gm, '<li style="margin-left:1.5em">$1</li>');
-  // Numbered lists
-  html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-left:1.5em">$1</li>');
-  // HR
-  html = html.replace(/^---+$/gm, '<hr style="border:none;border-top:1px solid #ddd;margin:1em 0">');
-  // Line breaks
-  html = html.replace(/\n/g, '<br>');
-  html = html.replace(/<br>\s*(<\/?(?:h[1-4]|li|hr|ul|ol))/g, '$1');
-  html = html.replace(/(<\/(?:h[1-4]|li|hr|ul|ol)>)\s*<br>/g, '$1');
-  return html;
+  /** Strip markdown bold/italic markers for measuring, return segments for styled rendering */
+  function parseInline(text) {
+    const segments = [];
+    const regex = /\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|\*(.+?)\*/g;
+    let last = 0, m;
+    while ((m = regex.exec(text)) !== null) {
+      if (m.index > last) segments.push({ text: text.slice(last, m.index), bold: false, italic: false });
+      if (m[1]) segments.push({ text: m[1], bold: true, italic: true });
+      else if (m[2]) segments.push({ text: m[2], bold: true, italic: false });
+      else if (m[3]) segments.push({ text: m[3], bold: false, italic: true });
+      last = regex.lastIndex;
+    }
+    if (last < text.length) segments.push({ text: text.slice(last), bold: false, italic: false });
+    if (segments.length === 0) segments.push({ text, bold: false, italic: false });
+    return segments;
+  }
+
+  function getFontStyle(bold, italic) {
+    if (bold && italic) return 'bolditalic';
+    if (bold) return 'bold';
+    if (italic) return 'italic';
+    return 'normal';
+  }
+
+  function renderWrappedLine(segments, fontSize, color, indent) {
+    const x0 = margin.left + (indent || 0);
+    const maxW = contentW - (indent || 0);
+    const lineH = fontSize * 0.45;
+
+    // Build words with style info
+    const words = [];
+    for (const seg of segments) {
+      const parts = seg.text.split(/( +)/);
+      for (const p of parts) {
+        if (p) words.push({ text: p, bold: seg.bold, italic: seg.italic });
+      }
+    }
+
+    let lineWords = [];
+    let lineWidth = 0;
+
+    function flushLine() {
+      checkPage(lineH);
+      let cx = x0;
+      for (const w of lineWords) {
+        doc.setFont('helvetica', getFontStyle(w.bold, w.italic));
+        doc.setFontSize(fontSize);
+        doc.setTextColor(...color);
+        doc.text(w.text, cx, y);
+        cx += doc.getTextWidth(w.text);
+      }
+      y += lineH;
+      lineWords = [];
+      lineWidth = 0;
+    }
+
+    for (const w of words) {
+      doc.setFont('helvetica', getFontStyle(w.bold, w.italic));
+      doc.setFontSize(fontSize);
+      const ww = doc.getTextWidth(w.text);
+      if (lineWords.length > 0 && lineWidth + ww > maxW) {
+        flushLine();
+      }
+      lineWords.push(w);
+      lineWidth += ww;
+    }
+    if (lineWords.length > 0) flushLine();
+  }
+
+  // Parse and render each line
+  const lines = markdown.split('\n');
+  let numberedIdx = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Empty line
+    if (trimmed === '') {
+      y += 2;
+      numberedIdx = 0;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(trimmed)) {
+      checkPage(4);
+      y += 2;
+      doc.setDrawColor(...COLORS.hr);
+      doc.setLineWidth(0.3);
+      doc.line(margin.left, y, pageW - margin.right, y);
+      y += 4;
+      numberedIdx = 0;
+      continue;
+    }
+
+    // Headers
+    let headingMatch;
+    if ((headingMatch = trimmed.match(/^(#{1,4}) (.+)$/))) {
+      const level = headingMatch[1].length;
+      const text = headingMatch[2];
+      const size = FONT_SIZES[`h${level}`] || FONT_SIZES.h3;
+      y += level === 1 ? 4 : 2;
+      checkPage(size * 0.5);
+      renderWrappedLine(parseInline(text), size, COLORS.heading, 0);
+      y += 1;
+      numberedIdx = 0;
+      continue;
+    }
+
+    // Checkbox items
+    if (/^- \[[ x]\] /.test(trimmed)) {
+      const checked = trimmed[3] === 'x';
+      const text = trimmed.slice(6);
+      const prefix = checked ? '☑ ' : '☐ ';
+      renderWrappedLine(parseInline(prefix + text), FONT_SIZES.body, COLORS.text, 6);
+      continue;
+    }
+
+    // Bullet list
+    if (/^[-*] /.test(trimmed)) {
+      const text = trimmed.slice(2);
+      checkPage(5);
+      doc.setFontSize(FONT_SIZES.body);
+      doc.setTextColor(...COLORS.text);
+      doc.text('•', margin.left + 3, y);
+      renderWrappedLine(parseInline(text), FONT_SIZES.body, COLORS.text, 8);
+      continue;
+    }
+
+    // Numbered list
+    if (/^\d+\. /.test(trimmed)) {
+      numberedIdx++;
+      const text = trimmed.replace(/^\d+\.\s*/, '');
+      checkPage(5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(FONT_SIZES.body);
+      doc.setTextColor(...COLORS.text);
+      doc.text(`${numberedIdx}.`, margin.left + 2, y);
+      renderWrappedLine(parseInline(text), FONT_SIZES.body, COLORS.text, 10);
+      continue;
+    }
+
+    // Normal paragraph
+    numberedIdx = 0;
+    renderWrappedLine(parseInline(trimmed), FONT_SIZES.body, COLORS.text, 0);
+  }
+
+  doc.save(filename.endsWith('.pdf') ? filename : filename + '.pdf');
 }
 
 export async function exportWord(markdown, filename) {

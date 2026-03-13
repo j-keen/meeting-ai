@@ -414,14 +414,6 @@ const translations = {
     'transcript.waiting': 'Listening for speech...',
     'transcript.waiting_hint': 'Speak and it will be transcribed automatically.',
 
-    // Analysis countdown
-    'analysis.countdown': '{n}s',
-    'analysis.char_count': '{current} / {threshold}',
-    'analysis.analyzing': 'Analyzing...',
-    'analysis.paused': 'Paused',
-    'panel.pause_analysis': 'Pause',
-    'panel.resume_analysis': 'Resume',
-
     // End Meeting Modal
     'end_meeting.title': 'Save Meeting',
     'end_meeting.meeting_title': 'Meeting Title',
@@ -434,14 +426,21 @@ const translations = {
     'end_meeting.model': 'AI Model',
     'end_meeting.model_flash_desc': 'Fast',
     'end_meeting.model_pro_desc': 'High quality',
-    'end_meeting.export': 'Export',
-    'end_meeting.save_generate': 'Save & Generate Minutes',
+    'end_meeting.export_minutes': 'Export Minutes',
     'end_meeting.save': 'Save',
     'end_meeting.cancel': 'Cancel',
     'end_meeting.generating': 'Generating AI suggestions...',
     'end_meeting.add_tag': 'Add tag...',
     'end_meeting.add_participant': 'Add name...',
     'end_meeting.no_participants': 'No contacts registered.',
+
+    // Minutes Generation Modal
+    'minutes.title': 'Generating Meeting Minutes',
+    'minutes.generating': 'AI is writing the meeting minutes...',
+    'minutes.done': 'Meeting minutes generated successfully!',
+    'minutes.skip': 'Skip',
+    'minutes.generate': 'Generate',
+    'minutes.continue_in_bg': 'Continue in background',
 
     // Panel bookmarks
     'panel.bookmarks': 'Bookmarks',
@@ -460,6 +459,12 @@ const translations = {
     'settings.placeholder_company': 'Company',
     'settings.placeholder_location': 'Location name',
     'settings.placeholder_category': 'Category name',
+    'settings.open_contacts': 'Manage Contacts',
+    'settings.open_locations': 'Manage Locations',
+    'settings.open_categories': 'Manage Categories',
+    'settings.search_contacts': 'Search contacts...',
+    'settings.click_to_edit_detail': 'Click to edit details',
+    'settings.add_contacts_from_group': 'Add Contacts',
 
     // History filters
     'history.filter_all_categories': 'All Categories',
@@ -931,14 +936,6 @@ const translations = {
     'transcript.waiting': '음성을 인식하고 있습니다...',
     'transcript.waiting_hint': '말씀하시면 자동으로 기록됩니다.',
 
-    // Analysis countdown
-    'analysis.countdown': '{n}초',
-    'analysis.char_count': '{current} / {threshold}',
-    'analysis.analyzing': '분석 중...',
-    'analysis.paused': '일시정지',
-    'panel.pause_analysis': '일시정지',
-    'panel.resume_analysis': '재개',
-
     // End Meeting Modal
     'end_meeting.title': '회의 저장',
     'end_meeting.meeting_title': '회의 제목',
@@ -951,14 +948,21 @@ const translations = {
     'end_meeting.model': 'AI 모델',
     'end_meeting.model_flash_desc': '빠름',
     'end_meeting.model_pro_desc': '고품질',
-    'end_meeting.export': '내보내기',
-    'end_meeting.save_generate': '저장 & 회의록 작성',
+    'end_meeting.export_minutes': '회의록 내보내기',
     'end_meeting.save': '저장',
     'end_meeting.cancel': '취소',
     'end_meeting.generating': 'AI 추천 생성 중...',
     'end_meeting.add_tag': '태그 추가...',
     'end_meeting.add_participant': '이름 추가...',
     'end_meeting.no_participants': '등록된 연락처가 없습니다.',
+
+    // Minutes Generation Modal
+    'minutes.title': '회의록 작성 중',
+    'minutes.generating': 'AI가 회의록을 작성하고 있습니다...',
+    'minutes.done': '회의록이 성공적으로 생성되었습니다!',
+    'minutes.skip': '건너뛰기',
+    'minutes.generate': '생성',
+    'minutes.continue_in_bg': '백그라운드에서 계속',
 
     // Panel bookmarks
     'panel.bookmarks': '북마크',
@@ -977,6 +981,12 @@ const translations = {
     'settings.placeholder_company': '회사',
     'settings.placeholder_location': '장소 이름',
     'settings.placeholder_category': '카테고리 이름',
+    'settings.open_contacts': '연락처 관리',
+    'settings.open_locations': '장소 관리',
+    'settings.open_categories': '카테고리 관리',
+    'settings.search_contacts': '연락처 검색...',
+    'settings.click_to_edit_detail': '클릭하여 편집',
+    'settings.add_contacts_from_group': '연락처 추가',
 
     // History filters
     'history.filter_all_categories': '모든 카테고리',

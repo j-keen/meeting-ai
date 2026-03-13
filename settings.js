@@ -1,6 +1,6 @@
 // settings.js - Settings panel management (manual save)
 
-import { state, emit } from './app.js';
+import { state, emit, on } from './app.js';
 import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
@@ -487,11 +487,47 @@ function renderChatPresets() {
 
 // ===== Data Tab (Participants, Locations, Categories) =====
 let settingsCameraStream = null;
+let contactSearchQuery = '';
 
 function initDataTab() {
-  renderDataParticipants();
-  renderDataLocations();
-  renderDataCategories();
+  updateDataBadges();
+
+  // --- Contacts Modal ---
+  $('#btnOpenContacts')?.addEventListener('click', () => {
+    $('#contactsModal').hidden = false;
+    contactSearchQuery = '';
+    const searchInput = $('#inputContactSearch');
+    if (searchInput) searchInput.value = '';
+    renderDataParticipants();
+  });
+  $('#btnCloseContacts')?.addEventListener('click', closeContactsModal);
+  $('#contactsModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeContactsModal();
+  });
+  $('#inputContactSearch')?.addEventListener('input', (e) => {
+    contactSearchQuery = e.target.value.trim().toLowerCase();
+    renderDataParticipants();
+  });
+
+  // --- Locations Modal ---
+  $('#btnOpenLocations')?.addEventListener('click', () => {
+    $('#locationsModal').hidden = false;
+    renderDataLocations();
+  });
+  $('#btnCloseLocations')?.addEventListener('click', closeLocationsModal);
+  $('#locationsModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeLocationsModal();
+  });
+
+  // --- Categories Modal ---
+  $('#btnOpenCategories')?.addEventListener('click', () => {
+    $('#categoriesModal').hidden = false;
+    renderDataCategories();
+  });
+  $('#btnCloseCategories')?.addEventListener('click', closeCategoriesModal);
+  $('#categoriesModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeCategoriesModal();
+  });
 
   // Add participant
   $('#btnAddParticipant')?.addEventListener('click', () => {
@@ -504,6 +540,7 @@ function initDataTab() {
     $('#inputNewParticipantTitle').value = '';
     $('#inputNewParticipantCompany').value = '';
     renderDataParticipants();
+    updateDataBadges();
   });
 
   // Business card scan
@@ -566,6 +603,7 @@ function initDataTab() {
     });
     $('#settingsCardResult').hidden = true;
     renderDataParticipants();
+    updateDataBadges();
     emit('toast', { message: t('prep.card_saved'), type: 'success' });
   });
 
@@ -576,6 +614,7 @@ function initDataTab() {
     addLocation(name);
     $('#inputNewLocation').value = '';
     renderDataLocations();
+    updateDataBadges();
   });
 
   // Add category
@@ -585,7 +624,97 @@ function initDataTab() {
     addCategory(name);
     $('#inputNewCategory').value = '';
     renderDataCategories();
+    updateDataBadges();
   });
+
+  // Listen for openContactsModal event (from contact groups)
+  on('openContactsModal', () => {
+    // Make sure settings is open and data tab is active
+    openSettings();
+    const dataTab = document.querySelector('.settings-tab[data-tab="data"]');
+    if (dataTab) dataTab.click();
+    setTimeout(() => {
+      $('#contactsModal').hidden = false;
+      contactSearchQuery = '';
+      const searchInput = $('#inputContactSearch');
+      if (searchInput) searchInput.value = '';
+      renderDataParticipants();
+    }, 100);
+  });
+}
+
+function closeContactsModal() {
+  $('#contactsModal').hidden = true;
+}
+function closeLocationsModal() {
+  $('#locationsModal').hidden = true;
+}
+function closeCategoriesModal() {
+  $('#categoriesModal').hidden = true;
+}
+
+function updateDataBadges() {
+  const contacts = loadContacts();
+  const locations = loadLocations();
+  const categories = loadCategories();
+
+  // Update badge counts
+  setBadge('#contactsBadge', contacts.length);
+  setBadge('#locationsBadge', locations.length);
+  setBadge('#categoriesBadge', categories.length);
+
+  // Update tooltips (recent 3 items preview)
+  setContactTooltip('#btnOpenContacts', contacts.slice(-3).reverse());
+  setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse());
+  setTextTooltip('#btnOpenCategories', categories.slice(-3).reverse());
+}
+
+function setBadge(selector, count) {
+  const badge = $(selector);
+  if (!badge) return;
+  badge.textContent = count > 0 ? count : '';
+  badge.style.display = count > 0 ? '' : 'none';
+}
+
+function setContactTooltip(btnSelector, contacts) {
+  const btn = $(btnSelector);
+  if (!btn) return;
+  btn.querySelector('.data-modal-tooltip')?.remove();
+  if (contacts.length === 0) return;
+  const tooltip = document.createElement('div');
+  tooltip.className = 'data-modal-tooltip';
+  contacts.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'data-modal-tooltip-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = c.name;
+    div.appendChild(nameSpan);
+    const sub = [c.title, c.company].filter(Boolean).join(' · ');
+    if (sub) {
+      const subSpan = document.createElement('span');
+      subSpan.className = 'data-list-item-sub';
+      subSpan.textContent = ` ${sub}`;
+      div.appendChild(subSpan);
+    }
+    tooltip.appendChild(div);
+  });
+  btn.appendChild(tooltip);
+}
+
+function setTextTooltip(btnSelector, items) {
+  const btn = $(btnSelector);
+  if (!btn) return;
+  btn.querySelector('.data-modal-tooltip')?.remove();
+  if (items.length === 0) return;
+  const tooltip = document.createElement('div');
+  tooltip.className = 'data-modal-tooltip';
+  items.forEach(text => {
+    const div = document.createElement('div');
+    div.className = 'data-modal-tooltip-item';
+    div.textContent = text;
+    tooltip.appendChild(div);
+  });
+  btn.appendChild(tooltip);
 }
 
 async function openSettingsCamera() {
@@ -638,8 +767,18 @@ async function processSettingsOcr(base64) {
 function renderDataParticipants() {
   const list = $('#dataParticipantsList');
   if (!list) return;
-  const contacts = loadContacts();
+  let contacts = loadContacts();
   list.innerHTML = '';
+
+  // Filter by search
+  if (contactSearchQuery) {
+    contacts = contacts.filter(c =>
+      c.name.toLowerCase().includes(contactSearchQuery) ||
+      (c.title || '').toLowerCase().includes(contactSearchQuery) ||
+      (c.company || '').toLowerCase().includes(contactSearchQuery)
+    );
+  }
+
   if (contacts.length === 0) {
     list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
     return;
@@ -649,16 +788,65 @@ function renderDataParticipants() {
     item.className = 'data-list-item';
     const info = document.createElement('div');
     info.className = 'data-list-item-info';
+
+    // Editable name
     const nameSpan = document.createElement('span');
     nameSpan.textContent = c.name;
+    nameSpan.style.cursor = 'text';
+    nameSpan.addEventListener('click', () => {
+      nameSpan.contentEditable = 'true';
+      nameSpan.focus();
+    });
+    nameSpan.addEventListener('blur', () => {
+      nameSpan.contentEditable = 'false';
+      const newName = nameSpan.textContent.trim();
+      if (newName && newName !== c.name) {
+        updateContact(c.id, { name: newName });
+        updateDataBadges();
+      } else {
+        nameSpan.textContent = c.name;
+      }
+    });
+    nameSpan.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); nameSpan.blur(); }
+      if (e.key === 'Escape') { nameSpan.textContent = c.name; nameSpan.blur(); }
+    });
     info.appendChild(nameSpan);
+
+    // Editable subtitle
     const sub = [c.title, c.company].filter(Boolean).join(' · ');
-    if (sub) {
-      const subSpan = document.createElement('span');
-      subSpan.className = 'data-list-item-sub';
-      subSpan.textContent = sub;
-      info.appendChild(subSpan);
-    }
+    const subSpan = document.createElement('span');
+    subSpan.className = 'data-list-item-sub';
+    subSpan.textContent = sub || t('settings.click_to_edit_detail');
+    subSpan.style.cursor = 'text';
+    if (!sub) subSpan.style.fontStyle = 'italic';
+    subSpan.addEventListener('click', () => {
+      // Show as "title · company" editable
+      subSpan.textContent = [c.title || '', c.company || ''].join(' · ');
+      subSpan.contentEditable = 'true';
+      subSpan.style.fontStyle = '';
+      subSpan.focus();
+    });
+    subSpan.addEventListener('blur', () => {
+      subSpan.contentEditable = 'false';
+      const raw = subSpan.textContent.trim();
+      const parts = raw.split('·').map(s => s.trim());
+      const newTitle = parts[0] || '';
+      const newCompany = parts[1] || '';
+      if (newTitle !== (c.title || '') || newCompany !== (c.company || '')) {
+        updateContact(c.id, { title: newTitle, company: newCompany });
+        updateDataBadges();
+      }
+      const updated = [newTitle, newCompany].filter(Boolean).join(' · ');
+      subSpan.textContent = updated || t('settings.click_to_edit_detail');
+      if (!updated) subSpan.style.fontStyle = 'italic';
+    });
+    subSpan.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); subSpan.blur(); }
+      if (e.key === 'Escape') { subSpan.textContent = sub; subSpan.blur(); }
+    });
+    info.appendChild(subSpan);
+
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-xs btn-danger';
     delBtn.textContent = '\u00d7';
@@ -666,6 +854,7 @@ function renderDataParticipants() {
     delBtn.addEventListener('click', () => {
       deleteContact(c.id);
       renderDataParticipants();
+      updateDataBadges();
     });
     list.appendChild(item);
   });
@@ -692,6 +881,7 @@ function renderDataLocations() {
     delBtn.addEventListener('click', () => {
       deleteLocation(loc);
       renderDataLocations();
+      updateDataBadges();
     });
     list.appendChild(item);
   });
@@ -718,6 +908,7 @@ function renderDataCategories() {
     delBtn.addEventListener('click', () => {
       deleteCategory(cat);
       renderDataCategories();
+      updateDataBadges();
     });
     list.appendChild(item);
   });
