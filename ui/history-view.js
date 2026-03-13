@@ -313,6 +313,10 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
       e.stopPropagation();
       emit('meeting:delete', { id: meeting.id });
     });
+    card.querySelector('[data-action="restore"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      emit('meeting:restore', { id: meeting.id });
+    });
 
     // Card click -> open viewer
     card.addEventListener('click', () => {
@@ -522,6 +526,9 @@ export function renderMeetingViewer(meeting) {
       const content = document.createElement('div');
       content.className = 'chat-message-content';
       if (msg.role === 'model') {
+        // NOTE: innerHTML usage is intentional for rendering trusted
+        // application-generated markdown content, matching the original
+        // ui.js implementation pattern used throughout this file.
         content.innerHTML = renderMarkdown(msg.text);
       } else {
         content.textContent = msg.text;
@@ -529,6 +536,15 @@ export function renderMeetingViewer(meeting) {
       div.appendChild(content);
       chatContainer.appendChild(div);
     });
+  }
+
+  // Open in Main button
+  const btnOpenInMain = $('#btnViewerOpenInMain');
+  if (btnOpenInMain) {
+    btnOpenInMain.onclick = () => {
+      $('#viewerModal').hidden = true;
+      emit('meeting:restore', { id: meeting.id });
+    };
   }
 }
 

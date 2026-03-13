@@ -2504,17 +2504,6 @@ h1, h2, h3 { font-weight: 600; }
   font-weight: 400;
 }
 
-/* Minutes Generation Modal */
-.minutes-gen-body {
-  text-align: center;
-}
-.minutes-gen-spinner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 20px 0;
-}
 .spinner-ring {
   width: 40px;
   height: 40px;
@@ -2526,40 +2515,75 @@ h1, h2, h3 { font-weight: 600; }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
-.minutes-gen-status {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 0;
+
+/* Minutes model cards */
+.minutes-model-cards {
+  display: flex;
+  gap: 10px;
 }
-.minutes-gen-done {
+.minutes-model-card {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 20px 0;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-secondary, var(--bg-card));
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
-.minutes-gen-check {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--success, #22c55e);
-  color: white;
+.minutes-model-card:hover:not(.locked) {
+  border-color: var(--accent);
+  background: var(--bg-hover, var(--bg-secondary));
+}
+.minutes-model-card.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+.minutes-model-card.selected .minutes-model-hint {
+  color: var(--text-inverse);
+  opacity: 0.85;
+}
+.minutes-model-card.locked {
+  cursor: default;
+  opacity: 0.5;
+}
+.minutes-model-card.locked.selected {
+  opacity: 1;
+}
+.minutes-model-icon {
   font-size: 20px;
-  font-weight: bold;
 }
-.minutes-gen-done p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin: 0;
+.minutes-model-name {
+  font-size: 14px;
+  font-weight: 600;
 }
-.minutes-gen-actions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
+.minutes-model-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Minutes generation indicator (inline in actions bar) */
+.minutes-gen-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: auto;
+  margin-left: 8px;
+}
+.spinner-ring-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Actions bar */
@@ -3650,5 +3674,63 @@ h1, h2, h3 { font-weight: 600; }
   .compare-run-section {
     grid-column: 1;
   }
+}
+
+/* Restore Banner */
+.restore-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: var(--accent-bg, rgba(59, 130, 246, 0.1));
+  border-bottom: 1px solid var(--accent, #3b82f6);
+  font-size: 13px;
+  color: var(--text);
+}
+.restore-banner-text {
+  font-weight: 500;
+}
+
+/* Restore Confirm Dialog */
+.restore-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.restore-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary, var(--bg));
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  font-size: 13px;
+}
+.restore-option-btn:hover {
+  border-color: var(--accent, #3b82f6);
+  background: var(--accent-bg, rgba(59, 130, 246, 0.05));
+}
+.restore-option-btn strong {
+  font-size: 14px;
+}
+.restore-option-btn .text-muted {
+  font-size: 12px;
+}
+
+/* History card accent button */
+.btn-accent {
+  color: var(--accent, #3b82f6);
+  border-color: var(--accent, #3b82f6);
+}
+.btn-accent:hover {
+  background: var(--accent, #3b82f6);
+  color: #fff;
 }
 
