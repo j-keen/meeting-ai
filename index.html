@@ -197,8 +197,7 @@
             </label>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.stt">STT Settings</h3>
-          <p class="settings-hint" data-i18n="settings.stt_hint">Converts your speech to text</p>
+          <h3 data-i18n="settings.stt">STT Settings <span class="settings-hint" data-i18n="settings.stt_hint">Converts your speech to text</span></h3>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
             <small class="settings-hint" data-i18n="settings.stt_language_hint">Language spoken in the meeting</small>
@@ -230,8 +229,7 @@
         </section>
 
         <section class="settings-section">
-          <h3 data-i18n="settings.analysis_prompt">Analysis Prompt</h3>
-          <p class="settings-hint" data-i18n="settings.analysis_prompt_hint">Instructions sent to AI for analysis</p>
+          <h3 data-i18n="settings.analysis_prompt">Analysis Prompt <span class="settings-hint" data-i18n="settings.analysis_prompt_hint">Instructions sent to AI for analysis</span></h3>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
             <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Prompt Preset</label>
             <select class="settings-select" id="selectPromptPreset" style="flex:1;">
@@ -251,14 +249,12 @@
       <!-- Chat Tab -->
       <div class="settings-tab-content" data-tab="chat">
         <section class="settings-section">
-          <h3 data-i18n="settings.chat_prompt">Chat System Prompt</h3>
-          <p class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</p>
+          <h3 data-i18n="settings.chat_prompt">Chat System Prompt <span class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</span></h3>
           <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
-          <p class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</p>
+          <h3 data-i18n="settings.chat_presets">Chat Preset Questions <span class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</span></h3>
           <div class="chat-presets-list" id="chatPresetsList"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
@@ -271,55 +267,28 @@
       <!-- Data Tab -->
       <div class="settings-tab-content" data-tab="data">
         <section class="settings-section">
-          <h3 data-i18n="settings.contacts_title">Contacts</h3>
-          <p class="settings-hint" data-i18n="settings.contacts_hint">People available as meeting participants</p>
-          <div class="data-list" id="dataParticipantsList"></div>
-          <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
-            <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
-            <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
-            <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
-          </div>
-          <div class="data-add-row" style="margin-top:8px;">
-            <button class="btn btn-sm" id="btnSettingsScanCard">&#128247; <span data-i18n="settings.scan_card">Scan Business Card</span></button>
-            <div class="prep-photo-popup" id="settingsPhotoPopup" hidden>
-              <button class="prep-photo-option" id="btnSettingsPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
-              <button class="prep-photo-option" id="btnSettingsPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
-            </div>
-            <input type="file" id="settingsImageFileInput" accept="image/*" hidden>
-          </div>
-          <div class="prep-card-result" id="settingsCardResult" hidden>
-            <div class="prep-card-fields">
-              <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">
-              <input type="text" class="settings-input" id="settingsCardTitle" placeholder="Title">
-              <input type="text" class="settings-input" id="settingsCardCompany" placeholder="Company">
-              <input type="text" class="settings-input" id="settingsCardEmail" placeholder="Email">
-              <input type="text" class="settings-input" id="settingsCardPhone" placeholder="Phone">
-            </div>
-            <button class="btn btn-sm btn-primary" id="btnSettingsSaveCard" data-i18n="prep.save_to_contacts">Save to Contacts</button>
-          </div>
+          <h3 data-i18n="settings.contacts_title">Contacts <span class="settings-hint" data-i18n="settings.contacts_hint">People available as meeting participants</span></h3>
+          <button class="btn btn-sm btn-data-modal-open" id="btnOpenContacts">
+            <span data-i18n="settings.open_contacts">Manage Contacts</span>
+            <span class="data-modal-badge" id="contactsBadge"></span>
+          </button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.locations">Locations</h3>
-          <p class="settings-hint" data-i18n="settings.locations_hint">Places available for meeting location</p>
-          <div class="data-list" id="dataLocationsList"></div>
-          <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
-            <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
-          </div>
+          <h3 data-i18n="settings.locations">Locations <span class="settings-hint" data-i18n="settings.locations_hint">Places available for meeting location</span></h3>
+          <button class="btn btn-sm btn-data-modal-open" id="btnOpenLocations">
+            <span data-i18n="settings.open_locations">Manage Locations</span>
+            <span class="data-modal-badge" id="locationsBadge"></span>
+          </button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.categories">Categories</h3>
-          <p class="settings-hint" data-i18n="settings.categories_hint">Tags used to classify meetings</p>
-          <div class="data-list" id="dataCategoriesList"></div>
-          <div class="data-add-row">
-            <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
-            <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
-          </div>
+          <h3 data-i18n="settings.categories">Categories <span class="settings-hint" data-i18n="settings.categories_hint">Tags used to classify meetings</span></h3>
+          <button class="btn btn-sm btn-data-modal-open" id="btnOpenCategories">
+            <span data-i18n="settings.open_categories">Manage Categories</span>
+            <span class="data-modal-badge" id="categoriesBadge"></span>
+          </button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
-          <p class="settings-hint" data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</p>
+          <h3 data-i18n="settings.correction_dict">Correction Dictionary <span class="settings-hint" data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</span></h3>
           <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
             <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
@@ -350,6 +319,78 @@
           </div>
         </div>
         <input type="file" id="correctionDictFileInput" accept=".json" hidden>
+      </div>
+
+      <!-- Contacts Modal -->
+      <div class="modal-overlay data-modal-overlay" id="contactsModal" hidden>
+        <div class="modal" style="max-width:520px;">
+          <div class="modal-header">
+            <h3 data-i18n="settings.contacts_title">Contacts</h3>
+            <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
+            <div class="data-list" id="dataParticipantsList" style="max-height:300px;overflow-y:auto;"></div>
+            <div class="data-add-row" style="margin-top:8px;">
+              <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
+              <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
+              <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
+              <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
+            </div>
+            <div class="data-add-row" style="margin-top:8px;">
+              <button class="btn btn-sm" id="btnSettingsScanCard">&#128247; <span data-i18n="settings.scan_card">Scan Business Card</span></button>
+              <div class="prep-photo-popup" id="settingsPhotoPopup" hidden>
+                <button class="prep-photo-option" id="btnSettingsPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
+                <button class="prep-photo-option" id="btnSettingsPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
+              </div>
+              <input type="file" id="settingsImageFileInput" accept="image/*" hidden>
+            </div>
+            <div class="prep-card-result" id="settingsCardResult" hidden>
+              <div class="prep-card-fields">
+                <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">
+                <input type="text" class="settings-input" id="settingsCardTitle" placeholder="Title">
+                <input type="text" class="settings-input" id="settingsCardCompany" placeholder="Company">
+                <input type="text" class="settings-input" id="settingsCardEmail" placeholder="Email">
+                <input type="text" class="settings-input" id="settingsCardPhone" placeholder="Phone">
+              </div>
+              <button class="btn btn-sm btn-primary" id="btnSettingsSaveCard" data-i18n="prep.save_to_contacts">Save to Contacts</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Locations Modal -->
+      <div class="modal-overlay data-modal-overlay" id="locationsModal" hidden>
+        <div class="modal" style="max-width:420px;">
+          <div class="modal-header">
+            <h3 data-i18n="settings.locations">Locations</h3>
+            <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
+            <div class="data-add-row" style="margin-top:8px;">
+              <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
+              <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories Modal -->
+      <div class="modal-overlay data-modal-overlay" id="categoriesModal" hidden>
+        <div class="modal" style="max-width:420px;">
+          <div class="modal-header">
+            <h3 data-i18n="settings.categories">Categories</h3>
+            <button class="btn btn-icon" id="btnCloseCategories" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="data-list" id="dataCategoriesList" style="max-height:300px;overflow-y:auto;"></div>
+            <div class="data-add-row" style="margin-top:8px;">
+              <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
+              <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="settings-footer" id="settingsFooter">
@@ -588,6 +629,43 @@
     </div>
   </div>
 
+  <!-- Minutes Generation Modal -->
+  <div class="modal-overlay" id="minutesGenModal" hidden>
+    <div class="modal" style="max-width:480px;">
+      <div class="modal-header">
+        <h3 data-i18n="minutes.title">Generating Meeting Minutes</h3>
+      </div>
+      <div class="modal-body minutes-gen-body">
+        <div class="minutes-gen-spinner" id="minutesGenSpinner">
+          <div class="spinner-ring"></div>
+          <p class="minutes-gen-status" id="minutesGenStatus" data-i18n="minutes.generating">AI is writing the meeting minutes...</p>
+        </div>
+        <div class="minutes-gen-done" id="minutesGenDone" hidden>
+          <span class="minutes-gen-check">&#10003;</span>
+          <p data-i18n="minutes.done">Meeting minutes generated successfully!</p>
+        </div>
+        <!-- Model Selection -->
+        <div class="end-meeting-section" style="margin-top:16px;">
+          <label class="end-meeting-label" data-i18n="end_meeting.model">AI Model</label>
+          <div class="end-meeting-model-select">
+            <label class="end-meeting-model-option">
+              <input type="radio" name="minutesModel" value="gemini-2.5-flash" checked>
+              <span class="end-meeting-model-chip">Flash <span class="end-meeting-model-desc" data-i18n="end_meeting.model_flash_desc">Fast</span></span>
+            </label>
+            <label class="end-meeting-model-option">
+              <input type="radio" name="minutesModel" value="gemini-2.5-pro">
+              <span class="end-meeting-model-chip">Pro <span class="end-meeting-model-desc" data-i18n="end_meeting.model_pro_desc">High quality</span></span>
+            </label>
+          </div>
+        </div>
+        <div class="minutes-gen-actions">
+          <button class="btn" id="btnMinutesSkip" data-i18n="minutes.skip">Skip</button>
+          <button class="btn btn-primary" id="btnMinutesGenerate" data-i18n="minutes.generate">Generate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- End Meeting Modal -->
   <div class="modal-overlay" id="endMeetingModal" hidden>
     <div class="modal modal-large">
@@ -650,34 +728,11 @@
           <div class="end-meeting-tags" id="endMeetingTags"></div>
           <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
         </div>
-        <!-- Model Selection -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.model">AI Model</label>
-          <div class="end-meeting-model-select">
-            <label class="end-meeting-model-option">
-              <input type="radio" name="endMeetingModel" value="gemini-2.5-flash" checked>
-              <span class="end-meeting-model-chip">Flash <span class="end-meeting-model-desc" data-i18n="end_meeting.model_flash_desc">Fast</span></span>
-            </label>
-            <label class="end-meeting-model-option">
-              <input type="radio" name="endMeetingModel" value="gemini-2.5-pro">
-              <span class="end-meeting-model-chip">Pro <span class="end-meeting-model-desc" data-i18n="end_meeting.model_pro_desc">High quality</span></span>
-            </label>
-          </div>
-        </div>
-        <!-- Export -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.export">Export</label>
-          <div class="end-meeting-export-grid" id="endMeetingExportGrid">
-            <button class="btn btn-sm export-fmt-btn" data-format="md">MD</button>
-            <button class="btn btn-sm export-fmt-btn" data-format="pdf">PDF</button>
-            <button class="btn btn-sm export-fmt-btn" data-format="docx">Word</button>
-            <button class="btn btn-sm export-fmt-btn" data-format="clipboard" data-i18n="export.clipboard">Copy</button>
-          </div>
-        </div>
         <!-- Actions -->
         <div class="end-meeting-actions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save_generate">Save &amp; Generate Minutes</button>
+          <button class="btn" id="btnEndMeetingExport" disabled data-i18n="end_meeting.export_minutes">Export Minutes</button>
+          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
       </div>
     </div>
@@ -861,6 +916,7 @@
               </div>
               <input type="text" class="settings-input" id="prepGroupNameInput" data-i18n-placeholder="prep.group_name_hint" placeholder="Group name...">
               <div class="prep-group-member-list" id="prepGroupMemberList"></div>
+              <button class="btn btn-sm btn-link" id="btnAddContactFromGroup" style="margin-top:4px;font-size:12px;" data-i18n="settings.add_contacts_from_group">Add Contacts</button>
               <div class="prep-group-manage-actions">
                 <button class="btn btn-sm btn-primary" id="btnSaveGroup" data-i18n="prep.save_group">Save</button>
                 <button class="btn btn-sm btn-danger" id="btnDeleteGroup" hidden data-i18n="prep.delete_group">Delete</button>
