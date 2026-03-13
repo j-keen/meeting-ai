@@ -1,6 +1,6 @@
 // chat.js - AI Chat module with Gemini function calling + model selection
 
-import { state, emit } from './app.js';
+import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 

@@ -111,31 +111,10 @@ export function saveSettings(settings) {
   return saveAll(data);
 }
 
-// API key helpers
-export function saveApiKey(name, value) {
-  const data = loadAll();
-  if (!data.settings.keys) data.settings.keys = {};
-  data.settings.keys[name] = btoa(value);
-  return saveAll(data);
-}
-
-export function getApiKey(name) {
-  const data = loadAll();
-  const encoded = data.settings.keys?.[name];
-  if (!encoded) return '';
-  try { return atob(encoded); } catch { return ''; }
-}
-
 // Contacts CRUD
 export function loadContacts() {
   const data = loadAll();
   return data.contacts || [];
-}
-
-export function saveContacts(contacts) {
-  const data = loadAll();
-  data.contacts = contacts;
-  return saveAll(data);
 }
 
 export function addContact(contact) {
@@ -172,12 +151,6 @@ export function loadLocations() {
   return data.locations || [];
 }
 
-export function saveLocations(locations) {
-  const data = loadAll();
-  data.locations = locations;
-  return saveAll(data);
-}
-
 export function addLocation(name) {
   const data = loadAll();
   if (!data.locations) data.locations = [];
@@ -202,12 +175,6 @@ const DEFAULT_CATEGORIES = ['정기회의', '브레인스토밍', '고객미팅'
 export function loadCategories() {
   const data = loadAll();
   return data.categories || [...DEFAULT_CATEGORIES];
-}
-
-export function saveCategories(categories) {
-  const data = loadAll();
-  data.categories = categories;
-  return saveAll(data);
 }
 
 export function addCategory(name) {
@@ -273,12 +240,6 @@ export function loadGroups() {
   return data.contactGroups || [];
 }
 
-export function saveGroups(groups) {
-  const data = loadAll();
-  data.contactGroups = groups;
-  return saveAll(data);
-}
-
 export function addGroup(name) {
   const data = loadAll();
   if (!data.contactGroups) data.contactGroups = [];
@@ -314,12 +275,6 @@ export function deleteGroup(id) {
 export function loadCorrectionDict() {
   const data = loadAll();
   return data.correctionDict || [];
-}
-
-export function saveCorrectionDict(entries) {
-  const data = loadAll();
-  data.correctionDict = entries;
-  return saveAll(data);
 }
 
 export function addCorrectionEntry(original, corrected) {

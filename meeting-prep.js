@@ -1,6 +1,6 @@
 // meeting-prep.js - Meeting preparation wizard (5-step)
 
-import { emit } from './app.js';
+import { emit } from './event-bus.js';
 import {
   loadContacts, addContact, updateContact, saveMeetingPrepPreset,
   savePreparedMeeting, listMeetings, getMeeting,
@@ -9,6 +9,7 @@ import {
 import { callGemini } from './gemini-api.js';
 import { t } from './i18n.js';
 import { showToast } from './ui.js';
+import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1027,9 +1028,3 @@ export async function ocrBusinessCard(base64) {
   }
 }
 
-// ===== Helpers =====
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}

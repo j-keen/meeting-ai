@@ -1,6 +1,6 @@
 // settings.js - Settings panel management (manual save)
 
-import { state, emit, on } from './app.js';
+import { state, emit, on } from './event-bus.js';
 import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
