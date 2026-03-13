@@ -192,6 +192,7 @@
           <h3 data-i18n="settings.language">Language</h3>
           <label class="settings-label">
               <span data-i18n="settings.ui_language">UI Language</span>
+              <small class="settings-hint" data-i18n="settings.ui_language_hint">Language shown in menus and buttons</small>
               <select class="settings-select" id="selectUiLanguage">
                 <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
                 <option value="en" data-i18n="settings.ui_lang_en">English</option>
@@ -201,8 +202,10 @@
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.stt">STT Settings</h3>
+          <p class="settings-hint" data-i18n="settings.stt_hint">Converts your speech to text</p>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
+            <small class="settings-hint" data-i18n="settings.stt_language_hint">Language spoken in the meeting</small>
             <select class="settings-select" id="selectLanguage">
               <option value="ko" data-i18n="settings.lang_ko">Korean</option>
               <option value="en" data-i18n="settings.lang_en">English</option>
@@ -220,6 +223,7 @@
           <div class="settings-row-2col">
             <label class="settings-label">
               <span data-i18n="settings.ai_language">AI Analysis Language</span>
+              <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results in</small>
               <select class="settings-select" id="selectAiLanguage">
                 <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
                 <option value="en" data-i18n="settings.ai_lang_en">English</option>
@@ -231,6 +235,7 @@
 
         <section class="settings-section">
           <h3 data-i18n="settings.analysis_prompt">Analysis Prompt</h3>
+          <p class="settings-hint" data-i18n="settings.analysis_prompt_hint">Instructions sent to AI for analysis</p>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
             <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Prompt Preset</label>
             <select class="settings-select" id="selectPromptPreset" style="flex:1;">
@@ -251,11 +256,13 @@
       <div class="settings-tab-content" data-tab="chat">
         <section class="settings-section">
           <h3 data-i18n="settings.chat_prompt">Chat System Prompt</h3>
+          <p class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</p>
           <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
           <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.chat_presets">Chat Preset Questions</h3>
+          <p class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</p>
           <div class="chat-presets-list" id="chatPresetsList"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
@@ -269,6 +276,7 @@
       <div class="settings-tab-content" data-tab="data">
         <section class="settings-section">
           <h3 data-i18n="settings.contacts_title">Contacts</h3>
+          <p class="settings-hint" data-i18n="settings.contacts_hint">People available as meeting participants</p>
           <div class="data-list" id="dataParticipantsList"></div>
           <div class="data-add-row">
             <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
@@ -297,6 +305,7 @@
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.locations">Locations</h3>
+          <p class="settings-hint" data-i18n="settings.locations_hint">Places available for meeting location</p>
           <div class="data-list" id="dataLocationsList"></div>
           <div class="data-add-row">
             <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
@@ -305,6 +314,7 @@
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.categories">Categories</h3>
+          <p class="settings-hint" data-i18n="settings.categories_hint">Tags used to classify meetings</p>
           <div class="data-list" id="dataCategoriesList"></div>
           <div class="data-add-row">
             <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
@@ -313,6 +323,7 @@
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
+          <p class="settings-hint" data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</p>
           <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
             <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
@@ -371,7 +382,6 @@
 
   <!-- Context Popup -->
   <div class="context-popup" id="contextPopup" hidden>
-    <div class="context-engine-info" id="contextEngineInfo"></div>
     <button class="context-btn" data-action="editText" data-i18n="context.edit_text">Edit Text</button>
     <button class="context-btn" data-action="bookmark" data-i18n="context.bookmark">Toggle Bookmark</button>
     <button class="context-btn" data-action="delete" data-i18n="context.delete">Delete</button>
@@ -714,15 +724,102 @@
           </div>
         </div>
 
-        <!-- Step 3: Participants -->
+        <!-- Step 3: Participants (redesigned) -->
         <div class="prep-step-panel" data-step="3" id="prepStep3">
           <div class="prep-section">
             <label class="prep-section-label" data-i18n="prep.step_attendees">Who's attending?</label>
-            <div class="prep-participant-input-wrap">
-              <input type="text" class="settings-input" id="prepParticipantSearch" data-i18n-placeholder="prep.participant_hint" placeholder="이름/직함 입력 후 스페이스 (예: 홍길동/부장)">
-              <div class="prep-autocomplete-dropdown" id="prepAutocompleteDropdown" hidden></div>
-            </div>
+
+            <!-- Selected badges -->
             <div class="prep-selected-badges" id="prepSelectedBadges"></div>
+
+            <!-- Recent attendees recommendation -->
+            <div class="prep-recent-attendees" id="prepRecentAttendees" hidden>
+              <div class="prep-subsection-label" data-i18n="prep.recent_attendees">Recent attendees</div>
+              <div class="prep-recent-list" id="prepRecentList"></div>
+            </div>
+
+            <!-- Group filter tabs -->
+            <div class="prep-group-tabs" id="prepGroupTabs">
+              <button class="prep-group-tab active" data-group="__all__" data-i18n="prep.group_all">All</button>
+              <!-- dynamic group tabs inserted here -->
+              <button class="prep-group-tab prep-group-add-btn" id="btnAddGroup" title="Add group">+</button>
+            </div>
+
+            <!-- Search filter -->
+            <div class="prep-contact-search-wrap">
+              <input type="search" class="settings-input prep-contact-search" id="prepContactSearch" data-i18n-placeholder="prep.contact_search" placeholder="Search contacts...">
+              <button class="prep-group-select-all-btn" id="btnGroupSelectAll" data-i18n="prep.group_select_all" title="Select all in group">Select All</button>
+            </div>
+
+            <!-- Contact list with checkboxes -->
+            <div class="prep-contact-list-v2" id="prepContactListV2">
+              <!-- dynamically populated -->
+            </div>
+
+            <!-- Add button -->
+            <div class="prep-add-actions">
+              <button class="btn btn-sm btn-outline" id="btnAddAttendee" data-i18n="prep.add_attendee">+ Add</button>
+              <button class="btn btn-sm btn-outline" id="btnOcrAttendee" data-i18n="prep.ocr_attendee">📷 Photo OCR</button>
+            </div>
+
+            <!-- Inline add panel (hidden by default) -->
+            <div class="prep-add-panel" id="prepAddPanel" hidden>
+              <div class="prep-add-panel-header">
+                <span class="prep-subsection-label" data-i18n="prep.add_new_contact">Add new contact</span>
+                <button class="prep-add-panel-close" id="btnCloseAddPanel">&times;</button>
+              </div>
+              <input type="text" class="settings-input" id="prepNewContactInput" data-i18n-placeholder="prep.new_contact_hint" placeholder="이름/직함 입력 후 엔터 (예: 홍길동/부장)">
+              <div class="prep-add-group-assign">
+                <select class="settings-select" id="prepNewContactGroup">
+                  <option value="" data-i18n="prep.no_group">No group</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- OCR panel (hidden by default) -->
+            <div class="prep-ocr-panel" id="prepOcrPanel" hidden>
+              <div class="prep-add-panel-header">
+                <span class="prep-subsection-label" data-i18n="prep.ocr_title">Business card OCR</span>
+                <button class="prep-ocr-panel-close" id="btnCloseOcrPanel">&times;</button>
+              </div>
+              <div class="prep-ocr-buttons">
+                <button class="btn btn-sm btn-outline" id="btnOcrUpload">📁 <span data-i18n="prep.photo_upload">Upload</span></button>
+                <button class="btn btn-sm btn-outline" id="btnOcrCamera">📷 <span data-i18n="prep.photo_camera">Camera</span></button>
+                <input type="file" id="prepOcrFileInput" accept="image/*" hidden>
+              </div>
+              <!-- Camera preview -->
+              <div class="prep-ocr-camera-wrap" id="prepOcrCameraWrap" hidden>
+                <video id="prepOcrVideo" autoplay playsinline></video>
+                <button class="btn btn-sm btn-primary" id="btnOcrCapture" data-i18n="prep.ocr_capture">Capture</button>
+              </div>
+              <canvas id="prepOcrCanvas" hidden></canvas>
+              <!-- OCR result preview -->
+              <div class="prep-ocr-result" id="prepOcrResult" hidden>
+                <div class="prep-ocr-result-title" data-i18n="prep.ocr_result">OCR Result — Edit before adding</div>
+                <div class="prep-ocr-result-fields" id="prepOcrResultFields"></div>
+                <div class="prep-ocr-result-actions">
+                  <button class="btn btn-sm btn-primary" id="btnOcrConfirm" data-i18n="prep.ocr_confirm">Add contact</button>
+                  <button class="btn btn-sm btn-outline" id="btnOcrRetry" data-i18n="prep.ocr_retry">Retry</button>
+                </div>
+              </div>
+              <div class="prep-ocr-loading" id="prepOcrLoading" hidden>
+                <span data-i18n="prep.scanning">Scanning...</span>
+              </div>
+            </div>
+
+            <!-- Group management modal (inline) -->
+            <div class="prep-group-manage" id="prepGroupManage" hidden>
+              <div class="prep-add-panel-header">
+                <span class="prep-subsection-label" data-i18n="prep.manage_group">Manage group</span>
+                <button class="prep-group-manage-close" id="btnCloseGroupManage">&times;</button>
+              </div>
+              <input type="text" class="settings-input" id="prepGroupNameInput" data-i18n-placeholder="prep.group_name_hint" placeholder="Group name...">
+              <div class="prep-group-member-list" id="prepGroupMemberList"></div>
+              <div class="prep-group-manage-actions">
+                <button class="btn btn-sm btn-primary" id="btnSaveGroup" data-i18n="prep.save_group">Save</button>
+                <button class="btn btn-sm btn-danger" id="btnDeleteGroup" hidden data-i18n="prep.delete_group">Delete</button>
+              </div>
+            </div>
           </div>
         </div>
 
