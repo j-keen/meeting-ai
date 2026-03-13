@@ -145,15 +145,6 @@ export function createSTT() {
       if (isRunning) return;
       isRunning = true;
 
-      // Check mic permission upfront
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop());
-      } catch {
-        isRunning = false;
-        throw new Error(t('stt.mic_permission_denied'));
-      }
-
       const safeFinal = (text) => {
         if (text && text.trim()) onFinal(text);
       };
@@ -168,8 +159,5 @@ export function createSTT() {
       isRunning = false;
     },
 
-    get engineName() {
-      return currentEngine?.name || 'none';
-    }
   };
 }

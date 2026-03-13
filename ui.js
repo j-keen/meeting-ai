@@ -263,12 +263,6 @@ function showContextPopup(e, lineId) {
   popup.style.top = e.clientY + 'px';
   popup.dataset.lineId = lineId;
 
-  // Show engine info
-  const engineInfo = document.getElementById('contextEngineInfo');
-  if (engineInfo) {
-    engineInfo.textContent = `${t('context.engine')}: Web Speech`;
-  }
-
   const close = (ev) => {
     if (!popup.contains(ev.target)) {
       popup.hidden = true;

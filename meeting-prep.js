@@ -2,8 +2,9 @@
 
 import { emit } from './app.js';
 import {
-  loadContacts, addContact, saveMeetingPrepPreset,
+  loadContacts, addContact, updateContact, saveMeetingPrepPreset,
   savePreparedMeeting, listMeetings, getMeeting,
+  loadGroups, addGroup, updateGroup, deleteGroup,
 } from './storage.js';
 import { callGemini } from './gemini-api.js';
 import { t } from './i18n.js';
@@ -57,6 +58,10 @@ let formConfig = {
 };
 
 let contacts = [];
+let groups = [];
+let activeGroupFilter = '__all__';
+let editingGroupId = null;
+let cameraStream = null;
 
 // ===== Public API =====
 export function initMeetingPrepForm() {
@@ -75,6 +80,7 @@ export function openMeetingPrepForm(presetConfig) {
   };
 
   contacts = loadContacts();
+  groups = loadGroups();
 
   if (presetConfig) {
     fillFormFromConfig(presetConfig);
@@ -130,7 +136,14 @@ function goToStep(step) {
   nextBtn.hidden = step === TOTAL_STEPS;
 
   // Load step-specific data
-  if (step === 4) {
+  if (step === 3) {
+    contacts = loadContacts();
+    groups = loadGroups();
+    renderGroupTabs();
+    renderContactList();
+    renderSelectedBadges();
+    renderRecentAttendees();
+  } else if (step === 4) {
     loadReferenceStep();
   }
 }
@@ -148,10 +161,15 @@ function resetFormUI() {
   // Agenda fields
   fillAgendaFields(formConfig.agenda);
 
-  // Clear participant input & badges
-  $('#prepParticipantSearch').value = '';
+  // Clear participant UI
   $('#prepSelectedBadges').innerHTML = '';
-  $('#prepAutocompleteDropdown').hidden = true;
+  $('#prepContactSearch').value = '';
+  $('#prepAddPanel').hidden = true;
+  $('#prepOcrPanel').hidden = true;
+  $('#prepGroupManage').hidden = true;
+  activeGroupFilter = '__all__';
+  editingGroupId = null;
+  stopCamera();
 
   // Clear file chips
   $('#prepFileChips').innerHTML = '';
@@ -161,8 +179,11 @@ function resetFormUI() {
   $('#prepReferenceChip').hidden = true;
   $('#prepAgendaSuggestions').hidden = true;
 
-  // Render attendee badges
+  // Render step 3
+  renderGroupTabs();
+  renderContactList();
   renderSelectedBadges();
+  renderRecentAttendees();
   renderFileChips();
 }
 
@@ -218,53 +239,85 @@ function bindFormEvents() {
     setTimeout(() => goToStep(2), 250);
   });
 
-  // Step 3: Participant input — spacebar to create badge
-  const participantInput = $('#prepParticipantSearch');
-  participantInput.addEventListener('keydown', (e) => {
-    if (e.key === ' ') {
-      const text = e.target.value.trim();
-      if (!text) return; // allow normal space if empty
-      e.preventDefault();
-      addAttendeeFromText(text);
-      e.target.value = '';
-      hideAutocomplete();
-    } else if (e.key === 'Enter') {
+  // Step 3: Contact search filter
+  $('#prepContactSearch').addEventListener('input', () => renderContactList());
+
+  // Step 3: Group tabs
+  $('#prepGroupTabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.prep-group-tab');
+    if (!tab || tab.id === 'btnAddGroup') return;
+    activeGroupFilter = tab.dataset.group;
+    renderGroupTabs();
+    renderContactList();
+  });
+  // Long-press / right-click on group tab to manage
+  $('#prepGroupTabs').addEventListener('contextmenu', (e) => {
+    const tab = e.target.closest('.prep-group-tab');
+    if (!tab || tab.dataset.group === '__all__' || tab.id === 'btnAddGroup') return;
+    e.preventDefault();
+    openGroupManage(tab.dataset.group);
+  });
+
+  // Add group button
+  $('#btnAddGroup').addEventListener('click', () => openGroupManage(null));
+
+  // Group select all
+  $('#btnGroupSelectAll').addEventListener('click', selectAllInGroup);
+
+  // Add attendee button
+  $('#btnAddAttendee').addEventListener('click', () => {
+    $('#prepAddPanel').hidden = false;
+    $('#prepOcrPanel').hidden = true;
+    $('#prepGroupManage').hidden = true;
+    updateGroupSelect();
+    $('#prepNewContactInput').focus();
+  });
+  $('#btnCloseAddPanel').addEventListener('click', () => { $('#prepAddPanel').hidden = true; });
+
+  // New contact input — Enter to add
+  $('#prepNewContactInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
       const text = e.target.value.trim();
       if (!text) return;
-      // If autocomplete is showing and has a highlighted item, select it
-      const highlighted = $('#prepAutocompleteDropdown .prep-autocomplete-item.highlighted');
-      if (highlighted) {
-        highlighted.click();
-      } else {
-        addAttendeeFromText(text);
-        e.target.value = '';
-        hideAutocomplete();
-      }
-    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      const dropdown = $('#prepAutocompleteDropdown');
-      if (dropdown.hidden) return;
-      e.preventDefault();
-      navigateAutocomplete(e.key === 'ArrowDown' ? 1 : -1);
-    } else if (e.key === 'Escape') {
-      hideAutocomplete();
+      addAttendeeFromText(text);
+      e.target.value = '';
     }
   });
 
-  // Autocomplete on input
-  participantInput.addEventListener('input', (e) => {
-    const query = e.target.value.trim();
-    if (query.length > 0) {
-      showAutocomplete(query);
-    } else {
-      hideAutocomplete();
-    }
+  // OCR button
+  $('#btnOcrAttendee').addEventListener('click', () => {
+    $('#prepOcrPanel').hidden = false;
+    $('#prepAddPanel').hidden = true;
+    $('#prepGroupManage').hidden = true;
+    $('#prepOcrResult').hidden = true;
+    $('#prepOcrCameraWrap').hidden = true;
+    $('#prepOcrLoading').hidden = true;
+  });
+  $('#btnCloseOcrPanel').addEventListener('click', () => {
+    $('#prepOcrPanel').hidden = true;
+    stopCamera();
   });
 
-  // Hide autocomplete on blur (with delay for click)
-  participantInput.addEventListener('blur', () => {
-    setTimeout(() => hideAutocomplete(), 200);
+  // OCR upload
+  $('#btnOcrUpload').addEventListener('click', () => $('#prepOcrFileInput').click());
+  $('#prepOcrFileInput').addEventListener('change', (e) => {
+    if (e.target.files[0]) processOcrImage(e.target.files[0]);
+    e.target.value = '';
   });
+
+  // OCR camera
+  $('#btnOcrCamera').addEventListener('click', startCamera);
+  $('#btnOcrCapture').addEventListener('click', capturePhoto);
+  $('#btnOcrConfirm').addEventListener('click', confirmOcrResult);
+  $('#btnOcrRetry').addEventListener('click', () => {
+    $('#prepOcrResult').hidden = true;
+  });
+
+  // Group management
+  $('#btnCloseGroupManage').addEventListener('click', () => { $('#prepGroupManage').hidden = true; });
+  $('#btnSaveGroup').addEventListener('click', saveGroupFromPanel);
+  $('#btnDeleteGroup').addEventListener('click', deleteGroupFromPanel);
 
   // Step 4: Reference meeting filters
   $('#refSearchInput').addEventListener('input', renderRefMeetingList);
@@ -324,9 +377,8 @@ function bindFormEvents() {
   });
 }
 
-// ===== Participant Input =====
+// ===== Participant Input (v2) =====
 function addAttendeeFromText(text) {
-  // Parse "이름/직함" format
   let name, title;
   if (text.includes('/')) {
     const parts = text.split('/');
@@ -337,67 +389,108 @@ function addAttendeeFromText(text) {
     title = '';
   }
   if (!name) return;
-
-  // Check if already added
   if (formConfig.attendees.find(a => a.name === name)) return;
 
-  // Check if matches existing contact
   const existing = contacts.find(c => c.name === name);
+  let contact;
   if (existing) {
-    formConfig.attendees.push({ id: existing.id, name: existing.name, title: title || existing.title || '' });
+    contact = existing;
+    if (title && !existing.title) updateContact(existing.id, { title });
   } else {
-    // Create new contact
-    const contact = addContact({ name, title, company: '' });
+    contact = addContact({ name, title, company: '' });
     contacts.push(contact);
-    formConfig.attendees.push({ id: contact.id, name: contact.name, title });
   }
 
+  // Assign to group if selected
+  const groupSelect = $('#prepNewContactGroup');
+  if (groupSelect && groupSelect.value) {
+    const grp = groups.find(g => g.id === groupSelect.value);
+    if (grp && !grp.contactIds.includes(contact.id)) {
+      grp.contactIds.push(contact.id);
+      updateGroup(grp.id, { contactIds: grp.contactIds });
+    }
+  }
+
+  formConfig.attendees.push({ id: contact.id, name: contact.name, title: title || contact.title || '' });
   renderSelectedBadges();
+  renderContactList();
+  showToast(t('prep.contact_added'), 'success');
 }
 
-function showAutocomplete(query) {
-  const dropdown = $('#prepAutocompleteDropdown');
-  const filtered = contacts.filter(c =>
-    matchChosung(c.name, query) && !formConfig.attendees.find(a => a.id === c.id)
-  );
-
-  if (filtered.length === 0) {
-    dropdown.hidden = true;
-    return;
+function toggleAttendee(contactId) {
+  const idx = formConfig.attendees.findIndex(a => a.id === contactId);
+  if (idx >= 0) {
+    formConfig.attendees.splice(idx, 1);
+  } else {
+    const c = contacts.find(c => c.id === contactId);
+    if (c) formConfig.attendees.push({ id: c.id, name: c.name, title: c.title || '' });
   }
+  renderSelectedBadges();
+  renderContactList();
+}
 
-  dropdown.innerHTML = '';
-  filtered.slice(0, 8).forEach(c => {
-    const item = document.createElement('div');
-    item.className = 'prep-autocomplete-item';
-    const label = c.title ? `${escapeHtml(c.name)} · ${escapeHtml(c.title)}` : escapeHtml(c.name);
-    const sub = c.company ? `<span class="prep-autocomplete-sub">${escapeHtml(c.company)}</span>` : '';
-    item.innerHTML = `<span>${label}</span>${sub}`;
-    item.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // prevent blur
-      formConfig.attendees.push({ id: c.id, name: c.name, title: c.title || '' });
-      $('#prepParticipantSearch').value = '';
-      hideAutocomplete();
-      renderSelectedBadges();
+function selectAllInGroup() {
+  const filtered = getFilteredContacts();
+  let allSelected = filtered.every(c => formConfig.attendees.find(a => a.id === c.id));
+  if (allSelected) {
+    // Deselect all in this group
+    const ids = new Set(filtered.map(c => c.id));
+    formConfig.attendees = formConfig.attendees.filter(a => !ids.has(a.id));
+  } else {
+    filtered.forEach(c => {
+      if (!formConfig.attendees.find(a => a.id === c.id)) {
+        formConfig.attendees.push({ id: c.id, name: c.name, title: c.title || '' });
+      }
     });
-    dropdown.appendChild(item);
+  }
+  renderSelectedBadges();
+  renderContactList();
+}
+
+function getFilteredContacts() {
+  const query = ($('#prepContactSearch')?.value || '').trim();
+  let list = contacts;
+  if (activeGroupFilter !== '__all__') {
+    const grp = groups.find(g => g.id === activeGroupFilter);
+    if (grp) {
+      const idSet = new Set(grp.contactIds);
+      list = list.filter(c => idSet.has(c.id));
+    }
+  }
+  if (query) {
+    list = list.filter(c => matchChosung(c.name, query));
+  }
+  return list;
+}
+
+function renderContactList() {
+  const container = $('#prepContactListV2');
+  container.setAttribute('data-empty', t('prep.no_contacts'));
+  const filtered = getFilteredContacts();
+  container.innerHTML = '';
+  filtered.forEach(c => {
+    const isChecked = !!formConfig.attendees.find(a => a.id === c.id);
+    const item = document.createElement('div');
+    item.className = 'prep-contact-item' + (isChecked ? ' checked' : '');
+    const contactGroups = groups.filter(g => g.contactIds.includes(c.id));
+    const groupDots = contactGroups.map(g =>
+      `<span class="prep-contact-group-dot">${escapeHtml(g.name)}</span>`
+    ).join('');
+    item.innerHTML = `
+      <input type="checkbox" ${isChecked ? 'checked' : ''}>
+      <div class="prep-contact-info">
+        <span class="prep-contact-name">${escapeHtml(c.name)}</span>
+        ${c.title ? `<span class="prep-contact-title">${escapeHtml(c.title)}</span>` : ''}
+      </div>
+      <div class="prep-contact-groups">${groupDots}</div>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      toggleAttendee(c.id);
+    });
+    item.querySelector('input').addEventListener('change', () => toggleAttendee(c.id));
+    container.appendChild(item);
   });
-  dropdown.hidden = false;
-}
-
-function hideAutocomplete() {
-  $('#prepAutocompleteDropdown').hidden = true;
-}
-
-function navigateAutocomplete(direction) {
-  const items = [...document.querySelectorAll('.prep-autocomplete-item')];
-  if (!items.length) return;
-  const current = items.findIndex(i => i.classList.contains('highlighted'));
-  items.forEach(i => i.classList.remove('highlighted'));
-  let next = current + direction;
-  if (next < 0) next = items.length - 1;
-  if (next >= items.length) next = 0;
-  items[next].classList.add('highlighted');
 }
 
 function renderSelectedBadges() {
@@ -412,8 +505,281 @@ function renderSelectedBadges() {
       e.stopPropagation();
       formConfig.attendees = formConfig.attendees.filter(x => x.id !== a.id);
       renderSelectedBadges();
+      renderContactList();
     });
     area.appendChild(badge);
+  });
+}
+
+function renderGroupTabs() {
+  const container = $('#prepGroupTabs');
+  const addBtn = $('#btnAddGroup');
+  // Remove old dynamic tabs
+  container.querySelectorAll('.prep-group-tab:not([data-group="__all__"]):not(#btnAddGroup)').forEach(el => el.remove());
+  // Set active state on "all" tab
+  container.querySelector('[data-group="__all__"]').classList.toggle('active', activeGroupFilter === '__all__');
+  // Insert group tabs before the add button
+  groups.forEach(g => {
+    const tab = document.createElement('button');
+    tab.className = 'prep-group-tab' + (activeGroupFilter === g.id ? ' active' : '');
+    tab.dataset.group = g.id;
+    tab.textContent = g.name;
+    container.insertBefore(tab, addBtn);
+  });
+}
+
+function renderRecentAttendees() {
+  const meetings = listMeetings().slice(0, 5);
+  const recentIds = new Map(); // id -> count
+  meetings.forEach(m => {
+    const attendees = m.prepConfig?.attendees || m.attendees || [];
+    attendees.forEach(a => {
+      if (a.id) recentIds.set(a.id, (recentIds.get(a.id) || 0) + 1);
+    });
+  });
+
+  const recentContacts = [...recentIds.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([id]) => contacts.find(c => c.id === id))
+    .filter(Boolean);
+
+  const container = $('#prepRecentAttendees');
+  const list = $('#prepRecentList');
+
+  if (recentContacts.length === 0) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  list.innerHTML = '';
+  recentContacts.forEach(c => {
+    const chip = document.createElement('button');
+    chip.className = 'prep-recent-chip';
+    chip.textContent = c.name;
+    if (formConfig.attendees.find(a => a.id === c.id)) {
+      chip.style.opacity = '0.4';
+      chip.style.pointerEvents = 'none';
+    }
+    chip.addEventListener('click', () => {
+      if (!formConfig.attendees.find(a => a.id === c.id)) {
+        formConfig.attendees.push({ id: c.id, name: c.name, title: c.title || '' });
+        renderSelectedBadges();
+        renderContactList();
+        renderRecentAttendees();
+      }
+    });
+    list.appendChild(chip);
+  });
+}
+
+function updateGroupSelect() {
+  const select = $('#prepNewContactGroup');
+  select.innerHTML = `<option value="">${t('prep.no_group')}</option>`;
+  groups.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id;
+    opt.textContent = g.name;
+    select.appendChild(opt);
+  });
+}
+
+// ===== Group Management =====
+function openGroupManage(groupId) {
+  editingGroupId = groupId;
+  const panel = $('#prepGroupManage');
+  panel.hidden = false;
+  $('#prepAddPanel').hidden = true;
+  $('#prepOcrPanel').hidden = true;
+
+  const nameInput = $('#prepGroupNameInput');
+  const deleteBtn = $('#btnDeleteGroup');
+  const memberList = $('#prepGroupMemberList');
+
+  if (groupId) {
+    const grp = groups.find(g => g.id === groupId);
+    nameInput.value = grp ? grp.name : '';
+    deleteBtn.hidden = false;
+  } else {
+    nameInput.value = '';
+    deleteBtn.hidden = true;
+  }
+
+  // Render contact checkboxes for group membership
+  memberList.innerHTML = '';
+  contacts.forEach(c => {
+    const grp = groupId ? groups.find(g => g.id === groupId) : null;
+    const isMember = grp ? grp.contactIds.includes(c.id) : false;
+    const item = document.createElement('div');
+    item.className = 'prep-contact-item' + (isMember ? ' checked' : '');
+    item.innerHTML = `
+      <input type="checkbox" data-contact-id="${c.id}" ${isMember ? 'checked' : ''}>
+      <div class="prep-contact-info">
+        <span class="prep-contact-name">${escapeHtml(c.name)}</span>
+        ${c.title ? `<span class="prep-contact-title">${escapeHtml(c.title)}</span>` : ''}
+      </div>
+    `;
+    item.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const cb = item.querySelector('input');
+      cb.checked = !cb.checked;
+      item.classList.toggle('checked', cb.checked);
+    });
+    item.querySelector('input').addEventListener('change', (e) => {
+      item.classList.toggle('checked', e.target.checked);
+    });
+    memberList.appendChild(item);
+  });
+
+  nameInput.focus();
+}
+
+function saveGroupFromPanel() {
+  const name = $('#prepGroupNameInput').value.trim();
+  if (!name) return;
+
+  const memberCheckboxes = $('#prepGroupMemberList').querySelectorAll('input[type="checkbox"]');
+  const contactIds = [...memberCheckboxes].filter(cb => cb.checked).map(cb => cb.dataset.contactId);
+
+  if (editingGroupId) {
+    updateGroup(editingGroupId, { name, contactIds });
+    const idx = groups.findIndex(g => g.id === editingGroupId);
+    if (idx >= 0) groups[idx] = { ...groups[idx], name, contactIds };
+    showToast(t('prep.group_saved'), 'success');
+  } else {
+    const grp = addGroup(name);
+    grp.contactIds = contactIds;
+    updateGroup(grp.id, { contactIds });
+    groups.push(grp);
+    showToast(t('prep.group_created'), 'success');
+  }
+
+  $('#prepGroupManage').hidden = true;
+  editingGroupId = null;
+  renderGroupTabs();
+  renderContactList();
+  updateGroupSelect();
+}
+
+function deleteGroupFromPanel() {
+  if (!editingGroupId) return;
+  deleteGroup(editingGroupId);
+  groups = groups.filter(g => g.id !== editingGroupId);
+  if (activeGroupFilter === editingGroupId) activeGroupFilter = '__all__';
+  editingGroupId = null;
+  $('#prepGroupManage').hidden = true;
+  showToast(t('prep.group_deleted'), 'success');
+  renderGroupTabs();
+  renderContactList();
+  updateGroupSelect();
+}
+
+// ===== OCR =====
+async function processOcrImage(file) {
+  $('#prepOcrLoading').hidden = false;
+  $('#prepOcrResult').hidden = true;
+
+  try {
+    const base64 = await fileToBase64(file);
+    const result = await ocrBusinessCard(base64);
+    showOcrResult(result);
+  } catch (err) {
+    console.error('OCR error:', err);
+    showToast(t('prep.scan_failed'), 'error');
+  } finally {
+    $('#prepOcrLoading').hidden = true;
+  }
+}
+
+function showOcrResult(data) {
+  const fields = $('#prepOcrResultFields');
+  fields.innerHTML = '';
+  const fieldDefs = [
+    { key: 'name', label: 'Name' },
+    { key: 'title', label: 'Title' },
+    { key: 'company', label: 'Company' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+  ];
+  fieldDefs.forEach(f => {
+    fields.innerHTML += `
+      <label>${f.label}</label>
+      <input type="text" data-field="${f.key}" value="${escapeHtml(data[f.key] || '')}">
+    `;
+  });
+  $('#prepOcrResult').hidden = false;
+}
+
+function confirmOcrResult() {
+  const inputs = $('#prepOcrResultFields').querySelectorAll('input');
+  const data = {};
+  inputs.forEach(inp => { data[inp.dataset.field] = inp.value.trim(); });
+
+  if (!data.name) return;
+
+  // Add as contact & attendee
+  const existing = contacts.find(c => c.name === data.name);
+  let contact;
+  if (existing) {
+    updateContact(existing.id, { title: data.title, company: data.company });
+    contact = { ...existing, ...data };
+  } else {
+    contact = addContact({ name: data.name, title: data.title, company: data.company });
+    contacts.push(contact);
+  }
+
+  if (!formConfig.attendees.find(a => a.id === contact.id)) {
+    formConfig.attendees.push({ id: contact.id, name: contact.name, title: data.title || '' });
+  }
+
+  showToast(t('prep.card_saved'), 'success');
+  $('#prepOcrResult').hidden = true;
+  renderSelectedBadges();
+  renderContactList();
+  renderRecentAttendees();
+}
+
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = $('#prepOcrVideo');
+    video.srcObject = cameraStream;
+    $('#prepOcrCameraWrap').hidden = false;
+  } catch {
+    showToast(t('prep.camera_permission'), 'error');
+  }
+}
+
+function capturePhoto() {
+  const video = $('#prepOcrVideo');
+  const canvas = $('#prepOcrCanvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  stopCamera();
+  canvas.toBlob(blob => {
+    if (blob) processOcrImage(blob);
+  }, 'image/jpeg', 0.85);
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(tr => tr.stop());
+    cameraStream = null;
+  }
+  const wrap = $('#prepOcrCameraWrap');
+  if (wrap) wrap.hidden = true;
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      resolve(result.split(',')[1]); // strip data URL prefix
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -433,6 +799,7 @@ function collectFormConfig() {
 
 // ===== Close Form =====
 function closeForm() {
+  stopCamera();
   $('#meetingPrepModal').hidden = true;
 }
 

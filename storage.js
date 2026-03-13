@@ -267,6 +267,49 @@ export function deletePreparedMeeting() {
   return saveAll(data);
 }
 
+// Contact Groups CRUD
+export function loadGroups() {
+  const data = loadAll();
+  return data.contactGroups || [];
+}
+
+export function saveGroups(groups) {
+  const data = loadAll();
+  data.contactGroups = groups;
+  return saveAll(data);
+}
+
+export function addGroup(name) {
+  const data = loadAll();
+  if (!data.contactGroups) data.contactGroups = [];
+  const group = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    name,
+    contactIds: [],
+    createdAt: Date.now(),
+  };
+  data.contactGroups.push(group);
+  saveAll(data);
+  return group;
+}
+
+export function updateGroup(id, updates) {
+  const data = loadAll();
+  if (!data.contactGroups) return null;
+  const idx = data.contactGroups.findIndex(g => g.id === id);
+  if (idx < 0) return null;
+  data.contactGroups[idx] = { ...data.contactGroups[idx], ...updates };
+  saveAll(data);
+  return data.contactGroups[idx];
+}
+
+export function deleteGroup(id) {
+  const data = loadAll();
+  if (!data.contactGroups) return { success: false };
+  data.contactGroups = data.contactGroups.filter(g => g.id !== id);
+  return saveAll(data);
+}
+
 // Correction Dictionary (global, cross-meeting)
 export function loadCorrectionDict() {
   const data = loadAll();
