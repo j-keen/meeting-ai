@@ -150,7 +150,7 @@ const translations = {
 
     // History modal
     'history.title': 'Meeting History',
-    'history.search': 'Search meetings...',
+    'history.search': 'Title, location, transcript, summary, chat, tags...',
     'history.view': 'View',
     'history.export': 'Export',
     'history.delete': 'Delete',
@@ -672,7 +672,7 @@ const translations = {
 
     // History modal
     'history.title': '회의 기록',
-    'history.search': '회의 검색...',
+    'history.search': '제목, 장소, 녹취록, 요약, 채팅, 태그 검색...',
     'history.view': '보기',
     'history.export': '내보내기',
     'history.delete': '삭제',
