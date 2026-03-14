@@ -66,6 +66,13 @@ function updateTimer() {
 
 export function getElapsedTimeStr() {
   if (!state.meetingStartTime) return 'unknown';
+  // In loaded mode, use last transcript timestamp instead of current time
+  if (state.loadedMeetingId && state.transcript.length > 0) {
+    const lastTs = state.transcript[state.transcript.length - 1].timestamp;
+    const diff = lastTs - state.meetingStartTime;
+    const mins = Math.floor(diff / 60000);
+    return t('minutes', { n: mins });
+  }
   const diff = Date.now() - state.meetingStartTime;
   const mins = Math.floor(diff / 60000);
   return t('minutes', { n: mins });
@@ -73,6 +80,7 @@ export function getElapsedTimeStr() {
 
 export async function startRecording() {
   if (state.isRecording) return;
+  if (state.loadedMeetingId) return; // Cannot record while a past meeting is loaded
 
   stt = createSTT();
 
@@ -794,6 +802,12 @@ function restoreEndButton(showEnd = true) {
 export function resetMeeting() {
   state.meetingEnded = false;
   state.meetingStartTime = null;
+  // Clear loaded meeting state
+  state.loadedMeetingId = null;
+  state.loadedMeetingOriginal = null;
+  const banner = document.querySelector('#loadedMeetingBanner');
+  if (banner) banner.hidden = true;
+  document.body.classList.remove('loaded-mode');
   // Reset record button and hide end meeting button
   const recBtn = $('#btnRecord');
   recBtn.classList.remove('recording', 'paused');

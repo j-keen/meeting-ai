@@ -20,7 +20,7 @@ import {
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
-import { initChat } from './chat.js';
+import { initChat, loadChatHistory } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
 import { handleExport, handleExportMeeting, getExportContent } from './export-md.js';
@@ -67,6 +67,10 @@ function init() {
   // Record button
   $('#btnRecord').addEventListener('click', () => emit('recording:toggle'));
   on('recording:toggle', async () => {
+    if (state.loadedMeetingId) {
+      showToast(t('loaded.recording_block'), 'warning');
+      return;
+    }
     if (state.isRecording) stopRecording();
     else await startRecording();
   });
@@ -296,6 +300,112 @@ function init() {
 
   on('meeting:export', ({ id }) => handleExportMeeting(id));
 
+  // ===== Load past meeting into home screen =====
+  on('meeting:load', ({ id }) => {
+    if (state.isRecording) {
+      showToast(t('loaded.recording_block'), 'warning');
+      return;
+    }
+    const meeting = getMeeting(id);
+    if (!meeting) return;
+
+    // Reset current state
+    resetMeeting();
+
+    // Restore all fields from saved meeting
+    state.meetingId = meeting.id;
+    state.meetingTitle = meeting.title || '';
+    state.meetingStartTime = meeting.startTime || meeting.createdAt;
+    state.meetingLocation = meeting.location || '';
+    state.transcript = meeting.transcript || [];
+    state.memos = meeting.memos || [];
+    state.analysisHistory = meeting.analysisHistory || [];
+    state.chatHistory = meeting.chatHistory || [];
+    state.userInsights = meeting.userInsights || [];
+    state.tags = meeting.tags || [];
+    state.starRating = meeting.starRating || 3;
+    state.categories = meeting.categories || [];
+    state.participants = meeting.participants || [];
+    state.analysisContext = meeting.analysisContext || '';
+
+    // Set loaded mode
+    state.loadedMeetingId = id;
+    state.loadedMeetingOriginal = JSON.parse(JSON.stringify(meeting));
+
+    // Render transcript + memos merged by timestamp
+    const merged = [
+      ...state.transcript.map(l => ({ ...l, _type: 'transcript' })),
+      ...state.memos.map(m => ({ ...m, _type: 'memo' })),
+    ].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    merged.forEach(item => {
+      if (item._type === 'memo') addMemoLine(item);
+      else addTranscriptLine(item);
+    });
+
+    // Render latest analysis
+    const lastAnalysis = state.analysisHistory[state.analysisHistory.length - 1];
+    if (lastAnalysis) {
+      state.currentAnalysis = lastAnalysis;
+      renderAnalysis(lastAnalysis);
+    }
+
+    // Load chat history
+    loadChatHistory();
+
+    // Show meeting timer with loaded meeting duration
+    if (state.meetingStartTime && state.transcript.length > 0) {
+      const lastTs = state.transcript[state.transcript.length - 1].timestamp;
+      const diff = lastTs - state.meetingStartTime;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      $('#meetingTimer').textContent =
+        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    // Show title input
+    const titleInput = $('#meetingTitleInput');
+    if (titleInput) {
+      titleInput.hidden = false;
+      titleInput.value = state.meetingTitle;
+    }
+
+    // Show banner
+    const banner = $('#loadedMeetingBanner');
+    $('#loadedBannerTitle').textContent = state.meetingTitle || t('history.untitled');
+    $('#loadedBannerDate').textContent = new Date(state.meetingStartTime).toLocaleDateString();
+    banner.hidden = false;
+    document.body.classList.add('loaded-mode');
+    $('#meetingStatus').textContent = t('history.load');
+
+    // Close history modal
+    $('#historyModal').hidden = true;
+  });
+
+  // Banner close -> save dialog
+  $('#loadedBannerClose').addEventListener('click', () => closeLoadedMeeting());
+
+  // Save modal buttons
+  $('#btnLoadedOverwrite').addEventListener('click', () => {
+    autoSave();
+    showToast(t('loaded.saved'), 'success');
+    $('#loadedSaveModal').hidden = true;
+    resetMeeting();
+  });
+  $('#btnLoadedSaveCopy').addEventListener('click', () => {
+    state.meetingId = generateId(); // new ID = new copy
+    autoSave();
+    showToast(t('loaded.saved_copy'), 'success');
+    $('#loadedSaveModal').hidden = true;
+    resetMeeting();
+  });
+  $('#btnLoadedDiscard').addEventListener('click', () => {
+    showToast(t('loaded.discarded'), 'info');
+    $('#loadedSaveModal').hidden = true;
+    resetMeeting();
+  });
+
   // Meeting tags
   on('meeting:addTag', ({ id, tag }) => {
     const meeting = getMeeting(id);
@@ -359,9 +469,9 @@ function init() {
     await startRecording();
   });
 
-  // beforeunload auto-save
+  // beforeunload auto-save (skip in loaded mode to avoid overwriting)
   window.addEventListener('beforeunload', () => {
-    if (state.meetingId) autoSave();
+    if (state.meetingId && !state.loadedMeetingId) autoSave();
   });
 
   // Storage usage check
@@ -369,6 +479,29 @@ function init() {
   if (usage.ratio > 0.8) {
     showToast(t('toast.storage_usage', { pct: (usage.ratio * 100).toFixed(0) }), 'warning');
   }
+}
+
+// ===== Close Loaded Meeting =====
+function closeLoadedMeeting() {
+  if (!state.loadedMeetingId) return;
+  const orig = state.loadedMeetingOriginal;
+
+  // Detect changes
+  const hasChanges =
+    (state.chatHistory || []).length !== (orig.chatHistory || []).length ||
+    (state.analysisHistory || []).length !== (orig.analysisHistory || []).length ||
+    (state.memos || []).length !== (orig.memos || []).length ||
+    (state.userInsights || []).length !== (orig.userInsights || []).length ||
+    state.meetingTitle !== (orig.title || '');
+
+  if (!hasChanges) {
+    showToast(t('loaded.no_changes'), 'info');
+    resetMeeting();
+    return;
+  }
+
+  // Show save confirmation modal
+  $('#loadedSaveModal').hidden = false;
 }
 
 // ===== Demo Data =====
