@@ -315,11 +315,21 @@ export async function generateFinalMinutes({
     : '\n\n[IMPORTANT] Respond ONLY in English.';
   messageParts.push(langReminder);
 
+  // Mode-specific prompt additions
+  const isProModel = model.includes('pro');
+  const modeInstruction = isProModel
+    ? (lang === 'ko'
+      ? '\n\n[Mode: Pro] 최대한 상세하게 작성하세요. 논의의 맥락과 배경까지 기술하세요. 발언자 간 의견 차이를 포착하세요. 숨은 인사이트와 패턴을 도출하세요. 후속 권장 사항을 추가하세요.'
+      : '\n\n[Mode: Pro] Be as detailed as possible. Describe the context and background of discussions. Capture differences in opinions between speakers. Derive hidden insights and patterns. Add follow-up recommendations.')
+    : (lang === 'ko'
+      ? '\n\n[Mode: Flash] 간결하지만 빠뜨리는 내용 없이 작성하세요. 각 섹션 3-5줄 이내. 핵심 결정과 액션 아이템에 집중하세요. 불필요한 배경 설명은 생략하세요.'
+      : '\n\n[Mode: Flash] Be concise but don\'t miss anything important. Keep each section to 3-5 lines. Focus on key decisions and action items. Skip unnecessary background explanations.');
+
   const body = {
     contents: [{
-      parts: [{ text: prompt + '\n\n' + messageParts.join('\n') }]
+      parts: [{ text: prompt + '\n\n' + messageParts.join('\n') + modeInstruction }]
     }],
-    generationConfig: { temperature: 0.2 }
+    generationConfig: { temperature: isProModel ? 0.3 : 0.2 }
   };
 
   const data = await callGemini(model, body);

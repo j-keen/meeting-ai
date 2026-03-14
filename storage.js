@@ -308,4 +308,35 @@ export function deleteCorrectionEntry(id) {
   return data.correctionDict;
 }
 
+// Pro usage tracking (monthly reset)
+const PRO_USAGE_KEY = 'meeting_pro_usage';
+
+export function getProUsageCount() {
+  try {
+    const raw = localStorage.getItem(PRO_USAGE_KEY);
+    if (!raw) return 0;
+    const data = JSON.parse(raw);
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    if (data.month !== currentMonth) return 0;
+    return data.count || 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function incrementProUsage() {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  let count = 0;
+  try {
+    const raw = localStorage.getItem(PRO_USAGE_KEY);
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.month === currentMonth) count = data.count || 0;
+    }
+  } catch { /* reset */ }
+  count++;
+  localStorage.setItem(PRO_USAGE_KEY, JSON.stringify({ count, month: currentMonth }));
+  return count;
+}
+
 export { getStorageUsage };

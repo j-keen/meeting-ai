@@ -634,8 +634,26 @@ body.loaded-mode #btnNewMeeting { display: none; }
   background: var(--bg-primary);
   flex-shrink: 0;
 }
-.transcript-memo-input .memo-input {
+.memo-input-wrapper {
+  position: relative;
   flex: 1;
+}
+.memo-placeholder {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--text-secondary); opacity: 0.6; pointer-events: none;
+  font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: calc(100% - 20px);
+  transition: opacity 0.3s;
+}
+.memo-placeholder.fade-out { opacity: 0; }
+.panel-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  white-space: nowrap;
+}
+.transcript-memo-input .memo-input {
+  width: 100%;
   padding: 5px 10px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -2605,6 +2623,44 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .quality-card-desc {
   font-size: 13px;
   color: var(--text-muted);
+}
+.quality-card-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+.pro-badge {
+  color: var(--accent);
+  font-size: 14px;
+  margin-left: 2px;
+}
+.quality-card-usage {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.quality-card-preview {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+.quality-card:hover .quality-card-preview {
+  display: flex;
+}
+.skeleton-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--border) 50%, var(--bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 .minutes-gen-actions {
   display: flex;

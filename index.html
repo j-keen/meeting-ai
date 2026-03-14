@@ -51,6 +51,7 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.transcript">Transcript</h2>
+          <span class="panel-hint" data-i18n="hint.transcript_edit">Tap to edit · improves AI quality</span>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
@@ -74,7 +75,10 @@
         </div>
       </div>
       <div class="transcript-memo-input" id="transcriptMemoInput">
-        <input type="text" class="memo-input" id="memoInput" data-i18n-placeholder="memo.placeholder" placeholder="Add a memo... (Ctrl+M)" aria-label="Add memo">
+        <div class="memo-input-wrapper">
+          <input type="text" class="memo-input" id="memoInput" aria-label="Add memo">
+          <span class="memo-placeholder" id="memoPlaceholder" aria-hidden="true"></span>
+        </div>
         <button class="btn btn-sm" id="btnAddMemo" data-i18n="memo.add">Add</button>
       </div>
     </section>
@@ -85,8 +89,9 @@
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
-        <div style="display:flex;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
+          <span class="panel-hint" data-i18n="hint.analysis_edit">Click blocks to edit · reflected in next analysis</span>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
@@ -664,10 +669,26 @@
           <button class="quality-card" id="btnQualityFlash" data-model="gemini-2.5-flash">
             <span class="quality-card-name">Flash</span>
             <span class="quality-card-desc" data-i18n="minutes.flash_desc">Summary</span>
+            <span class="quality-card-sub" data-i18n="minutes.flash_sub">Just the essentials</span>
+            <div class="quality-card-preview">
+              <div class="skeleton-bar" style="width:90%"></div>
+              <div class="skeleton-bar" style="width:75%"></div>
+              <div class="skeleton-bar" style="width:60%"></div>
+            </div>
           </button>
           <button class="quality-card" id="btnQualityPro" data-model="gemini-2.5-pro">
-            <span class="quality-card-name">Pro</span>
+            <span class="quality-card-name">Pro <span class="pro-badge">✦</span></span>
             <span class="quality-card-desc" data-i18n="minutes.pro_desc">In-depth</span>
+            <span class="quality-card-sub" data-i18n="minutes.pro_sub">Catches what you missed</span>
+            <span class="quality-card-usage" id="proUsageCount" hidden></span>
+            <div class="quality-card-preview">
+              <div class="skeleton-bar" style="width:95%"></div>
+              <div class="skeleton-bar" style="width:88%"></div>
+              <div class="skeleton-bar" style="width:92%"></div>
+              <div class="skeleton-bar" style="width:70%"></div>
+              <div class="skeleton-bar" style="width:85%"></div>
+              <div class="skeleton-bar" style="width:65%"></div>
+            </div>
           </button>
         </div>
         <div class="minutes-gen-actions">

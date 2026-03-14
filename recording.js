@@ -8,6 +8,7 @@ import {
   saveMeeting, loadSettings, saveSettings,
   loadContacts, addContact, loadLocations, addLocation, loadCategories,
   loadCorrectionDict, addCorrectionEntry,
+  getProUsageCount, incrementProUsage,
 } from './storage.js';
 import {
   showToast, showCenterToast, addTranscriptLine, showInterim, clearInterim,
@@ -446,7 +447,22 @@ function showMinutesGenModal() {
 
   modal.hidden = false;
 
+  // Show Pro usage count on card
+  const proCount = getProUsageCount();
+  const proUsageEl = $('#proUsageCount');
+  if (proUsageEl) {
+    if (proCount > 0) {
+      proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
+      proUsageEl.hidden = false;
+    } else {
+      proUsageEl.hidden = true;
+    }
+  }
+
   const handleCardClick = (model) => {
+    if (model.includes('pro')) {
+      incrementProUsage();
+    }
     state.settings.geminiModel = model;
     modal.hidden = true;
 
