@@ -2,55 +2,10 @@
 
 import { t } from './i18n.js';
 
-// Mobile debug overlay
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-let debugOverlay = null;
-let debugLogs = [];
-const MAX_DEBUG_LINES = 30;
 
 function sttDebug(msg) {
   console.log(msg);
-  if (!isMobile) return;
-
-  if (!debugOverlay) {
-    debugOverlay = document.createElement('div');
-    debugOverlay.id = 'sttDebugOverlay';
-    Object.assign(debugOverlay.style, {
-      position: 'fixed', bottom: '0', left: '0', right: '0',
-      maxHeight: '35vh', overflowY: 'auto', zIndex: '99999',
-      background: 'rgba(0,0,0,0.85)', color: '#0f0',
-      fontSize: '11px', fontFamily: 'monospace', padding: '6px',
-      lineHeight: '1.4', pointerEvents: 'auto',
-      borderTop: '2px solid #0f0'
-    });
-    // close button
-    const closeBtn = document.createElement('div');
-    closeBtn.textContent = '✕ CLOSE DEBUG';
-    Object.assign(closeBtn.style, {
-      position: 'sticky', top: '0', textAlign: 'right',
-      color: '#f55', cursor: 'pointer', padding: '2px 4px',
-      background: 'rgba(0,0,0,0.9)', fontWeight: 'bold'
-    });
-    closeBtn.addEventListener('click', () => { debugOverlay.style.display = 'none'; });
-    debugOverlay.appendChild(closeBtn);
-    document.body.appendChild(debugOverlay);
-  }
-
-  const now = new Date();
-  const ts = `${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0')}`;
-  debugLogs.push(`[${ts}] ${msg}`);
-  if (debugLogs.length > MAX_DEBUG_LINES) debugLogs.shift();
-
-  // re-render (skip close button at index 0)
-  while (debugOverlay.childNodes.length > 1) debugOverlay.removeChild(debugOverlay.lastChild);
-  const pre = document.createElement('pre');
-  pre.style.margin = '0';
-  pre.style.whiteSpace = 'pre-wrap';
-  pre.style.wordBreak = 'break-all';
-  pre.textContent = debugLogs.join('\n');
-  debugOverlay.appendChild(pre);
-  debugOverlay.style.display = 'block';
-  debugOverlay.scrollTop = debugOverlay.scrollHeight;
 }
 
 // Web Speech API engine
