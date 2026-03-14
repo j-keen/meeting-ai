@@ -211,11 +211,11 @@ function createWebSpeechEngine(language) {
   };
 }
 
-// Deepgram Nova-2 engine (WebSocket streaming, used on mobile)
-function createDeepgramEngine(language) {
+// Deepgram Nova-3 engine (WebSocket streaming, used on mobile)
+function createDeepgramEngine(language, micStream) {
   let ws = null;
   let mediaRecorder = null;
-  let stream = null;
+  let stream = micStream; // Use pre-acquired mic stream
   let shouldReconnect = false;
   let reconnectAttempts = 0;
   const MAX_RECONNECT = 3;
@@ -242,14 +242,6 @@ function createDeepgramEngine(language) {
           onError(t('stt.deepgram_key_missing'));
           return;
         }
-      }
-
-      // Get microphone stream
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch {
-        onError(t('stt.mic_permission_denied'));
-        return;
       }
 
       const connectWebSocket = () => {
@@ -357,12 +349,38 @@ export function createSTT() {
         if (text && text.trim()) onFinal(text);
       };
 
+      // Pre-check microphone permission before engine selection
+      let micStream = null;
+      try {
+        sttDebug(`[STT] Requesting mic permission (platform: ${navigator.userAgent.slice(0, 60)})`);
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        sttDebug(`[STT] Mic permission granted, tracks: ${micStream.getTracks().length}`);
+      } catch (err) {
+        isRunning = false;
+        sttDebug(`[STT] Mic permission failed: ${err.name} - ${err.message}`);
+        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          onError(t('stt.mic_not_found'));
+        } else {
+          // NotAllowedError, SecurityError, etc.
+          onError(t('stt.mic_permission_denied_detail'));
+        }
+        return;
+      }
+
       if (isMobile) {
-        currentEngine = createDeepgramEngine(language);
+        currentEngine = createDeepgramEngine(language, micStream);
         try {
           await currentEngine.start(onInterim, safeFinal, (err) => {
-            // Deepgram error → Web Speech fallback
+            // Only fallback for service errors, not permission errors
+            if (err === t('stt.mic_permission_denied') || err === t('stt.mic_permission_denied_detail')) {
+              sttDebug(`[STT] Permission error in Deepgram, no fallback`);
+              onError(err);
+              return;
+            }
+            // Deepgram service error → Web Speech fallback
             sttDebug(`Deepgram error, fallback to WebSpeech: ${err}`);
+            // Release mic stream before Web Speech takes over
+            micStream.getTracks().forEach(tr => tr.stop());
             onError(err + ' ' + t('stt.fallback_webspeech'));
             currentEngine = createWebSpeechEngine(language);
             onConnected?.('webspeech');
@@ -370,11 +388,15 @@ export function createSTT() {
           }, onReplace, onConnecting, () => onConnected?.('deepgram'));
         } catch (err) {
           sttDebug(`Deepgram failed, fallback: ${err}`);
+          // Release mic stream before Web Speech takes over
+          micStream.getTracks().forEach(tr => tr.stop());
           currentEngine = createWebSpeechEngine(language);
           onConnected?.('webspeech');
           currentEngine.start(onInterim, safeFinal, onError, onReplace);
         }
       } else {
+        // Desktop: release pre-check stream, Web Speech manages its own mic
+        micStream.getTracks().forEach(tr => tr.stop());
         currentEngine = createWebSpeechEngine(language);
         onConnected?.('webspeech');
         currentEngine.start(onInterim, safeFinal, onError, onReplace);
