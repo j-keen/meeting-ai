@@ -96,12 +96,15 @@ function createWebSpeechEngine(language) {
             // Mobile browsers may send progressive final results (each a superset of the previous).
             // Detect this and replace the last line instead of creating a new one.
             // Only REPLACE within the same session to prevent cross-session merging after restart.
-            const replaceWindow = isMobile ? 10000 : 2000;
+            const growWindow = isMobile ? 3000 : 2000;    // progressive growth (짧게)
+            const dedupWindow = isMobile ? 10000 : 2000;  // duplicate filtering (길게)
             const isProgressive = text.startsWith(lastFinalText);  // text grew
             const isSubset = lastFinalText.startsWith(text);  // text is same or shorter (re-sent)
-            const isSimilar = isProgressive || isSubset;
 
-            if (onReplace && lastFinalText && lastFinalSessionId === sessionId && (now - lastFinalTime) < replaceWindow && isSimilar) {
+            const shouldGrow = isProgressive && (now - lastFinalTime) < growWindow;
+            const shouldDedup = isSubset && (now - lastFinalTime) < dedupWindow;
+
+            if (onReplace && lastFinalText && lastFinalSessionId === sessionId && (shouldGrow || shouldDedup)) {
               const replaceType = isProgressive ? 'grow' : 'dedup';
               sttDebug(`REPLACE(${replaceType}) gap=${gap}ms "${lastFinalText.slice(0,20)}" → "${text.slice(0,30)}"`);
               if (isSubset) {
