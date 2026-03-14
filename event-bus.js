@@ -36,4 +36,5 @@ export const state = {
   loadedMeetingOriginal: null,
   minutesVersions: [],
   minutesPromptConfig: { referenceDoc: '', basePromptOverride: '', userInstruction: '' },
+  aiTitleCached: null, // { titles: string[], tags: string[] } | null
 };

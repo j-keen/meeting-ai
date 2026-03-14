@@ -754,50 +754,111 @@ function showEndMeetingModal() {
   // Update export button state
   updateExportButton();
 
-  // "Generate Minutes" button — re-opens quality select modal
+  // "Generate Minutes" button — opens sub-modal overlay (keeps end-meeting modal open)
   const genBtn = $('#btnEndMeetingGenerate');
   if (genBtn) {
     genBtn.onclick = () => {
-      modal.hidden = true;
-      showMinutesGenModal();
+      const subModal = $('#endMeetingMinutesSub');
+      subModal.hidden = false;
+
+      // Pro usage count
+      const proCount = getProUsageCount();
+      const proEl = $('#subProUsageCount');
+      if (proCount > 0) { proEl.textContent = t('minutes.pro_usage', { n: proCount }); proEl.hidden = false; }
+      else { proEl.hidden = true; }
     };
   }
 
-  // AI title/tag generation
+  // Sub-modal card click handlers
+  $('#endMeetingMinutesSub').querySelectorAll('[data-gen-model]').forEach(card => {
+    card.onclick = () => {
+      const model = card.dataset.genModel;
+      if (model.includes('pro')) incrementProUsage();
+      state.settings.geminiModel = model;
+
+      $('#endMeetingMinutesSub').hidden = true;
+
+      // Button state: generating spinner
+      minutesGenerated = false;
+      minutesSkipped = false;
+      updateExportButton();
+
+      generateFinalMeetingMinutes().then(() => {
+        minutesGenerated = true;
+        updateExportButton();
+        showToast(t('toast.final_minutes_done'), 'success');
+      }).catch(err => {
+        minutesSkipped = true;
+        updateExportButton();
+        showToast(t('toast.final_minutes_fail') + err.message, 'error');
+      });
+    };
+  });
+
+  // Sub-modal cancel
+  $('#endMeetingMinutesSub .end-meeting-sub-cancel').onclick = () => {
+    $('#endMeetingMinutesSub').hidden = true;
+  };
+
+  // AI title/tag generation (with caching)
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
   if (isProxyAvailable() && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
-    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
     chipsEl.innerHTML = '';
 
-    generateMeetingTitle({
-      transcript: state.transcript,
-      existingTitle: state.meetingTitle,
-    }).then(result => {
-      if (!result) { suggestionsEl.hidden = true; return; }
+    if (state.aiTitleCached) {
+      // Use cached results immediately
       suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
+      renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
+    } else {
+      suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_generating');
+      fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
+    }
 
-      const allTitles = [result.title, ...(result.alternatives || [])].filter(Boolean);
+    // Regenerate button handler
+    $('#btnRegenerateTitles').onclick = () => {
+      state.aiTitleCached = null;
       chipsEl.innerHTML = '';
-      allTitles.forEach(title => {
-        const chip = document.createElement('button');
-        chip.className = 'ai-title-chip';
-        chip.textContent = title;
-        chip.addEventListener('click', () => { titleInput.value = title; });
-        chipsEl.appendChild(chip);
-      });
-
-      if (result.tags && result.tags.length > 0) {
-        result.tags.forEach(tag => {
-          if (!state.tags.includes(tag)) state.tags.push(tag);
-        });
-        renderEndMeetingTags();
-      }
-    });
+      suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_generating');
+      fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
+    };
   } else {
     suggestionsEl.hidden = true;
   }
+}
+
+function renderTitleChips(titles, container, titleInput) {
+  container.innerHTML = '';
+  titles.forEach(title => {
+    const chip = document.createElement('button');
+    chip.className = 'ai-title-chip';
+    chip.textContent = title;
+    chip.addEventListener('click', () => { titleInput.value = title; });
+    container.appendChild(chip);
+  });
+}
+
+function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
+  generateMeetingTitle({
+    transcript: state.transcript,
+    existingTitle: state.meetingTitle,
+  }).then(result => {
+    if (!result) { suggestionsEl.hidden = true; return; }
+    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
+
+    state.aiTitleCached = {
+      titles: [result.title, ...(result.alternatives || [])].filter(Boolean),
+      tags: result.tags || [],
+    };
+    renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
+
+    // Merge tags (only once per cache)
+    state.aiTitleCached.tags.forEach(tag => {
+      if (!state.tags.includes(tag)) state.tags.push(tag);
+    });
+    renderEndMeetingTags();
+  });
 }
 
 export function renderEndMeetingTags() {
@@ -1062,6 +1123,7 @@ export function resetMeeting() {
   state.tags = [];
   state.analysisContext = '';
   state.analysisCorrections = [];
+  state.aiTitleCached = null;
   $('#transcriptList').innerHTML = '';
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';

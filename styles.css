@@ -2592,6 +2592,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
   margin-bottom: 6px;
 }
 .ai-title-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   margin-top: 8px;
 }
 .ai-suggestions-label {
@@ -2599,11 +2603,17 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-muted);
   font-style: italic;
 }
+#btnRegenerateTitles {
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
 .ai-title-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 2px;
+  width: 100%;
 }
 .ai-title-chip {
   padding: 4px 10px;
@@ -2961,6 +2971,55 @@ body.loaded-mode #btnNewMeeting { display: none; }
   padding-top: 16px;
   border-top: 1px solid var(--border-light);
 }
+
+/* End meeting modal — relative for sub-overlay */
+#endMeetingModal .modal { position: relative; }
+
+/* End meeting sub-modal overlay */
+.end-meeting-sub-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+}
+.end-meeting-sub-overlay[hidden] { display: none; }
+.end-meeting-sub-modal {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+  min-width: 280px;
+}
+.end-meeting-sub-modal h4 { margin: 0 0 4px; }
+.minutes-quality-cards-inline {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+  justify-content: center;
+}
+.minutes-quality-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: var(--bg-secondary);
+  transition: border-color 0.15s, background 0.15s;
+}
+.minutes-quality-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-primary);
+}
+.quality-label { font-weight: 700; font-size: 15px; }
+.quality-desc { font-size: 12px; color: var(--text-secondary); }
+.quality-usage { font-size: 11px; color: var(--text-muted); }
 
 /* History card extras */
 .history-card-rating {

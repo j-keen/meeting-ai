@@ -789,6 +789,7 @@
           <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title">
           <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
             <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
+            <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
             <div class="ai-title-chips" id="aiTitleChips"></div>
           </div>
         </div>
@@ -818,6 +819,24 @@
             <span class="btn-export-text" data-i18n="end_meeting.export_generating">Generating minutes...</span>
           </button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+        </div>
+      </div>
+      <!-- Minutes quality select sub-modal (overlay inside end-meeting modal) -->
+      <div class="end-meeting-sub-overlay" id="endMeetingMinutesSub" hidden>
+        <div class="end-meeting-sub-modal">
+          <h4 data-i18n="minutes.select_quality">Select Minutes Quality</h4>
+          <div class="minutes-quality-cards-inline">
+            <button class="minutes-quality-card" data-gen-model="gemini-2.5-flash">
+              <span class="quality-label">⚡ Flash</span>
+              <span class="quality-desc" data-i18n="minutes.flash_sub">Just the essentials</span>
+            </button>
+            <button class="minutes-quality-card" data-gen-model="gemini-2.5-pro">
+              <span class="quality-label">✦ Pro</span>
+              <span class="quality-desc" data-i18n="minutes.pro_sub">Catches what you missed</span>
+              <span class="quality-usage" id="subProUsageCount" hidden></span>
+            </button>
+          </div>
+          <button class="btn btn-xs end-meeting-sub-cancel" data-i18n="end_meeting.cancel">Cancel</button>
         </div>
       </div>
     </div>
