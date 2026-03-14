@@ -468,9 +468,9 @@ const translations = {
 
     // Minutes Generation Modal
     'minutes.select_quality': 'Select Minutes Quality',
-    'minutes.flash_desc': 'Quick summary',
-    'minutes.pro_desc': 'In-depth analysis',
-    'minutes.skip': 'Skip',
+    'minutes.flash_desc': 'Summary',
+    'minutes.pro_desc': 'In-depth',
+    'minutes.skip': 'Skip minutes',
     'toast.minutes_generating_bg': 'Generating minutes in the background',
     'toast.minutes_still_generating': 'Still generating...',
 
@@ -1022,9 +1022,9 @@ const translations = {
 
     // Minutes Generation Modal
     'minutes.select_quality': '회의록 품질 선택',
-    'minutes.flash_desc': '빠른 요약',
-    'minutes.pro_desc': '심층 분석',
-    'minutes.skip': '건너뛰기',
+    'minutes.flash_desc': '요약 회의록',
+    'minutes.pro_desc': '심층 회의록',
+    'minutes.skip': '회의록 생략',
     'toast.minutes_generating_bg': '회의록을 백그라운드에서 작성 중입니다',
     'toast.minutes_still_generating': '아직 작성 중입니다',
 
