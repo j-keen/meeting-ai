@@ -63,6 +63,10 @@ function createWebSpeechEngine(language) {
   let lastResultTime = 0;
   let lastFinalText = '';
   let lastFinalTime = 0;
+  let sessionId = 0;
+  let lastFinalSessionId = 0;
+  let lastInterimText = '';
+  let hadFinalSinceLastInterim = true;
 
   return {
     name: 'webspeech',
@@ -91,16 +95,21 @@ function createWebSpeechEngine(language) {
             const gap = lastFinalTime ? now - lastFinalTime : 0;
             // Mobile browsers may send progressive final results (each a superset of the previous).
             // Detect this and replace the last line instead of creating a new one.
-            if (onReplace && lastFinalText && (now - lastFinalTime) < 2000 && text.startsWith(lastFinalText)) {
+            // Only REPLACE within the same session to prevent cross-session merging after restart.
+            if (onReplace && lastFinalText && lastFinalSessionId === sessionId && (now - lastFinalTime) < 2000 && text.startsWith(lastFinalText)) {
               sttDebug(`REPLACE gap=${gap}ms "${lastFinalText.slice(0,20)}" → "${text.slice(0,30)}"`);
               onReplace(text);
             } else {
-              sttDebug(`FINAL gap=${gap}ms conf=${result[0].confidence.toFixed(2)} "${text.slice(0,40)}"`);
+              sttDebug(`FINAL gap=${gap}ms conf=${result[0].confidence?.toFixed(2) ?? '?'} sid=${sessionId} "${text.slice(0,40)}"`);
               onFinal(text);
             }
             lastFinalText = text;
             lastFinalTime = now;
+            lastFinalSessionId = sessionId;
+            hadFinalSinceLastInterim = true;
           } else {
+            lastInterimText = text;
+            hadFinalSinceLastInterim = false;
             sttDebug(`interim "${text.slice(0,40)}"`);
             onInterim(text);
           }
@@ -147,9 +156,22 @@ function createWebSpeechEngine(language) {
 
       recognition.onend = () => {
         const sessionDur = ((Date.now() - sessionStartTime) / 1000).toFixed(1);
+
+        // Flush pending interim text as final before restarting
+        if (lastInterimText && !hadFinalSinceLastInterim) {
+          sttDebug(`💾 Flush interim on end: "${lastInterimText.slice(0,40)}"`);
+          onFinal(lastInterimText);
+          lastInterimText = '';
+          hadFinalSinceLastInterim = true;
+        }
+
         if (shouldRestart) {
           restartCount++;
-          sttDebug(`🔄 RESTART #${restartCount} (session was ${sessionDur}s)`);
+          // Reset session state to prevent cross-session REPLACE merging
+          sessionId++;
+          lastFinalText = '';
+          lastFinalTime = 0;
+          sttDebug(`🔄 RESTART #${restartCount} sid=${sessionId} (session was ${sessionDur}s)`);
           setTimeout(() => {
             if (!shouldRestart) return;
             try {
@@ -165,7 +187,7 @@ function createWebSpeechEngine(language) {
                 onError(t('stt.restart_failed'));
               }
             }
-          }, 300);
+          }, isMobile ? 50 : 300);
         } else {
           sttDebug(`⏹️ Stopped (session ${sessionDur}s)`);
         }
