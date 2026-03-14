@@ -229,6 +229,28 @@ function init() {
     input.addEventListener('blur', () => { if (!input.value) ph.style.display = ''; });
   })();
 
+  // Panel hint rotation
+  (() => {
+    const INTERVAL = 3500;
+    const FADE = 300;
+    const configs = [
+      { el: document.querySelector('#panelLeft .panel-hint'), key: 'hint.transcript_edit', count: 5 },
+      { el: document.querySelector('#panelCenter .panel-hint'), key: 'hint.analysis_edit', count: 5 },
+    ];
+    configs.forEach(({ el, key, count }) => {
+      if (!el) return;
+      let idx = 0;
+      setInterval(() => {
+        el.classList.add('fade-out');
+        setTimeout(() => {
+          idx = (idx + 1) % count;
+          el.textContent = t(key + '.' + idx);
+          el.classList.remove('fade-out');
+        }, FADE);
+      }, INTERVAL);
+    });
+  })();
+
   // Memo from chat
   on('memo:fromChat', ({ text }) => {
     const memo = { id: generateId(), text, timestamp: Date.now() };

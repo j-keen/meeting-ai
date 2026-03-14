@@ -655,6 +655,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-secondary);
   opacity: 0.6;
   white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+.panel-hint.fade-out {
+  opacity: 0;
 }
 .transcript-memo-input .memo-input {
   width: 100%;
