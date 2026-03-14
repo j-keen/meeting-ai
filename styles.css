@@ -2642,14 +2642,16 @@ body.loaded-mode #btnNewMeeting { display: none; }
   margin-top: 4px;
 }
 .quality-card-preview {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 6px;
   margin-top: 10px;
   width: 100%;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 .quality-card:hover .quality-card-preview {
-  display: flex;
+  opacity: 1;
 }
 .skeleton-bar {
   height: 8px;
