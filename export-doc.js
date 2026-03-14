@@ -6,15 +6,20 @@ const CDN = {
   docx: 'https://cdn.jsdelivr.net/npm/docx@9.1.1/dist/index.iife.js',
 };
 
+const _scriptPromises = {};
 function loadScript(url) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${url}"]`)) return resolve();
+  if (_scriptPromises[url]) return _scriptPromises[url];
+  _scriptPromises[url] = new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${url}"]`);
+    if (existing && window.jspdf) return resolve();
+    if (existing) existing.remove();
     const s = document.createElement('script');
     s.src = url;
     s.onload = resolve;
-    s.onerror = () => reject(new Error(`Failed to load ${url}`));
+    s.onerror = () => { delete _scriptPromises[url]; reject(new Error(`Failed to load ${url}`)); };
     document.head.appendChild(s);
   });
+  return _scriptPromises[url];
 }
 
 export async function exportPDF(markdown, filename) {
