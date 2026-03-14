@@ -1,4 +1,4 @@
-// stt.js - STT abstraction (Web Speech API only)
+// stt.js - STT abstraction (Web Speech API + Deepgram for mobile)
 
 import { t } from './i18n.js';
 
@@ -243,6 +243,128 @@ function createWebSpeechEngine(language) {
   };
 }
 
+// Deepgram Nova-2 engine (WebSocket streaming, used on mobile)
+function createDeepgramEngine(language) {
+  let ws = null;
+  let mediaRecorder = null;
+  let stream = null;
+  let shouldReconnect = false;
+  let reconnectAttempts = 0;
+  const MAX_RECONNECT = 3;
+
+  const langMap = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh' };
+
+  return {
+    name: 'deepgram',
+
+    async start(onInterim, onFinal, onError) {
+      // Fetch API key from server
+      let apiKey;
+      try {
+        const resp = await fetch('/api/stt-token');
+        if (!resp.ok) throw new Error('Failed to get STT token');
+        const data = await resp.json();
+        apiKey = data.key;
+      } catch (err) {
+        onError(t('stt.deepgram_key_missing'));
+        return;
+      }
+
+      // Get microphone stream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        onError(t('stt.mic_permission_denied'));
+        return;
+      }
+
+      const connectWebSocket = () => {
+        const lang = langMap[language] || 'en';
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=1000&vad_events=true&encoding=opus&sample_rate=48000`;
+
+        ws = new WebSocket(wsUrl, ['token', apiKey]);
+
+        ws.onopen = () => {
+          sttDebug('[STT:Deepgram] WebSocket connected');
+          reconnectAttempts = 0;
+
+          // Start MediaRecorder to capture audio
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: 'audio/webm;codecs=opus',
+          });
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
+              ws.send(e.data);
+            }
+          };
+
+          mediaRecorder.start(250); // Send chunks every 250ms
+        };
+
+        ws.onmessage = (e) => {
+          try {
+            const msg = JSON.parse(e.data);
+            if (msg.type === 'Results' && msg.channel?.alternatives?.[0]) {
+              const alt = msg.channel.alternatives[0];
+              const text = alt.transcript;
+              if (!text) return;
+
+              if (msg.is_final) {
+                if (msg.speech_final) {
+                  sttDebug(`[STT:Deepgram] FINAL "${text.slice(0,40)}"`);
+                  onFinal(text);
+                } else {
+                  sttDebug(`[STT:Deepgram] interim(final) "${text.slice(0,40)}"`);
+                  onInterim(text);
+                }
+              } else {
+                onInterim(text);
+              }
+            }
+          } catch (err) {
+            sttDebug(`[STT:Deepgram] Parse error: ${err}`);
+          }
+        };
+
+        ws.onerror = (e) => {
+          sttDebug(`[STT:Deepgram] WebSocket error`);
+        };
+
+        ws.onclose = (e) => {
+          sttDebug(`[STT:Deepgram] WebSocket closed: ${e.code} ${e.reason}`);
+          if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
+            reconnectAttempts++;
+            sttDebug(`[STT:Deepgram] Reconnecting... attempt ${reconnectAttempts}`);
+            setTimeout(connectWebSocket, 1000 * reconnectAttempts);
+          } else if (shouldReconnect) {
+            onError(t('stt.connection_failed'));
+          }
+        };
+      };
+
+      shouldReconnect = true;
+      connectWebSocket();
+    },
+
+    stop() {
+      shouldReconnect = false;
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      mediaRecorder = null;
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+    }
+  };
+}
+
 // Unified STT interface
 export function createSTT() {
   let currentEngine = null;
@@ -259,8 +381,25 @@ export function createSTT() {
         if (text && text.trim()) onFinal(text);
       };
 
-      currentEngine = createWebSpeechEngine(language);
-      currentEngine.start(onInterim, safeFinal, onError, onReplace);
+      if (isMobile) {
+        currentEngine = createDeepgramEngine(language);
+        try {
+          await currentEngine.start(onInterim, safeFinal, (err) => {
+            // Deepgram error → Web Speech fallback
+            sttDebug(`Deepgram error, fallback to WebSpeech: ${err}`);
+            onError(err + ' ' + t('stt.fallback_webspeech'));
+            currentEngine = createWebSpeechEngine(language);
+            currentEngine.start(onInterim, safeFinal, onError, onReplace);
+          });
+        } catch (err) {
+          sttDebug(`Deepgram failed, fallback: ${err}`);
+          currentEngine = createWebSpeechEngine(language);
+          currentEngine.start(onInterim, safeFinal, onError, onReplace);
+        }
+      } else {
+        currentEngine = createWebSpeechEngine(language);
+        currentEngine.start(onInterim, safeFinal, onError, onReplace);
+      }
     },
 
     stop() {
