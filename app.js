@@ -15,7 +15,7 @@ import {
   addMemoLine, renderAnalysis, renderHighlights,
   renderMeetingViewer,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
-  showToast, updateTranscriptLineUI, removeTranscriptLineUI,
+  showToast, showCenterToast, updateTranscriptLineUI, removeTranscriptLineUI,
   getAnalysisAsText,
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced } from './history.js';
@@ -138,7 +138,13 @@ function init() {
   // End Meeting Modal events
   $('#btnEndMeetingSave').addEventListener('click', () => finalizeEndMeeting());
   $('#btnEndMeetingCancel').addEventListener('click', () => cancelEndMeeting());
-  $('#btnEndMeetingExport').addEventListener('click', () => { $('#exportModal').hidden = false; });
+  $('#btnEndMeetingExport').addEventListener('click', () => {
+    if ($('#btnEndMeetingExport').disabled) {
+      showCenterToast(t('toast.minutes_still_generating'));
+      return;
+    }
+    $('#exportModal').hidden = false;
+  });
 
   // Star rating clicks
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {

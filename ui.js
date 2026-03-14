@@ -4,7 +4,7 @@ import { state, emit } from './event-bus.js';
 import { t } from './i18n.js';
 
 // ===== Re-exports from sub-modules =====
-export { showToast } from './ui/toast.js';
+export { showToast, showCenterToast } from './ui/toast.js';
 
 export {
   addTranscriptLine,

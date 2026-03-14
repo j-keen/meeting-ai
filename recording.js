@@ -10,7 +10,7 @@ import {
   loadCorrectionDict, addCorrectionEntry,
 } from './storage.js';
 import {
-  showToast, addTranscriptLine, showInterim, clearInterim,
+  showToast, showCenterToast, addTranscriptLine, showInterim, clearInterim,
   showAnalysisSkeletons, renderAnalysis, renderHighlights,
   updateTranscriptLineUI, removeTranscriptLineUI,
   showTranscriptConnecting, showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
@@ -435,27 +435,8 @@ export function endMeeting() {
 
 function showMinutesGenModal() {
   const modal = $('#minutesGenModal');
-  const spinner = $('#minutesGenSpinner');
-  const done = $('#minutesGenDone');
-  const btnGenerate = $('#btnMinutesGenerate');
-  const btnSkip = $('#btnMinutesSkip');
-
-  // Reset state
-  spinner.hidden = false;
-  done.hidden = true;
   minutesGenerated = false;
 
-  // Set model radio to current setting
-  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
-  const modelRadio = document.querySelector(`input[name="minutesModel"][value="${currentModel}"]`);
-  if (modelRadio) modelRadio.checked = true;
-
-  // Disable model radios & show initial state
-  document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = false);
-  spinner.hidden = true;
-  done.hidden = true;
-
-  // Show if transcript exists & proxy available, otherwise skip straight to save
   if (!isProxyAvailable() || state.transcript.length === 0) {
     showEndMeetingModal();
     return;
@@ -463,60 +444,46 @@ function showMinutesGenModal() {
 
   modal.hidden = false;
 
-  // Generate button
-  btnGenerate.onclick = async () => {
-    const selectedModel = document.querySelector('input[name="minutesModel"]:checked');
-    if (selectedModel) state.settings.geminiModel = selectedModel.value;
+  const handleCardClick = (model) => {
+    state.settings.geminiModel = model;
+    modal.hidden = true;
 
-    // Disable controls during generation
-    document.querySelectorAll('input[name="minutesModel"]').forEach(r => r.disabled = true);
-    btnGenerate.disabled = true;
-    btnSkip.textContent = t('minutes.continue_in_bg');
-    spinner.hidden = false;
-
-    try {
-      await generateFinalMeetingMinutes();
+    // Background generation (don't await)
+    generateFinalMeetingMinutes().then(() => {
       minutesGenerated = true;
       updateExportButton();
-
-      if (!modal.hidden) {
-        // Still on minutes modal — show success then proceed
-        spinner.hidden = true;
-        done.hidden = false;
-        setTimeout(() => {
-          modal.hidden = true;
-          showEndMeetingModal();
-        }, 1200);
-      } else {
-        // User already moved to save modal (clicked "continue in bg")
-        showToast(t('toast.final_minutes_done'), 'success');
-      }
-    } catch (err) {
-      if (!modal.hidden) {
-        spinner.hidden = true;
-        modal.hidden = true;
-        showEndMeetingModal();
-      }
+      showToast(t('toast.final_minutes_done'), 'success');
+    }).catch(err => {
       showToast(t('toast.final_minutes_fail') + err.message, 'error');
-    }
-  };
+      updateExportButton();
+    });
 
-  // Skip / Continue in background button
-  btnSkip.onclick = () => {
-    modal.hidden = true;
+    showToast(t('toast.minutes_generating_bg'), 'info');
     showEndMeetingModal();
-    // If generation is still running, it will finish in the background
-    // and enable export when done
   };
 
-  // Auto-start generation
-  btnGenerate.click();
+  $('#btnQualityFlash').onclick = () => handleCardClick('gemini-2.5-flash');
+  $('#btnQualityPro').onclick = () => handleCardClick('gemini-2.5-pro');
+  $('#btnMinutesSkip').onclick = () => { modal.hidden = true; showEndMeetingModal(); };
 }
 
 function updateExportButton() {
   const btn = $('#btnEndMeetingExport');
   if (!btn) return;
-  btn.disabled = !minutesGenerated;
+  const spinner = btn.querySelector('.btn-spinner');
+  const textEl = btn.querySelector('.btn-export-text');
+
+  if (minutesGenerated) {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    if (spinner) spinner.hidden = true;
+    if (textEl) textEl.textContent = t('end_meeting.export_minutes');
+  } else {
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+    if (spinner) spinner.hidden = false;
+    if (textEl) textEl.textContent = t('end_meeting.export_generating');
+  }
 }
 
 function showEndMeetingModal() {
@@ -529,12 +496,8 @@ function showEndMeetingModal() {
   const pad = n => String(n).padStart(2, '0');
   datetimeInput.value = `${meetingDate.getFullYear()}-${pad(meetingDate.getMonth() + 1)}-${pad(meetingDate.getDate())}T${pad(meetingDate.getHours())}:${pad(meetingDate.getMinutes())}`;
 
-  const defaultTitle = t('meeting_title', {
-    date: meetingDate.toLocaleDateString(getDateLocale()),
-    time: meetingDate.toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
-  });
   const titleInput = $('#endMeetingTitle');
-  titleInput.value = state.meetingTitle || defaultTitle;
+  titleInput.value = state.meetingTitle || '';
 
   renderEndMeetingTags();
   renderEndMeetingCategories();
@@ -559,7 +522,7 @@ function showEndMeetingModal() {
   const chipsEl = $('#aiTitleChips');
   if (isProxyAvailable() && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
-    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.generating');
+    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
     chipsEl.innerHTML = '';
 
     generateMeetingTitle({
@@ -567,7 +530,7 @@ function showEndMeetingModal() {
       existingTitle: state.meetingTitle,
     }).then(result => {
       if (!result) { suggestionsEl.hidden = true; return; }
-      suggestionsEl.querySelector('.ai-suggestions-label').textContent = '';
+      suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
 
       const allTitles = [result.title, ...(result.alternatives || [])].filter(Boolean);
       chipsEl.innerHTML = '';

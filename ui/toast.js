@@ -13,6 +13,18 @@ export function showToast(message, type = 'success') {
   setTimeout(() => removeToast(el), 4000);
 }
 
+export function showCenterToast(message, duration = 2500) {
+  document.querySelector('.center-toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'center-toast';
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('center-toast-out');
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
 function removeToast(el) {
   if (el.classList.contains('toast-out')) return;
   el.classList.add('toast-out');

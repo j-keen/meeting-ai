@@ -652,38 +652,26 @@
     </div>
   </div>
 
-  <!-- Minutes Generation Modal -->
+  <!-- Minutes Generation Modal — Quality Select -->
   <div class="modal-overlay" id="minutesGenModal" hidden>
     <div class="modal" style="max-width:480px;">
       <div class="modal-header">
-        <h3 data-i18n="minutes.title">Generating Meeting Minutes</h3>
+        <h3 data-i18n="minutes.select_quality">Select Minutes Quality</h3>
+        <button class="btn btn-icon modal-close" data-close="minutesGenModal">&times;</button>
       </div>
       <div class="modal-body minutes-gen-body">
-        <div class="minutes-gen-spinner" id="minutesGenSpinner">
-          <div class="spinner-ring"></div>
-          <p class="minutes-gen-status" id="minutesGenStatus" data-i18n="minutes.generating">AI is writing the meeting minutes...</p>
-        </div>
-        <div class="minutes-gen-done" id="minutesGenDone" hidden>
-          <span class="minutes-gen-check">&#10003;</span>
-          <p data-i18n="minutes.done">Meeting minutes generated successfully!</p>
-        </div>
-        <!-- Model Selection -->
-        <div class="end-meeting-section" style="margin-top:16px;">
-          <label class="end-meeting-label" data-i18n="end_meeting.model">AI Model</label>
-          <div class="end-meeting-model-select">
-            <label class="end-meeting-model-option">
-              <input type="radio" name="minutesModel" value="gemini-2.5-flash" checked>
-              <span class="end-meeting-model-chip">Flash <span class="end-meeting-model-desc" data-i18n="end_meeting.model_flash_desc">Fast</span></span>
-            </label>
-            <label class="end-meeting-model-option">
-              <input type="radio" name="minutesModel" value="gemini-2.5-pro">
-              <span class="end-meeting-model-chip">Pro <span class="end-meeting-model-desc" data-i18n="end_meeting.model_pro_desc">High quality</span></span>
-            </label>
-          </div>
+        <div class="quality-select-cards">
+          <button class="quality-card" id="btnQualityFlash" data-model="gemini-2.5-flash">
+            <span class="quality-card-name">Flash</span>
+            <span class="quality-card-desc" data-i18n="minutes.flash_desc">Quick summary</span>
+          </button>
+          <button class="quality-card" id="btnQualityPro" data-model="gemini-2.5-pro">
+            <span class="quality-card-name">Pro</span>
+            <span class="quality-card-desc" data-i18n="minutes.pro_desc">In-depth analysis</span>
+          </button>
         </div>
         <div class="minutes-gen-actions">
           <button class="btn" id="btnMinutesSkip" data-i18n="minutes.skip">Skip</button>
-          <button class="btn btn-primary" id="btnMinutesGenerate" data-i18n="minutes.generate">Generate</button>
         </div>
       </div>
     </div>
@@ -697,28 +685,7 @@
         <button class="btn btn-icon modal-close" data-close="endMeetingModal">&times;</button>
       </div>
       <div class="modal-body">
-        <!-- Date/Time & Location (top row) -->
-        <div class="end-meeting-row">
-          <div class="end-meeting-section end-meeting-flex-1">
-            <label class="end-meeting-label" data-i18n="end_meeting.datetime">Date / Time</label>
-            <input type="datetime-local" class="settings-input" id="endMeetingDatetime">
-          </div>
-          <div class="end-meeting-section end-meeting-flex-1">
-            <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
-            <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
-            <datalist id="locationDatalist"></datalist>
-          </div>
-        </div>
-        <!-- Title -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
-          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title...">
-          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
-            <span class="ai-suggestions-label" data-i18n="end_meeting.generating">Generating AI suggestions...</span>
-            <div class="ai-title-chips" id="aiTitleChips"></div>
-          </div>
-        </div>
-        <!-- Categories + Importance (same row) -->
+        <!-- 1. Categories + Importance (top) -->
         <div class="end-meeting-row">
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
@@ -735,26 +702,51 @@
             </div>
           </div>
         </div>
-        <!-- Participants -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
-          <div class="end-meeting-participants-selected" id="endMeetingParticipantsSelected"></div>
-          <div class="end-meeting-participants-list" id="endMeetingParticipantsList"></div>
-          <div class="end-meeting-inline-add">
-            <input type="text" class="settings-input" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.add_participant" placeholder="Add name...">
-            <button class="btn btn-sm" id="btnEndMeetingAddParticipant">+</button>
+        <!-- 2. Date/Time + Location -->
+        <div class="end-meeting-row">
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.datetime">Date / Time</label>
+            <input type="datetime-local" class="settings-input" id="endMeetingDatetime">
+          </div>
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
+            <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
+            <datalist id="locationDatalist"></datalist>
           </div>
         </div>
-        <!-- Tags -->
+        <!-- 3. Title + AI suggestions -->
         <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
-          <div class="end-meeting-tags" id="endMeetingTags"></div>
-          <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
+          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
+          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title">
+          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
+            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
+            <div class="ai-title-chips" id="aiTitleChips"></div>
+          </div>
         </div>
-        <!-- Actions -->
+        <!-- 4. Participants + Tags (side by side) -->
+        <div class="end-meeting-row">
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
+            <div class="end-meeting-participants-selected" id="endMeetingParticipantsSelected"></div>
+            <div class="end-meeting-participants-list" id="endMeetingParticipantsList"></div>
+            <div class="end-meeting-inline-add">
+              <input type="text" class="settings-input" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.add_participant" placeholder="Add name...">
+              <button class="btn btn-sm" id="btnEndMeetingAddParticipant">+</button>
+            </div>
+          </div>
+          <div class="end-meeting-section end-meeting-flex-1">
+            <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
+            <div class="end-meeting-tags" id="endMeetingTags"></div>
+            <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
+          </div>
+        </div>
+        <!-- 5. Actions -->
         <div class="end-meeting-actions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn" id="btnEndMeetingExport" disabled data-i18n="end_meeting.export_minutes">Export Minutes</button>
+          <button class="btn btn-loading" id="btnEndMeetingExport" disabled>
+            <span class="btn-spinner"></span>
+            <span class="btn-export-text" data-i18n="end_meeting.export_generating">Generating minutes...</span>
+          </button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
       </div>
