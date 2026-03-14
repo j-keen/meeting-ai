@@ -52,6 +52,135 @@ let maxDurationTimeout = null;
 let minutesGenerated = false;
 let minutesSkipped = false;
 
+// ===== Draft Recovery (sessionStorage) =====
+const DRAFT_KEY = 'meeting-ai-draft';
+let draftSaveInterval = null;
+
+function saveDraft() {
+  if (!state.meetingId) return;
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) return;
+  try {
+    const draft = {
+      meetingId: state.meetingId,
+      meetingTitle: state.meetingTitle,
+      meetingStartTime: state.meetingStartTime,
+      meetingLocation: state.meetingLocation,
+      transcript: state.transcript,
+      memos: state.memos,
+      chatHistory: state.chatHistory,
+      analysisHistory: state.analysisHistory,
+      currentAnalysis: state.currentAnalysis,
+      userInsights: state.userInsights,
+      tags: state.tags,
+      starRating: state.starRating,
+      categories: state.categories,
+      participants: state.participants,
+      settings: { meetingPreset: state.settings.meetingPreset, meetingContext: state.settings.meetingContext },
+      savedAt: Date.now(),
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch { /* ignore quota errors */ }
+}
+
+export function clearDraftRecovery() {
+  sessionStorage.removeItem(DRAFT_KEY);
+  if (draftSaveInterval) { clearInterval(draftSaveInterval); draftSaveInterval = null; }
+}
+
+function startDraftSaving() {
+  if (draftSaveInterval) clearInterval(draftSaveInterval);
+  draftSaveInterval = setInterval(saveDraft, 15000); // every 15s
+}
+
+export function checkDraftRecovery() {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const draft = JSON.parse(raw);
+    // Only show recovery if draft is less than 12 hours old
+    if (Date.now() - draft.savedAt > 12 * 60 * 60 * 1000) {
+      sessionStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    showDraftRecoveryBanner(draft);
+  } catch { sessionStorage.removeItem(DRAFT_KEY); }
+}
+
+function showDraftRecoveryBanner(draft) {
+  const existing = $('#draftRecoveryBanner');
+  if (existing) existing.remove();
+
+  const timeStr = new Date(draft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const lines = draft.transcript?.length || 0;
+
+  const banner = document.createElement('div');
+  banner.id = 'draftRecoveryBanner';
+  banner.className = 'draft-recovery-banner';
+  banner.innerHTML = `
+    <span>${t('draft.recovery_message', { time: timeStr, lines })}</span>
+    <div class="draft-recovery-actions">
+      <button class="btn btn-sm btn-primary" id="btnDraftRecover">${t('draft.recover')}</button>
+      <button class="btn btn-sm" id="btnDraftDiscard">${t('draft.discard')}</button>
+    </div>
+  `;
+  document.body.prepend(banner);
+
+  $('#btnDraftRecover').onclick = () => {
+    recoverDraft(draft);
+    banner.remove();
+  };
+  $('#btnDraftDiscard').onclick = () => {
+    sessionStorage.removeItem(DRAFT_KEY);
+    banner.remove();
+  };
+}
+
+function recoverDraft(draft) {
+  sessionStorage.removeItem(DRAFT_KEY);
+  state.meetingId = draft.meetingId;
+  state.meetingTitle = draft.meetingTitle || '';
+  state.meetingStartTime = draft.meetingStartTime;
+  state.meetingLocation = draft.meetingLocation || '';
+  state.transcript = draft.transcript || [];
+  state.memos = draft.memos || [];
+  state.chatHistory = draft.chatHistory || [];
+  state.analysisHistory = draft.analysisHistory || [];
+  state.currentAnalysis = draft.currentAnalysis || null;
+  state.userInsights = draft.userInsights || [];
+  state.tags = draft.tags || [];
+  state.starRating = draft.starRating || 3;
+  state.categories = draft.categories || [];
+  state.participants = draft.participants || [];
+  if (draft.settings) {
+    if (draft.settings.meetingPreset) state.settings.meetingPreset = draft.settings.meetingPreset;
+    if (draft.settings.meetingContext) state.settings.meetingContext = draft.settings.meetingContext;
+  }
+
+  // Render recovered transcript
+  state.transcript.forEach(line => addTranscriptLine(line));
+  // Render recovered memos
+  state.memos.forEach(memo => addMemoLine(memo));
+  // Render analysis if available
+  if (state.currentAnalysis) renderAnalysis(state.currentAnalysis);
+  // Show meeting as ended (user can resume or save)
+  state.meetingEnded = true;
+  const titleInput = $('#meetingTitleInput');
+  if (titleInput) { titleInput.value = state.meetingTitle; titleInput.hidden = false; }
+  $('#meetingTimer').textContent = '00:00:00';
+  $('#meetingStatus').textContent = t('draft.recovered_status');
+
+  // Show post-end buttons so user can resume or save
+  const endBtn = $('#btnEndMeeting');
+  endBtn.hidden = false;
+
+  // Hide launcher if showing
+  const launcher = $('#launcherModal');
+  if (launcher) launcher.hidden = true;
+
+  showToast(t('toast.draft_recovered'), 'success');
+}
+
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -153,6 +282,7 @@ export async function startRecording() {
     autoSaveInterval = setInterval(() => autoSave(), 30000);
     startAutoAnalysis();
     startAiCorrection();
+    startDraftSaving();
 
     // Guards: idle detection + max duration
     lastTranscriptTime = Date.now();
@@ -430,12 +560,64 @@ export function autoSave() {
 }
 
 export function endMeeting() {
+  // Block if nothing was recorded/typed/chatted
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) {
+    showToast(t('toast.empty_meeting'), 'warning');
+    return;
+  }
+
+  // Confirm dialog for meetings 30min+
+  const elapsed = state.meetingStartTime ? Date.now() - state.meetingStartTime : 0;
+  if (elapsed >= 30 * 60 * 1000) {
+    showEndConfirmDialog(() => {
+      proceedEndMeeting();
+    });
+    return;
+  }
+
+  proceedEndMeeting();
+}
+
+function proceedEndMeeting() {
   stopRecording();
+  clearDraftRecovery();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
   showMinutesGenModal();
 }
 
-function showMinutesGenModal() {
+function showEndConfirmDialog(onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay end-confirm-overlay';
+  const elapsed = getElapsedTimeStr();
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-body" style="padding:24px;text-align:center;">
+        <p style="font-size:1.05rem;margin-bottom:4px;">${t('end_confirm.message')}</p>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+          ${t('end_confirm.stats', { duration: elapsed, lines: state.transcript.length })}
+        </p>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn" id="btnEndConfirmCancel">${t('end_confirm.cancel')}</button>
+          <button class="btn btn-primary" id="btnEndConfirmOk">${t('end_confirm.confirm')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#btnEndConfirmCancel').onclick = () => overlay.remove();
+  overlay.querySelector('#btnEndConfirmOk').onclick = () => {
+    overlay.remove();
+    onConfirm();
+  };
+  // Clicking overlay background closes
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+}
+
+export function showMinutesGenModal() {
   const modal = $('#minutesGenModal');
   minutesGenerated = false;
   minutesSkipped = false;
@@ -518,6 +700,20 @@ function updateExportButton() {
 function showEndMeetingModal() {
   const modal = $('#endMeetingModal');
   modal.hidden = false;
+
+  // Render meeting summary stats
+  const statsEl = $('#endMeetingStats');
+  if (statsEl) {
+    const stats = [];
+    stats.push(`${t('end_meeting.stat_duration')}: ${getElapsedTimeStr()}`);
+    stats.push(`${t('end_meeting.stat_transcript')}: ${state.transcript.length}`);
+    const bookmarkCount = state.transcript.filter(l => l.bookmarked).length;
+    if (bookmarkCount > 0) stats.push(`${t('end_meeting.stat_bookmarks')}: ${bookmarkCount}`);
+    if (state.memos.length > 0) stats.push(`${t('end_meeting.stat_memos')}: ${state.memos.length}`);
+    if (state.analysisHistory.length > 0) stats.push(`${t('end_meeting.stat_analyses')}: ${state.analysisHistory.length}`);
+    if (state.chatHistory.length > 0) stats.push(`${t('end_meeting.stat_chats')}: ${state.chatHistory.length}`);
+    statsEl.textContent = stats.join('  ·  ');
+  }
 
   // Populate date/time (auto-generated from meeting start, editable)
   const meetingDate = new Date(state.meetingStartTime || Date.now());
@@ -705,7 +901,18 @@ export async function finalizeEndMeeting() {
     showToast(t('toast.correction_done'), 'success');
   }
 
+  // Don't save empty meetings (no transcript, memos, or chat)
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) {
+    $('#endMeetingModal').hidden = true;
+    showToast(t('toast.empty_meeting'), 'warning');
+    resetMeeting();
+    restoreEndButton(false);
+    return;
+  }
+
   autoSave();
+  clearDraftRecovery();
   state.meetingEnded = true;
   $('#endMeetingModal').hidden = true;
 
@@ -808,6 +1015,7 @@ function restoreEndButton(showEnd = true) {
 }
 
 export function resetMeeting() {
+  clearDraftRecovery();
   state.meetingEnded = false;
   state.meetingStartTime = null;
   // Clear loaded meeting state
@@ -848,5 +1056,8 @@ export function resetMeeting() {
   $('#meetingStatus').textContent = '';
   const headerTitleInput = $('#meetingTitleInput');
   if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }
+  // Reset inbox badge
+  const inboxBadge = document.querySelector('#inboxBadge');
+  if (inboxBadge) inboxBadge.hidden = true;
   showLauncherModal();
 }
