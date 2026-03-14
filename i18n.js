@@ -151,7 +151,7 @@ const translations = {
     'export.title': 'Transcript Export',
     'export.content_full': 'Full Report',
     'export.content_summary': 'Summary',
-    'export.content_highlights': 'Highlights & Memos',
+    'export.content_highlights': 'Inbox',
     'export.clipboard': 'Copy',
     'export.copied': 'Copied to clipboard!',
     'export.copy_fail': 'Failed to copy',
@@ -189,11 +189,17 @@ const translations = {
     'analysis_history.view_detail': 'View Details',
 
     // Highlights modal
-    'highlights.title': 'Highlights & Memos',
+    'highlights.title': 'Inbox',
     'highlights.all': 'All',
     'highlights.bookmarks': 'Bookmarks',
     'highlights.memos': 'Memos',
-    'highlights.empty': 'No highlights yet.',
+    'highlights.empty': 'No items in your inbox yet.',
+    'highlights.empty_guide': 'Press Ctrl+B to bookmark important moments, or Ctrl+M to add a memo.',
+    'highlights.view_all': 'View all',
+    'highlights.jump': 'Jump to line',
+    'highlights.search_placeholder': 'Search inbox...',
+    'highlights.item_count': '{n} items',
+    'highlights.no_results': 'No results',
 
     // Meeting viewer
     'viewer.title': 'Meeting Details',
@@ -255,7 +261,7 @@ const translations = {
     'md.suggestions': '## Suggestions',
     'md.meeting_summary': '# Meeting Summary',
     'md.context': '## Context',
-    'md.highlights_title': '# Highlights & Memos',
+    'md.highlights_title': '# Inbox',
     'md.bookmarks': '## Bookmarks',
     'md.no_analysis': '# No analysis available',
 
@@ -462,6 +468,7 @@ const translations = {
     'end_meeting.location': 'Location',
     'end_meeting.datetime': 'Date / Time',
     'end_meeting.export_minutes': 'Export Minutes',
+    'end_meeting.view_minutes': 'View Minutes',
     'end_meeting.export_transcript': 'Export Transcript',
     'end_meeting.export_generating': 'Generating minutes...',
     'end_meeting.generate_minutes': 'Generate Minutes',
@@ -486,11 +493,21 @@ const translations = {
     'minutes_preview.done': 'Done',
     'minutes_preview.regenerate': 'Regenerate',
     'minutes_preview.export_as': 'Export as:',
+    'minutes_preview.save_template': 'Save Template',
+    'minutes_preview.no_template': 'Default structure',
+    'minutes_preview.template_name_prompt': 'Template name:',
+    'minutes_preview.template_saved': 'Template saved',
+    'minutes_preview.template_deleted': 'Template deleted',
+    'minutes_preview.more_detail': 'More Detail',
+    'minutes_preview.summarize': 'Summarize',
+    'minutes_preview.custom_placeholder': 'Custom instruction...',
+    'minutes_preview.section_refined': 'Section updated',
+    'minutes_preview.section_refine_fail': 'Failed to refine:',
     'toast.minutes_generating_bg': 'Generating minutes in the background',
     'toast.minutes_still_generating': 'Still generating...',
 
-    // Panel bookmarks
-    'panel.bookmarks': 'Bookmarks',
+    // Panel inbox
+    'panel.inbox': 'Inbox',
 
     // Settings Data tab
     'settings.tab_data': 'Data',
@@ -543,6 +560,28 @@ const translations = {
     'panel.copy_md': 'Copy',
     'panel.compare': 'Compare',
     'toast.copied_md': 'Copied as Markdown!',
+    'toast.empty_meeting': 'Nothing to save — no transcript, memos, or chats yet.',
+
+    'end_meeting.stat_duration': 'Duration',
+    'end_meeting.stat_transcript': 'Transcript lines',
+    'end_meeting.stat_bookmarks': 'Bookmarks',
+    'end_meeting.stat_memos': 'Memos',
+    'end_meeting.stat_analyses': 'Analyses',
+    'end_meeting.stat_chats': 'Chats',
+
+    // End meeting confirmation (30min+)
+    'end_confirm.message': 'End this meeting?',
+    'end_confirm.stats': '{duration} · {lines} transcript lines',
+    'end_confirm.cancel': 'Cancel',
+    'end_confirm.confirm': 'End Meeting',
+
+    // Draft recovery
+    'draft.recovery_message': 'Unsaved meeting found (last saved {time}, {lines} lines). Recover?',
+    'draft.recover': 'Recover',
+    'draft.discard': 'Discard',
+    'draft.recovered_status': 'Recovered from draft',
+    'toast.draft_recovered': 'Meeting recovered from draft.',
+
     'compare.title': 'Prompt A/B Compare',
     'compare.prompt_a': 'Prompt A',
     'compare.prompt_b': 'Prompt B',
@@ -720,7 +759,7 @@ const translations = {
     'export.title': '녹취록 내보내기',
     'export.content_full': '전체 보고서',
     'export.content_summary': '요약',
-    'export.content_highlights': '하이라이트 & 메모',
+    'export.content_highlights': '인박스',
     'export.clipboard': '복사',
     'export.copied': '클립보드에 복사되었습니다!',
     'export.copy_fail': '복사에 실패했습니다',
@@ -758,11 +797,17 @@ const translations = {
     'analysis_history.view_detail': '상세 보기',
 
     // Highlights modal
-    'highlights.title': '하이라이트 & 메모',
+    'highlights.title': '인박스',
     'highlights.all': '전체',
     'highlights.bookmarks': '북마크',
     'highlights.memos': '메모',
-    'highlights.empty': '하이라이트가 없습니다.',
+    'highlights.empty': '인박스가 비어있습니다.',
+    'highlights.empty_guide': 'Ctrl+B로 중요 순간을 북마크하거나, Ctrl+M으로 메모를 남겨보세요.',
+    'highlights.view_all': '전체 보기',
+    'highlights.jump': '해당 줄로 이동',
+    'highlights.search_placeholder': '인박스 검색...',
+    'highlights.item_count': '{n}개 항목',
+    'highlights.no_results': '결과 없음',
 
     // Meeting viewer
     'viewer.title': '회의 상세',
@@ -824,7 +869,7 @@ const translations = {
     'md.suggestions': '## 제안',
     'md.meeting_summary': '# 회의 요약',
     'md.context': '## 맥락',
-    'md.highlights_title': '# 하이라이트 & 메모',
+    'md.highlights_title': '# 인박스',
     'md.bookmarks': '## 북마크',
     'md.no_analysis': '# 분석 결과 없음',
 
@@ -1031,6 +1076,7 @@ const translations = {
     'end_meeting.location': '장소',
     'end_meeting.datetime': '회의 일시',
     'end_meeting.export_minutes': '회의록 내보내기',
+    'end_meeting.view_minutes': '회의록 보기',
     'end_meeting.export_transcript': '녹취록 내보내기',
     'end_meeting.export_generating': '회의록 작성 중',
     'end_meeting.generate_minutes': '회의록 생성하기',
@@ -1055,11 +1101,21 @@ const translations = {
     'minutes_preview.done': '완료',
     'minutes_preview.regenerate': '다시 생성',
     'minutes_preview.export_as': '내보내기:',
+    'minutes_preview.save_template': '템플릿 저장',
+    'minutes_preview.no_template': '기본 구조',
+    'minutes_preview.template_name_prompt': '템플릿 이름:',
+    'minutes_preview.template_saved': '템플릿 저장됨',
+    'minutes_preview.template_deleted': '템플릿 삭제됨',
+    'minutes_preview.more_detail': '더 자세히',
+    'minutes_preview.summarize': '요약',
+    'minutes_preview.custom_placeholder': '지시사항 입력...',
+    'minutes_preview.section_refined': '섹션 업데이트됨',
+    'minutes_preview.section_refine_fail': '섹션 수정 실패:',
     'toast.minutes_generating_bg': '회의록을 백그라운드에서 작성 중입니다',
     'toast.minutes_still_generating': '아직 작성 중입니다',
 
-    // Panel bookmarks
-    'panel.bookmarks': '북마크',
+    // Panel inbox
+    'panel.inbox': '인박스',
 
     // Settings Data tab
     'settings.tab_data': '데이터',
@@ -1112,6 +1168,28 @@ const translations = {
     'panel.copy_md': '복사',
     'panel.compare': '비교',
     'toast.copied_md': '마크다운으로 복사됨!',
+    'toast.empty_meeting': '저장할 내용이 없습니다 — 아직 녹음, 메모, 채팅이 없어요.',
+
+    'end_meeting.stat_duration': '녹음 시간',
+    'end_meeting.stat_transcript': '트랜스크립트',
+    'end_meeting.stat_bookmarks': '북마크',
+    'end_meeting.stat_memos': '메모',
+    'end_meeting.stat_analyses': 'AI 분석',
+    'end_meeting.stat_chats': '채팅',
+
+    // End meeting confirmation (30min+)
+    'end_confirm.message': '회의를 종료하시겠습니까?',
+    'end_confirm.stats': '{duration} · 트랜스크립트 {lines}줄',
+    'end_confirm.cancel': '취소',
+    'end_confirm.confirm': '종료',
+
+    // Draft recovery
+    'draft.recovery_message': '저장되지 않은 회의가 있습니다 (마지막 저장: {time}, {lines}줄). 복구할까요?',
+    'draft.recover': '복구',
+    'draft.discard': '삭제',
+    'draft.recovered_status': '임시저장에서 복구됨',
+    'toast.draft_recovered': '회의가 임시저장에서 복구되었습니다.',
+
     'compare.title': '프롬프트 A/B 비교',
     'compare.prompt_a': '프롬프트 A',
     'compare.prompt_b': '프롬프트 B',

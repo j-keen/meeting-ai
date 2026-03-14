@@ -111,9 +111,59 @@ function renderMarkdownAnalysis(container, analysis) {
   container.appendChild(div);
 }
 
-export function renderHighlights(filter = 'all') {
+export function scrollToTranscriptLine(id) {
+  const el = document.querySelector(`#transcriptList .transcript-line[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('inbox-flash');
+  el.addEventListener('animationend', () => el.classList.remove('inbox-flash'), { once: true });
+}
+
+export function renderInboxPreview() {
+  const container = $('#inboxPreviewItems');
+  container.innerHTML = '';
+  let items = [];
+  state.transcript.filter(l => l.bookmarked).forEach(l => items.push({ ...l, type: 'bookmark' }));
+  state.memos.forEach(m => items.push({ ...m, type: 'memo' }));
+  items.sort((a, b) => b.timestamp - a.timestamp);
+  items = items.slice(0, 3);
+
+  if (items.length === 0) return false;
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'inbox-preview-item';
+
+    const icon = document.createElement('span');
+    icon.className = 'inbox-preview-icon';
+    icon.textContent = item.type === 'memo' ? '📝' : '🔖';
+    row.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.className = 'inbox-preview-text';
+    text.textContent = item.text.length > 40 ? item.text.slice(0, 40) + '...' : item.text;
+    row.appendChild(text);
+
+    const time = document.createElement('span');
+    time.className = 'inbox-preview-time';
+    time.textContent = formatTime(item.timestamp);
+    row.appendChild(time);
+
+    row.addEventListener('click', () => {
+      $('#inboxPreviewDropdown').hidden = true;
+      scrollToTranscriptLine(item.id);
+    });
+
+    container.appendChild(row);
+  });
+
+  return true;
+}
+
+export function renderHighlights(filter = 'all', searchTerm = '') {
   const list = $('#highlightsList');
   list.innerHTML = '';
+  const countEl = $('#inboxSearchCount');
   let items = [];
   if (filter === 'all' || filter === 'bookmarks') {
     state.transcript.filter(l => l.bookmarked).forEach(l => items.push({ ...l, type: 'bookmark' }));
@@ -123,12 +173,46 @@ export function renderHighlights(filter = 'all') {
   }
   items.sort((a, b) => a.timestamp - b.timestamp);
 
-  if (items.length === 0) {
-    const p = document.createElement('p');
-    p.className = 'text-muted';
-    p.style.cssText = 'text-align:center;padding:20px;';
-    p.textContent = t('highlights.empty');
-    list.appendChild(p);
+  if (searchTerm) {
+    const term = searchTerm.toLowerCase();
+    items = items.filter(item => item.text.toLowerCase().includes(term));
+  }
+
+  if (countEl) {
+    if (items.length === 0 && searchTerm) {
+      countEl.textContent = t('highlights.no_results');
+    } else if (items.length > 0) {
+      countEl.textContent = t('highlights.item_count', { n: items.length });
+    } else {
+      countEl.textContent = '';
+    }
+  }
+
+  if (items.length === 0 && !searchTerm) {
+    const guide = document.createElement('div');
+    guide.className = 'inbox-empty-guide';
+    guide.innerHTML = `
+      <div class="inbox-empty-icon">📥</div>
+      <div class="inbox-empty-title">${t('highlights.empty')}</div>
+      <div class="inbox-empty-desc">${t('highlights.empty_guide')}</div>
+      <div class="inbox-shortcut-list">
+        <span class="inbox-shortcut-item"><kbd>Ctrl+B</kbd> ${t('highlights.bookmarks')}</span>
+        <span class="inbox-shortcut-item"><kbd>Ctrl+M</kbd> ${t('highlights.memos')}</span>
+      </div>
+    `;
+    list.appendChild(guide);
+    return;
+  }
+
+  if (items.length === 0 && searchTerm) {
+    const noResults = document.createElement('div');
+    noResults.className = 'inbox-empty-guide';
+    noResults.style.padding = '20px';
+    const noResText = document.createElement('div');
+    noResText.className = 'inbox-empty-title';
+    noResText.textContent = t('highlights.no_results');
+    noResults.appendChild(noResText);
+    list.appendChild(noResults);
     return;
   }
 
@@ -152,6 +236,17 @@ export function renderHighlights(filter = 'all') {
     textSpan.className = 'transcript-text' + (item.type === 'memo' ? ' memo-text' : '');
     textSpan.textContent = item.text;
     div.appendChild(textSpan);
+
+    const jumpBtn = document.createElement('button');
+    jumpBtn.className = 'inbox-jump-btn';
+    jumpBtn.textContent = '📍';
+    jumpBtn.title = t('highlights.jump');
+    jumpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      $('#highlightsModal').hidden = true;
+      scrollToTranscriptLine(item.id);
+    });
+    div.appendChild(jumpBtn);
 
     list.appendChild(div);
   });

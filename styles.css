@@ -2739,6 +2739,48 @@ body.loaded-mode #btnNewMeeting { display: none; }
   display: none;
 }
 
+/* Draft recovery banner */
+.draft-recovery-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  animation: slideDown 0.3s ease;
+}
+.draft-recovery-banner .btn {
+  color: #fff;
+  border-color: rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+}
+.draft-recovery-banner .btn-primary {
+  background: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.6);
+}
+.draft-recovery-actions {
+  display: flex;
+  gap: 6px;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+/* End confirm overlay */
+.end-confirm-overlay {
+  z-index: 9999;
+}
+
 /* Row layout for date/location */
 .end-meeting-row {
   display: flex;
@@ -4037,19 +4079,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 14px;
   line-height: 1.7;
 }
-.minutes-preview-editor {
-  flex: 1;
-  min-height: 300px;
-  padding: 12px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.6;
-  resize: vertical;
-}
+/* .minutes-preview-editor styles moved to .minutes-split-editor */
 .minutes-preview-export {
   display: flex;
   align-items: center;
@@ -4065,5 +4095,119 @@ body.loaded-mode #btnNewMeeting { display: none; }
 }
 .minutes-preview-export .export-format-grid {
   flex: 1;
+}
+
+/* Split editor */
+.minutes-split-editor {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  min-height: 300px;
+}
+.minutes-split-editor .minutes-preview-editor {
+  flex: 1;
+  min-height: 300px;
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+}
+.minutes-preview-live {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+#minutesPreviewModal .modal.minutes-editing {
+  max-width: 1000px;
+}
+@media (max-width: 768px) {
+  .minutes-split-editor {
+    flex-direction: column;
+  }
+}
+
+/* Template selector */
+.minutes-template-select {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.minutes-template-select select {
+  max-width: 180px;
+  font-size: 12px;
+}
+
+/* Section AI refinement */
+.minutes-section-wrapper {
+  position: relative;
+}
+.minutes-section-wrapper .section-action-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+}
+.minutes-section-wrapper:hover .section-action-btn {
+  opacity: 1;
+}
+.section-action-popover {
+  position: absolute;
+  top: 28px;
+  right: 4px;
+  z-index: 10;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 180px;
+}
+.section-custom-input {
+  display: flex;
+  gap: 4px;
+}
+.section-custom-input input {
+  flex: 1;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.minutes-section-loading {
+  opacity: 0.5;
+  pointer-events: none;
+  position: relative;
+}
+.minutes-section-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
 }
 

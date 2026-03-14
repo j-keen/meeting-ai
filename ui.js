@@ -38,6 +38,8 @@ export {
   renderHistoryGrid,
   renderMeetingViewer,
   renderHighlights,
+  renderInboxPreview,
+  scrollToTranscriptLine,
 } from './ui/history-view.js';
 
 // ===== Initialization functions (kept in facade) =====

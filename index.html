@@ -54,7 +54,16 @@
           <span class="panel-hint" data-i18n="hint.transcript_edit">Tap to edit · improves AI quality</span>
         </div>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="btnBookmarks" title="Bookmarks">&#128278; <span data-i18n="panel.bookmarks">Bookmarks</span></button>
+          <div class="inbox-btn-wrap">
+            <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
+            <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
+              <div class="inbox-preview-items" id="inboxPreviewItems"></div>
+              <div class="inbox-preview-footer">
+                <button class="btn btn-sm inbox-preview-viewall" id="inboxPreviewViewAll"
+                        data-i18n="highlights.view_all">View all</button>
+              </div>
+            </div>
+          </div>
           <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
         </div>
       </div>
@@ -508,17 +517,30 @@
             <span id="minutesEditIcon">&#x270E;</span>
             <span id="minutesEditLabel" data-i18n="minutes_preview.edit">Edit</span>
           </button>
+          <button class="btn btn-sm" id="btnMinutesSaveTemplate">
+            <span>&#x1F4BE;</span>
+            <span data-i18n="minutes_preview.save_template">Save Template</span>
+          </button>
           <button class="btn btn-sm" id="btnMinutesRegenerate">
             <span>&#x21BB;</span>
             <span data-i18n="minutes_preview.regenerate">Regenerate</span>
           </button>
           <div class="minutes-regen-options" id="minutesRegenOptions" hidden>
+            <div class="minutes-template-select" id="minutesTemplateSelect">
+              <select id="minutesTemplateDropdown" class="settings-input">
+                <option value="" data-i18n="minutes_preview.no_template">Default structure</option>
+              </select>
+              <button class="btn btn-xs" id="btnDeleteTemplate" hidden>&#x1F5D1;</button>
+            </div>
             <button class="btn btn-xs" data-regen-model="gemini-2.5-flash">Flash</button>
             <button class="btn btn-xs" data-regen-model="gemini-2.5-pro">Pro ✦</button>
           </div>
         </div>
         <div class="minutes-preview-content" id="minutesPreviewContent"></div>
-        <textarea class="minutes-preview-editor" id="minutesPreviewEditor" hidden></textarea>
+        <div class="minutes-split-editor" id="minutesSplitEditor" hidden>
+          <textarea class="minutes-preview-editor" id="minutesPreviewEditor"></textarea>
+          <div class="minutes-preview-live" id="minutesPreviewLive"></div>
+        </div>
         <div class="minutes-preview-export">
           <span class="minutes-preview-export-label" data-i18n="minutes_preview.export_as">Export as:</span>
           <div class="export-format-grid">
@@ -692,10 +714,15 @@
   <div class="modal-overlay" id="highlightsModal" hidden>
     <div class="modal modal-large">
       <div class="modal-header">
-        <h3 data-i18n="highlights.title">Highlights & Memos</h3>
+        <h3 data-i18n="highlights.title">Inbox</h3>
         <button class="btn btn-icon modal-close" data-close="highlightsModal">&times;</button>
       </div>
       <div class="modal-body">
+        <div class="inbox-search-wrap">
+          <input type="text" class="inbox-search-input" id="inboxSearchInput"
+                 data-i18n-placeholder="highlights.search_placeholder" placeholder="Search inbox...">
+          <span class="inbox-search-count" id="inboxSearchCount"></span>
+        </div>
         <div class="highlights-tabs">
           <button class="btn btn-sm tab-active" data-tab="all" data-i18n="highlights.all">All</button>
           <button class="btn btn-sm" data-tab="bookmarks" data-i18n="highlights.bookmarks">Bookmarks</button>
@@ -755,6 +782,8 @@
         <button class="btn btn-icon modal-close" data-close="endMeetingModal">&times;</button>
       </div>
       <div class="modal-body">
+        <!-- 0. Meeting Summary Stats -->
+        <div class="end-meeting-stats" id="endMeetingStats"></div>
         <!-- 1. Categories + Importance (top) -->
         <div class="end-meeting-row">
           <div class="end-meeting-section end-meeting-flex-1">
@@ -1206,6 +1235,17 @@
     <div class="chat-message">
       <div class="chat-message-content"></div>
       <div class="chat-message-actions"></div>
+    </div>
+  </template>
+
+  <template id="sectionActionPopover">
+    <div class="section-action-popover">
+      <button class="btn btn-xs" data-section-action="detail" data-i18n="minutes_preview.more_detail">More Detail</button>
+      <button class="btn btn-xs" data-section-action="summarize" data-i18n="minutes_preview.summarize">Summarize</button>
+      <div class="section-custom-input">
+        <input type="text" class="settings-input" data-i18n-placeholder="minutes_preview.custom_placeholder">
+        <button class="btn btn-xs btn-primary" data-section-action="custom">Go</button>
+      </div>
     </div>
   </template>
 

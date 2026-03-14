@@ -13,24 +13,26 @@ import {
 import {
   initDragResizer, initPanelTabs, addTranscriptLine,
   addMemoLine, renderAnalysis, renderHighlights,
-  renderMeetingViewer,
+  renderMeetingViewer, renderInboxPreview,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
   showToast, showCenterToast, updateTranscriptLineUI, removeTranscriptLineUI,
   getAnalysisAsText,
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
-import { initChat, loadChatHistory } from './chat.js';
+import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
-import { handleExport, handleExportMeeting, getExportContent } from './export-md.js';
+import { handleExport, handleExportMeeting, getExportContent, downloadFile } from './export-md.js';
+import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
-  runCorrection, resetMeeting, getElapsedTimeStr,
+  runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
+  checkDraftRecovery,
 } from './recording.js';
 import { prefetchDeepgramToken } from './stt.js';
 
@@ -56,6 +58,9 @@ function init() {
 
   // Pre-fetch Deepgram token on mobile for faster STT start
   prefetchDeepgramToken();
+
+  // ===== Draft Recovery =====
+  checkDraftRecovery();
 
   // ===== Launcher Modal =====
   if (!state.isRecording) {
@@ -143,7 +148,12 @@ function init() {
       showCenterToast(t('toast.minutes_still_generating'));
       return;
     }
-    $('#exportModal').hidden = false;
+    // If minutes exist, show preview modal; otherwise show export modal (transcript only)
+    if (state.currentAnalysis?.markdown) {
+      openMinutesPreview();
+    } else {
+      $('#exportModal').hidden = false;
+    }
   });
 
   // Star rating clicks
@@ -175,6 +185,24 @@ function init() {
     }
   });
 
+  // Minutes Preview Modal
+  initMinutesPreview();
+
+  // Inbox badge
+  const inboxBadge = $('#inboxBadge');
+  function updateInboxBadge() {
+    const count = state.transcript.filter(l => l.bookmarked).length + (state.memos?.length || 0);
+    if (count > 0) {
+      inboxBadge.textContent = count;
+      inboxBadge.hidden = false;
+      inboxBadge.classList.remove('inbox-badge-pulse');
+      void inboxBadge.offsetWidth; // reflow to retrigger animation
+      inboxBadge.classList.add('inbox-badge-pulse');
+    } else {
+      inboxBadge.hidden = true;
+    }
+  }
+
   // Memo
   const memoInput = $('#memoInput');
   const addMemo = () => {
@@ -185,9 +213,25 @@ function init() {
     addMemoLine(memo);
     memoInput.value = '';
     emit('memo:add', memo);
+    updateInboxBadge();
   };
   memoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addMemo(); });
   $('#btnAddMemo').addEventListener('click', addMemo);
+
+  // Rotating memo placeholder
+  (() => {
+    const input = $('#memoInput');
+    const ph = $('#memoPlaceholder');
+    const keys = ['memo.placeholder.0','memo.placeholder.1','memo.placeholder.2','memo.placeholder.3'];
+    let idx = 0, timer = null;
+    const show = () => { ph.textContent = t(keys[idx]); ph.classList.remove('fade-out'); ph.style.display = ''; };
+    const hide = () => { clearInterval(timer); timer = null; ph.style.display = 'none'; };
+    const rotate = () => { ph.classList.add('fade-out'); setTimeout(() => { idx = (idx + 1) % keys.length; show(); }, 300); };
+    const start = () => { if (!timer) { show(); timer = setInterval(rotate, 3500); } };
+    input.addEventListener('focus', hide);
+    input.addEventListener('blur', () => { if (!input.value) start(); });
+    start();
+  })();
 
   // Memo from chat
   on('memo:fromChat', ({ text }) => {
@@ -195,6 +239,7 @@ function init() {
     state.memos.push(memo);
     addMemoLine(memo);
     emit('memo:add', memo);
+    updateInboxBadge();
   });
 
   // Memo delete
@@ -202,6 +247,7 @@ function init() {
     state.memos = state.memos.filter(m => m.id !== id);
     const el = document.querySelector(`.transcript-line[data-id="${id}"]`);
     if (el) el.remove();
+    updateInboxBadge();
   });
 
   // Analysis rerun from chat
@@ -218,6 +264,10 @@ function init() {
 
   // Highlights
   $('#btnBookmarks').addEventListener('click', () => {
+    const searchInput = $('#inboxSearchInput');
+    if (searchInput) searchInput.value = '';
+    const countEl = $('#inboxSearchCount');
+    if (countEl) countEl.textContent = '';
     renderHighlights('all');
     $('#highlightsModal').hidden = false;
   });
@@ -225,9 +275,44 @@ function init() {
     btn.addEventListener('click', (e) => {
       document.querySelectorAll('.highlights-tabs .btn').forEach(b => b.classList.remove('tab-active'));
       e.target.classList.add('tab-active');
-      renderHighlights(e.target.dataset.tab);
+      const searchTerm = $('#inboxSearchInput')?.value || '';
+      renderHighlights(e.target.dataset.tab, searchTerm);
     });
   });
+
+  // Inbox search input
+  $('#inboxSearchInput')?.addEventListener('input', (e) => {
+    const activeTab = document.querySelector('.highlights-tabs .tab-active')?.dataset.tab || 'all';
+    renderHighlights(activeTab, e.target.value);
+  });
+
+  // Inbox preview dropdown on hover
+  (() => {
+    const wrap = document.querySelector('.inbox-btn-wrap');
+    const dropdown = $('#inboxPreviewDropdown');
+    if (!wrap || !dropdown) return;
+    let hoverTimeout = null;
+
+    wrap.addEventListener('mouseenter', () => {
+      clearTimeout(hoverTimeout);
+      const hasItems = renderInboxPreview();
+      if (hasItems) dropdown.hidden = false;
+    });
+
+    wrap.addEventListener('mouseleave', () => {
+      hoverTimeout = setTimeout(() => { dropdown.hidden = true; }, 150);
+    });
+
+    $('#inboxPreviewViewAll')?.addEventListener('click', () => {
+      dropdown.hidden = true;
+      const searchInput = $('#inboxSearchInput');
+      if (searchInput) searchInput.value = '';
+      const countEl = $('#inboxSearchCount');
+      if (countEl) countEl.textContent = '';
+      renderHighlights('all');
+      $('#highlightsModal').hidden = false;
+    });
+  })();
 
 
   // Analysis user corrections (one-shot for next analysis)
@@ -263,6 +348,7 @@ function init() {
     if (line) {
       line.bookmarked = !line.bookmarked;
       updateTranscriptLineUI(id);
+      updateInboxBadge();
     }
   });
 
@@ -388,6 +474,7 @@ function init() {
     // Close history & viewer modals
     $('#historyModal').hidden = true;
     $('#viewerModal').hidden = true;
+    updateInboxBadge();
   });
 
   // Banner close -> save dialog
@@ -654,6 +741,7 @@ function loadDemoData() {
 
   $('#meetingStatus').textContent = 'Demo Mode';
   showToast('Demo data loaded - 65 transcript lines', 'success');
+  updateInboxBadge();
 }
 
 window.__loadDemo = loadDemoData;
@@ -758,6 +846,130 @@ function loadDemoData2() {
 
   state.meetingStartTime = Date.now() - 90 * 60000;
   showToast('Demo 2 loaded — extended transcript (115 lines, ~90min)', 'success');
+  updateInboxBadge();
+}
+
+// ===== Minutes Preview Modal =====
+function openMinutesPreview() {
+  const modal = $('#minutesPreviewModal');
+  const content = $('#minutesPreviewContent');
+  const editor = $('#minutesPreviewEditor');
+  const editBtn = $('#btnMinutesEditToggle');
+  const editLabel = $('#minutesEditLabel');
+  const editIcon = $('#minutesEditIcon');
+  const regenOptions = $('#minutesRegenOptions');
+
+  const markdown = state.currentAnalysis?.markdown || '';
+
+  // Reset to view mode
+  content.innerHTML = renderMarkdown(markdown);
+  editor.value = markdown;
+  content.hidden = false;
+  editor.hidden = true;
+  editLabel.textContent = t('minutes_preview.edit');
+  editIcon.innerHTML = '&#x270E;';
+  regenOptions.hidden = true;
+
+  modal.hidden = false;
+}
+
+function initMinutesPreview() {
+  const modal = $('#minutesPreviewModal');
+  const content = $('#minutesPreviewContent');
+  const editor = $('#minutesPreviewEditor');
+  const editBtn = $('#btnMinutesEditToggle');
+  const editLabel = $('#minutesEditLabel');
+  const editIcon = $('#minutesEditIcon');
+  const regenBtn = $('#btnMinutesRegenerate');
+  const regenOptions = $('#minutesRegenOptions');
+
+  // Edit toggle
+  editBtn.addEventListener('click', () => {
+    const isEditing = !editor.hidden;
+    if (isEditing) {
+      // Save edits: apply edited markdown back to state
+      const edited = editor.value;
+      if (state.currentAnalysis) {
+        state.currentAnalysis.markdown = edited;
+        autoSave();
+      }
+      content.innerHTML = renderMarkdown(edited);
+      content.hidden = false;
+      editor.hidden = true;
+      editLabel.textContent = t('minutes_preview.edit');
+      editIcon.innerHTML = '&#x270E;';
+    } else {
+      editor.value = state.currentAnalysis?.markdown || '';
+      content.hidden = true;
+      editor.hidden = false;
+      editLabel.textContent = t('minutes_preview.done');
+      editIcon.innerHTML = '&#x2713;';
+      editor.focus();
+    }
+  });
+
+  // Regenerate toggle
+  regenBtn.addEventListener('click', () => {
+    regenOptions.hidden = !regenOptions.hidden;
+  });
+
+  // Regenerate model buttons
+  regenOptions.querySelectorAll('[data-regen-model]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const model = btn.dataset.regenModel;
+      regenOptions.hidden = true;
+      modal.hidden = true;
+      showToast(t('toast.minutes_generating_bg'), 'info');
+
+      try {
+        await regenerateMinutes(model);
+        showToast(t('toast.final_minutes_done'), 'success');
+        // Re-open preview with new content
+        openMinutesPreview();
+      } catch (err) {
+        showToast(t('toast.final_minutes_fail') + err.message, 'error');
+      }
+    });
+  });
+
+  // Export buttons in preview modal
+  modal.querySelectorAll('[data-preview-format]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      // If editing, apply edits first
+      if (!editor.hidden && state.currentAnalysis) {
+        state.currentAnalysis.markdown = editor.value;
+        autoSave();
+      }
+
+      const format = btn.dataset.previewFormat;
+      const markdown = state.currentAnalysis?.markdown || '';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `minutes-${dateStr}`;
+
+      if (format === 'clipboard') {
+        try {
+          await navigator.clipboard.writeText(markdown);
+          showToast(t('export.copied'), 'success');
+        } catch { showToast(t('export.copy_fail'), 'error'); }
+      } else if (format === 'md') {
+        downloadFile(markdown, `${filename}.md`);
+      } else if (format === 'pdf') {
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        try {
+          await exportPDF(markdown, `${filename}.pdf`);
+        } catch (err) { showToast(err.message, 'error'); }
+        finally { btn.disabled = false; btn.innerHTML = origHTML; }
+      } else if (format === 'docx') {
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        try {
+          await exportWord(markdown, `${filename}.docx`);
+        } catch (err) { showToast(err.message, 'error'); }
+        finally { btn.disabled = false; btn.innerHTML = origHTML; }
+      }
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);
