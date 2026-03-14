@@ -89,8 +89,19 @@ function createWebSpeechEngine(language) {
         lastResultTime = Date.now();
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
-          const text = result[0].transcript;
+          let text = result[0].transcript.trim();
           if (result.isFinal) {
+            // Android Chrome sometimes sends empty finals — use last interim as fallback
+            if (!text && lastInterimText) {
+              text = lastInterimText;
+              sttDebug(`FINAL(empty→interim) "${text.slice(0,40)}"`);
+            }
+            // Skip completely empty finals (no interim fallback available)
+            if (!text) {
+              sttDebug(`FINAL(skip) empty, no interim fallback`);
+              hadFinalSinceLastInterim = true;
+              continue;
+            }
             const now = Date.now();
             const gap = lastFinalTime ? now - lastFinalTime : 0;
             // Mobile browsers may send progressive final results (each a superset of the previous).
@@ -119,12 +130,15 @@ function createWebSpeechEngine(language) {
             if (!isSubset) lastFinalText = text;
             lastFinalTime = now;
             lastFinalSessionId = sessionId;
+            lastInterimText = '';
             hadFinalSinceLastInterim = true;
           } else {
             lastInterimText = text;
             hadFinalSinceLastInterim = false;
-            sttDebug(`interim "${text.slice(0,40)}"`);
-            onInterim(text);
+            if (text) {
+              sttDebug(`interim "${text.slice(0,40)}"`);
+              onInterim(text);
+            }
           }
         }
       };
