@@ -379,8 +379,9 @@ function init() {
     document.body.classList.add('loaded-mode');
     $('#meetingStatus').textContent = t('history.load');
 
-    // Close history modal
+    // Close history & viewer modals
     $('#historyModal').hidden = true;
+    $('#viewerModal').hidden = true;
   });
 
   // Banner close -> save dialog

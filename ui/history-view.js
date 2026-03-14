@@ -144,7 +144,7 @@ export function renderHighlights(filter = 'all') {
     if (item.type === 'memo') {
       const badge = document.createElement('span');
       badge.className = 'memo-badge';
-      badge.textContent = 'MEMO';
+      badge.textContent = t('viewer.memo_badge');
       div.appendChild(badge);
     }
 
@@ -287,13 +287,18 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     // Add tag button
     const addTagBtn = document.createElement('button');
     addTagBtn.className = 'history-tag-add';
-    addTagBtn.textContent = '+ tag';
+    addTagBtn.textContent = t('history.add_tag');
     addTagBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const tag = prompt('Enter tag:');
+      const tag = prompt(t('history.enter_tag'));
       if (tag) emit('meeting:addTag', { id: meeting.id, tag: tag.trim() });
     });
     tagsContainer.appendChild(addTagBtn);
+
+    // Apply i18n to template-cloned buttons
+    card.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
 
     const lastAnalysis = meeting.analysisHistory?.[meeting.analysisHistory.length - 1];
     const summaryEl = card.querySelector('.history-card-summary');
@@ -337,16 +342,16 @@ export function renderMeetingViewer(meeting) {
   // Render metadata
   metaContainer.innerHTML = '';
   const metaItems = [
-    { label: 'Date', value: new Date(meeting.startTime || meeting.createdAt).toLocaleString(getDateLocale()) },
-    { label: 'Duration', value: meeting.duration || '' },
-    { label: 'Type', value: meeting.preset || 'General' },
-    { label: 'Location', value: meeting.location || '' },
+    { label: t('viewer.meta_date'), value: new Date(meeting.startTime || meeting.createdAt).toLocaleString(getDateLocale()) },
+    { label: t('viewer.meta_duration'), value: meeting.duration || '' },
+    { label: t('viewer.meta_type'), value: meeting.preset || t('settings.preset_general') },
+    { label: t('viewer.meta_location'), value: meeting.location || '' },
   ];
   if (meeting.meetingContext) {
-    metaItems.push({ label: 'Context', value: meeting.meetingContext.slice(0, 100) + (meeting.meetingContext.length > 100 ? '...' : '') });
+    metaItems.push({ label: t('viewer.meta_context'), value: meeting.meetingContext.slice(0, 100) + (meeting.meetingContext.length > 100 ? '...' : '') });
   }
   if (meeting.tags && meeting.tags.length > 0) {
-    metaItems.push({ label: 'Tags', value: meeting.tags.join(', ') });
+    metaItems.push({ label: t('viewer.meta_tags'), value: meeting.tags.join(', ') });
   }
   metaItems.forEach(({ label, value }) => {
     if (!value) return;
@@ -386,7 +391,7 @@ export function renderMeetingViewer(meeting) {
 
       const badge = document.createElement('span');
       badge.className = 'memo-badge';
-      badge.textContent = 'MEMO';
+      badge.textContent = t('viewer.memo_badge');
 
       const textSpan = document.createElement('span');
       textSpan.className = 'transcript-text memo-text';
@@ -505,7 +510,7 @@ export function renderMeetingViewer(meeting) {
   chatContainer.innerHTML = '';
   const chatTitle = document.createElement('h4');
   chatTitle.className = 'viewer-section-title';
-  chatTitle.textContent = 'AI Chat';
+  chatTitle.textContent = t('viewer.chat_title');
   chatContainer.appendChild(chatTitle);
 
   const chatHistory = (meeting.chatHistory || []).filter(msg =>
@@ -533,6 +538,16 @@ export function renderMeetingViewer(meeting) {
       div.appendChild(content);
       chatContainer.appendChild(div);
     });
+  }
+
+  // Viewer Load button
+  const btnViewerLoad = $('#btnViewerLoad');
+  if (btnViewerLoad) {
+    btnViewerLoad.textContent = t('viewer.load');
+    btnViewerLoad.onclick = () => {
+      emit('meeting:load', { id: meeting.id });
+      $('#viewerModal').hidden = true;
+    };
   }
 }
 
