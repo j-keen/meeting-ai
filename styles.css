@@ -99,6 +99,7 @@ h1, h2, h3 { font-weight: 600; }
 .text-muted { color: var(--text-muted); font-size: 12px; }
 
 /* ===== Buttons ===== */
+.btn[hidden] { display: none; }
 .btn {
   display: inline-flex;
   align-items: center;
