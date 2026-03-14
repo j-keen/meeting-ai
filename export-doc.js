@@ -7,15 +7,22 @@ const CDN = {
 };
 
 const _scriptPromises = {};
-function loadScript(url) {
+function loadScript(url, globalName) {
   if (_scriptPromises[url]) return _scriptPromises[url];
   _scriptPromises[url] = new Promise((resolve, reject) => {
+    if (globalName && window[globalName]) return resolve();
     const existing = document.querySelector(`script[src="${url}"]`);
-    if (existing && window.jspdf) return resolve();
     if (existing) existing.remove();
     const s = document.createElement('script');
     s.src = url;
-    s.onload = resolve;
+    s.onload = () => {
+      if (globalName && !window[globalName]) {
+        delete _scriptPromises[url];
+        reject(new Error(`Script loaded but ${globalName} not found`));
+      } else {
+        resolve();
+      }
+    };
     s.onerror = () => { delete _scriptPromises[url]; reject(new Error(`Failed to load ${url}`)); };
     document.head.appendChild(s);
   });
@@ -23,7 +30,7 @@ function loadScript(url) {
 }
 
 export async function exportPDF(markdown, filename) {
-  await loadScript(CDN.jspdf);
+  await loadScript(CDN.jspdf, 'jspdf');
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -195,7 +202,7 @@ export async function exportPDF(markdown, filename) {
 }
 
 export async function exportWord(markdown, filename) {
-  await loadScript(CDN.docx);
+  await loadScript(CDN.docx, 'docx');
 
   const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = window.docx;
 

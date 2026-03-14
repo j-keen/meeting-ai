@@ -269,6 +269,7 @@ export async function generateFinalMinutes({
   memos = [],
   userProfile = '',
   model = 'gemini-2.5-flash',
+  template = '',
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
@@ -306,6 +307,10 @@ export async function generateFinalMinutes({
 
   if (prevAnalyses) {
     messageParts.push('', '[Previous Interim Analyses]', prevAnalyses);
+  }
+
+  if (template) {
+    messageParts.push('', '[Template Structure — use this heading structure]', template);
   }
 
   messageParts.push('', 'Full Transcript:', transcriptText);
@@ -435,6 +440,36 @@ Rules:
 - 각 섹션 내에서 시간순으로 정리
 - 메모가 제공된 경우, 사용자의 개인 메모/관찰을 반영`
 };
+
+// Refine a single section of the meeting minutes via AI
+export async function refineSectionContent({ fullMarkdown, sectionMarkdown, instruction, lang }) {
+  if (!isProxyAvailable()) throw new Error('Proxy not available');
+
+  const systemPrompt = lang === 'ko'
+    ? `당신은 회의록 편집 도우미입니다. 전체 회의록 맥락을 참고하여, 지정된 섹션만 수정하세요.
+수정된 섹션의 마크다운만 반환하세요. 다른 설명은 불필요합니다.`
+    : `You are a meeting minutes editing assistant. Refer to the full minutes for context, and modify only the specified section.
+Return only the modified section markdown. No other explanation needed.`;
+
+  const userMessage = `[Full Meeting Minutes (for context)]
+${fullMarkdown}
+
+[Target Section to Modify]
+${sectionMarkdown}
+
+[Instruction]
+${instruction}`;
+
+  const body = {
+    contents: [{
+      parts: [{ text: systemPrompt + '\n\n' + userMessage }]
+    }],
+    generationConfig: { temperature: 0.2 }
+  };
+
+  const data = await callGemini('gemini-2.5-flash', body);
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || sectionMarkdown;
+}
 
 // AI-powered sentence correction
 export async function correctSentences({ lines, model = 'gemini-2.5-flash', correctionDict = [] }) {
