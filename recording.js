@@ -487,25 +487,31 @@ function showMinutesGenModal() {
 
 function updateExportButton() {
   const btn = $('#btnEndMeetingExport');
+  const genBtn = $('#btnEndMeetingGenerate');
   if (!btn) return;
   const spinner = btn.querySelector('.btn-spinner');
   const textEl = btn.querySelector('.btn-export-text');
 
   if (minutesGenerated) {
+    // Minutes ready — show export, hide generate
+    btn.hidden = false;
     btn.disabled = false;
     btn.classList.remove('btn-loading');
     if (spinner) spinner.hidden = true;
-    if (textEl) textEl.textContent = t('end_meeting.export_minutes');
+    if (textEl) textEl.textContent = t('end_meeting.view_minutes');
+    if (genBtn) genBtn.hidden = true;
   } else if (minutesSkipped) {
-    btn.disabled = false;
-    btn.classList.remove('btn-loading');
-    if (spinner) spinner.hidden = true;
-    if (textEl) textEl.textContent = t('end_meeting.export_transcript');
+    // Skipped — hide export, show generate button
+    btn.hidden = true;
+    if (genBtn) genBtn.hidden = false;
   } else {
+    // Generating — show export (loading), hide generate
+    btn.hidden = false;
     btn.disabled = true;
     btn.classList.add('btn-loading');
     if (spinner) spinner.hidden = false;
     if (textEl) textEl.textContent = t('end_meeting.export_generating');
+    if (genBtn) genBtn.hidden = true;
   }
 }
 
@@ -539,6 +545,15 @@ function showEndMeetingModal() {
 
   // Update export button state
   updateExportButton();
+
+  // "Generate Minutes" button — re-opens quality select modal
+  const genBtn = $('#btnEndMeetingGenerate');
+  if (genBtn) {
+    genBtn.onclick = () => {
+      modal.hidden = true;
+      showMinutesGenModal();
+    };
+  }
 
   // AI title/tag generation
   const suggestionsEl = $('#aiTitleSuggestions');
@@ -728,6 +743,13 @@ async function generateFinalMeetingMinutes() {
   autoSave();
 
   emit('analysis:complete', result);
+}
+
+export async function regenerateMinutes(model) {
+  state.settings.geminiModel = model;
+  await generateFinalMeetingMinutes();
+  minutesGenerated = true;
+  updateExportButton();
 }
 
 export function cancelEndMeeting() {

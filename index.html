@@ -495,6 +495,55 @@
     </div>
   </div>
 
+  <!-- Minutes Preview Modal -->
+  <div class="modal-overlay" id="minutesPreviewModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 data-i18n="minutes_preview.title">Meeting Minutes</h3>
+        <button class="btn btn-icon modal-close" data-close="minutesPreviewModal">&times;</button>
+      </div>
+      <div class="modal-body minutes-preview-body">
+        <div class="minutes-preview-toolbar">
+          <button class="btn btn-sm" id="btnMinutesEditToggle">
+            <span id="minutesEditIcon">&#x270E;</span>
+            <span id="minutesEditLabel" data-i18n="minutes_preview.edit">Edit</span>
+          </button>
+          <button class="btn btn-sm" id="btnMinutesRegenerate">
+            <span>&#x21BB;</span>
+            <span data-i18n="minutes_preview.regenerate">Regenerate</span>
+          </button>
+          <div class="minutes-regen-options" id="minutesRegenOptions" hidden>
+            <button class="btn btn-xs" data-regen-model="gemini-2.5-flash">Flash</button>
+            <button class="btn btn-xs" data-regen-model="gemini-2.5-pro">Pro ✦</button>
+          </div>
+        </div>
+        <div class="minutes-preview-content" id="minutesPreviewContent"></div>
+        <textarea class="minutes-preview-editor" id="minutesPreviewEditor" hidden></textarea>
+        <div class="minutes-preview-export">
+          <span class="minutes-preview-export-label" data-i18n="minutes_preview.export_as">Export as:</span>
+          <div class="export-format-grid">
+            <button class="btn export-fmt-btn" data-preview-format="md" title="Markdown">
+              <span class="export-fmt-icon">MD</span>
+              <span>Markdown</span>
+            </button>
+            <button class="btn export-fmt-btn" data-preview-format="pdf" title="PDF">
+              <span class="export-fmt-icon">PDF</span>
+              <span>PDF</span>
+            </button>
+            <button class="btn export-fmt-btn" data-preview-format="docx" title="Word">
+              <span class="export-fmt-icon">W</span>
+              <span>Word</span>
+            </button>
+            <button class="btn export-fmt-btn" data-preview-format="clipboard" title="Clipboard">
+              <span class="export-fmt-icon">&#128203;</span>
+              <span data-i18n="export.clipboard">Copy</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- History Modal -->
   <div class="modal-overlay" id="historyModal" hidden>
     <div class="modal modal-large">
@@ -763,6 +812,7 @@
         </div>
         <!-- 5. Actions -->
         <div class="end-meeting-actions">
+          <button class="btn" id="btnEndMeetingGenerate" hidden data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
           <button class="btn btn-loading" id="btnEndMeetingExport" disabled>
             <span class="btn-spinner"></span>
