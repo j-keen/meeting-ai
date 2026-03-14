@@ -4,6 +4,19 @@ import { t } from './i18n.js';
 
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+// Deepgram token cache (pre-connect optimization)
+let cachedDeepgramToken = null;
+let tokenFetchPromise = null;
+
+export function prefetchDeepgramToken() {
+  if (!isMobile || cachedDeepgramToken || tokenFetchPromise) return;
+  tokenFetchPromise = fetch('/api/stt-token')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => { cachedDeepgramToken = data.key; })
+    .catch(() => { /* silent — will retry at start */ })
+    .finally(() => { tokenFetchPromise = null; });
+}
+
 function sttDebug(msg) {
   console.log(msg);
 }
@@ -212,17 +225,23 @@ function createDeepgramEngine(language) {
   return {
     name: 'deepgram',
 
-    async start(onInterim, onFinal, onError) {
-      // Fetch API key from server
-      let apiKey;
-      try {
-        const resp = await fetch('/api/stt-token');
-        if (!resp.ok) throw new Error('Failed to get STT token');
-        const data = await resp.json();
-        apiKey = data.key;
-      } catch (err) {
-        onError(t('stt.deepgram_key_missing'));
-        return;
+    async start(onInterim, onFinal, onError, _onReplace, onConnecting, onConnected) {
+      // Signal connecting state
+      onConnecting?.();
+
+      // Fetch API key (use cache if available)
+      let apiKey = cachedDeepgramToken;
+      if (!apiKey) {
+        try {
+          const resp = await fetch('/api/stt-token');
+          if (!resp.ok) throw new Error('Failed to get STT token');
+          const data = await resp.json();
+          apiKey = data.key;
+          cachedDeepgramToken = apiKey;
+        } catch (err) {
+          onError(t('stt.deepgram_key_missing'));
+          return;
+        }
       }
 
       // Get microphone stream
@@ -242,6 +261,7 @@ function createDeepgramEngine(language) {
         ws.onopen = () => {
           sttDebug('[STT:Deepgram] WebSocket connected');
           reconnectAttempts = 0;
+          onConnected?.();
 
           // Start MediaRecorder to capture audio
           mediaRecorder = new MediaRecorder(stream, {
@@ -327,8 +347,9 @@ export function createSTT() {
 
   return {
     get isRunning() { return isRunning; },
+    get engineName() { return currentEngine?.name || null; },
 
-    async start({ language, onInterim, onFinal, onError, onReplace }) {
+    async start({ language, onInterim, onFinal, onError, onReplace, onConnecting, onConnected }) {
       if (isRunning) return;
       isRunning = true;
 
@@ -344,15 +365,18 @@ export function createSTT() {
             sttDebug(`Deepgram error, fallback to WebSpeech: ${err}`);
             onError(err + ' ' + t('stt.fallback_webspeech'));
             currentEngine = createWebSpeechEngine(language);
+            onConnected?.('webspeech');
             currentEngine.start(onInterim, safeFinal, onError, onReplace);
-          });
+          }, onReplace, onConnecting, () => onConnected?.('deepgram'));
         } catch (err) {
           sttDebug(`Deepgram failed, fallback: ${err}`);
           currentEngine = createWebSpeechEngine(language);
+          onConnected?.('webspeech');
           currentEngine.start(onInterim, safeFinal, onError, onReplace);
         }
       } else {
         currentEngine = createWebSpeechEngine(language);
+        onConnected?.('webspeech');
         currentEngine.start(onInterim, safeFinal, onError, onReplace);
       }
     },

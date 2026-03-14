@@ -14,6 +14,7 @@ export {
   initContextPopup,
   updateTranscriptLineUI,
   removeTranscriptLineUI,
+  showTranscriptConnecting,
   showTranscriptWaiting,
   hideTranscriptWaiting,
   resetTranscriptEmpty,

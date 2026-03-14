@@ -32,6 +32,7 @@ import {
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   runCorrection, resetMeeting, getElapsedTimeStr,
 } from './recording.js';
+import { prefetchDeepgramToken } from './stt.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -52,6 +53,9 @@ function init() {
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
+
+  // Pre-fetch Deepgram token on mobile for faster STT start
+  prefetchDeepgramToken();
 
   // ===== Launcher Modal =====
   if (!state.isRecording) {

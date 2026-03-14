@@ -158,6 +158,21 @@ const translations = {
     'history.delete': 'Delete',
     'history.no_meetings': 'No meetings found.',
     'history.untitled': 'Untitled Meeting',
+    'history.load': 'Load',
+
+    // Loaded meeting
+    'loaded.banner': 'Loaded: {title}',
+    'loaded.save_title': 'Save Changes?',
+    'loaded.save_desc': 'This meeting has been modified. How would you like to proceed?',
+    'loaded.overwrite': 'Overwrite Original',
+    'loaded.save_copy': 'Save as Copy',
+    'loaded.discard': 'Discard Changes',
+    'loaded.no_changes': 'No changes detected. Closing.',
+    'loaded.recording_block': 'Cannot record while a past meeting is loaded. Close the loaded meeting first.',
+    'loaded.saved': 'Changes saved.',
+    'loaded.saved_copy': 'Saved as a new copy.',
+    'loaded.discarded': 'Changes discarded.',
+
     // Analysis history modal
     'analysis_history.title': 'Analysis History',
     'analysis_history.empty': 'No analysis history yet.',
@@ -413,8 +428,11 @@ const translations = {
     'meeting.preset_start_desc': 'Start from saved preset',
     'meeting.no_presets': 'No presets',
     'toast.recording_started': 'Recording started. Speak to transcribe.',
+    'transcript.connecting': 'Connecting to speech service...',
+    'transcript.connecting_hint': 'This may take a moment on mobile networks.',
     'transcript.waiting': 'Listening for speech...',
     'transcript.waiting_hint': 'Speak and it will be transcribed automatically.',
+    'stt.connected': 'Speech service connected.',
 
     // End Meeting Modal
     'end_meeting.title': 'Save Meeting',
@@ -682,6 +700,21 @@ const translations = {
     'history.delete': '삭제',
     'history.no_meetings': '회의 기록이 없습니다.',
     'history.untitled': '제목 없는 회의',
+    'history.load': '불러오기',
+
+    // Loaded meeting
+    'loaded.banner': '불러옴: {title}',
+    'loaded.save_title': '변경사항 저장',
+    'loaded.save_desc': '이 회의가 수정되었습니다. 어떻게 하시겠습니까?',
+    'loaded.overwrite': '원본에 덮어쓰기',
+    'loaded.save_copy': '복사본으로 저장',
+    'loaded.discard': '변경사항 버리기',
+    'loaded.no_changes': '변경사항이 없습니다. 닫습니다.',
+    'loaded.recording_block': '과거 회의가 로드된 상태에서는 녹음할 수 없습니다. 먼저 로드된 회의를 닫으세요.',
+    'loaded.saved': '변경사항이 저장되었습니다.',
+    'loaded.saved_copy': '새 복사본으로 저장되었습니다.',
+    'loaded.discarded': '변경사항이 버려졌습니다.',
+
     // Analysis history modal
     'analysis_history.title': '분석 기록',
     'analysis_history.empty': '분석 기록이 없습니다.',
@@ -937,8 +970,11 @@ const translations = {
     'meeting.preset_start_desc': '저장된 프리셋으로 시작',
     'meeting.no_presets': '프리셋 없음',
     'toast.recording_started': '녹음이 시작되었습니다. 말씀하시면 자동으로 기록됩니다.',
+    'transcript.connecting': '음성 서비스 연결 중...',
+    'transcript.connecting_hint': '모바일 네트워크에서는 잠시 시간이 걸릴 수 있습니다.',
     'transcript.waiting': '음성을 인식하고 있습니다...',
     'transcript.waiting_hint': '말씀하시면 자동으로 기록됩니다.',
+    'stt.connected': '음성 서비스에 연결되었습니다.',
 
     // End Meeting Modal
     'end_meeting.title': '회의 저장',

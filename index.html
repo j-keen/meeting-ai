@@ -29,6 +29,14 @@
     </div>
   </header>
 
+  <!-- Loaded Meeting Banner -->
+  <div class="loaded-meeting-banner" id="loadedMeetingBanner" hidden>
+    <span class="loaded-banner-icon">📂</span>
+    <span id="loadedBannerTitle"></span>
+    <span id="loadedBannerDate" class="loaded-banner-date"></span>
+    <button class="loaded-banner-close" id="loadedBannerClose">&times;</button>
+  </div>
+
   <!-- Mobile Panel Tabs -->
   <div class="panel-tabs" id="panelTabs">
     <button class="panel-tab active" data-panel="left" data-i18n="panel.transcript">Transcript</button>
@@ -56,11 +64,11 @@
             <p class="text-muted" data-i18n="transcript.empty_hint">Start recording to begin</p>
           </div>
           <div class="transcript-waiting" id="transcriptWaiting" style="display:none">
-            <div class="waiting-indicator"></div>
+            <div class="waiting-indicator" id="transcriptWaitingIndicator"></div>
             <div class="waiting-content">
-              <span class="waiting-dot-label">REC</span>
-              <p class="waiting-text" data-i18n="transcript.waiting">Listening for speech...</p>
-              <p class="waiting-hint text-muted" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
+              <span class="waiting-dot-label" id="transcriptWaitingLabel">REC</span>
+              <p class="waiting-text" id="transcriptWaitingText" data-i18n="transcript.waiting">Listening for speech...</p>
+              <p class="waiting-hint text-muted" id="transcriptWaitingHint" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
             </div>
           </div>
         </div>
@@ -155,6 +163,7 @@
       <button class="btn btn-record" id="btnRecord" title="Start/Stop recording (Ctrl+R)" aria-label="Toggle recording">
         <span class="record-icon record-dot"></span>
         <span class="record-label">REC</span>
+        <span class="stt-engine-badge" id="sttEngineBadge" hidden></span>
       </button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
@@ -422,6 +431,19 @@
     <button class="context-btn" data-action="editText" data-i18n="context.edit_text">Edit Text</button>
     <button class="context-btn" data-action="bookmark" data-i18n="context.bookmark">Toggle Bookmark</button>
     <button class="context-btn" data-action="delete" data-i18n="context.delete">Delete</button>
+  </div>
+
+  <!-- Loaded Meeting Save Confirmation Modal -->
+  <div class="modal-overlay" id="loadedSaveModal" hidden>
+    <div class="modal loaded-save-modal">
+      <h2 class="modal-title" id="loadedSaveTitle" data-i18n="loaded.save_title">Save Changes?</h2>
+      <p class="loaded-save-desc" id="loadedSaveDesc" data-i18n="loaded.save_desc">This meeting has been modified. How would you like to proceed?</p>
+      <div class="loaded-save-actions">
+        <button class="btn btn-primary" id="btnLoadedOverwrite" data-i18n="loaded.overwrite">Overwrite Original</button>
+        <button class="btn" id="btnLoadedSaveCopy" data-i18n="loaded.save_copy">Save as Copy</button>
+        <button class="btn btn-danger" id="btnLoadedDiscard" data-i18n="loaded.discard">Discard Changes</button>
+      </div>
+    </div>
   </div>
 
   <!-- Export Modal -->
@@ -1088,6 +1110,7 @@
       <div class="history-card-tags"></div>
       <div class="history-card-summary"></div>
       <div class="history-card-actions">
+        <button class="btn btn-xs btn-primary" data-action="load" data-i18n="history.load">Load</button>
         <button class="btn btn-xs" data-action="view" data-i18n="history.view">View</button>
         <button class="btn btn-xs" data-action="export" data-i18n="history.export">Export</button>
         <button class="btn btn-xs btn-danger" data-action="delete" data-i18n="history.delete">Delete</button>

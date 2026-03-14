@@ -32,4 +32,6 @@ export const state = {
   participants: [],
   analysisContext: '',
   analysisCorrections: [], // [{before, after}] — user edits to include in next analysis only
+  loadedMeetingId: null,
+  loadedMeetingOriginal: null,
 };

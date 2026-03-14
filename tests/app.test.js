@@ -1,7 +1,7 @@
 // Characterization tests for app.js — pub/sub system and state object.
 // All module dependencies are mocked so the DOM-heavy init() never runs.
 
-vi.mock('../stt.js', () => ({ createSTT: vi.fn() }));
+vi.mock('../stt.js', () => ({ createSTT: vi.fn(), prefetchDeepgramToken: vi.fn() }));
 vi.mock('../ai.js', () => ({
   analyzeTranscript: vi.fn(),
   getDefaultPrompt: vi.fn(),
@@ -70,6 +70,7 @@ vi.mock('../ui.js', () => ({
   showToast: vi.fn(),
   updateTranscriptLineUI: vi.fn(),
   removeTranscriptLineUI: vi.fn(),
+  showTranscriptConnecting: vi.fn(),
   showTranscriptWaiting: vi.fn(),
   hideTranscriptWaiting: vi.fn(),
   resetTranscriptEmpty: vi.fn(),

@@ -301,6 +301,10 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
       summaryEl.textContent = lastAnalysis.summary.slice(0, 100) + (lastAnalysis.summary.length > 100 ? '...' : '');
     }
 
+    card.querySelector('[data-action="load"]').addEventListener('click', (e) => {
+      e.stopPropagation();
+      emit('meeting:load', { id: meeting.id });
+    });
     card.querySelector('[data-action="view"]').addEventListener('click', (e) => {
       e.stopPropagation();
       emit('meeting:view', { id: meeting.id });

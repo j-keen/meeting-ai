@@ -232,11 +232,36 @@ export function removeTranscriptLineUI(id) {
   if (el) el.remove();
 }
 
+export function showTranscriptConnecting() {
+  const placeholder = $('#transcriptEmptyPlaceholder');
+  const waiting = $('#transcriptWaiting');
+  if (placeholder) placeholder.style.display = 'none';
+  if (waiting) {
+    waiting.style.display = '';
+    waiting.classList.add('connecting');
+    const label = $('#transcriptWaitingLabel');
+    const text = $('#transcriptWaitingText');
+    const hint = $('#transcriptWaitingHint');
+    if (label) label.textContent = '';
+    if (text) text.textContent = t('transcript.connecting');
+    if (hint) hint.textContent = t('transcript.connecting_hint');
+  }
+}
+
 export function showTranscriptWaiting() {
   const placeholder = $('#transcriptEmptyPlaceholder');
   const waiting = $('#transcriptWaiting');
   if (placeholder) placeholder.style.display = 'none';
-  if (waiting) waiting.style.display = '';
+  if (waiting) {
+    waiting.style.display = '';
+    waiting.classList.remove('connecting');
+    const label = $('#transcriptWaitingLabel');
+    const text = $('#transcriptWaitingText');
+    const hint = $('#transcriptWaitingHint');
+    if (label) label.textContent = 'REC';
+    if (text) text.textContent = t('transcript.waiting');
+    if (hint) hint.textContent = t('transcript.waiting_hint');
+  }
 }
 
 export function hideTranscriptWaiting() {

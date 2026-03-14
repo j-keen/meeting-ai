@@ -372,6 +372,13 @@ describe('transcript waiting state helpers', () => {
     waiting.id = 'transcriptWaiting';
     waiting.style.display = 'none';
     document.body.appendChild(waiting);
+
+    // Sub-elements used by showTranscriptWaiting/showTranscriptConnecting
+    for (const [id] of [['transcriptWaitingIndicator'], ['transcriptWaitingLabel'], ['transcriptWaitingText'], ['transcriptWaitingHint']]) {
+      const el = document.createElement('span');
+      el.id = id;
+      waiting.appendChild(el);
+    }
   });
 
   it('showTranscriptWaiting makes the waiting element visible', () => {

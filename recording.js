@@ -13,7 +13,7 @@ import {
   showToast, addTranscriptLine, showInterim, clearInterim,
   showAnalysisSkeletons, renderAnalysis, renderHighlights,
   updateTranscriptLineUI, removeTranscriptLineUI,
-  showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
+  showTranscriptConnecting, showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
   showAiWaiting, hideAiWaiting, resetAiEmpty,
   showChatWaiting, resetChatEmpty,
   addMemoLine, getAnalysisAsText,
@@ -109,6 +109,20 @@ export async function startRecording() {
       onError: (err) => {
         showToast(err, 'error');
       },
+      onConnecting: () => {
+        showTranscriptConnecting();
+      },
+      onConnected: (engine) => {
+        showTranscriptWaiting();
+        showToast(t('stt.connected'), 'success');
+        // Show engine badge
+        const badge = document.querySelector('#sttEngineBadge');
+        if (badge) {
+          badge.textContent = engine === 'deepgram' ? 'DG' : 'WS';
+          badge.title = engine === 'deepgram' ? 'Deepgram Nova-2' : 'Web Speech API';
+          badge.hidden = false;
+        }
+      },
     });
 
     // Set recording state only AFTER stt.start() succeeds
@@ -146,7 +160,6 @@ export async function startRecording() {
     $('#meetingStatus').textContent = t('record.status_recording');
     $('#btnEndMeeting').hidden = false;
 
-    showTranscriptWaiting();
     showAiWaiting(state.settings.analysisCharThreshold || 1000);
     showChatWaiting();
     showToast(t('toast.recording_started'), 'success');
@@ -181,6 +194,8 @@ export function stopRecording() {
   btn.classList.add('paused');
   btn.querySelector('.record-label').textContent = t('record.paused');
   $('#meetingStatus').textContent = t('record.status_paused');
+  const badge = $('#sttEngineBadge');
+  if (badge) badge.hidden = true;
 
   autoSave();
 }
@@ -783,6 +798,8 @@ export function resetMeeting() {
   const recBtn = $('#btnRecord');
   recBtn.classList.remove('recording', 'paused');
   recBtn.querySelector('.record-label').textContent = t('record.label');
+  const badge = $('#sttEngineBadge');
+  if (badge) badge.hidden = true;
   $('#btnEndMeeting').hidden = true;
   state.meetingId = null;
   state.meetingLocation = '';
