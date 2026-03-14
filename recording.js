@@ -623,11 +623,22 @@ export function showMinutesGenModal() {
   minutesSkipped = false;
 
   if (!isProxyAvailable() || state.transcript.length === 0) {
+    minutesSkipped = true;
     showEndMeetingModal();
     return;
   }
 
   modal.hidden = false;
+
+  // Close handler: X button or overlay click → skip + restore endMeetingModal
+  const handleModalClose = () => {
+    modal.hidden = true;
+    minutesSkipped = true;
+    showEndMeetingModal();
+  };
+  const closeBtn = modal.querySelector('.modal-close');
+  if (closeBtn) closeBtn.onclick = handleModalClose;
+  modal.onclick = (e) => { if (e.target === modal) handleModalClose(); };
 
   // Show Pro usage count on card
   const proCount = getProUsageCount();
@@ -654,6 +665,7 @@ export function showMinutesGenModal() {
       updateExportButton();
       showToast(t('toast.final_minutes_done'), 'success');
     }).catch(err => {
+      minutesSkipped = true;
       showToast(t('toast.final_minutes_fail') + err.message, 'error');
       updateExportButton();
     });
