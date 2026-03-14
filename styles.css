@@ -2806,6 +2806,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .correction-dict-modal-overlay {
   z-index: 300;
 }
+
+#exportModal {
+  z-index: 250;
+}
 .btn-correction-dict-open {
   width: 100%;
   display: flex;

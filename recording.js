@@ -49,6 +49,7 @@ let idleWarningShown = false;
 let maxDurationTimeout = null;
 
 let minutesGenerated = false;
+let minutesSkipped = false;
 
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -436,6 +437,7 @@ export function endMeeting() {
 function showMinutesGenModal() {
   const modal = $('#minutesGenModal');
   minutesGenerated = false;
+  minutesSkipped = false;
 
   if (!isProxyAvailable() || state.transcript.length === 0) {
     showEndMeetingModal();
@@ -464,7 +466,7 @@ function showMinutesGenModal() {
 
   $('#btnQualityFlash').onclick = () => handleCardClick('gemini-2.5-flash');
   $('#btnQualityPro').onclick = () => handleCardClick('gemini-2.5-pro');
-  $('#btnMinutesSkip').onclick = () => { modal.hidden = true; showEndMeetingModal(); };
+  $('#btnMinutesSkip').onclick = () => { modal.hidden = true; minutesSkipped = true; showEndMeetingModal(); };
 }
 
 function updateExportButton() {
@@ -478,6 +480,11 @@ function updateExportButton() {
     btn.classList.remove('btn-loading');
     if (spinner) spinner.hidden = true;
     if (textEl) textEl.textContent = t('end_meeting.export_minutes');
+  } else if (minutesSkipped) {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    if (spinner) spinner.hidden = true;
+    if (textEl) textEl.textContent = t('end_meeting.export_transcript');
   } else {
     btn.disabled = true;
     btn.classList.add('btn-loading');
