@@ -2,7 +2,7 @@
 
 
 const CDN = {
-  jspdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+  jspdf: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
   docx: 'https://cdn.jsdelivr.net/npm/docx@9.1.1/dist/index.iife.js',
 };
 

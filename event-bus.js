@@ -34,4 +34,6 @@ export const state = {
   analysisCorrections: [], // [{before, after}] — user edits to include in next analysis only
   loadedMeetingId: null,
   loadedMeetingOriginal: null,
+  minutesVersions: [],
+  minutesPromptConfig: { referenceDoc: '', basePromptOverride: '', userInstruction: '' },
 };

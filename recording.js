@@ -941,7 +941,7 @@ export async function finalizeEndMeeting() {
   showToast(t('toast.meeting_saved'), 'success');
 }
 
-async function generateFinalMeetingMinutes(template) {
+async function generateFinalMeetingMinutes(template, promptConfig = {}) {
   showAnalysisSkeletons();
 
   const result = await generateFinalMinutes({
@@ -954,6 +954,9 @@ async function generateFinalMeetingMinutes(template) {
     userProfile: buildFullProfile(),
     model: state.settings.geminiModel || 'gemini-2.5-flash',
     template: template || '',
+    referenceDoc: promptConfig.referenceDoc || '',
+    basePromptOverride: promptConfig.basePromptOverride || '',
+    userInstruction: promptConfig.userInstruction || '',
   });
 
   state.currentAnalysis = result;
@@ -965,9 +968,9 @@ async function generateFinalMeetingMinutes(template) {
   emit('analysis:complete', result);
 }
 
-export async function regenerateMinutes(model, template) {
+export async function regenerateMinutes(model, template, promptConfig = {}) {
   state.settings.geminiModel = model;
-  await generateFinalMeetingMinutes(template);
+  await generateFinalMeetingMinutes(template, promptConfig);
   minutesGenerated = true;
   updateExportButton();
 }

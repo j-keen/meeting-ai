@@ -260,6 +260,11 @@ Return ONLY valid JSON:
 }
 
 // Generate final meeting minutes at meeting end
+export function getDefaultMinutesPrompt() {
+  const lang = getAiLanguage();
+  return lang === 'ko' ? FINAL_MINUTES_PROMPT.ko : FINAL_MINUTES_PROMPT.en;
+}
+
 export async function generateFinalMinutes({
   transcript,
   analysisHistory = [],
@@ -270,6 +275,9 @@ export async function generateFinalMinutes({
   userProfile = '',
   model = 'gemini-2.5-flash',
   template = '',
+  referenceDoc = '',
+  basePromptOverride = '',
+  userInstruction = '',
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
@@ -285,7 +293,7 @@ export async function generateFinalMinutes({
     .join('\n---\n');
 
   const lang = getAiLanguage();
-  const prompt = lang === 'ko' ? FINAL_MINUTES_PROMPT.ko : FINAL_MINUTES_PROMPT.en;
+  const prompt = basePromptOverride || (lang === 'ko' ? FINAL_MINUTES_PROMPT.ko : FINAL_MINUTES_PROMPT.en);
 
   const messageParts = [
     `Meeting Context: ${contextText}`,
@@ -311,6 +319,14 @@ export async function generateFinalMinutes({
 
   if (template) {
     messageParts.push('', '[Template Structure — use this heading structure]', template);
+  }
+
+  if (referenceDoc) {
+    messageParts.push('', '[Reference Minutes Style]', referenceDoc);
+  }
+
+  if (userInstruction) {
+    messageParts.push('', '[Additional Instruction]', userInstruction);
   }
 
   messageParts.push('', 'Full Transcript:', transcriptText);

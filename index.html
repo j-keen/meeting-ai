@@ -513,55 +513,25 @@
       </div>
       <div class="modal-body minutes-preview-body">
         <div class="minutes-preview-toolbar">
-          <button class="btn btn-sm" id="btnMinutesEditToggle">
-            <span id="minutesEditIcon">&#x270E;</span>
-            <span id="minutesEditLabel" data-i18n="minutes_preview.edit">Edit</span>
-          </button>
-          <button class="btn btn-sm" id="btnMinutesSaveTemplate">
-            <span>&#x1F4BE;</span>
-            <span data-i18n="minutes_preview.save_template">Save Template</span>
-          </button>
-          <button class="btn btn-sm" id="btnMinutesRegenerate">
-            <span>&#x21BB;</span>
-            <span data-i18n="minutes_preview.regenerate">Regenerate</span>
-          </button>
-          <div class="minutes-regen-options" id="minutesRegenOptions" hidden>
-            <div class="minutes-template-select" id="minutesTemplateSelect">
-              <select id="minutesTemplateDropdown" class="settings-input">
-                <option value="" data-i18n="minutes_preview.no_template">Default structure</option>
-              </select>
-              <button class="btn btn-xs" id="btnDeleteTemplate" hidden>&#x1F5D1;</button>
-            </div>
-            <button class="btn btn-xs" data-regen-model="gemini-2.5-flash">Flash</button>
-            <button class="btn btn-xs" data-regen-model="gemini-2.5-pro">Pro ✦</button>
+          <div class="minutes-model-pill">
+            <button class="pill-seg" data-pill-model="gemini-2.5-flash">Flash</button>
+            <button class="pill-seg" data-pill-model="gemini-2.5-pro">Pro ✦</button>
           </div>
+          <button class="btn btn-sm" id="btnMinutesPromptEdit">
+            <span>&#x270E;</span>
+            <span data-i18n="minutes_preview.prompt_edit">Prompt</span>
+          </button>
+          <button class="btn btn-sm" id="btnMinutesVersions" hidden>
+            <span>&#x1F4C4;</span>
+            <span data-i18n="minutes_preview.prev_versions">Versions</span>
+            <span class="version-count-badge" id="minutesVersionBadge">0</span>
+          </button>
+          <button class="btn btn-sm" id="btnMinutesExport">
+            <span>&#x2B07;</span>
+            <span data-i18n="minutes_preview.export">Export</span>
+          </button>
         </div>
         <div class="minutes-preview-content" id="minutesPreviewContent"></div>
-        <div class="minutes-split-editor" id="minutesSplitEditor" hidden>
-          <textarea class="minutes-preview-editor" id="minutesPreviewEditor"></textarea>
-          <div class="minutes-preview-live" id="minutesPreviewLive"></div>
-        </div>
-        <div class="minutes-preview-export">
-          <span class="minutes-preview-export-label" data-i18n="minutes_preview.export_as">Export as:</span>
-          <div class="export-format-grid">
-            <button class="btn export-fmt-btn" data-preview-format="md" title="Markdown">
-              <span class="export-fmt-icon">MD</span>
-              <span>Markdown</span>
-            </button>
-            <button class="btn export-fmt-btn" data-preview-format="pdf" title="PDF">
-              <span class="export-fmt-icon">PDF</span>
-              <span>PDF</span>
-            </button>
-            <button class="btn export-fmt-btn" data-preview-format="docx" title="Word">
-              <span class="export-fmt-icon">W</span>
-              <span>Word</span>
-            </button>
-            <button class="btn export-fmt-btn" data-preview-format="clipboard" title="Clipboard">
-              <span class="export-fmt-icon">&#128203;</span>
-              <span data-i18n="export.clipboard">Copy</span>
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1246,6 +1216,77 @@
         <input type="text" class="settings-input" data-i18n-placeholder="minutes_preview.custom_placeholder">
         <button class="btn btn-xs btn-primary" data-section-action="custom">Go</button>
       </div>
+    </div>
+  </template>
+
+  <template id="tmplExportPopover">
+    <div class="export-popover">
+      <button class="btn btn-sm export-pop-btn" data-preview-format="pdf">
+        <span class="export-fmt-icon">PDF</span> PDF
+      </button>
+      <button class="btn btn-sm export-pop-btn" data-preview-format="docx">
+        <span class="export-fmt-icon">W</span> Word
+      </button>
+      <button class="btn btn-sm export-pop-btn" data-preview-format="clipboard">
+        <span class="export-fmt-icon">&#128203;</span> <span data-i18n="export.clipboard">Copy</span>
+      </button>
+    </div>
+  </template>
+
+  <template id="tmplPromptEditModal">
+    <div class="prompt-edit-overlay">
+      <div class="prompt-edit-modal">
+        <div class="modal-header">
+          <h3 data-i18n="minutes_preview.prompt_edit">Prompt Settings</h3>
+          <button class="btn btn-icon prompt-edit-close">&times;</button>
+        </div>
+        <div class="prompt-edit-body">
+          <div class="prompt-section">
+            <div class="prompt-section-header" data-section="reference">
+              <span data-i18n="minutes_preview.prompt_reference">Reference Style</span>
+              <span class="prompt-section-arrow">&#x25BC;</span>
+            </div>
+            <div class="prompt-section-content">
+              <textarea class="settings-textarea prompt-textarea" id="promptReference" rows="4"
+                data-i18n-placeholder="minutes_preview.prompt_reference_hint" placeholder="Paste reference minutes here..."></textarea>
+            </div>
+          </div>
+          <div class="prompt-section">
+            <div class="prompt-section-header" data-section="base">
+              <span data-i18n="minutes_preview.prompt_base">Base Prompt</span>
+              <span class="prompt-section-arrow">&#x25BC;</span>
+            </div>
+            <div class="prompt-section-content">
+              <textarea class="settings-textarea prompt-textarea" id="promptBaseOverride" rows="6"></textarea>
+            </div>
+          </div>
+          <div class="prompt-section">
+            <div class="prompt-section-header" data-section="instruction">
+              <span data-i18n="minutes_preview.prompt_instruction">User Instruction</span>
+              <span class="prompt-section-arrow">&#x25BC;</span>
+            </div>
+            <div class="prompt-section-content">
+              <textarea class="settings-textarea prompt-textarea" id="promptInstruction" rows="3"
+                data-i18n-placeholder="minutes_preview.prompt_instruction_hint" placeholder="e.g., Focus on action items"></textarea>
+            </div>
+          </div>
+          <div class="prompt-preset-bar">
+            <select class="settings-input" id="promptPresetSelect">
+              <option value="" data-i18n="minutes_preview.preset_select">Select preset</option>
+            </select>
+            <button class="btn btn-xs" id="btnSavePreset" data-i18n="minutes_preview.save_preset">Save Preset</button>
+          </div>
+          <div class="prompt-edit-actions">
+            <button class="btn btn-sm btn-primary" id="btnApplyPrompt" data-i18n="minutes_preview.apply">Apply</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tmplVersionListPopover">
+    <div class="version-list-popover">
+      <div class="version-list" id="versionListItems"></div>
     </div>
   </template>
 

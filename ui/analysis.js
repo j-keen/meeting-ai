@@ -24,7 +24,7 @@ function isMarkdownAnalysis(analysis) {
 }
 
 // Parse markdown into blocks for block-level editing
-function parseMarkdownBlocks(markdown) {
+export function parseMarkdownBlocks(markdown) {
   const lines = markdown.split('\n');
   const blocks = [];
   let currentBlock = null;
@@ -93,7 +93,7 @@ function parseMarkdownBlocks(markdown) {
 }
 
 // Reconstruct full markdown from blocks array
-function blocksToMarkdown(blocks) {
+export function blocksToMarkdown(blocks) {
   return blocks.map(b => b.raw).join('\n\n');
 }
 

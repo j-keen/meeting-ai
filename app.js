@@ -23,7 +23,8 @@ import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
-import { refineSectionContent } from './ai.js';
+import { refineSectionContent, getDefaultMinutesPrompt } from './ai.js';
+import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
 import { handleExport, handleExportMeeting, getExportContent, downloadFile } from './export-md.js';
 import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
@@ -846,191 +847,228 @@ function loadDemoData2() {
 
 // ===== Minutes Preview Modal =====
 
-// Extract heading structure from markdown for templates
-function extractTemplateStructure(markdown) {
-  return markdown.split('\n').filter(line => /^#{1,4}\s/.test(line)).join('\n');
-}
+function renderMinutesBlocks(container, markdown) {
+  container.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'ai-markdown-content';
 
-// Split markdown into sections by ## headings
-function splitMarkdownSections(markdown) {
-  const lines = markdown.split('\n');
-  const sections = [];
-  let current = null;
-  for (const line of lines) {
-    if (/^## /.test(line)) {
-      if (current) sections.push(current);
-      current = { heading: line, lines: [line] };
-    } else if (current) {
-      current.lines.push(line);
-    } else {
-      // Lines before first ## heading
-      if (!sections.length && !current) {
-        current = { heading: '', lines: [line] };
-      }
+  const blocks = parseMarkdownBlocks(markdown);
+
+  blocks.forEach((block, index) => {
+    const blockEl = document.createElement('div');
+    blockEl.className = 'ai-block';
+    blockEl.dataset.blockIndex = index;
+    blockEl.innerHTML = renderMarkdown(block.raw);
+
+    // Edit button (shown on hover via CSS)
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ai-block-edit-btn';
+    editBtn.innerHTML = '&#x270E;';
+    editBtn.title = t('block_edit.edit');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (div.querySelector('.ai-block.editing')) return;
+      startMinutesBlockEdit(blockEl, block, index, blocks, div);
+    });
+    blockEl.appendChild(editBtn);
+
+    // AI refinement button for ## headings
+    if (block.type === 'heading' && /^## /.test(block.raw)) {
+      const aiBtn = document.createElement('button');
+      aiBtn.className = 'section-action-btn';
+      aiBtn.title = 'AI';
+      aiBtn.textContent = 'AI';
+      blockEl.appendChild(aiBtn);
     }
-  }
-  if (current) sections.push(current);
-  return sections;
+
+    div.appendChild(blockEl);
+  });
+
+  container.appendChild(div);
+  return blocks;
 }
 
-// Render markdown with per-section wrappers and AI buttons (view mode)
-function renderSectionedMarkdown(markdown) {
-  const sections = splitMarkdownSections(markdown);
-  if (sections.length <= 1) return renderMarkdown(markdown);
+function startMinutesBlockEdit(blockEl, block, index, blocks, containerDiv) {
+  const originalRaw = block.raw;
+  let done = false;
+  blockEl.classList.add('editing');
+  containerDiv.classList.add('has-editing-block');
 
-  return sections.map((sec, idx) => {
-    const html = renderMarkdown(sec.lines.join('\n'));
-    return `<div class="minutes-section-wrapper" data-section-idx="${idx}">
-      <button class="section-action-btn" title="AI">AI</button>
-      ${html}
-    </div>`;
-  }).join('');
+  const textarea = document.createElement('textarea');
+  textarea.className = 'ai-block-textarea';
+  textarea.value = originalRaw;
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'ai-block-toolbar';
+
+  const hintSpan = document.createElement('span');
+  hintSpan.className = 'ai-block-hint';
+  hintSpan.textContent = t('block_edit.hint');
+
+  const actionsDiv = document.createElement('div');
+  actionsDiv.className = 'ai-block-actions';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-xs';
+  cancelBtn.dataset.action = 'cancel';
+  cancelBtn.title = t('block_edit.cancel');
+  cancelBtn.textContent = '\u2715';
+
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-xs btn-primary';
+  saveBtn.dataset.action = 'save';
+  saveBtn.title = t('block_edit.done');
+  saveBtn.textContent = '\u2713';
+
+  actionsDiv.appendChild(cancelBtn);
+  actionsDiv.appendChild(saveBtn);
+  toolbar.appendChild(hintSpan);
+  toolbar.appendChild(actionsDiv);
+
+  blockEl.innerHTML = '';
+  blockEl.appendChild(textarea);
+  blockEl.appendChild(toolbar);
+  textarea.focus();
+
+  const autoResize = () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+  textarea.addEventListener('input', autoResize);
+  requestAnimationFrame(autoResize);
+
+  const reattachEditBtn = () => {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'ai-block-edit-btn';
+    editBtn.innerHTML = '&#x270E;';
+    editBtn.title = t('block_edit.edit');
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (containerDiv.querySelector('.ai-block.editing')) return;
+      startMinutesBlockEdit(blockEl, block, index, blocks, containerDiv);
+    });
+    blockEl.appendChild(editBtn);
+
+    // Re-add AI button for headings
+    if (block.type === 'heading' && /^## /.test(block.raw)) {
+      const aiBtn = document.createElement('button');
+      aiBtn.className = 'section-action-btn';
+      aiBtn.title = 'AI';
+      aiBtn.textContent = 'AI';
+      blockEl.appendChild(aiBtn);
+    }
+  };
+
+  const removeOutsideListener = () => {
+    document.removeEventListener('mousedown', onOutsideClick, true);
+  };
+
+  const cancel = () => {
+    if (done) return;
+    done = true;
+    removeOutsideListener();
+    blockEl.classList.remove('editing');
+    containerDiv.classList.remove('has-editing-block');
+    blockEl.innerHTML = renderMarkdown(originalRaw);
+    reattachEditBtn();
+  };
+
+  const save = () => {
+    if (done) return;
+    const newRaw = textarea.value.trim();
+    if (!newRaw || newRaw === originalRaw) { cancel(); return; }
+
+    done = true;
+    removeOutsideListener();
+
+    block.raw = newRaw;
+    blocks[index] = block;
+
+    const newMarkdown = blocksToMarkdown(blocks);
+    if (state.currentAnalysis) {
+      state.currentAnalysis.markdown = newMarkdown;
+      state.currentAnalysis.summary = newMarkdown;
+      autoSave();
+    }
+
+    blockEl.classList.remove('editing');
+    containerDiv.classList.remove('has-editing-block');
+    blockEl.innerHTML = renderMarkdown(newRaw);
+    reattachEditBtn();
+  };
+
+  toolbar.addEventListener('click', (e) => {
+    const action = e.target.closest('[data-action]')?.dataset.action;
+    if (action === 'cancel') cancel();
+    if (action === 'save') save();
+  });
+
+  textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cancel();
+    if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+  });
+
+  const onOutsideClick = (e) => {
+    if (!blockEl.contains(e.target)) save();
+  };
+  requestAnimationFrame(() => {
+    document.addEventListener('mousedown', onOutsideClick, true);
+  });
+}
+
+function saveMinutesVersion() {
+  const markdown = state.currentAnalysis?.markdown;
+  if (!markdown) return;
+  const model = state.settings.geminiModel || 'gemini-2.5-flash';
+  state.minutesVersions.push({ markdown, timestamp: Date.now(), model });
+  if (state.minutesVersions.length > 10) state.minutesVersions.shift();
+}
+
+function updateVersionBadge() {
+  const btn = $('#btnMinutesVersions');
+  const badge = $('#minutesVersionBadge');
+  const count = state.minutesVersions.length;
+  btn.hidden = count === 0;
+  badge.textContent = count;
 }
 
 function openMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
-  const splitEditor = $('#minutesSplitEditor');
-  const editLabel = $('#minutesEditLabel');
-  const editIcon = $('#minutesEditIcon');
-  const regenOptions = $('#minutesRegenOptions');
-
   const markdown = state.currentAnalysis?.markdown || '';
 
-  // Reset to view mode
-  content.innerHTML = renderSectionedMarkdown(markdown);
-  content.hidden = false;
-  splitEditor.hidden = true;
-  modal.querySelector('.modal').classList.remove('minutes-editing');
-  editLabel.textContent = t('minutes_preview.edit');
-  editIcon.innerHTML = '&#x270E;';
-  regenOptions.hidden = true;
+  renderMinutesBlocks(content, markdown);
 
-  // Populate template dropdown
-  populateTemplateDropdown();
-
-  modal.hidden = false;
-}
-
-function populateTemplateDropdown() {
-  const dropdown = $('#minutesTemplateDropdown');
-  const deleteBtn = $('#btnDeleteTemplate');
-  const templates = state.settings.minutesTemplates || [];
-  dropdown.innerHTML = `<option value="">${t('minutes_preview.no_template')}</option>`;
-  templates.forEach(tmpl => {
-    const opt = document.createElement('option');
-    opt.value = tmpl.id;
-    opt.textContent = tmpl.name;
-    dropdown.appendChild(opt);
+  // Set pill active state
+  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
+  modal.querySelectorAll('.pill-seg').forEach(seg => {
+    seg.classList.toggle('active', seg.dataset.pillModel === currentModel);
   });
-  deleteBtn.hidden = true;
+
+  updateVersionBadge();
+  modal.hidden = false;
 }
 
 function initMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
-  const splitEditor = $('#minutesSplitEditor');
-  const editor = $('#minutesPreviewEditor');
-  const livePreview = $('#minutesPreviewLive');
-  const editBtn = $('#btnMinutesEditToggle');
-  const editLabel = $('#minutesEditLabel');
-  const editIcon = $('#minutesEditIcon');
-  const regenBtn = $('#btnMinutesRegenerate');
-  const regenOptions = $('#minutesRegenOptions');
-  const saveTemplateBtn = $('#btnMinutesSaveTemplate');
-  const templateDropdown = $('#minutesTemplateDropdown');
-  const deleteTemplateBtn = $('#btnDeleteTemplate');
 
-  // Debounce helper for live preview
-  let livePreviewTimer = null;
+  // ── Model pill toggle ──
+  modal.querySelectorAll('.pill-seg').forEach(seg => {
+    seg.addEventListener('click', async () => {
+      if (seg.classList.contains('active')) return;
+      const model = seg.dataset.pillModel;
 
-  // Edit toggle — now uses split editor
-  editBtn.addEventListener('click', () => {
-    const isEditing = !splitEditor.hidden;
-    if (isEditing) {
-      // Save edits
-      const edited = editor.value;
-      if (state.currentAnalysis) {
-        state.currentAnalysis.markdown = edited;
-        autoSave();
-      }
-      content.innerHTML = renderSectionedMarkdown(edited);
-      content.hidden = false;
-      splitEditor.hidden = true;
-      modal.querySelector('.modal').classList.remove('minutes-editing');
-      editLabel.textContent = t('minutes_preview.edit');
-      editIcon.innerHTML = '&#x270E;';
-    } else {
-      editor.value = state.currentAnalysis?.markdown || '';
-      livePreview.innerHTML = renderMarkdown(editor.value);
-      content.hidden = true;
-      splitEditor.hidden = false;
-      modal.querySelector('.modal').classList.add('minutes-editing');
-      editLabel.textContent = t('minutes_preview.done');
-      editIcon.innerHTML = '&#x2713;';
-      editor.focus();
-    }
-  });
+      saveMinutesVersion();
 
-  // Live preview on textarea input (200ms debounce)
-  editor.addEventListener('input', () => {
-    clearTimeout(livePreviewTimer);
-    livePreviewTimer = setTimeout(() => {
-      livePreview.innerHTML = renderMarkdown(editor.value);
-    }, 200);
-  });
+      modal.querySelectorAll('.pill-seg').forEach(s => s.classList.remove('active'));
+      seg.classList.add('active');
 
-  // Save Template
-  saveTemplateBtn.addEventListener('click', () => {
-    const markdown = state.currentAnalysis?.markdown || '';
-    if (!markdown) return;
-    const name = prompt(t('minutes_preview.template_name_prompt'));
-    if (!name) return;
-    const structure = extractTemplateStructure(markdown);
-    const templates = state.settings.minutesTemplates || [];
-    templates.push({ id: generateId(), name, structure, createdAt: Date.now() });
-    saveSettings({ minutesTemplates: templates });
-    state.settings.minutesTemplates = templates;
-    populateTemplateDropdown();
-    showToast(t('minutes_preview.template_saved'), 'success');
-  });
-
-  // Template dropdown change — show/hide delete button
-  templateDropdown.addEventListener('change', () => {
-    deleteTemplateBtn.hidden = !templateDropdown.value;
-  });
-
-  // Delete template
-  deleteTemplateBtn.addEventListener('click', () => {
-    const id = templateDropdown.value;
-    if (!id) return;
-    const templates = (state.settings.minutesTemplates || []).filter(t => t.id !== id);
-    saveSettings({ minutesTemplates: templates });
-    state.settings.minutesTemplates = templates;
-    populateTemplateDropdown();
-    showToast(t('minutes_preview.template_deleted'), 'success');
-  });
-
-  // Regenerate toggle
-  regenBtn.addEventListener('click', () => {
-    regenOptions.hidden = !regenOptions.hidden;
-  });
-
-  // Regenerate model buttons
-  regenOptions.querySelectorAll('[data-regen-model]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const model = btn.dataset.regenModel;
-      const selectedTemplateId = templateDropdown.value;
-      const templates = state.settings.minutesTemplates || [];
-      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
-      const templateStructure = selectedTemplate?.structure || '';
-
-      regenOptions.hidden = true;
       modal.hidden = true;
       showToast(t('toast.minutes_generating_bg'), 'info');
 
       try {
-        await regenerateMinutes(model, templateStructure);
+        await regenerateMinutes(model, '', state.minutesPromptConfig);
         showToast(t('toast.final_minutes_done'), 'success');
         openMinutesPreview();
       } catch (err) {
@@ -1039,22 +1077,206 @@ function initMinutesPreview() {
     });
   });
 
-  // Section AI refinement — event delegation on content
+  // ── Export button ──
+  const exportBtn = $('#btnMinutesExport');
+  let currentExportPopover = null;
+  exportBtn.addEventListener('click', () => {
+    if (currentExportPopover) { currentExportPopover.remove(); currentExportPopover = null; return; }
+
+    const tmpl = document.getElementById('tmplExportPopover');
+    const popover = tmpl.content.cloneNode(true).firstElementChild;
+
+    // Apply i18n
+    popover.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+
+    exportBtn.parentElement.style.position = 'relative';
+    exportBtn.parentElement.appendChild(popover);
+    currentExportPopover = popover;
+
+    popover.querySelectorAll('[data-preview-format]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const format = btn.dataset.previewFormat;
+        const markdown = state.currentAnalysis?.markdown || '';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const filename = `minutes-${dateStr}`;
+
+        if (format === 'clipboard') {
+          try { await navigator.clipboard.writeText(markdown); showToast(t('export.copied'), 'success'); }
+          catch { showToast(t('export.copy_fail'), 'error'); }
+        } else if (format === 'pdf') {
+          btn.disabled = true;
+          try { await exportPDF(markdown, `${filename}.pdf`); }
+          catch (err) { showToast(err.message, 'error'); }
+          finally { btn.disabled = false; }
+        } else if (format === 'docx') {
+          btn.disabled = true;
+          try { await exportWord(markdown, `${filename}.docx`); }
+          catch (err) { showToast(err.message, 'error'); }
+          finally { btn.disabled = false; }
+        }
+        popover.remove();
+        currentExportPopover = null;
+      });
+    });
+
+    const closeExport = (ev) => {
+      if (!popover.contains(ev.target) && ev.target !== exportBtn) {
+        popover.remove();
+        currentExportPopover = null;
+        document.removeEventListener('click', closeExport);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeExport), 0);
+  });
+
+  // ── Prompt edit button ──
+  const promptEditBtn = $('#btnMinutesPromptEdit');
+  promptEditBtn.addEventListener('click', () => {
+    const tmpl = document.getElementById('tmplPromptEditModal');
+    const overlay = tmpl.content.cloneNode(true).firstElementChild;
+
+    // Apply i18n
+    overlay.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    overlay.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+
+    // Fill current values
+    const cfg = state.minutesPromptConfig;
+    overlay.querySelector('#promptReference').value = cfg.referenceDoc || '';
+    overlay.querySelector('#promptBaseOverride').value = cfg.basePromptOverride || getDefaultMinutesPrompt();
+    overlay.querySelector('#promptInstruction').value = cfg.userInstruction || '';
+
+    // Collapsible sections
+    overlay.querySelectorAll('.prompt-section-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const section = header.closest('.prompt-section');
+        section.classList.toggle('collapsed');
+      });
+    });
+
+    // Presets
+    const presetSelect = overlay.querySelector('#promptPresetSelect');
+    const presets = state.settings.minutesPromptPresets || [];
+    presets.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      presetSelect.appendChild(opt);
+    });
+
+    presetSelect.addEventListener('change', () => {
+      const preset = presets.find(p => p.id === presetSelect.value);
+      if (!preset) return;
+      overlay.querySelector('#promptReference').value = preset.referenceDoc || '';
+      overlay.querySelector('#promptBaseOverride').value = preset.basePromptOverride || '';
+      overlay.querySelector('#promptInstruction').value = preset.userInstruction || '';
+    });
+
+    // Save preset
+    overlay.querySelector('#btnSavePreset').addEventListener('click', () => {
+      const name = prompt(t('minutes_preview.preset_name'));
+      if (!name) return;
+      const newPreset = {
+        id: generateId(),
+        name,
+        referenceDoc: overlay.querySelector('#promptReference').value,
+        basePromptOverride: overlay.querySelector('#promptBaseOverride').value,
+        userInstruction: overlay.querySelector('#promptInstruction').value,
+      };
+      presets.push(newPreset);
+      saveSettings({ minutesPromptPresets: presets });
+      state.settings.minutesPromptPresets = presets;
+      const opt = document.createElement('option');
+      opt.value = newPreset.id;
+      opt.textContent = newPreset.name;
+      presetSelect.appendChild(opt);
+      showToast(t('minutes_preview.preset_saved'), 'success');
+    });
+
+    // Apply
+    overlay.querySelector('#btnApplyPrompt').addEventListener('click', () => {
+      state.minutesPromptConfig = {
+        referenceDoc: overlay.querySelector('#promptReference').value.trim(),
+        basePromptOverride: overlay.querySelector('#promptBaseOverride').value.trim(),
+        userInstruction: overlay.querySelector('#promptInstruction').value.trim(),
+      };
+      overlay.remove();
+      showToast(t('minutes_preview.apply'), 'success');
+    });
+
+    // Close
+    overlay.querySelector('.prompt-edit-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    document.body.appendChild(overlay);
+  });
+
+  // ── Versions button ──
+  const versionsBtn = $('#btnMinutesVersions');
+  let currentVersionPopover = null;
+  versionsBtn.addEventListener('click', () => {
+    if (currentVersionPopover) { currentVersionPopover.remove(); currentVersionPopover = null; return; }
+
+    const tmpl = document.getElementById('tmplVersionListPopover');
+    const popover = tmpl.content.cloneNode(true).firstElementChild;
+    const list = popover.querySelector('#versionListItems');
+
+    state.minutesVersions.forEach((ver, idx) => {
+      const item = document.createElement('div');
+      item.className = 'version-item';
+      const time = new Date(ver.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
+      const modelLabel = ver.model.includes('pro') ? 'Pro' : 'Flash';
+      item.innerHTML = `<span>${time} — ${modelLabel}</span>`;
+      const restoreBtn = document.createElement('button');
+      restoreBtn.className = 'btn btn-xs';
+      restoreBtn.textContent = t('minutes_preview.version_restore');
+      restoreBtn.addEventListener('click', () => {
+        saveMinutesVersion();
+        if (state.currentAnalysis) {
+          state.currentAnalysis.markdown = ver.markdown;
+          state.currentAnalysis.summary = ver.markdown;
+          autoSave();
+        }
+        popover.remove();
+        currentVersionPopover = null;
+        openMinutesPreview();
+      });
+      item.appendChild(restoreBtn);
+      list.appendChild(item);
+    });
+
+    versionsBtn.parentElement.style.position = 'relative';
+    versionsBtn.parentElement.appendChild(popover);
+    currentVersionPopover = popover;
+
+    const closeVersions = (ev) => {
+      if (!popover.contains(ev.target) && ev.target !== versionsBtn) {
+        popover.remove();
+        currentVersionPopover = null;
+        document.removeEventListener('click', closeVersions);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeVersions), 0);
+  });
+
+  // ── Section AI refinement — event delegation ──
   content.addEventListener('click', (e) => {
     const actionBtn = e.target.closest('.section-action-btn');
     if (!actionBtn) return;
 
-    // Close any existing popover
     content.querySelectorAll('.section-action-popover').forEach(p => p.remove());
 
-    const wrapper = actionBtn.closest('.minutes-section-wrapper');
-    if (!wrapper) return;
+    const blockEl = actionBtn.closest('.ai-block');
+    if (!blockEl) return;
 
-    // Create popover from template
     const tmpl = document.getElementById('sectionActionPopover');
     const popover = tmpl.content.cloneNode(true).firstElementChild;
 
-    // Apply i18n to popover
     popover.querySelectorAll('[data-i18n]').forEach(el => {
       el.textContent = t(el.getAttribute('data-i18n'));
     });
@@ -1062,9 +1284,8 @@ function initMinutesPreview() {
       el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
     });
 
-    wrapper.appendChild(popover);
+    blockEl.appendChild(popover);
 
-    // Handle popover actions
     popover.addEventListener('click', async (ev) => {
       const actionEl = ev.target.closest('[data-section-action]');
       if (!actionEl) return;
@@ -1085,44 +1306,43 @@ function initMinutesPreview() {
 
       popover.remove();
 
-      const sectionIdx = parseInt(wrapper.dataset.sectionIdx);
+      const headingIdx = parseInt(blockEl.dataset.blockIndex);
       const fullMarkdown = state.currentAnalysis?.markdown || '';
-      const sections = splitMarkdownSections(fullMarkdown);
-      if (!sections[sectionIdx]) return;
+      const blocks = parseMarkdownBlocks(fullMarkdown);
 
-      const sectionMarkdown = sections[sectionIdx].lines.join('\n');
+      // Find section range: from this heading to next heading
+      let endIdx = blocks.length;
+      for (let i = headingIdx + 1; i < blocks.length; i++) {
+        if (blocks[i].type === 'heading' && /^## /.test(blocks[i].raw)) { endIdx = i; break; }
+      }
+      const sectionBlocks = blocks.slice(headingIdx, endIdx);
+      const sectionMarkdown = sectionBlocks.map(b => b.raw).join('\n\n');
 
-      // Show loading state
-      wrapper.classList.add('minutes-section-loading');
+      blockEl.classList.add('section-loading');
       const scrollTop = content.scrollTop;
 
       try {
-        const refined = await refineSectionContent({
-          fullMarkdown,
-          sectionMarkdown,
-          instruction,
-          lang,
-        });
+        const refined = await refineSectionContent({ fullMarkdown, sectionMarkdown, instruction, lang });
 
-        // Replace section in full markdown
-        sections[sectionIdx].lines = refined.split('\n');
-        const newMarkdown = sections.map(s => s.lines.join('\n')).join('\n');
+        // Replace blocks in range
+        const newSectionBlocks = parseMarkdownBlocks(refined);
+        blocks.splice(headingIdx, endIdx - headingIdx, ...newSectionBlocks);
 
+        const newMarkdown = blocksToMarkdown(blocks);
         if (state.currentAnalysis) {
           state.currentAnalysis.markdown = newMarkdown;
           autoSave();
         }
 
-        content.innerHTML = renderSectionedMarkdown(newMarkdown);
+        renderMinutesBlocks(content, newMarkdown);
         content.scrollTop = scrollTop;
         showToast(t('minutes_preview.section_refined'), 'success');
       } catch (err) {
-        wrapper.classList.remove('minutes-section-loading');
+        blockEl.classList.remove('section-loading');
         showToast(t('minutes_preview.section_refine_fail') + ' ' + err.message, 'error');
       }
     });
 
-    // Close popover on outside click
     const closePopover = (ev) => {
       if (!popover.contains(ev.target) && ev.target !== actionBtn) {
         popover.remove();
@@ -1130,45 +1350,6 @@ function initMinutesPreview() {
       }
     };
     setTimeout(() => document.addEventListener('click', closePopover), 0);
-  });
-
-  // Export buttons in preview modal
-  modal.querySelectorAll('[data-preview-format]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      // If editing, apply edits first
-      if (!splitEditor.hidden && state.currentAnalysis) {
-        state.currentAnalysis.markdown = editor.value;
-        autoSave();
-      }
-
-      const format = btn.dataset.previewFormat;
-      const markdown = state.currentAnalysis?.markdown || '';
-      const dateStr = new Date().toISOString().slice(0, 10);
-      const filename = `minutes-${dateStr}`;
-
-      if (format === 'clipboard') {
-        try {
-          await navigator.clipboard.writeText(markdown);
-          showToast(t('export.copied'), 'success');
-        } catch { showToast(t('export.copy_fail'), 'error'); }
-      } else if (format === 'md') {
-        downloadFile(markdown, `${filename}.md`);
-      } else if (format === 'pdf') {
-        const origHTML = btn.innerHTML;
-        btn.disabled = true;
-        try {
-          await exportPDF(markdown, `${filename}.pdf`);
-        } catch (err) { showToast(err.message, 'error'); }
-        finally { btn.disabled = false; btn.innerHTML = origHTML; }
-      } else if (format === 'docx') {
-        const origHTML = btn.innerHTML;
-        btn.disabled = true;
-        try {
-          await exportWord(markdown, `${filename}.docx`);
-        } catch (err) { showToast(err.message, 'error'); }
-        finally { btn.disabled = false; btn.innerHTML = origHTML; }
-      }
-    });
   });
 }
 
