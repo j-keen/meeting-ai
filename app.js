@@ -219,19 +219,13 @@ function init() {
   memoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addMemo(); });
   $('#btnAddMemo').addEventListener('click', addMemo);
 
-  // Rotating memo placeholder
+  // Memo placeholder
   (() => {
     const input = $('#memoInput');
     const ph = $('#memoPlaceholder');
-    const keys = ['memo.placeholder.0','memo.placeholder.1','memo.placeholder.2','memo.placeholder.3'];
-    let idx = 0, timer = null;
-    const show = () => { ph.textContent = t(keys[idx]); ph.classList.remove('fade-out'); ph.style.display = ''; };
-    const hide = () => { clearInterval(timer); timer = null; ph.style.display = 'none'; };
-    const rotate = () => { ph.classList.add('fade-out'); setTimeout(() => { idx = (idx + 1) % keys.length; show(); }, 300); };
-    const start = () => { if (!timer) { show(); timer = setInterval(rotate, 3500); } };
-    input.addEventListener('focus', hide);
-    input.addEventListener('blur', () => { if (!input.value) start(); });
-    start();
+    ph.textContent = t('memo.placeholder.0');
+    input.addEventListener('focus', () => { ph.style.display = 'none'; });
+    input.addEventListener('blur', () => { if (!input.value) ph.style.display = ''; });
   })();
 
   // Memo from chat

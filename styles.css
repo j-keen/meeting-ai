@@ -648,9 +648,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-secondary); opacity: 0.6; pointer-events: none;
   font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: calc(100% - 20px);
-  transition: opacity 0.3s;
 }
-.memo-placeholder.fade-out { opacity: 0; }
 .panel-hint {
   font-size: 0.7rem;
   color: var(--text-secondary);
@@ -668,6 +666,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 13px;
   outline: none;
   transition: border-color var(--transition-fast);
+  position: relative;
+  z-index: 0;
 }
 .transcript-memo-input .memo-input:focus { border-color: var(--accent); }
 
