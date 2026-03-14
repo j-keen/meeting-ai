@@ -23,6 +23,7 @@ import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
+import { refineSectionContent } from './ai.js';
 import { handleExport, handleExportMeeting, getExportContent, downloadFile } from './export-md.js';
 import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
@@ -850,11 +851,52 @@ function loadDemoData2() {
 }
 
 // ===== Minutes Preview Modal =====
+
+// Extract heading structure from markdown for templates
+function extractTemplateStructure(markdown) {
+  return markdown.split('\n').filter(line => /^#{1,4}\s/.test(line)).join('\n');
+}
+
+// Split markdown into sections by ## headings
+function splitMarkdownSections(markdown) {
+  const lines = markdown.split('\n');
+  const sections = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^## /.test(line)) {
+      if (current) sections.push(current);
+      current = { heading: line, lines: [line] };
+    } else if (current) {
+      current.lines.push(line);
+    } else {
+      // Lines before first ## heading
+      if (!sections.length && !current) {
+        current = { heading: '', lines: [line] };
+      }
+    }
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+// Render markdown with per-section wrappers and AI buttons (view mode)
+function renderSectionedMarkdown(markdown) {
+  const sections = splitMarkdownSections(markdown);
+  if (sections.length <= 1) return renderMarkdown(markdown);
+
+  return sections.map((sec, idx) => {
+    const html = renderMarkdown(sec.lines.join('\n'));
+    return `<div class="minutes-section-wrapper" data-section-idx="${idx}">
+      <button class="section-action-btn" title="AI">AI</button>
+      ${html}
+    </div>`;
+  }).join('');
+}
+
 function openMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
-  const editor = $('#minutesPreviewEditor');
-  const editBtn = $('#btnMinutesEditToggle');
+  const splitEditor = $('#minutesSplitEditor');
   const editLabel = $('#minutesEditLabel');
   const editIcon = $('#minutesEditIcon');
   const regenOptions = $('#minutesRegenOptions');
@@ -862,50 +904,117 @@ function openMinutesPreview() {
   const markdown = state.currentAnalysis?.markdown || '';
 
   // Reset to view mode
-  content.innerHTML = renderMarkdown(markdown);
-  editor.value = markdown;
+  content.innerHTML = renderSectionedMarkdown(markdown);
   content.hidden = false;
-  editor.hidden = true;
+  splitEditor.hidden = true;
+  modal.querySelector('.modal').classList.remove('minutes-editing');
   editLabel.textContent = t('minutes_preview.edit');
   editIcon.innerHTML = '&#x270E;';
   regenOptions.hidden = true;
 
+  // Populate template dropdown
+  populateTemplateDropdown();
+
   modal.hidden = false;
+}
+
+function populateTemplateDropdown() {
+  const dropdown = $('#minutesTemplateDropdown');
+  const deleteBtn = $('#btnDeleteTemplate');
+  const templates = state.settings.minutesTemplates || [];
+  dropdown.innerHTML = `<option value="">${t('minutes_preview.no_template')}</option>`;
+  templates.forEach(tmpl => {
+    const opt = document.createElement('option');
+    opt.value = tmpl.id;
+    opt.textContent = tmpl.name;
+    dropdown.appendChild(opt);
+  });
+  deleteBtn.hidden = true;
 }
 
 function initMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
+  const splitEditor = $('#minutesSplitEditor');
   const editor = $('#minutesPreviewEditor');
+  const livePreview = $('#minutesPreviewLive');
   const editBtn = $('#btnMinutesEditToggle');
   const editLabel = $('#minutesEditLabel');
   const editIcon = $('#minutesEditIcon');
   const regenBtn = $('#btnMinutesRegenerate');
   const regenOptions = $('#minutesRegenOptions');
+  const saveTemplateBtn = $('#btnMinutesSaveTemplate');
+  const templateDropdown = $('#minutesTemplateDropdown');
+  const deleteTemplateBtn = $('#btnDeleteTemplate');
 
-  // Edit toggle
+  // Debounce helper for live preview
+  let livePreviewTimer = null;
+
+  // Edit toggle — now uses split editor
   editBtn.addEventListener('click', () => {
-    const isEditing = !editor.hidden;
+    const isEditing = !splitEditor.hidden;
     if (isEditing) {
-      // Save edits: apply edited markdown back to state
+      // Save edits
       const edited = editor.value;
       if (state.currentAnalysis) {
         state.currentAnalysis.markdown = edited;
         autoSave();
       }
-      content.innerHTML = renderMarkdown(edited);
+      content.innerHTML = renderSectionedMarkdown(edited);
       content.hidden = false;
-      editor.hidden = true;
+      splitEditor.hidden = true;
+      modal.querySelector('.modal').classList.remove('minutes-editing');
       editLabel.textContent = t('minutes_preview.edit');
       editIcon.innerHTML = '&#x270E;';
     } else {
       editor.value = state.currentAnalysis?.markdown || '';
+      livePreview.innerHTML = renderMarkdown(editor.value);
       content.hidden = true;
-      editor.hidden = false;
+      splitEditor.hidden = false;
+      modal.querySelector('.modal').classList.add('minutes-editing');
       editLabel.textContent = t('minutes_preview.done');
       editIcon.innerHTML = '&#x2713;';
       editor.focus();
     }
+  });
+
+  // Live preview on textarea input (200ms debounce)
+  editor.addEventListener('input', () => {
+    clearTimeout(livePreviewTimer);
+    livePreviewTimer = setTimeout(() => {
+      livePreview.innerHTML = renderMarkdown(editor.value);
+    }, 200);
+  });
+
+  // Save Template
+  saveTemplateBtn.addEventListener('click', () => {
+    const markdown = state.currentAnalysis?.markdown || '';
+    if (!markdown) return;
+    const name = prompt(t('minutes_preview.template_name_prompt'));
+    if (!name) return;
+    const structure = extractTemplateStructure(markdown);
+    const templates = state.settings.minutesTemplates || [];
+    templates.push({ id: generateId(), name, structure, createdAt: Date.now() });
+    saveSettings({ minutesTemplates: templates });
+    state.settings.minutesTemplates = templates;
+    populateTemplateDropdown();
+    showToast(t('minutes_preview.template_saved'), 'success');
+  });
+
+  // Template dropdown change — show/hide delete button
+  templateDropdown.addEventListener('change', () => {
+    deleteTemplateBtn.hidden = !templateDropdown.value;
+  });
+
+  // Delete template
+  deleteTemplateBtn.addEventListener('click', () => {
+    const id = templateDropdown.value;
+    if (!id) return;
+    const templates = (state.settings.minutesTemplates || []).filter(t => t.id !== id);
+    saveSettings({ minutesTemplates: templates });
+    state.settings.minutesTemplates = templates;
+    populateTemplateDropdown();
+    showToast(t('minutes_preview.template_deleted'), 'success');
   });
 
   // Regenerate toggle
@@ -917,14 +1026,18 @@ function initMinutesPreview() {
   regenOptions.querySelectorAll('[data-regen-model]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const model = btn.dataset.regenModel;
+      const selectedTemplateId = templateDropdown.value;
+      const templates = state.settings.minutesTemplates || [];
+      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+      const templateStructure = selectedTemplate?.structure || '';
+
       regenOptions.hidden = true;
       modal.hidden = true;
       showToast(t('toast.minutes_generating_bg'), 'info');
 
       try {
-        await regenerateMinutes(model);
+        await regenerateMinutes(model, templateStructure);
         showToast(t('toast.final_minutes_done'), 'success');
-        // Re-open preview with new content
         openMinutesPreview();
       } catch (err) {
         showToast(t('toast.final_minutes_fail') + err.message, 'error');
@@ -932,11 +1045,104 @@ function initMinutesPreview() {
     });
   });
 
+  // Section AI refinement — event delegation on content
+  content.addEventListener('click', (e) => {
+    const actionBtn = e.target.closest('.section-action-btn');
+    if (!actionBtn) return;
+
+    // Close any existing popover
+    content.querySelectorAll('.section-action-popover').forEach(p => p.remove());
+
+    const wrapper = actionBtn.closest('.minutes-section-wrapper');
+    if (!wrapper) return;
+
+    // Create popover from template
+    const tmpl = document.getElementById('sectionActionPopover');
+    const popover = tmpl.content.cloneNode(true).firstElementChild;
+
+    // Apply i18n to popover
+    popover.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    popover.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+
+    wrapper.appendChild(popover);
+
+    // Handle popover actions
+    popover.addEventListener('click', async (ev) => {
+      const actionEl = ev.target.closest('[data-section-action]');
+      if (!actionEl) return;
+
+      const action = actionEl.dataset.sectionAction;
+      let instruction = '';
+      const lang = getAiLanguage();
+
+      if (action === 'detail') {
+        instruction = lang === 'ko' ? '이 섹션을 더 자세하고 구체적으로 확장하세요.' : 'Expand this section with more detail and specifics.';
+      } else if (action === 'summarize') {
+        instruction = lang === 'ko' ? '이 섹션을 간결하게 요약하세요.' : 'Summarize this section concisely.';
+      } else if (action === 'custom') {
+        const input = popover.querySelector('input');
+        instruction = input?.value?.trim();
+        if (!instruction) return;
+      }
+
+      popover.remove();
+
+      const sectionIdx = parseInt(wrapper.dataset.sectionIdx);
+      const fullMarkdown = state.currentAnalysis?.markdown || '';
+      const sections = splitMarkdownSections(fullMarkdown);
+      if (!sections[sectionIdx]) return;
+
+      const sectionMarkdown = sections[sectionIdx].lines.join('\n');
+
+      // Show loading state
+      wrapper.classList.add('minutes-section-loading');
+      const scrollTop = content.scrollTop;
+
+      try {
+        const refined = await refineSectionContent({
+          fullMarkdown,
+          sectionMarkdown,
+          instruction,
+          lang,
+        });
+
+        // Replace section in full markdown
+        sections[sectionIdx].lines = refined.split('\n');
+        const newMarkdown = sections.map(s => s.lines.join('\n')).join('\n');
+
+        if (state.currentAnalysis) {
+          state.currentAnalysis.markdown = newMarkdown;
+          autoSave();
+        }
+
+        content.innerHTML = renderSectionedMarkdown(newMarkdown);
+        content.scrollTop = scrollTop;
+        showToast(t('minutes_preview.section_refined'), 'success');
+      } catch (err) {
+        wrapper.classList.remove('minutes-section-loading');
+        showToast(t('minutes_preview.section_refine_fail') + ' ' + err.message, 'error');
+      }
+    });
+
+    // Close popover on outside click
+    const closePopover = (ev) => {
+      if (!popover.contains(ev.target) && ev.target !== actionBtn) {
+        popover.remove();
+        document.removeEventListener('click', closePopover);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closePopover), 0);
+  });
+
   // Export buttons in preview modal
   modal.querySelectorAll('[data-preview-format]').forEach(btn => {
     btn.addEventListener('click', async () => {
       // If editing, apply edits first
-      if (!editor.hidden && state.currentAnalysis) {
+      if (!splitEditor.hidden && state.currentAnalysis) {
         state.currentAnalysis.markdown = editor.value;
         autoSave();
       }
