@@ -280,7 +280,7 @@ function createDeepgramEngine(language) {
 
       const connectWebSocket = () => {
         const lang = langMap[language] || 'en';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=1000&vad_events=true&encoding=opus&sample_rate=48000`;
+        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-2&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=1000&vad_events=true`;
 
         ws = new WebSocket(wsUrl, ['token', apiKey]);
 
