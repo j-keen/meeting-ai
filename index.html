@@ -610,7 +610,7 @@
           </button>
           <button class="btn btn-sm" id="btnMinutesPromptEdit">
             <span>&#x270E;</span>
-            <span data-i18n="minutes_preview.prompt_edit">Minutes Style</span>
+            <span data-i18n="minutes_preview.prompt_edit">Change Minutes Style</span>
           </button>
           <button class="btn btn-sm" id="btnMinutesExport">
             <span>&#x2B07;</span>
@@ -1157,7 +1157,7 @@
         </div>
         <hr class="launcher-divider">
       </div>
-      <!-- 3 action cards -->
+      <!-- 4 action cards -->
       <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
       <div class="launcher-actions-grid">
         <button class="launcher-card" id="btnLauncherQuickStart">
@@ -1166,14 +1166,20 @@
           <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
           <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Start recording immediately</span>
         </button>
-        <button class="launcher-card" id="btnLauncherMeetingPrep">
+        <button class="launcher-card launcher-card-ai-setup" id="btnLauncherAiSetup">
           <span class="launcher-card-badge">2</span>
+          <span class="launcher-card-icon">&#129302;</span>
+          <span class="launcher-card-label" data-i18n="meeting.ai_setup">AI Setup</span>
+          <span class="launcher-card-desc" data-i18n="meeting.ai_setup_desc">AI creates a custom setup for you</span>
+        </button>
+        <button class="launcher-card" id="btnLauncherMeetingPrep">
+          <span class="launcher-card-badge">3</span>
           <span class="launcher-card-icon">&#128221;</span>
           <span class="launcher-card-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
           <span class="launcher-card-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
         </button>
         <button class="launcher-card" id="btnLauncherPreset">
-          <span class="launcher-card-badge">3</span>
+          <span class="launcher-card-badge">4</span>
           <span class="launcher-card-icon">&#128203;</span>
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
@@ -1181,6 +1187,36 @@
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
+    </div>
+  </div>
+
+  <!-- Prompt Builder Modal -->
+  <div class="modal-overlay" id="promptBuilderModal" hidden>
+    <div class="modal prompt-builder-modal">
+      <button class="modal-close" id="pbCloseBtn">&times;</button>
+      <h2 class="pb-title" data-i18n="pb.title">AI Setup</h2>
+
+      <!-- Chat View -->
+      <div class="pb-view" id="pbChatView">
+        <div class="pb-messages" id="pbMessages"></div>
+        <div class="pb-chips" id="pbScenarioChips"></div>
+        <div class="pb-input-wrap">
+          <textarea class="pb-input" id="pbInput" rows="1" data-i18n-placeholder="pb.input_placeholder" placeholder="Describe your situation..."></textarea>
+          <button class="pb-send-btn" id="btnPbSend">&#10148;</button>
+        </div>
+      </div>
+
+      <!-- Preview View -->
+      <div class="pb-view" id="pbPreviewView" hidden>
+        <div class="pb-preview" id="pbPreview"></div>
+        <div class="pb-preview-actions">
+          <button class="btn btn-text" id="btnPbBack" data-i18n="pb.back_to_chat">&larr; Back to Chat</button>
+          <div class="pb-preview-actions-right">
+            <button class="btn btn-outline" id="btnPbSavePreset" data-i18n="pb.save_preset">💾 Save as Preset</button>
+            <button class="btn btn-primary" id="btnPbStart" data-i18n="pb.start">▶ Start</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1309,7 +1345,7 @@
     <div class="prompt-edit-overlay">
       <div class="prompt-edit-modal">
         <div class="modal-header">
-          <h3 data-i18n="minutes_preview.prompt_edit">Prompt Settings</h3>
+          <h3 data-i18n="minutes_preview.prompt_edit">Change Minutes Style</h3>
           <button class="btn btn-icon prompt-edit-close">&times;</button>
         </div>
         <div class="prompt-edit-body">
@@ -1320,7 +1356,7 @@
             </div>
             <div class="prompt-section-content">
               <textarea class="settings-textarea prompt-textarea" id="promptReference" rows="4"
-                data-i18n-placeholder="minutes_preview.prompt_reference_hint" placeholder="Paste reference minutes here..."></textarea>
+                data-i18n-placeholder="minutes_preview.prompt_reference_hint" placeholder="Paste reference minutes here. We'll generate in a similar format."></textarea>
             </div>
           </div>
           <div class="prompt-section">
@@ -1339,7 +1375,7 @@
             </div>
             <div class="prompt-section-content">
               <textarea class="settings-textarea prompt-textarea" id="promptInstruction" rows="3"
-                data-i18n-placeholder="minutes_preview.prompt_instruction_hint" placeholder="e.g., Focus on action items"></textarea>
+                data-i18n-placeholder="minutes_preview.prompt_instruction_hint" placeholder="e.g., &quot;Summarize key decisions&quot;, &quot;Create action items table by attendee&quot;"></textarea>
             </div>
           </div>
           <div class="prompt-preset-bar">
