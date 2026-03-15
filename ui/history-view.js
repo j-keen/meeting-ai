@@ -267,7 +267,7 @@ function formatTimeFromMs(ms) {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterCategory = '', filterRating = '', dateFrom = '', dateTo = '' } = {}) {
+export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterRating = '', dateFrom = '', dateTo = '' } = {}) {
   const grid = $('#historyGrid');
   grid.innerHTML = '';
   let filtered = meetings;
@@ -291,9 +291,6 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
   if (filterTag) {
     const tag = filterTag.toLowerCase();
     filtered = filtered.filter(m => m.tags?.some(t => t.toLowerCase().includes(tag)));
-  }
-  if (filterCategory) {
-    filtered = filtered.filter(m => m.categories?.includes(filterCategory));
   }
   if (filterRating) {
     const minRating = parseInt(filterRating);

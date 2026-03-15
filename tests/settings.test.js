@@ -33,13 +33,14 @@ vi.mock('../storage.js', () => ({
 
 vi.mock('../ai.js', () => ({
   getDefaultPrompt: vi.fn(() => 'default prompt'),
+  getPromptForType: vi.fn(() => 'default prompt'),
 }));
 
 vi.mock('../i18n.js', () => ({
   t: vi.fn(k => k),
   setLanguage: vi.fn(),
   setAiLanguage: vi.fn(),
-  getPromptPresets: vi.fn(() => ({})),
+  getTypeDefaultPrompt: vi.fn(() => 'default prompt'),
 }));
 
 vi.mock('../gemini-api.js', () => ({
@@ -104,15 +105,14 @@ function setupSettingsDOM() {
     selLang.appendChild(o);
   });
 
-  // Prompt preset select
-  const selPreset = makeEl('select', 'selectPromptPreset');
-  const defaultOpt = makeEl('option');
-  defaultOpt.value = '';
-  defaultOpt.textContent = '-- select --';
-  selPreset.appendChild(defaultOpt);
-  const btnSavePreset = makeEl('button', 'btnSavePromptPreset');
-  const btnDeletePreset = makeEl('button', 'btnDeletePromptPreset');
-  btnDeletePreset.style.display = 'none';
+  // Per-type prompt selector
+  const selTypeForPrompt = makeEl('select', 'selectTypeForPrompt');
+  ['general', 'weekly', 'brainstorm', 'sales', '1on1', 'kickoff'].forEach(v => {
+    const o = makeEl('option');
+    o.value = v;
+    o.textContent = v;
+    selTypeForPrompt.appendChild(o);
+  });
 
   // Prompt textareas / buttons
   const textPrompt = makeEl('textarea', 'textPrompt');
@@ -190,15 +190,6 @@ function setupSettingsDOM() {
   const btnAddLocation = makeEl('button', 'btnAddLocation');
   locationsModal.append(btnCloseLocations, dataLocationsList, inputNewLocation, btnAddLocation);
 
-  // Categories modal
-  const categoriesModal = makeEl('div', 'categoriesModal');
-  categoriesModal.hidden = true;
-  const btnCloseCategories = makeEl('button', 'btnCloseCategories');
-  const dataCategoriesList = makeEl('div', 'dataCategoriesList');
-  const inputNewCategory = makeEl('input', 'inputNewCategory');
-  const btnAddCategory = makeEl('button', 'btnAddCategory');
-  categoriesModal.append(btnCloseCategories, dataCategoriesList, inputNewCategory, btnAddCategory);
-
   // Correction dictionary
   const btnOpenCorrectionDict = makeEl('button', 'btnOpenCorrectionDict');
   const correctionDictBadge = makeEl('span', 'correctionDictBadge');
@@ -225,12 +216,12 @@ function setupSettingsDOM() {
     panel, overlay, btnSettings, btnClose, btnSave, btnReset, unsavedDot,
     unsavedModal,
     selUiLang, selAiLang, selLang,
-    selPreset, btnSavePreset, btnDeletePreset,
+    selTypeForPrompt,
     textPrompt, btnResetPrompt, textChatPrompt, btnResetChatPrompt,
     chatModelSelect,
     chatPresetsList, inputNewChatPreset, btnAddChatPreset, btnResetChatPresets,
-    btnOpenContacts, contactsBadge, btnOpenLocations, locationsBadge, btnOpenCategories, categoriesBadge,
-    contactsModal, cameraModal, locationsModal, categoriesModal,
+    btnOpenContacts, contactsBadge, btnOpenLocations, locationsBadge,
+    contactsModal, cameraModal, locationsModal,
     btnOpenCorrectionDict, correctionDictBadge, correctionDictModal
   );
 }

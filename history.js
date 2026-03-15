@@ -11,7 +11,6 @@ export function getHistoryFilters() {
     searchTerm: $('#historySearch')?.value || '',
     filterType: $('#historyFilterType')?.value || '',
     filterTag: $('#historyFilterTag')?.value || '',
-    filterCategory: $('#historyFilterCategory')?.value || '',
     filterRating: $('#historyFilterRating')?.value || '',
     dateFrom: $('#historyFilterDateFrom')?.value || '',
     dateTo: $('#historyFilterDateTo')?.value || '',
