@@ -706,47 +706,6 @@
     </div>
   </div>
 
-  <!-- Minutes Generation Modal — Quality Select -->
-  <div class="modal-overlay" id="minutesGenModal" hidden>
-    <div class="modal" style="max-width:480px;">
-      <div class="modal-header">
-        <h3 data-i18n="minutes.select_quality">Select Minutes Quality</h3>
-        <button class="btn btn-icon modal-close" data-close="minutesGenModal">&times;</button>
-      </div>
-      <div class="modal-body minutes-gen-body">
-        <div class="quality-select-cards">
-          <button class="quality-card" id="btnQualityFlash" data-model="gemini-2.5-flash">
-            <span class="quality-card-name">Flash</span>
-            <span class="quality-card-desc" data-i18n="minutes.flash_desc">Summary</span>
-            <span class="quality-card-sub" data-i18n="minutes.flash_sub">Just the essentials</span>
-            <div class="quality-card-preview">
-              <div class="skeleton-bar" style="width:90%"></div>
-              <div class="skeleton-bar" style="width:75%"></div>
-              <div class="skeleton-bar" style="width:60%"></div>
-            </div>
-          </button>
-          <button class="quality-card" id="btnQualityPro" data-model="gemini-2.5-pro">
-            <span class="quality-card-name">Pro <span class="pro-badge">✦</span></span>
-            <span class="quality-card-desc" data-i18n="minutes.pro_desc">In-depth</span>
-            <span class="quality-card-sub" data-i18n="minutes.pro_sub">Catches what you missed</span>
-            <span class="quality-card-usage" id="proUsageCount" hidden></span>
-            <div class="quality-card-preview">
-              <div class="skeleton-bar" style="width:95%"></div>
-              <div class="skeleton-bar" style="width:88%"></div>
-              <div class="skeleton-bar" style="width:92%"></div>
-              <div class="skeleton-bar" style="width:70%"></div>
-              <div class="skeleton-bar" style="width:85%"></div>
-              <div class="skeleton-bar" style="width:65%"></div>
-            </div>
-          </button>
-        </div>
-        <div class="minutes-gen-actions">
-          <button class="btn" id="btnMinutesSkip" data-i18n="minutes.skip">Skip minutes</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- End Meeting Modal -->
   <div class="modal-overlay" id="endMeetingModal" hidden>
     <div class="modal modal-large">
@@ -805,41 +764,30 @@
               <button class="btn btn-sm" id="btnEndMeetingAddParticipant">+</button>
             </div>
             <div class="end-meeting-participants-selected" id="endMeetingParticipantsSelected"></div>
+            <div class="ai-suggestions-row" id="aiParticipantSuggestions" hidden></div>
             <div class="end-meeting-participants-list" id="endMeetingParticipantsList"></div>
           </div>
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
             <input type="text" class="settings-input end-meeting-tag-input" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag...">
             <div class="end-meeting-tags" id="endMeetingTags"></div>
+            <div class="ai-suggestions-row" id="aiTagSuggestions" hidden></div>
           </div>
-        </div>
-        <!-- 5. Actions -->
-        <div class="end-meeting-actions">
-          <button class="btn" id="btnEndMeetingGenerate" hidden data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
-          <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn btn-loading" id="btnEndMeetingExport" disabled>
-            <span class="btn-spinner"></span>
-            <span class="btn-export-text" data-i18n="end_meeting.export_generating">Generating minutes...</span>
-          </button>
-          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
       </div>
-      <!-- Minutes quality select sub-modal (overlay inside end-meeting modal) -->
-      <div class="end-meeting-sub-overlay" id="endMeetingMinutesSub" hidden>
-        <div class="end-meeting-sub-modal">
-          <h4 data-i18n="minutes.select_quality">Select Minutes Quality</h4>
-          <div class="minutes-quality-cards-inline">
-            <button class="minutes-quality-card" data-gen-model="gemini-2.5-flash">
-              <span class="quality-label">⚡ Flash</span>
-              <span class="quality-desc" data-i18n="minutes.flash_sub">Just the essentials</span>
-            </button>
-            <button class="minutes-quality-card" data-gen-model="gemini-2.5-pro">
-              <span class="quality-label">✦ Pro</span>
-              <span class="quality-desc" data-i18n="minutes.pro_sub">Catches what you missed</span>
-              <span class="quality-usage" id="subProUsageCount" hidden></span>
-            </button>
+      <!-- 5. Footer: Quality + Save -->
+      <div class="end-meeting-footer" id="endMeetingFooter">
+        <div class="end-meeting-quality-select" id="endMeetingQualitySelect">
+          <label class="end-meeting-label" data-i18n="end_meeting.minutes_quality">Minutes Quality</label>
+          <div class="quality-toggle-group">
+            <button class="quality-toggle selected" data-quality="gemini-2.5-flash">⚡ Flash</button>
+            <button class="quality-toggle" data-quality="gemini-2.5-pro">✦ Pro <span class="quality-usage" id="endMeetingProUsage" hidden></span></button>
+            <button class="quality-toggle" data-quality="skip" data-i18n="minutes.skip">Skip</button>
           </div>
-          <button class="btn btn-xs end-meeting-sub-cancel" data-i18n="end_meeting.cancel">Cancel</button>
+        </div>
+        <div class="end-meeting-footer-actions" id="endMeetingFooterActions">
+          <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
+          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
       </div>
     </div>

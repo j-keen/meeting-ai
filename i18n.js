@@ -485,6 +485,12 @@ const translations = {
     'end_meeting.add_tag': 'Add tag...',
     'end_meeting.add_participant': 'Add name...',
     'end_meeting.no_participants': 'No contacts registered.',
+    'end_meeting.minutes_quality': 'Minutes Quality',
+    'end_meeting.generating_minutes': 'Generating minutes...',
+    'end_meeting.close_background': 'Close (continue in background)',
+    'end_meeting.minutes_complete': 'Minutes complete!',
+    'end_meeting.minutes_error': 'Minutes generation failed',
+    'end_meeting.close': 'Close',
 
     // Minutes Generation Modal
     'minutes.select_quality': 'Select Minutes Quality',
@@ -1107,6 +1113,12 @@ const translations = {
     'end_meeting.add_tag': '태그 추가...',
     'end_meeting.add_participant': '이름 추가...',
     'end_meeting.no_participants': '등록된 연락처가 없습니다.',
+    'end_meeting.minutes_quality': '회의록 품질',
+    'end_meeting.generating_minutes': '회의록 생성 중...',
+    'end_meeting.close_background': '닫기 (백그라운드 계속)',
+    'end_meeting.minutes_complete': '회의록 완성!',
+    'end_meeting.minutes_error': '회의록 생성 실패',
+    'end_meeting.close': '닫기',
 
     // Minutes Generation Modal
     'minutes.select_quality': '회의록 품질 선택',

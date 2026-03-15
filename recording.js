@@ -2,7 +2,7 @@
 
 import { state, on, emit } from './event-bus.js';
 import { createSTT } from './stt.js';
-import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes } from './ai.js';
+import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, loadSettings, saveSettings,
@@ -53,8 +53,6 @@ let idleCheckInterval = null;
 let idleWarningShown = false;
 let maxDurationTimeout = null;
 
-let minutesGenerated = false;
-let minutesSkipped = false;
 
 // ===== Draft Recovery (sessionStorage) =====
 const DRAFT_KEY = 'meeting-ai-draft';
@@ -593,23 +591,17 @@ export function endMeeting() {
     return;
   }
 
-  // Confirm dialog for meetings 30min+
-  const elapsed = state.meetingStartTime ? Date.now() - state.meetingStartTime - getTotalPausedMs() : 0;
-  if (elapsed >= 30 * 60 * 1000) {
-    showEndConfirmDialog(() => {
-      proceedEndMeeting();
-    });
-    return;
-  }
-
-  proceedEndMeeting();
+  // Always show confirm dialog
+  showEndConfirmDialog(() => {
+    proceedEndMeeting();
+  });
 }
 
 function proceedEndMeeting() {
   stopRecording();
   clearDraftRecovery();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
-  showMinutesGenModal();
+  showEndMeetingModal();
 }
 
 function showEndConfirmDialog(onConfirm) {
@@ -643,101 +635,15 @@ function showEndConfirmDialog(onConfirm) {
   });
 }
 
-export function showMinutesGenModal() {
-  const modal = $('#minutesGenModal');
-  minutesGenerated = false;
-  minutesSkipped = false;
-
-  if (!isProxyAvailable() || state.transcript.length === 0) {
-    minutesSkipped = true;
-    showEndMeetingModal();
-    return;
-  }
-
-  modal.hidden = false;
-
-  // Close handler: X button or overlay click → skip + restore endMeetingModal
-  const handleModalClose = () => {
-    modal.hidden = true;
-    minutesSkipped = true;
-    showEndMeetingModal();
-  };
-  const closeBtn = modal.querySelector('.modal-close');
-  if (closeBtn) closeBtn.onclick = handleModalClose;
-  modal.onclick = (e) => { if (e.target === modal) handleModalClose(); };
-
-  // Show Pro usage count on card
-  const proCount = getProUsageCount();
-  const proUsageEl = $('#proUsageCount');
-  if (proUsageEl) {
-    if (proCount > 0) {
-      proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
-      proUsageEl.hidden = false;
-    } else {
-      proUsageEl.hidden = true;
-    }
-  }
-
-  const handleCardClick = (model) => {
-    if (model.includes('pro')) {
-      incrementProUsage();
-    }
-    state.settings.geminiModel = model;
-    modal.hidden = true;
-
-    // Background generation (don't await)
-    generateFinalMeetingMinutes().then(() => {
-      minutesGenerated = true;
-      updateExportButton();
-      showToast(t('toast.final_minutes_done'), 'success');
-    }).catch(err => {
-      minutesSkipped = true;
-      showToast(t('toast.final_minutes_fail') + err.message, 'error');
-      updateExportButton();
-    });
-
-    showToast(t('toast.minutes_generating_bg'), 'info');
-    showEndMeetingModal();
-  };
-
-  $('#btnQualityFlash').onclick = () => handleCardClick('gemini-2.5-flash');
-  $('#btnQualityPro').onclick = () => handleCardClick('gemini-2.5-pro');
-  $('#btnMinutesSkip').onclick = () => { modal.hidden = true; minutesSkipped = true; showEndMeetingModal(); };
-}
-
-function updateExportButton() {
-  const btn = $('#btnEndMeetingExport');
-  const genBtn = $('#btnEndMeetingGenerate');
-  if (!btn) return;
-  const spinner = btn.querySelector('.btn-spinner');
-  const textEl = btn.querySelector('.btn-export-text');
-
-  if (minutesGenerated) {
-    // Minutes ready — show export, hide generate
-    btn.hidden = false;
-    btn.disabled = false;
-    btn.classList.remove('btn-loading');
-    if (spinner) spinner.hidden = true;
-    if (textEl) textEl.textContent = t('end_meeting.view_minutes');
-    if (genBtn) genBtn.hidden = true;
-  } else if (minutesSkipped) {
-    // Skipped — hide export, show generate button
-    btn.hidden = true;
-    if (genBtn) genBtn.hidden = false;
-  } else {
-    // Generating — show export (loading), hide generate
-    btn.hidden = false;
-    btn.disabled = true;
-    btn.classList.add('btn-loading');
-    if (spinner) spinner.hidden = false;
-    if (textEl) textEl.textContent = t('end_meeting.export_generating');
-    if (genBtn) genBtn.hidden = true;
-  }
-}
+let _minutesGenerationPromise = null; // Track ongoing minutes generation
 
 function showEndMeetingModal() {
   const modal = $('#endMeetingModal');
   modal.hidden = false;
+  state._selectedMinutesModel = 'gemini-2.5-flash';
+
+  // Reset footer to default state
+  resetFooterToDefault();
 
   // Render meeting summary stats
   const statsEl = $('#endMeetingStats');
@@ -777,54 +683,29 @@ function showEndMeetingModal() {
     datalist.appendChild(opt);
   });
 
-  // Update export button state
-  updateExportButton();
-
-  // "Generate Minutes" button — opens sub-modal overlay (keeps end-meeting modal open)
-  const genBtn = $('#btnEndMeetingGenerate');
-  if (genBtn) {
-    genBtn.onclick = () => {
-      const subModal = $('#endMeetingMinutesSub');
-      subModal.hidden = false;
-
-      // Pro usage count
-      const proCount = getProUsageCount();
-      const proEl = $('#subProUsageCount');
-      if (proCount > 0) { proEl.textContent = t('minutes.pro_usage', { n: proCount }); proEl.hidden = false; }
-      else { proEl.hidden = true; }
-    };
+  // Quality toggle handlers
+  const qualitySelect = $('#endMeetingQualitySelect');
+  if (!isProxyAvailable() || state.transcript.length === 0) {
+    qualitySelect.hidden = true;
+    state._selectedMinutesModel = 'skip';
+  } else {
+    qualitySelect.hidden = false;
+    // Pro usage count
+    const proCount = getProUsageCount();
+    const proUsageEl = $('#endMeetingProUsage');
+    if (proUsageEl) {
+      if (proCount > 0) { proUsageEl.textContent = t('minutes.pro_usage', { n: proCount }); proUsageEl.hidden = false; }
+      else { proUsageEl.hidden = true; }
+    }
   }
 
-  // Sub-modal card click handlers
-  $('#endMeetingMinutesSub').querySelectorAll('[data-gen-model]').forEach(card => {
-    card.onclick = () => {
-      const model = card.dataset.genModel;
-      if (model.includes('pro')) incrementProUsage();
-      state.settings.geminiModel = model;
-
-      $('#endMeetingMinutesSub').hidden = true;
-
-      // Button state: generating spinner
-      minutesGenerated = false;
-      minutesSkipped = false;
-      updateExportButton();
-
-      generateFinalMeetingMinutes().then(() => {
-        minutesGenerated = true;
-        updateExportButton();
-        showToast(t('toast.final_minutes_done'), 'success');
-      }).catch(err => {
-        minutesSkipped = true;
-        updateExportButton();
-        showToast(t('toast.final_minutes_fail') + err.message, 'error');
-      });
+  qualitySelect.querySelectorAll('.quality-toggle').forEach(btn => {
+    btn.onclick = () => {
+      qualitySelect.querySelectorAll('.quality-toggle').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state._selectedMinutesModel = btn.dataset.quality;
     };
   });
-
-  // Sub-modal cancel
-  $('#endMeetingMinutesSub .end-meeting-sub-cancel').onclick = () => {
-    $('#endMeetingMinutesSub').hidden = true;
-  };
 
   // AI title/tag generation (with caching)
   const suggestionsEl = $('#aiTitleSuggestions');
@@ -834,7 +715,6 @@ function showEndMeetingModal() {
     chipsEl.innerHTML = '';
 
     if (state.aiTitleCached) {
-      // Use cached results immediately
       suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
       renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
     } else {
@@ -842,16 +722,145 @@ function showEndMeetingModal() {
       fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
     }
 
-    // Regenerate button handler
     $('#btnRegenerateTitles').onclick = () => {
       state.aiTitleCached = null;
       chipsEl.innerHTML = '';
       suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_generating');
       fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
     };
+
+    // AI metadata suggestions (parallel with title)
+    fetchAndCacheMetadata();
   } else {
     suggestionsEl.hidden = true;
   }
+}
+
+function resetFooterToDefault() {
+  const footer = $('#endMeetingFooter');
+  footer.classList.remove('save-progress-state', 'save-complete-state', 'save-error-state');
+  const qualitySelect = $('#endMeetingQualitySelect');
+  qualitySelect.hidden = false;
+  // Reset quality toggle selection
+  qualitySelect.querySelectorAll('.quality-toggle').forEach(b => b.classList.remove('selected'));
+  const flashBtn = qualitySelect.querySelector('[data-quality="gemini-2.5-flash"]');
+  if (flashBtn) flashBtn.classList.add('selected');
+
+  const actions = $('#endMeetingFooterActions');
+  actions.innerHTML = '';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn';
+  cancelBtn.id = 'btnEndMeetingCancel';
+  cancelBtn.textContent = t('end_meeting.cancel');
+  cancelBtn.onclick = () => cancelEndMeeting();
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary';
+  saveBtn.id = 'btnEndMeetingSave';
+  saveBtn.textContent = t('end_meeting.save');
+  saveBtn.onclick = () => finalizeEndMeeting();
+  actions.append(cancelBtn, saveBtn);
+
+  // Re-enable form inputs
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.remove('disabled-form');
+}
+
+// AI metadata suggestion rendering
+function fetchAndCacheMetadata() {
+  if (state.aiMetadataCached) {
+    renderAiMetadataSuggestions(state.aiMetadataCached);
+    return;
+  }
+
+  suggestMeetingMetadata({
+    transcript: state.transcript,
+    meetingContext: state.settings.meetingContext || '',
+    existingParticipants: state.participants.map(p => p.name || p),
+    existingTags: state.tags,
+  }).then(result => {
+    if (!result) return;
+    state.aiMetadataCached = result;
+    renderAiMetadataSuggestions(result);
+  }).catch(() => { /* silent */ });
+}
+
+function renderAiMetadataSuggestions(metadata) {
+  // Participants
+  const pContainer = $('#aiParticipantSuggestions');
+  pContainer.innerHTML = '';
+  const existingNames = state.participants.map(p => (p.name || p).toLowerCase());
+  const newParticipants = (metadata.participants || []).filter(
+    name => !existingNames.includes(name.toLowerCase())
+  );
+  if (newParticipants.length > 0) {
+    pContainer.hidden = false;
+    newParticipants.forEach(name => {
+      const chip = createAiSuggestionChip(name, () => {
+        state.participants.push({ id: 'ai_' + Date.now(), name });
+        renderEndMeetingParticipants();
+        chip.remove();
+        if (pContainer.children.length === 0) pContainer.hidden = true;
+      }, () => {
+        chip.remove();
+        if (pContainer.children.length === 0) pContainer.hidden = true;
+      });
+      pContainer.appendChild(chip);
+    });
+  } else {
+    pContainer.hidden = true;
+  }
+
+  // Tags
+  const tContainer = $('#aiTagSuggestions');
+  tContainer.innerHTML = '';
+  const existingTags = state.tags.map(t2 => t2.toLowerCase());
+  const newTags = (metadata.tags || []).filter(
+    tag => !existingTags.includes(tag.toLowerCase())
+  );
+  if (newTags.length > 0) {
+    tContainer.hidden = false;
+    newTags.forEach(tag => {
+      const chip = createAiSuggestionChip(tag, () => {
+        if (!state.tags.includes(tag)) state.tags.push(tag);
+        renderEndMeetingTags();
+        chip.remove();
+        if (tContainer.children.length === 0) tContainer.hidden = true;
+      }, () => {
+        chip.remove();
+        if (tContainer.children.length === 0) tContainer.hidden = true;
+      });
+      tContainer.appendChild(chip);
+    });
+  } else {
+    tContainer.hidden = true;
+  }
+
+  // Categories — auto-select suggested categories
+  if (metadata.categories && metadata.categories.length > 0) {
+    metadata.categories.forEach(cat => {
+      if (!state.categories.includes(cat)) {
+        state.categories.push(cat);
+      }
+    });
+    renderEndMeetingCategories();
+  }
+}
+
+function createAiSuggestionChip(text, onAccept, onReject) {
+  const chip = document.createElement('span');
+  chip.className = 'ai-suggestion-chip';
+  const label = document.createElement('span');
+  label.className = 'ai-chip-label';
+  label.textContent = '✨';
+  const textEl = document.createElement('span');
+  textEl.textContent = text;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'ai-chip-close';
+  closeBtn.textContent = '\u00d7';
+  closeBtn.onclick = (e) => { e.stopPropagation(); onReject(); };
+  chip.append(label, textEl, closeBtn);
+  chip.addEventListener('click', onAccept);
+  return chip;
 }
 
 function renderTitleChips(titles, container, titleInput) {
@@ -992,14 +1001,6 @@ export async function finalizeEndMeeting() {
   const dtVal = $('#endMeetingDatetime').value;
   if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
 
-  // Auto-correct all uncorrected lines before saving
-  const hasUncorrected = state.transcript.some(l => !l.originalText);
-  if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
-    showToast(t('toast.correcting'), 'info');
-    await runCorrection(false);
-    showToast(t('toast.correction_done'), 'success');
-  }
-
   // Don't save empty meetings (no transcript, memos, or chat)
   const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
   if (!hasContent) {
@@ -1010,12 +1011,48 @@ export async function finalizeEndMeeting() {
     return;
   }
 
+  // Auto-correct all uncorrected lines before saving
+  const hasUncorrected = state.transcript.some(l => !l.originalText);
+  if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
+    await runCorrection(false);
+  }
+
   autoSave();
   clearDraftRecovery();
   state.meetingEnded = true;
+
+  const selectedModel = state._selectedMinutesModel;
+
+  // If skip — close immediately
+  if (selectedModel === 'skip') {
+    closeAndFinalizeMeeting();
+    return;
+  }
+
+  // Show progress in footer
+  showSaveProgress();
+
+  // Disable form inputs
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.add('disabled-form');
+
+  // Track pro usage
+  if (selectedModel.includes('pro')) incrementProUsage();
+  state.settings.geminiModel = selectedModel;
+
+  // Generate minutes with metadata
+  _minutesGenerationPromise = generateFinalMeetingMinutes().then(() => {
+    _minutesGenerationPromise = null;
+    showSaveComplete();
+  }).catch(err => {
+    _minutesGenerationPromise = null;
+    showSaveError(err.message);
+  });
+}
+
+function closeAndFinalizeMeeting() {
   $('#endMeetingModal').hidden = true;
 
-  // Reset record button to initial state
   const recBtn = $('#btnRecord');
   recBtn.classList.remove('recording', 'paused');
   recBtn.querySelector('.record-label').textContent = t('record.label');
@@ -1031,8 +1068,114 @@ export async function finalizeEndMeeting() {
   showToast(t('toast.meeting_saved'), 'success');
 }
 
+function showSaveProgress() {
+  const footer = $('#endMeetingFooter');
+  footer.classList.add('save-progress-state');
+
+  const qualitySelect = $('#endMeetingQualitySelect');
+  qualitySelect.hidden = true;
+
+  const actions = $('#endMeetingFooterActions');
+  actions.innerHTML = `
+    <div class="save-progress-content">
+      <div class="save-progress-bar"><div class="save-progress-bar-inner"></div></div>
+      <span class="save-progress-text">${t('end_meeting.generating_minutes')}</span>
+    </div>
+    <button class="btn btn-sm" id="btnSaveProgressClose">${t('end_meeting.close_background')}</button>
+  `;
+
+  actions.querySelector('#btnSaveProgressClose').onclick = () => {
+    closeAndFinalizeMeeting();
+    showToast(t('toast.minutes_generating_bg'), 'info');
+  };
+
+  // X button during generation → same as background close
+  const closeBtn = $('#endMeetingModal .modal-close');
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    closeAndFinalizeMeeting();
+    showToast(t('toast.minutes_generating_bg'), 'info');
+  };
+
+  // Overlay click during generation → same as background close
+  const modal = $('#endMeetingModal');
+  modal._progressClickHandler = (e) => {
+    if (e.target === modal) {
+      e.stopImmediatePropagation();
+      closeAndFinalizeMeeting();
+      showToast(t('toast.minutes_generating_bg'), 'info');
+    }
+  };
+  modal.addEventListener('click', modal._progressClickHandler, true);
+}
+
+function showSaveComplete() {
+  const footer = $('#endMeetingFooter');
+  footer.classList.remove('save-progress-state');
+  footer.classList.add('save-complete-state');
+
+  // Remove progress overlay click handler
+  cleanupProgressHandlers();
+
+  const actions = $('#endMeetingFooterActions');
+  actions.innerHTML = `
+    <div class="save-complete-content">
+      <span class="save-complete-icon">✓</span>
+      <span>${t('end_meeting.minutes_complete')}</span>
+    </div>
+    <div class="save-complete-actions">
+      <button class="btn" id="btnSaveCompleteClose">${t('end_meeting.close')}</button>
+      <button class="btn btn-primary" id="btnViewMinutes">${t('end_meeting.view_minutes')}</button>
+    </div>
+  `;
+
+  actions.querySelector('#btnSaveCompleteClose').onclick = () => closeAndFinalizeMeeting();
+  actions.querySelector('#btnViewMinutes').onclick = () => {
+    closeAndFinalizeMeeting();
+    const aiPanel = document.querySelector('#aiSections');
+    if (aiPanel) aiPanel.scrollIntoView({ behavior: 'smooth' });
+  };
+}
+
+function showSaveError(errorMsg) {
+  const footer = $('#endMeetingFooter');
+  footer.classList.remove('save-progress-state');
+  footer.classList.add('save-error-state');
+
+  // Remove progress overlay click handler
+  cleanupProgressHandlers();
+
+  const actions = $('#endMeetingFooterActions');
+  actions.innerHTML = `
+    <div class="save-error-content">
+      <span class="save-error-text">${t('end_meeting.minutes_error')}: ${errorMsg}</span>
+    </div>
+    <button class="btn" id="btnSaveErrorClose">${t('end_meeting.close')}</button>
+  `;
+
+  actions.querySelector('#btnSaveErrorClose').onclick = () => closeAndFinalizeMeeting();
+}
+
+function cleanupProgressHandlers() {
+  const modal = $('#endMeetingModal');
+  if (modal._progressClickHandler) {
+    modal.removeEventListener('click', modal._progressClickHandler, true);
+    modal._progressClickHandler = null;
+  }
+}
+
 async function generateFinalMeetingMinutes(template, promptConfig = {}) {
   showAnalysisSkeletons();
+
+  const metadata = {
+    title: state.meetingTitle,
+    participants: state.participants.map(p => p.name || p),
+    tags: state.tags,
+    categories: state.categories,
+    location: state.meetingLocation,
+    datetime: state.meetingStartTime,
+    starRating: state.starRating,
+  };
 
   const result = await generateFinalMinutes({
     transcript: state.transcript,
@@ -1047,6 +1190,7 @@ async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     referenceDoc: promptConfig.referenceDoc || '',
     basePromptOverride: promptConfig.basePromptOverride || '',
     userInstruction: promptConfig.userInstruction || '',
+    metadata,
   });
 
   state.currentAnalysis = result;
@@ -1061,8 +1205,6 @@ async function generateFinalMeetingMinutes(template, promptConfig = {}) {
 export async function regenerateMinutes(model, template, promptConfig = {}) {
   state.settings.geminiModel = model;
   await generateFinalMeetingMinutes(template, promptConfig);
-  minutesGenerated = true;
-  updateExportButton();
 }
 
 export function cancelEndMeeting() {
@@ -1155,6 +1297,7 @@ export function resetMeeting() {
   state.analysisContext = '';
   state.analysisCorrections = [];
   state.aiTitleCached = null;
+  state.aiMetadataCached = null;
   $('#transcriptList').innerHTML = '';
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';

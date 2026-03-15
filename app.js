@@ -142,21 +142,9 @@ function init() {
     state.meetingTitle = e.target.value;
   });
 
-  // End Meeting Modal events
-  $('#btnEndMeetingSave').addEventListener('click', () => finalizeEndMeeting());
-  $('#btnEndMeetingCancel').addEventListener('click', () => cancelEndMeeting());
-  $('#btnEndMeetingExport').addEventListener('click', () => {
-    if ($('#btnEndMeetingExport').disabled) {
-      showCenterToast(t('toast.minutes_still_generating'));
-      return;
-    }
-    // If minutes exist, show preview modal; otherwise show export modal (transcript only)
-    if (state.currentAnalysis?.markdown) {
-      openMinutesPreview();
-    } else {
-      $('#exportModal').hidden = false;
-    }
-  });
+  // End Meeting Modal events — save/cancel buttons are now created dynamically in recording.js
+  // Modal close button (X)
+  $('#endMeetingModal .modal-close').addEventListener('click', () => cancelEndMeeting());
 
   // Star rating clicks
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {

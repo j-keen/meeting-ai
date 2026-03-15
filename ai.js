@@ -285,6 +285,7 @@ export async function generateFinalMinutes({
   referenceDoc = '',
   basePromptOverride = '',
   userInstruction = '',
+  metadata = {},
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
@@ -307,6 +308,26 @@ export async function generateFinalMinutes({
     `Total Duration: ${elapsedTime || 'unknown'}`,
     `Total Lines: ${transcript.length}`,
   ];
+
+  // Inject metadata if provided
+  if (metadata && Object.keys(metadata).length > 0) {
+    messageParts.push('', '[Meeting Metadata — use this information in the Overview section]');
+    if (metadata.title) messageParts.push(`Meeting Title: ${metadata.title}`);
+    if (metadata.datetime) {
+      const dt = new Date(metadata.datetime);
+      messageParts.push(`Date/Time: ${dt.toLocaleDateString(getDateLocale())} ${dt.toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })}`);
+    }
+    if (metadata.location) messageParts.push(`Location: ${metadata.location}`);
+    if (metadata.participants && metadata.participants.length > 0) {
+      messageParts.push(`Participants: ${metadata.participants.join(', ')}`);
+    }
+    if (metadata.categories && metadata.categories.length > 0) {
+      messageParts.push(`Categories: ${metadata.categories.join(', ')}`);
+    }
+    if (metadata.tags && metadata.tags.length > 0) {
+      messageParts.push(`Tags: ${metadata.tags.join(', ')}`);
+    }
+  }
 
   if (userProfile) {
     messageParts.push('', '[User Profile]', userProfile);
@@ -374,6 +395,54 @@ export async function generateFinalMinutes({
   };
 }
 
+// AI-powered meeting metadata suggestions
+export async function suggestMeetingMetadata({ transcript, meetingContext, existingParticipants = [], existingTags = [] }) {
+  if (!isProxyAvailable() || !transcript || transcript.length === 0) return null;
+
+  const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
+  const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
+  const transcriptText = transcript.length > 60 ? head + '\n...\n' + tail : head;
+
+  const lang = getAiLanguage();
+  const langInstruction = lang === 'ko'
+    ? '한국어로 결과를 생성하세요.'
+    : 'Generate results in English.';
+
+  const prompt = `Based on this meeting transcript, suggest metadata. ${langInstruction}
+
+${meetingContext ? `Meeting Context: ${meetingContext}\n` : ''}
+Already known participants: ${existingParticipants.join(', ') || 'none'}
+Already known tags: ${existingTags.join(', ') || 'none'}
+
+Transcript:
+${transcriptText}
+
+Suggest NEW participants (names mentioned but not already listed), NEW tags (keywords not already listed), and categories from this list: ["회의", "미팅", "브레인스토밍", "리뷰", "보고", "교육", "면담", "기타"].
+
+Return ONLY valid JSON:
+{
+  "participants": ["new name 1", "new name 2"],
+  "tags": ["new tag 1", "new tag 2"],
+  "categories": ["matching category"]
+}`;
+
+  try {
+    const data = await callGemini('gemini-2.5-flash', {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
+    });
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const parsed = JSON.parse(rawText);
+    return {
+      participants: Array.isArray(parsed.participants) ? parsed.participants.map(p => String(p).trim()).filter(Boolean) : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      categories: Array.isArray(parsed.categories) ? parsed.categories.map(c => String(c).trim()).filter(Boolean) : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 const FINAL_MINUTES_PROMPT = {
   en: `You are an expert meeting secretary producing the FINAL, DEFINITIVE meeting minutes. This is the complete record generated after the meeting has ended — it must be thorough and comprehensive.
 
@@ -382,8 +451,10 @@ Respond in well-structured **Markdown**. Use the following structure:
 # Final Meeting Minutes
 
 ## Overview
-- **Date/Time**: (from transcript timestamps)
+- **Date/Time**: (use provided metadata if available, otherwise from transcript timestamps)
 - **Duration**: (from provided duration)
+- **Location**: (from provided metadata, omit if not provided)
+- **Participants**: (from provided metadata, omit if not provided)
 - **Key Result**: One sentence — the most important outcome.
 
 ## Executive Summary
@@ -428,8 +499,10 @@ Rules:
 # 최종 회의록
 
 ## 개요
-- **일시**: (트랜스크립트 타임스탬프 기반)
+- **일시**: (메타데이터가 제공된 경우 사용, 아니면 트랜스크립트 타임스탬프 기반)
 - **소요 시간**: (제공된 시간 정보)
+- **장소**: (메타데이터에서, 없으면 생략)
+- **참석자**: (메타데이터에서, 없으면 생략)
 - **핵심 결과**: 한 문장 — 가장 중요한 결론.
 
 ## 요약 (Executive Summary)
