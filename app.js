@@ -33,6 +33,7 @@ import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
+  updateParticipantDropdown, updateTagDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
   checkDraftRecovery,
 } from './recording.js';
@@ -151,27 +152,56 @@ function init() {
     btn.addEventListener('click', () => updateStarRating(parseInt(btn.dataset.star)));
   });
 
-  // Tag input (Enter to add)
-  $('#endMeetingTagInput').addEventListener('keydown', (e) => {
+  // Unified tag input (Enter to add, focus for dropdown)
+  const tagInput = $('#endMeetingTagInput');
+  tagInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       const tag = e.target.value.trim();
       if (tag && !state.tags.includes(tag)) {
         state.tags.push(tag);
         renderEndMeetingTags();
       }
       e.target.value = '';
+      updateTagDropdown('');
+    } else if (e.key === 'Backspace' && !e.target.value && state.tags.length > 0) {
+      state.tags.pop();
+      renderEndMeetingTags();
     }
   });
+  tagInput.addEventListener('input', () => updateTagDropdown(tagInput.value));
+  tagInput.addEventListener('focus', () => updateTagDropdown(tagInput.value));
+  $('#tagInputWrapper').addEventListener('click', () => tagInput.focus());
 
-  // Inline participant add
-  $('#btnEndMeetingAddParticipant').addEventListener('click', () => {
-    const input = $('#endMeetingParticipantInput');
-    const name = input.value.trim();
-    if (name) {
-      const contact = addContact({ name });
-      state.participants.push({ id: contact.id, name: contact.name });
+  // Unified participant input (Enter to add, focus for dropdown)
+  const participantInput = $('#endMeetingParticipantInput');
+  participantInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const name = e.target.value.trim();
+      if (name) {
+        const contact = addContact({ name });
+        state.participants.push({ id: contact.id, name: contact.name });
+        renderEndMeetingParticipants();
+        e.target.value = '';
+        updateParticipantDropdown('');
+      }
+    } else if (e.key === 'Backspace' && !e.target.value && state.participants.length > 0) {
+      state.participants.pop();
       renderEndMeetingParticipants();
-      input.value = '';
+    }
+  });
+  participantInput.addEventListener('input', () => updateParticipantDropdown(participantInput.value));
+  participantInput.addEventListener('focus', () => updateParticipantDropdown(participantInput.value));
+  $('#participantInputWrapper').addEventListener('click', () => participantInput.focus());
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#participantInputWrapper') && !e.target.closest('#participantDropdown')) {
+      $('#participantDropdown').hidden = true;
+    }
+    if (!e.target.closest('#tagInputWrapper') && !e.target.closest('#tagDropdown')) {
+      $('#tagDropdown').hidden = true;
     }
   });
 

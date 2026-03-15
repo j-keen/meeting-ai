@@ -816,10 +816,10 @@ function resetFooterToDefault() {
   if (body) body.classList.remove('disabled-form');
 }
 
-// AI metadata suggestion rendering
+// AI metadata suggestion rendering — auto-fill into badges
 function fetchAndCacheMetadata() {
   if (state.aiMetadataCached) {
-    renderAiMetadataSuggestions(state.aiMetadataCached);
+    applyAiMetadata(state.aiMetadataCached);
     return;
   }
 
@@ -831,62 +831,34 @@ function fetchAndCacheMetadata() {
   }).then(result => {
     if (!result) return;
     state.aiMetadataCached = result;
-    renderAiMetadataSuggestions(result);
+    applyAiMetadata(result);
   }).catch(() => { /* silent */ });
 }
 
-function renderAiMetadataSuggestions(metadata) {
-  // Participants
-  const pContainer = $('#aiParticipantSuggestions');
-  pContainer.innerHTML = '';
+function applyAiMetadata(metadata) {
+  // Auto-fill participants (with _isAi flag)
   const existingNames = state.participants.map(p => (p.name || p).toLowerCase());
-  const newParticipants = (metadata.participants || []).filter(
-    name => !existingNames.includes(name.toLowerCase())
-  );
-  if (newParticipants.length > 0) {
-    pContainer.hidden = false;
-    newParticipants.forEach(name => {
-      const chip = createAiSuggestionChip(name, () => {
-        state.participants.push({ id: 'ai_' + Date.now(), name });
-        renderEndMeetingParticipants();
-        chip.remove();
-        if (pContainer.children.length === 0) pContainer.hidden = true;
-      }, () => {
-        chip.remove();
-        if (pContainer.children.length === 0) pContainer.hidden = true;
-      });
-      pContainer.appendChild(chip);
-    });
-  } else {
-    pContainer.hidden = true;
-  }
+  (metadata.participants || []).forEach(name => {
+    if (!existingNames.includes(name.toLowerCase())) {
+      state.participants.push({ id: 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name, _isAi: true });
+      existingNames.push(name.toLowerCase());
+    }
+  });
+  renderEndMeetingParticipants();
 
-  // Tags
-  const tContainer = $('#aiTagSuggestions');
-  tContainer.innerHTML = '';
+  // Auto-fill tags (with _isAi marker)
   const existingTags = state.tags.map(t2 => t2.toLowerCase());
-  const newTags = (metadata.tags || []).filter(
-    tag => !existingTags.includes(tag.toLowerCase())
-  );
-  if (newTags.length > 0) {
-    tContainer.hidden = false;
-    newTags.forEach(tag => {
-      const chip = createAiSuggestionChip(tag, () => {
-        if (!state.tags.includes(tag)) state.tags.push(tag);
-        renderEndMeetingTags();
-        chip.remove();
-        if (tContainer.children.length === 0) tContainer.hidden = true;
-      }, () => {
-        chip.remove();
-        if (tContainer.children.length === 0) tContainer.hidden = true;
-      });
-      tContainer.appendChild(chip);
-    });
-  } else {
-    tContainer.hidden = true;
-  }
+  (metadata.tags || []).forEach(tag => {
+    if (!existingTags.includes(tag.toLowerCase())) {
+      state.tags.push(tag);
+      if (!state._aiTags) state._aiTags = [];
+      state._aiTags.push(tag);
+      existingTags.push(tag.toLowerCase());
+    }
+  });
+  renderEndMeetingTags();
 
-  // Categories — auto-select suggested categories
+  // Categories — auto-select
   if (metadata.categories && metadata.categories.length > 0) {
     metadata.categories.forEach(cat => {
       if (!state.categories.includes(cat)) {
@@ -897,21 +869,22 @@ function renderAiMetadataSuggestions(metadata) {
   }
 }
 
-function createAiSuggestionChip(text, onAccept, onReject) {
-  const chip = document.createElement('span');
-  chip.className = 'ai-suggestion-chip';
-  const label = document.createElement('span');
-  label.className = 'ai-chip-label';
-  label.textContent = '✨';
-  const textEl = document.createElement('span');
-  textEl.textContent = text;
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'ai-chip-close';
-  closeBtn.textContent = '\u00d7';
-  closeBtn.onclick = (e) => { e.stopPropagation(); onReject(); };
-  chip.append(label, textEl, closeBtn);
-  chip.addEventListener('click', onAccept);
-  return chip;
+function createUnifiedBadge(text, onRemove, isAi = false) {
+  const badge = document.createElement('span');
+  badge.className = 'unified-badge' + (isAi ? ' ai-filled' : '');
+  if (isAi) {
+    const icon = document.createElement('span');
+    icon.className = 'unified-badge-ai-icon';
+    icon.textContent = '✨';
+    badge.appendChild(icon);
+  }
+  badge.appendChild(document.createTextNode(text));
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'unified-badge-remove';
+  removeBtn.textContent = '\u00d7';
+  removeBtn.onclick = (e) => { e.stopPropagation(); onRemove(); };
+  badge.appendChild(removeBtn);
+  return badge;
 }
 
 function renderTitleChips(titles, container, titleInput) {
@@ -951,18 +924,13 @@ export function renderEndMeetingTags() {
   const container = $('#endMeetingTags');
   container.innerHTML = '';
   state.tags.forEach(tag => {
-    const el = document.createElement('span');
-    el.className = 'end-meeting-tag';
-    const tagText = document.createTextNode(tag);
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'end-meeting-tag-remove';
-    removeBtn.textContent = '\u00d7';
-    el.append(tagText, removeBtn);
-    removeBtn.addEventListener('click', () => {
+    const isAi = state._aiTags && state._aiTags.includes(tag);
+    const badge = createUnifiedBadge(tag, () => {
       state.tags = state.tags.filter(t2 => t2 !== tag);
+      if (state._aiTags) state._aiTags = state._aiTags.filter(t2 => t2 !== tag);
       renderEndMeetingTags();
-    });
-    container.appendChild(el);
+    }, isAi);
+    container.appendChild(badge);
   });
 }
 
@@ -995,52 +963,121 @@ export function updateStarRating(rating) {
 }
 
 export function renderEndMeetingParticipants() {
-  const selectedContainer = $('#endMeetingParticipantsSelected');
-  const listContainer = $('#endMeetingParticipantsList');
-
-  selectedContainer.innerHTML = '';
+  const container = $('#endMeetingParticipantsSelected');
+  container.innerHTML = '';
   state.participants.forEach(p => {
-    const badge = document.createElement('span');
-    badge.className = 'contact-badge';
-    const nameText = document.createTextNode(p.name || p);
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'contact-badge-remove';
-    removeBtn.textContent = '\u00d7';
-    badge.append(nameText, removeBtn);
-    removeBtn.addEventListener('click', () => {
+    const isAi = !!p._isAi;
+    const badge = createUnifiedBadge(p.name || p, () => {
       state.participants = state.participants.filter(pp => pp !== p);
       renderEndMeetingParticipants();
+    }, isAi);
+    container.appendChild(badge);
+  });
+}
+
+// Dropdown for participant input — shows contacts filtered by query
+export function updateParticipantDropdown(query) {
+  const dropdown = $('#participantDropdown');
+  const contacts = loadContacts();
+  const q = query.toLowerCase().trim();
+
+  // Filter contacts not already selected
+  const available = contacts.filter(c =>
+    !state.participants.some(p => (p.id || p) === c.id)
+  );
+
+  // Filter by query
+  const filtered = q
+    ? available.filter(c => c.name.toLowerCase().includes(q) || (c.company || '').toLowerCase().includes(q))
+    : available;
+
+  if (filtered.length === 0) {
+    dropdown.hidden = true;
+    return;
+  }
+
+  dropdown.innerHTML = '';
+  const section = document.createElement('div');
+  section.className = 'unified-dropdown-section';
+  const header = document.createElement('div');
+  header.className = 'unified-dropdown-header';
+  header.textContent = t('end_meeting.contacts') || 'Contacts';
+  section.appendChild(header);
+
+  filtered.slice(0, 8).forEach(contact => {
+    const item = document.createElement('div');
+    item.className = 'unified-dropdown-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = contact.name;
+    item.appendChild(nameSpan);
+    if (contact.company) {
+      const sub = document.createElement('span');
+      sub.className = 'unified-dropdown-item-sub';
+      sub.textContent = contact.company;
+      item.appendChild(sub);
+    }
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.participants.push({ id: contact.id, name: contact.name });
+      renderEndMeetingParticipants();
+      $('#endMeetingParticipantInput').value = '';
+      updateParticipantDropdown('');
+      $('#endMeetingParticipantInput').focus();
     });
-    selectedContainer.appendChild(badge);
+    section.appendChild(item);
   });
 
-  const contacts = loadContacts();
-  listContainer.innerHTML = '';
-  if (contacts.length === 0 && state.participants.length === 0) {
-    const p = document.createElement('p');
-    p.className = 'text-muted';
-    p.style.fontSize = '11px';
-    p.textContent = t('end_meeting.no_participants');
-    listContainer.appendChild(p);
-  } else {
-    contacts.forEach(contact => {
-      if (state.participants.some(p => (p.id || p) === contact.id)) return;
-      const card = document.createElement('div');
-      card.className = 'contact-card';
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'contact-card-name';
-      nameSpan.textContent = contact.name;
-      const companySpan = document.createElement('span');
-      companySpan.className = 'contact-card-company';
-      companySpan.textContent = contact.company || '';
-      card.append(nameSpan, companySpan);
-      card.addEventListener('click', () => {
-        state.participants.push({ id: contact.id, name: contact.name });
-        renderEndMeetingParticipants();
-      });
-      listContainer.appendChild(card);
-    });
+  dropdown.appendChild(section);
+  dropdown.hidden = false;
+}
+
+// Dropdown for tag input — shows recent tags filtered by query
+export function updateTagDropdown(query) {
+  const dropdown = $('#tagDropdown');
+  const q = query.toLowerCase().trim();
+
+  // Collect all unique tags from saved meetings
+  const allMeetings = JSON.parse(localStorage.getItem('meetings') || '[]');
+  const allTags = new Set();
+  allMeetings.forEach(m => (m.tags || []).forEach(tag => allTags.add(tag)));
+  // Remove already-selected tags
+  state.tags.forEach(tag => allTags.delete(tag));
+
+  const available = [...allTags];
+  const filtered = q
+    ? available.filter(tag => tag.toLowerCase().includes(q))
+    : available;
+
+  if (filtered.length === 0) {
+    dropdown.hidden = true;
+    return;
   }
+
+  dropdown.innerHTML = '';
+  const section = document.createElement('div');
+  section.className = 'unified-dropdown-section';
+  const header = document.createElement('div');
+  header.className = 'unified-dropdown-header';
+  header.textContent = t('end_meeting.recent_tags') || 'Recent';
+  section.appendChild(header);
+
+  filtered.slice(0, 8).forEach(tag => {
+    const item = document.createElement('div');
+    item.className = 'unified-dropdown-item';
+    item.textContent = tag;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!state.tags.includes(tag)) state.tags.push(tag);
+      renderEndMeetingTags();
+      $('#endMeetingTagInput').value = '';
+      updateTagDropdown('');
+      $('#endMeetingTagInput').focus();
+    });
+    section.appendChild(item);
+  });
+
+  dropdown.appendChild(section);
+  dropdown.hidden = false;
 }
 
 // Save metadata only (no minutes generation)
@@ -1359,6 +1396,7 @@ export function resetMeeting() {
   state.analysisCorrections = [];
   state.aiTitleCached = null;
   state.aiMetadataCached = null;
+  state._aiTags = null;
   $('#transcriptList').innerHTML = '';
   resetTranscriptEmpty();
   $('#aiSections').innerHTML = '';

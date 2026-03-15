@@ -2675,40 +2675,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   background: var(--accent-bg);
 }
 
-/* Tags chips */
-.end-meeting-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.end-meeting-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  background: var(--accent-bg);
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 500;
-}
-.end-meeting-tag-remove {
-  border: none;
-  background: none;
-  color: var(--accent);
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0;
-  line-height: 1;
-  opacity: 0.6;
-}
-.end-meeting-tag-remove:hover { opacity: 1; }
-.end-meeting-tag-input {
-  max-width: 200px;
-  font-size: 12px !important;
-  padding: 4px 8px !important;
-}
+/* (Tags chips — merged into unified-badge) */
 
 /* Categories toggle buttons */
 .end-meeting-categories {
