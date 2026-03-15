@@ -477,33 +477,27 @@
             <h3 data-i18n="settings.locations">Locations</h3>
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
           </div>
+          <div class="contacts-modal-tabs">
+            <button class="contacts-modal-tab active" data-locations-tab="add" data-i18n="settings.contacts_tab_add">Add</button>
+            <button class="contacts-modal-tab" data-locations-tab="search" data-i18n="settings.contacts_tab_search">Search</button>
+          </div>
           <div class="modal-body">
-            <div class="data-add-row" style="margin-bottom:8px;">
-              <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
-              <select class="location-group-select" id="selectLocationGroup" style="min-width:80px;"></select>
-              <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
-            </div>
-            <label class="location-gps-check" style="margin-bottom:8px;">
-              <input type="checkbox" id="chkLocationGps">
-              <span data-i18n="settings.location_include_gps">📍 Include current location</span>
-            </label>
-            <div class="location-gps-tip" id="locationGpsTip" hidden>
-              <p data-i18n="settings.location_gps_tip">GPS saves your current physical coordinates. Register each place while you're actually there, otherwise all locations will point to the same spot.</p>
-              <button class="btn btn-xs" id="btnDismissGpsTip" data-i18n="settings.location_gps_tip_dismiss">Don't show again</button>
-            </div>
-            <div id="locationNoGpsTip" hidden class="location-gps-tip location-gps-tip--subtle"></div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <div class="location-group-tabs" id="locationGroupTabs"></div>
-              <button class="btn btn-xs" id="btnManageLocationGroups">+ Group</button>
-            </div>
-            <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
-            <div class="location-map-popup" id="locationMapPopup" hidden>
-              <img id="locationMapImg" width="250" height="180" alt="Map">
-              <div class="location-map-popup-footer">
-                <span id="locationMapCoords"></span>
-                <a id="locationMapLink" href="#" target="_blank" rel="noopener">OSM ↗</a>
+            <!-- Add Tab -->
+            <div class="locations-tab-content" id="locationsTabAdd">
+              <div class="data-add-row">
+                <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
+                <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
+              </div>
+              <div class="data-add-row" style="margin-top:4px;">
+                <input type="text" class="settings-input" id="inputNewLocationMemo" data-i18n-placeholder="settings.placeholder_location_memo" placeholder="Memo (optional)" style="font-size:12px;">
               </div>
             </div>
+            <!-- Search Tab -->
+            <div class="locations-tab-content" id="locationsTabSearch" hidden>
+              <input type="text" class="settings-input data-modal-search" id="inputLocationSearch" data-i18n-placeholder="settings.search_locations" placeholder="Search locations...">
+            </div>
+            <!-- Location List (always visible) -->
+            <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
           </div>
         </div>
       </div>
@@ -866,6 +860,7 @@
             <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
             <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
             <datalist id="locationDatalist"></datalist>
+            <div class="recent-location-chips" id="recentLocationChips"></div>
           </div>
         </div>
         <!-- 3. Title + AI suggestions -->

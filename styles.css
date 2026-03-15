@@ -3731,51 +3731,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   padding: 5px 8px;
 }
 
-/* Location GPS checkbox */
-.location-gps-check {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  user-select: none;
-}
-.location-gps-check input[type="checkbox"] {
-  margin: 0;
-}
-
-/* Location GPS inline tip */
-.location-gps-tip {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-.location-gps-tip p {
-  margin: 0 0 8px 0;
-}
-.location-gps-tip--subtle {
-  background: transparent;
-  border: 1px dashed var(--border-color);
-  padding: 8px 12px;
-  font-size: 11px;
-}
-
-/* Location distance badge */
-.location-distance-badge {
-  font-size: 10px;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 1px 6px;
-  border-radius: 10px;
-  white-space: nowrap;
-}
-
 /* Location frequency badge */
 .location-freq-badge {
   font-size: 10px;
@@ -3787,13 +3742,30 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-weight: 600;
 }
 
-/* Location group tabs */
-.location-group-tabs {
+/* Location memo */
+.location-memo {
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.3;
+}
+.location-memo--empty {
+  color: var(--text-tertiary, var(--text-secondary));
+  opacity: 0.5;
+  font-style: italic;
+}
+.location-memo:hover {
+  color: var(--accent);
+}
+
+/* Recent location chips (end-meeting modal) */
+.recent-location-chips {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
+  margin-top: 4px;
 }
-.location-group-tab {
+.recent-location-chip {
   font-size: 11px;
   padding: 2px 10px;
   border-radius: 12px;
@@ -3802,73 +3774,17 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-secondary);
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.15s;
 }
-.location-group-tab:hover {
+.recent-location-chip:hover {
   background: var(--bg-tertiary, var(--bg-secondary));
+  border-color: var(--accent);
+  color: var(--text-primary);
 }
-.location-group-tab.active {
+.recent-location-chip.active {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
-}
-
-/* Location group header separator */
-.location-group-header {
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 8px 0 4px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
-
-/* Location group select inside items */
-.location-group-select {
-  font-size: 11px;
-  padding: 1px 4px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  max-width: 90px;
-}
-
-/* Location map popup — parent needs relative positioning */
-#locationsModal .modal-body { position: relative; }
-.location-map-popup {
-  position: absolute;
-  z-index: 100;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  padding: 8px;
-  width: 266px;
-}
-.location-map-popup img {
-  width: 250px;
-  height: 180px;
-  border-radius: 6px;
-  object-fit: cover;
-  display: block;
-}
-.location-map-popup-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 6px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.location-map-popup-footer a {
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 500;
-}
-.location-map-popup-footer a:hover {
-  text-decoration: underline;
 }
 
 /* ===== Data Modal Buttons & Badges ===== */

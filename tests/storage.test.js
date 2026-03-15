@@ -13,7 +13,6 @@ import {
   loadLocations,
   addLocation,
   deleteLocation,
-  findNearestLocation,
   loadCategories,
   addCategory,
   deleteCategory,
@@ -284,12 +283,12 @@ describe('loadLocations', () => {
 describe('addLocation', () => {
   it('adds a new location by string and returns the list', () => {
     const list = addLocation('Seoul HQ');
-    expect(list).toEqual([{ name: 'Seoul HQ' }]);
+    expect(list).toEqual([{ name: 'Seoul HQ', memo: '' }]);
   });
 
-  it('adds a location with GPS coordinates', () => {
-    const list = addLocation({ name: 'Office', lat: 37.5, lng: 127.0 });
-    expect(list).toEqual([{ name: 'Office', lat: 37.5, lng: 127.0 }]);
+  it('adds a location with memo', () => {
+    const list = addLocation({ name: 'Office', memo: '3F meeting room' });
+    expect(list).toEqual([{ name: 'Office', memo: '3F meeting room' }]);
   });
 
   it('does not add duplicates', () => {
@@ -298,12 +297,12 @@ describe('addLocation', () => {
     expect(loadLocations().filter(l => l.name === 'Room A')).toHaveLength(1);
   });
 
-  it('updates GPS coordinates on duplicate name', () => {
+  it('updates memo on duplicate name', () => {
     addLocation('Room B');
-    addLocation({ name: 'Room B', lat: 37.5, lng: 127.0 });
+    addLocation({ name: 'Room B', memo: 'updated memo' });
     const locs = loadLocations().filter(l => l.name === 'Room B');
     expect(locs).toHaveLength(1);
-    expect(locs[0].lat).toBe(37.5);
+    expect(locs[0].memo).toBe('updated memo');
   });
 });
 
@@ -321,26 +320,6 @@ describe('deleteLocation', () => {
   });
 });
 
-describe('findNearestLocation', () => {
-  it('returns null when no GPS locations exist', () => {
-    addLocation('No GPS');
-    expect(findNearestLocation(37.5, 127.0)).toBeNull();
-  });
-
-  it('finds the nearest location within range', () => {
-    addLocation({ name: 'Office', lat: 37.5000, lng: 127.0000 });
-    addLocation({ name: 'Far Place', lat: 38.0, lng: 128.0 });
-    const result = findNearestLocation(37.5001, 127.0001);
-    expect(result).not.toBeNull();
-    expect(result.location.name).toBe('Office');
-    expect(result.distance).toBeLessThan(0.1); // less than 100m
-  });
-
-  it('returns null when all locations are out of range', () => {
-    addLocation({ name: 'Far', lat: 38.0, lng: 128.0 });
-    expect(findNearestLocation(37.5, 127.0)).toBeNull(); // > 1km default
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Categories CRUD

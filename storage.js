@@ -146,7 +146,7 @@ export function deleteContact(id) {
   return saveAll(data);
 }
 
-// Locations CRUD — each location is { name, lat?, lng? }
+// Locations CRUD — each location is { name, memo? }
 // Backward compat: migrate old string[] format on load
 function migrateLocations(arr) {
   if (!arr) return [];
@@ -165,13 +165,9 @@ export function addLocation(nameOrObj) {
   if (!loc.name) return data.locations;
   const existing = data.locations.find(l => l.name === loc.name);
   if (existing) {
-    // Update coordinates if provided
-    if (loc.lat != null && loc.lng != null) {
-      existing.lat = loc.lat;
-      existing.lng = loc.lng;
-    }
+    if (loc.memo != null) existing.memo = loc.memo;
   } else {
-    data.locations.push(loc);
+    data.locations.push({ name: loc.name, memo: loc.memo || '' });
   }
   saveAll(data);
   return data.locations;
@@ -205,72 +201,6 @@ export function getLocationFrequency() {
     }
   }
   return freq;
-}
-
-// Location Groups CRUD
-export function loadLocationGroups() {
-  const data = loadAll();
-  return data.locationGroups || [];
-}
-
-export function addLocationGroup(name) {
-  const data = loadAll();
-  if (!data.locationGroups) data.locationGroups = [];
-  const group = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-    name,
-    createdAt: Date.now(),
-  };
-  data.locationGroups.push(group);
-  saveAll(data);
-  return group;
-}
-
-export function deleteLocationGroup(id) {
-  const data = loadAll();
-  if (!data.locationGroups) return { success: false };
-  // Remove group assignment from locations
-  data.locations = migrateLocations(data.locations);
-  for (const loc of data.locations) {
-    if (loc.group === id) delete loc.group;
-  }
-  data.locationGroups = data.locationGroups.filter(g => g.id !== id);
-  saveAll(data);
-  return { success: true };
-}
-
-// Find nearest saved location by GPS coordinates (returns { location, distance } or null)
-export function findNearestLocation(lat, lng, maxDistanceKm = 1) {
-  const locations = loadLocations().filter(l => l.lat != null && l.lng != null);
-  if (locations.length === 0) return null;
-
-  let nearest = null;
-  let minDist = Infinity;
-  for (const loc of locations) {
-    const d = haversineKm(lat, lng, loc.lat, loc.lng);
-    if (d < minDist) {
-      minDist = d;
-      nearest = loc;
-    }
-  }
-  return minDist <= maxDistanceKm ? { location: nearest, distance: minDist } : null;
-}
-
-// Find locations within a radius (returns array of { location, distance })
-export function findNearbyLocations(lat, lng, maxDistanceKm = 0.1) {
-  const locations = loadLocations().filter(l => l.lat != null && l.lng != null);
-  return locations
-    .map(loc => ({ location: loc, distance: haversineKm(lat, lng, loc.lat, loc.lng) }))
-    .filter(r => r.distance <= maxDistanceKm);
-}
-
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const toRad = d => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // Categories CRUD

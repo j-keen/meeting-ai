@@ -4,8 +4,8 @@ import { state, emit, on } from './event-bus.js';
 import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
-  loadLocations, addLocation, deleteLocation, updateLocation, findNearestLocation, findNearbyLocations,
-  getLocationFrequency, loadLocationGroups, addLocationGroup, deleteLocationGroup,
+  loadLocations, addLocation, deleteLocation, updateLocation,
+  getLocationFrequency,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
   loadCustomTypes, addCustomType, deleteCustomType,
 } from './storage.js';
@@ -558,6 +558,7 @@ let settingsCameraStream = null;
 let contactSearchQuery = '';
 let contactSearchField = 'all'; // 'all' | 'name' | 'title' | 'company'
 let starFilterActive = false;
+let locationSearchQuery = '';
 
 function switchContactsTab(tab) {
   document.querySelectorAll('.contacts-modal-tab').forEach(btn => {
@@ -641,6 +642,13 @@ function initDataTab() {
   // --- Locations Modal ---
   $('#btnOpenLocations')?.addEventListener('click', () => {
     $('#locationsModal').hidden = false;
+    locationSearchQuery = '';
+    const searchInput = $('#inputLocationSearch');
+    if (searchInput) searchInput.value = '';
+    // Reset to Add tab
+    document.querySelectorAll('[data-locations-tab]').forEach(b => b.classList.toggle('active', b.dataset.locationsTab === 'add'));
+    $('#locationsTabAdd').hidden = false;
+    $('#locationsTabSearch').hidden = true;
     renderDataLocations();
   });
   $('#btnCloseLocations')?.addEventListener('click', closeLocationsModal);
@@ -762,77 +770,19 @@ function initDataTab() {
     e.target.value = '';
   });
 
-  // Add location (shared logic)
-  const GPS_TIP_DISMISSED_KEY = 'locationGpsTipDismissed';
-
-  function showGpsTip() {
-    const tip = $('#locationGpsTip');
-    if (tip) tip.hidden = false;
-  }
-  function hideGpsTip() {
-    const tip = $('#locationGpsTip');
-    if (tip) tip.hidden = true;
-  }
-
-  // Show/hide GPS tip when checkbox toggled
-  $('#chkLocationGps')?.addEventListener('change', (e) => {
-    if (e.target.checked && !localStorage.getItem(GPS_TIP_DISMISSED_KEY)) {
-      showGpsTip();
-    } else {
-      hideGpsTip();
-    }
-  });
-
-  // Dismiss GPS tip permanently
-  $('#btnDismissGpsTip')?.addEventListener('click', () => {
-    localStorage.setItem(GPS_TIP_DISMISSED_KEY, '1');
-    hideGpsTip();
-  });
-
-  function finishAddLocation(name, pos) {
-    const groupId = $('#selectLocationGroup')?.value || undefined;
-    if (pos) {
-      // Check for nearby existing locations within 100m
-      const nearby = findNearbyLocations(pos.coords.latitude, pos.coords.longitude, 0.1);
-      if (nearby.length > 0) {
-        const closest = nearby[0];
-        const dist = Math.round(closest.distance * 1000);
-        emit('toast', { message: t('settings.location_duplicate_coords', { name: closest.location.name, dist }), type: 'error', duration: 5000 });
-        return;
-      }
-      addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
-      emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
-    } else {
-      addLocation(name);
-    }
-    if (groupId) updateLocation(name, { group: groupId });
-    $('#inputNewLocation').value = '';
-    renderDataLocations();
-    updateDataBadges();
-  }
+  // Add location (simple: name + memo)
 
   function handleAddLocation() {
     const input = $('#inputNewLocation');
+    const memoInput = $('#inputNewLocationMemo');
     const name = input?.value.trim();
     if (!name) { emit('toast', { message: t('settings.location_name_required'), type: 'warning' }); return; }
-    const withGps = $('#chkLocationGps')?.checked;
-    if (withGps) {
-      const btn = $('#btnAddLocation');
-      if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          finishAddLocation(name, pos);
-          if (btn) { btn.disabled = false; btn.textContent = t('settings.add'); }
-        },
-        () => {
-          emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
-          if (btn) { btn.disabled = false; btn.textContent = t('settings.add'); }
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
-    } else {
-      finishAddLocation(name, null);
-    }
+    const memo = memoInput?.value.trim() || '';
+    addLocation({ name, memo });
+    input.value = '';
+    if (memoInput) memoInput.value = '';
+    renderDataLocations();
+    updateDataBadges();
   }
 
   // Add button click
@@ -842,14 +792,27 @@ function initDataTab() {
   $('#inputNewLocation')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); handleAddLocation(); }
   });
+  $('#inputNewLocationMemo')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAddLocation(); }
+  });
 
-  // Manage location groups
-  $('#btnManageLocationGroups')?.addEventListener('click', () => {
-    const name = prompt(t('settings.location_group_name_prompt'));
-    if (name?.trim()) {
-      addLocationGroup(name.trim());
+  // Location tabs
+  document.querySelectorAll('[data-locations-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-locations-tab]').forEach(b => b.classList.toggle('active', b === btn));
+      $('#locationsTabAdd').hidden = btn.dataset.locationsTab !== 'add';
+      $('#locationsTabSearch').hidden = btn.dataset.locationsTab !== 'search';
       renderDataLocations();
-    }
+      if (btn.dataset.locationsTab === 'search') {
+        setTimeout(() => $('#inputLocationSearch')?.focus(), 50);
+      }
+    });
+  });
+
+  // Location search
+  $('#inputLocationSearch')?.addEventListener('input', (e) => {
+    locationSearchQuery = e.target.value.trim().toLowerCase();
+    renderDataLocations();
   });
 
   // Add category
@@ -887,7 +850,7 @@ function updateDataBadges() {
 
   // Update tooltips (recent 3 items preview)
   setContactTooltip('#btnOpenContacts', contacts.slice(-3).reverse());
-  setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse().map(l => typeof l === 'string' ? l : l.name + (l.lat != null ? ' 📍' : '')));
+  setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse().map(l => typeof l === 'string' ? l : l.name));
 }
 
 function setBadge(selector, count) {
@@ -1379,121 +1342,29 @@ function renderDataParticipants() {
   });
 }
 
-let currentLocationGroupFilter = null; // null = all
-let currentMapPopupLoc = null;
-
-function renderLocationGroupTabs(groups) {
-  const container = $('#locationGroupTabs');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const allTab = document.createElement('button');
-  allTab.className = 'location-group-tab' + (currentLocationGroupFilter === null ? ' active' : '');
-  allTab.textContent = t('settings.location_group_all');
-  allTab.addEventListener('click', () => { currentLocationGroupFilter = null; renderDataLocations(); });
-  container.appendChild(allTab);
-
-  for (const g of groups) {
-    const tab = document.createElement('button');
-    tab.className = 'location-group-tab' + (currentLocationGroupFilter === g.id ? ' active' : '');
-    tab.textContent = g.name;
-    tab.addEventListener('click', () => { currentLocationGroupFilter = g.id; renderDataLocations(); });
-    tab.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-      const msg = t('settings.location_group_delete_confirm').replace('{name}', g.name);
-      if (confirm(msg)) {
-        deleteLocationGroup(g.id);
-        if (currentLocationGroupFilter === g.id) currentLocationGroupFilter = null;
-        renderDataLocations();
-      }
-    });
-    container.appendChild(tab);
-  }
-
-  // Ungrouped tab
-  const ungroupedTab = document.createElement('button');
-  ungroupedTab.className = 'location-group-tab' + (currentLocationGroupFilter === '__ungrouped' ? ' active' : '');
-  ungroupedTab.textContent = t('settings.location_group_ungrouped');
-  ungroupedTab.addEventListener('click', () => { currentLocationGroupFilter = '__ungrouped'; renderDataLocations(); });
-  container.appendChild(ungroupedTab);
-}
-
-function populateGroupSelector(groups, selectEl, selectedGroupId) {
-  if (!selectEl) return;
-  selectEl.innerHTML = '';
-  const noneOpt = document.createElement('option');
-  noneOpt.value = '';
-  noneOpt.textContent = t('settings.location_group_none');
-  selectEl.appendChild(noneOpt);
-  for (const g of groups) {
-    const opt = document.createElement('option');
-    opt.value = g.id;
-    opt.textContent = g.name;
-    if (g.id === selectedGroupId) opt.selected = true;
-    selectEl.appendChild(opt);
-  }
-}
-
-function showLocationMapPopup(loc, anchorEl) {
-  const popup = $('#locationMapPopup');
-  if (!popup) return;
-  // Toggle: close if same location
-  if (!popup.hidden && currentMapPopupLoc === loc.name) {
-    popup.hidden = true;
-    currentMapPopupLoc = null;
-    return;
-  }
-  currentMapPopupLoc = loc.name;
-  const img = $('#locationMapImg');
-  const coords = $('#locationMapCoords');
-  const link = $('#locationMapLink');
-
-  const lat = loc.lat, lng = loc.lng;
-  img.src = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=16&size=250x180&markers=${lat},${lng},red-pushpin`;
-  img.onerror = () => { img.alt = `${lat.toFixed(4)}, ${lng.toFixed(4)}`; img.style.display = 'none'; };
-  img.onload = () => { img.style.display = 'block'; };
-  coords.textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  link.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`;
-  link.textContent = t('settings.location_open_map');
-
-  // Position relative to anchor
-  const modalBody = popup.parentElement;
-  if (anchorEl && modalBody) {
-    const anchorRect = anchorEl.getBoundingClientRect();
-    const bodyRect = modalBody.getBoundingClientRect();
-    popup.style.left = Math.min(anchorRect.left - bodyRect.left, bodyRect.width - 280) + 'px';
-    popup.style.top = (anchorRect.bottom - bodyRect.top + 4) + 'px';
-  }
-  popup.hidden = false;
-}
-
-function createLocationItem(loc, freq, groups) {
+function createLocationItem(loc, freq) {
   const item = document.createElement('div');
   item.className = 'data-list-item';
-  const span = document.createElement('span');
-  span.style.cssText = 'display:flex;align-items:center;gap:6px;';
-  const hasGps = loc.lat != null && loc.lng != null;
 
+  const infoSpan = document.createElement('span');
+  infoSpan.style.cssText = 'display:flex;flex-direction:column;gap:1px;flex:1;min-width:0;';
+
+  const topRow = document.createElement('span');
+  topRow.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+  // Inline-editable name
   const nameEl = document.createElement('span');
   nameEl.textContent = loc.name;
-  span.appendChild(nameEl);
-
-  // GPS map button (separate clickable button)
-  if (hasGps) {
-    const mapBtn = document.createElement('button');
-    mapBtn.className = 'btn btn-xs';
-    mapBtn.textContent = '📍';
-    mapBtn.title = `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`;
-    mapBtn.style.cssText = 'padding:0 2px;min-width:auto;';
-    mapBtn.addEventListener('click', () => showLocationMapPopup(loc, mapBtn));
-    span.appendChild(mapBtn);
-
-    const distEl = document.createElement('span');
-    distEl.className = 'location-distance-badge';
-    distEl.dataset.locDistance = loc.name;
-    distEl.textContent = '';
-    span.appendChild(distEl);
-  }
+  nameEl.style.cssText = 'cursor:pointer;font-weight:500;';
+  nameEl.title = t('settings.click_to_edit');
+  nameEl.addEventListener('click', () => {
+    const newName = prompt(t('settings.location_edit_name'), loc.name);
+    if (newName?.trim() && newName.trim() !== loc.name) {
+      updateLocation(loc.name, { name: newName.trim() });
+      renderDataLocations();
+    }
+  });
+  topRow.appendChild(nameEl);
 
   // Frequency badge
   const count = freq[loc.name] || 0;
@@ -1501,54 +1372,28 @@ function createLocationItem(loc, freq, groups) {
     const badge = document.createElement('span');
     badge.className = 'location-freq-badge';
     badge.textContent = count + t('settings.location_freq_suffix');
-    span.appendChild(badge);
+    topRow.appendChild(badge);
   }
 
-  // Group selector
-  if (groups.length > 0) {
-    const groupSelect = document.createElement('select');
-    groupSelect.className = 'location-group-select';
-    populateGroupSelector(groups, groupSelect, loc.group);
-    groupSelect.addEventListener('change', () => {
-      updateLocation(loc.name, { group: groupSelect.value || undefined });
+  infoSpan.appendChild(topRow);
+
+  // Memo line (editable)
+  const memoEl = document.createElement('span');
+  memoEl.className = 'location-memo';
+  memoEl.textContent = loc.memo || '';
+  if (!loc.memo) {
+    memoEl.classList.add('location-memo--empty');
+    memoEl.textContent = t('settings.location_add_memo');
+  }
+  memoEl.addEventListener('click', () => {
+    const newMemo = prompt(t('settings.location_edit_memo'), loc.memo || '');
+    if (newMemo != null) {
+      updateLocation(loc.name, { memo: newMemo.trim() });
       renderDataLocations();
-    });
-    span.appendChild(groupSelect);
-  }
-
-  const btnGroup = document.createElement('span');
-  btnGroup.style.cssText = 'display:flex;gap:4px;';
-  const gpsBtn = document.createElement('button');
-  gpsBtn.className = 'btn btn-xs';
-  gpsBtn.textContent = hasGps ? '📍' : '📌';
-  gpsBtn.title = hasGps ? t('settings.location_update_gps') : t('settings.location_add_gps');
-  gpsBtn.addEventListener('click', () => {
-    gpsBtn.disabled = true;
-    gpsBtn.textContent = '⏳';
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const nearby = findNearbyLocations(pos.coords.latitude, pos.coords.longitude, 0.1)
-          .filter(n => n.location.name !== loc.name);
-        if (nearby.length > 0) {
-          const closest = nearby[0];
-          const dist = Math.round(closest.distance * 1000);
-          emit('toast', { message: t('settings.location_duplicate_coords', { name: closest.location.name, dist }), type: 'error', duration: 5000 });
-          gpsBtn.disabled = false;
-          gpsBtn.textContent = hasGps ? '📍' : '📌';
-          return;
-        }
-        addLocation({ name: loc.name, lat: pos.coords.latitude, lng: pos.coords.longitude });
-        renderDataLocations();
-        emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
-      },
-      () => {
-        gpsBtn.disabled = false;
-        gpsBtn.textContent = hasGps ? '📍' : '📌';
-        emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+    }
   });
+  infoSpan.appendChild(memoEl);
+
   const delBtn = document.createElement('button');
   delBtn.className = 'btn btn-xs btn-danger';
   delBtn.textContent = '\u00d7';
@@ -1557,8 +1402,8 @@ function createLocationItem(loc, freq, groups) {
     renderDataLocations();
     updateDataBadges();
   });
-  btnGroup.append(gpsBtn, delBtn);
-  item.append(span, btnGroup);
+
+  item.append(infoSpan, delBtn);
   return item;
 }
 
@@ -1567,21 +1412,10 @@ function renderDataLocations() {
   if (!list) return;
   const locations = loadLocations();
   const freq = getLocationFrequency();
-  const groups = loadLocationGroups();
   list.innerHTML = '';
-
-  // Hide map popup on re-render
-  const popup = $('#locationMapPopup');
-  if (popup) { popup.hidden = true; currentMapPopupLoc = null; }
-
-  // Render group tabs
-  renderLocationGroupTabs(groups);
-  // Populate add-form group selector
-  populateGroupSelector(groups, $('#selectLocationGroup'), null);
 
   if (locations.length === 0) {
     list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
-    showNoGpsTip(locations);
     return;
   }
 
@@ -1592,89 +1426,22 @@ function renderDataLocations() {
     return a.name.localeCompare(b.name);
   });
 
-  // Filter by group
+  // Filter by search query
   let filtered = sorted;
-  if (currentLocationGroupFilter === '__ungrouped') {
-    filtered = sorted.filter(l => !l.group);
-  } else if (currentLocationGroupFilter) {
-    filtered = sorted.filter(l => l.group === currentLocationGroupFilter);
-  }
-
-  // Render: if "All" tab and groups exist, show grouped with headers
-  if (currentLocationGroupFilter === null && groups.length > 0) {
-    const groupMap = new Map(groups.map(g => [g.id, g.name]));
-    const grouped = new Map();
-    const ungrouped = [];
-    for (const loc of filtered) {
-      if (loc.group && groupMap.has(loc.group)) {
-        if (!grouped.has(loc.group)) grouped.set(loc.group, []);
-        grouped.get(loc.group).push(loc);
-      } else {
-        ungrouped.push(loc);
-      }
-    }
-    for (const [gid, locs] of grouped) {
-      const header = document.createElement('div');
-      header.className = 'location-group-header';
-      header.textContent = groupMap.get(gid);
-      list.appendChild(header);
-      for (const loc of locs) list.appendChild(createLocationItem(loc, freq, groups));
-    }
-    if (ungrouped.length > 0) {
-      if (grouped.size > 0) {
-        const header = document.createElement('div');
-        header.className = 'location-group-header';
-        header.textContent = t('settings.location_group_ungrouped');
-        list.appendChild(header);
-      }
-      for (const loc of ungrouped) list.appendChild(createLocationItem(loc, freq, groups));
-    }
-  } else {
-    for (const loc of filtered) list.appendChild(createLocationItem(loc, freq, groups));
-  }
-
-  // Get current position once for distance display
-  const gpsLocs = locations.filter(l => l.lat != null && l.lng != null);
-  if (gpsLocs.length > 0 && navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        list.querySelectorAll('[data-loc-distance]').forEach(el => {
-          const loc = locations.find(l => l.name === el.dataset.locDistance);
-          if (!loc || loc.lat == null) return;
-          const d = haversineKmLocal(latitude, longitude, loc.lat, loc.lng);
-          el.textContent = d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)}km`;
-        });
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 5000 }
+  if (locationSearchQuery) {
+    const q = locationSearchQuery;
+    filtered = sorted.filter(l =>
+      l.name.toLowerCase().includes(q) ||
+      (l.memo && l.memo.toLowerCase().includes(q))
     );
   }
 
-  showNoGpsTip(locations);
-}
-
-// Local haversine for distance display
-function haversineKmLocal(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const toRad = d => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-// Show tip when many locations lack GPS
-function showNoGpsTip(locations) {
-  const tip = $('#locationNoGpsTip');
-  if (!tip) return;
-  const noGpsCount = locations.filter(l => l.lat == null || l.lng == null).length;
-  if (locations.length >= 5 && noGpsCount >= locations.length / 2) {
-    tip.textContent = t('settings.location_no_gps_tip');
-    tip.hidden = false;
-  } else {
-    tip.hidden = true;
+  if (filtered.length === 0) {
+    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_search_results')}</p>`;
+    return;
   }
+
+  for (const loc of filtered) list.appendChild(createLocationItem(loc, freq));
 }
 
 // ===== Correction Dictionary (Modal) =====
