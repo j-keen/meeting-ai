@@ -154,15 +154,28 @@ export async function exportPDF(markdown, filename) {
 
     for (let i = 0; i < elements.length; i++) {
       const el = elements[i];
+      const usedCss = el.top - pageStartCss;
 
-      // Force page break before section headings (## level)
-      if (el.isSectionHeading && el.top - pageStartCss > 10) {
+      // Conditional section break: only break before ## if page is ≥75% full
+      if (el.isSectionHeading && usedCss > maxCssPxPerPage * 0.75) {
         pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
         pageStartCss = el.top;
+        continue;
       }
 
-      // Would this element's bottom exceed current page?
-      if (el.bottom - pageStartCss > maxCssPxPerPage && el.top - pageStartCss > 5) {
+      // Orphan prevention: if a heading sits near page bottom with no room
+      // for at least 2 elements after it, push heading to next page
+      if (el.isSectionHeading) {
+        const nextElBottom = elements[i + 1]?.bottom ?? el.bottom;
+        if (nextElBottom - pageStartCss > maxCssPxPerPage && usedCss > 5) {
+          pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
+          pageStartCss = el.top;
+          continue;
+        }
+      }
+
+      // Normal overflow: break at element boundary when content exceeds page
+      if (el.bottom - pageStartCss > maxCssPxPerPage && usedCss > 5) {
         pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
         pageStartCss = el.top;
       }
