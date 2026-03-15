@@ -72,6 +72,13 @@ function extractHeadline(markdown) {
   return (firstLine || '').replace(/^#+\s*/, '').trim().slice(0, 80);
 }
 
+/** Remove any AI preamble text before the first markdown heading */
+function stripPreamble(text) {
+  const idx = text.indexOf('#');
+  if (idx > 0) return text.slice(idx);
+  return text;
+}
+
 export async function analyzeTranscript({
   transcript,
   prompt,
@@ -355,13 +362,15 @@ export async function generateFinalMinutes({
 
   const data = await callGemini(model, body);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const cleanedText = stripPreamble(rawText);
 
   return {
-    markdown: rawText,
-    flow: extractHeadline(rawText),
-    summary: rawText,
+    markdown: cleanedText,
+    flow: extractHeadline(cleanedText),
+    summary: cleanedText,
     timestamp: Date.now(),
     isFinalMinutes: true,
+    generatedModel: model,
   };
 }
 
@@ -405,6 +414,7 @@ What needs to happen before the next meeting.
 3-5 bullet points — the most important things to remember.
 
 Rules:
+- Do NOT include any greeting, preamble, or meta-commentary. Start directly with the first heading.
 - This is the FINAL record — be exhaustive, do not omit any discussed topic
 - Use exact numbers, dates, names, and technical terms as stated
 - Describe actual content, not abstract references like "discussed X"
@@ -450,6 +460,7 @@ Rules:
 가장 중요한 3-5가지 사항.
 
 규칙:
+- 인사말, 서두, 메타 코멘트를 포함하지 마세요. 첫 번째 제목(#)으로 바로 시작하세요.
 - 이것은 **최종 기록**입니다 — 빠뜨리는 주제 없이 철저하게 작성
 - 구체적 수치, 날짜, 이름, 기술 용어는 그대로 기록
 - "~에 대해 논의함" 같은 추상적 표현 대신 실제 구체적 내용을 서술

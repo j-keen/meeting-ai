@@ -54,7 +54,7 @@ function markdownToHTML(markdown) {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    if (trimmed === '') { closeList(); result.push('<div style="height:6px"></div>'); continue; }
+    if (trimmed === '') { closeList(); result.push('<div style="height:10px"></div>'); continue; }
 
     if (/^---+$/.test(trimmed)) { closeList(); result.push('<hr style="border:none;border-top:1px solid #ccc;margin:8px 0">'); continue; }
 
@@ -62,9 +62,10 @@ function markdownToHTML(markdown) {
     if (hm) {
       closeList();
       const level = hm[1].length;
-      const sizes = { 1: '20px', 2: '17px', 3: '15px', 4: '14px' };
-      const margins = { 1: '18px 0 8px', 2: '14px 0 6px', 3: '10px 0 4px', 4: '8px 0 4px' };
-      result.push(`<div style="font-size:${sizes[level]};font-weight:700;color:#4f6ef7;margin:${margins[level]}">${formatInline(hm[2])}</div>`);
+      const sizes = { 1: '24px', 2: '20px', 3: '17px', 4: '15px' };
+      const margins = { 1: '24px 0 12px', 2: '20px 0 10px', 3: '14px 0 6px', 4: '10px 0 4px' };
+      const border = level <= 2 ? 'border-bottom:1px solid #ddd;padding-bottom:4px;' : '';
+      result.push(`<div style="font-size:${sizes[level]};font-weight:700;color:#4f6ef7;margin:${margins[level]};${border}">${formatInline(hm[2])}</div>`);
       continue;
     }
 
@@ -76,14 +77,14 @@ function markdownToHTML(markdown) {
     }
 
     if (/^[-*] /.test(trimmed)) {
-      if (!inList || listType !== 'ul') { closeList(); result.push('<ul style="margin:2px 0 2px 8px;padding-left:16px">'); inList = true; listType = 'ul'; }
-      result.push(`<li style="margin:2px 0">${formatInline(trimmed.slice(2))}</li>`);
+      if (!inList || listType !== 'ul') { closeList(); result.push('<ul style="margin:4px 0 8px 8px;padding-left:16px">'); inList = true; listType = 'ul'; }
+      result.push(`<li style="margin:4px 0">${formatInline(trimmed.slice(2))}</li>`);
       continue;
     }
 
     if (/^\d+\. /.test(trimmed)) {
-      if (!inList || listType !== 'ol') { closeList(); result.push('<ol style="margin:2px 0 2px 8px;padding-left:16px">'); inList = true; listType = 'ol'; }
-      result.push(`<li style="margin:2px 0">${formatInline(trimmed.replace(/^\d+\.\s*/, ''))}</li>`);
+      if (!inList || listType !== 'ol') { closeList(); result.push('<ol style="margin:4px 0 8px 8px;padding-left:16px">'); inList = true; listType = 'ol'; }
+      result.push(`<li style="margin:4px 0">${formatInline(trimmed.replace(/^\d+\.\s*/, ''))}</li>`);
       continue;
     }
 
@@ -108,7 +109,7 @@ export async function exportPDF(markdown, filename) {
     'position:absolute', 'left:-9999px', 'top:0',
     'width:660px', 'padding:0', 'background:#fff', 'color:#222',
     'font-family:"Malgun Gothic","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif',
-    'font-size:13px', 'line-height:1.7',
+    'font-size:14px', 'line-height:1.8', 'padding:20px 0',
   ].join(';');
   container.innerHTML = markdownToHTML(markdown);
   document.body.appendChild(container);

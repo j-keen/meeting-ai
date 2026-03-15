@@ -514,6 +514,8 @@ const translations = {
     'minutes_preview.custom_placeholder': 'Custom instruction...',
     'minutes_preview.section_refined': 'Section updated',
     'minutes_preview.section_refine_fail': 'Failed to refine:',
+    'minutes_preview.regenerate': 'Regenerate with {model}',
+    'minutes_preview.generated_with': 'Generated with {model}',
     'toast.minutes_generating_bg': 'Generating minutes in the background',
     'toast.minutes_still_generating': 'Still generating...',
 
@@ -1133,6 +1135,8 @@ const translations = {
     'minutes_preview.custom_placeholder': '지시사항 입력...',
     'minutes_preview.section_refined': '섹션 업데이트됨',
     'minutes_preview.section_refine_fail': '섹션 수정 실패:',
+    'minutes_preview.regenerate': '{model}로 재생성하기',
+    'minutes_preview.generated_with': '{model}로 생성됨',
     'toast.minutes_generating_bg': '회의록을 백그라운드에서 작성 중입니다',
     'toast.minutes_still_generating': '아직 작성 중입니다',
 

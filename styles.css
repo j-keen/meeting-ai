@@ -4139,9 +4139,48 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
 }
+.minutes-generated-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 3px 10px;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
 .minutes-preview-content .ai-markdown-content {
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 14.5px;
+  line-height: 1.8;
+}
+.minutes-preview-content .ai-markdown-content h1 {
+  font-size: 20px;
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 6px;
+  margin: 0 0 12px;
+}
+.minutes-preview-content .ai-markdown-content h2 {
+  font-size: 17px;
+  margin: 24px 0 10px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+.minutes-preview-content .ai-markdown-content h3 {
+  font-size: 15px;
+  margin: 18px 0 8px;
+}
+.minutes-preview-content .ai-markdown-content ul,
+.minutes-preview-content .ai-markdown-content ol {
+  margin: 6px 0 12px;
+  padding-left: 22px;
+}
+.minutes-preview-content .ai-markdown-content li {
+  margin-bottom: 5px;
+}
+.minutes-preview-content .ai-markdown-content strong {
+  color: var(--accent);
 }
 
 /* Model pill toggle */

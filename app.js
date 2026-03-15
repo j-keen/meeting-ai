@@ -1061,42 +1061,66 @@ function openMinutesPreview() {
 
   renderMinutesBlocks(content, markdown);
 
-  // Set pill active state
+  // Set pill active state based on selected model (not generated model)
   const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
   modal.querySelectorAll('.pill-seg').forEach(seg => {
     seg.classList.toggle('active', seg.dataset.pillModel === currentModel);
   });
 
+  // Show generated model badge
+  const badge = $('#minutesGeneratedBadge');
+  const genModel = state.currentAnalysis?.generatedModel;
+  if (genModel) {
+    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
+    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.hidden = false;
+  } else {
+    badge.hidden = true;
+  }
+
+  updateRegenerateLabel();
   updateVersionBadge();
   modal.hidden = false;
+}
+
+function updateRegenerateLabel() {
+  const modal = $('#minutesPreviewModal');
+  const active = modal.querySelector('.pill-seg.active');
+  const modelLabel = active?.dataset.pillModel?.includes('pro') ? 'Pro' : 'Flash';
+  $('#btnMinutesRegenerateLabel').textContent = t('minutes_preview.regenerate', { model: modelLabel });
 }
 
 function initMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
 
-  // ── Model pill toggle ──
+  // ── Model pill toggle (selection only, no regeneration) ──
   modal.querySelectorAll('.pill-seg').forEach(seg => {
-    seg.addEventListener('click', async () => {
+    seg.addEventListener('click', () => {
       if (seg.classList.contains('active')) return;
-      const model = seg.dataset.pillModel;
-
-      saveMinutesVersion();
-
       modal.querySelectorAll('.pill-seg').forEach(s => s.classList.remove('active'));
       seg.classList.add('active');
-
-      modal.hidden = true;
-      showToast(t('toast.minutes_generating_bg'), 'info');
-
-      try {
-        await regenerateMinutes(model, '', state.minutesPromptConfig);
-        showToast(t('toast.final_minutes_done'), 'success');
-        openMinutesPreview();
-      } catch (err) {
-        showToast(t('toast.final_minutes_fail') + err.message, 'error');
-      }
+      updateRegenerateLabel();
     });
+  });
+
+  // ── Regenerate button ──
+  $('#btnMinutesRegenerate').addEventListener('click', async () => {
+    const active = modal.querySelector('.pill-seg.active');
+    const model = active?.dataset.pillModel || 'gemini-2.5-flash';
+
+    saveMinutesVersion();
+
+    modal.hidden = true;
+    showToast(t('toast.minutes_generating_bg'), 'info');
+
+    try {
+      await regenerateMinutes(model, '', state.minutesPromptConfig);
+      showToast(t('toast.final_minutes_done'), 'success');
+      openMinutesPreview();
+    } catch (err) {
+      showToast(t('toast.final_minutes_fail') + err.message, 'error');
+    }
   });
 
   // ── Export button ──
