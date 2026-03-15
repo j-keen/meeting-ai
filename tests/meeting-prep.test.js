@@ -96,8 +96,8 @@ function setupMeetingPrepDOM() {
   const prepTypeGrid = makeEl('div', 'prepTypeGrid');
   const typeRadio = makeEl('button', null);
   typeRadio.className = 'prep-type-radio';
-  typeRadio.dataset.type = 'general';
-  typeRadio.textContent = 'General';
+  typeRadio.dataset.type = 'copilot';
+  typeRadio.textContent = 'Copilot';
   prepTypeGrid.appendChild(typeRadio);
 
   // Step 2 - agenda fields

@@ -33,7 +33,7 @@ export function showLauncherModal() {
   // Card click handlers
   $('#btnLauncherQuickStart').onclick = async () => {
     close();
-    state.settings.meetingPreset = 'general';
+    state.settings.meetingPreset = 'copilot';
     emit('recording:toggle');
   };
 
@@ -75,7 +75,7 @@ export function showLauncherModal() {
     const card = document.createElement('button');
     card.className = 'launcher-card launcher-card-prepared';
     card.id = 'btnLauncherPrepared';
-    const typeLabel = prepared.meetingType || 'general';
+    const typeLabel = prepared.meetingType || 'copilot';
     const nParticipants = prepared.attendees?.length || 0;
     card.innerHTML = `
       <span class="launcher-card-badge">5</span>

@@ -150,39 +150,30 @@ const translations = {
     'settings.strategy_full': 'Full Transcript',
     'settings.recent_minutes': 'Recent Minutes:',
     'settings.meeting_type': 'Meeting Type',
-    'settings.preset_general': 'General',
-    'settings.preset_weekly': 'Weekly Meeting',
-    'settings.preset_brainstorm': 'Brainstorming',
-    'settings.preset_sales': 'Sales/Client',
-    'settings.preset_1on1': '1-on-1',
-    'settings.preset_kickoff': 'Kickoff',
+    'settings.preset_copilot': 'Copilot',
+    'settings.preset_minutes': 'Minutes',
+    'settings.preset_learning': 'Learning',
+    'settings.preset_copilot_desc': 'Real-time analysis for business conversations',
+    'settings.preset_minutes_desc': 'Traditional meeting minutes format',
+    'settings.preset_learning_desc': 'Key concepts & comprehension check',
     'settings.preset_custom': 'Custom',
     'settings.meeting_context': 'Meeting Context',
     'settings.context_placeholder': 'Describe the meeting context, goals, participants...',
     'settings.analysis_prompt': 'Analysis Prompt',
-    'settings.type_prompt': 'Analysis Prompt by Type',
-    'settings.type_prompt_hint': 'Each meeting type has its own analysis prompt',
-    'settings.select_type_for_prompt': 'Meeting Type',
-    'settings.reset_type_prompt': 'Reset to Default',
     'settings.prompt_placeholder': 'Custom analysis prompt...',
     'settings.reset_prompt': 'Reset to Default',
-    'settings.custom_types': 'Custom Meeting Types',
-    'settings.custom_types_hint': 'Create your own meeting types with custom analysis prompts',
-    'settings.add_custom_type': '+ Add Custom Type',
-    'settings.custom_type_name': 'Type Name',
-    'settings.custom_type_name_placeholder': 'e.g., Code Review',
-    'settings.custom_type_context': 'Meeting Context',
-    'settings.custom_type_context_placeholder': 'e.g., Code review meeting',
-    'settings.custom_type_guidance': 'Analysis Guidance',
-    'settings.custom_type_guidance_placeholder': 'e.g., Focus on code quality and review feedback',
-    'settings.custom_type_prompt': 'Analysis Prompt (optional)',
-    'settings.custom_type_prompt_placeholder': 'Leave empty to use default prompt with guidance...',
-    'settings.custom_type_save': 'Save Type',
-    'settings.custom_type_delete': 'Delete',
-    'settings.custom_type_delete_confirm': 'Delete this custom type?',
-    'settings.custom_type_saved': 'Custom type saved!',
-    'settings.custom_type_deleted': 'Custom type deleted!',
-    'settings.custom_type_name_required': 'Type name is required.',
+    'settings.preset_section': 'Analysis Presets',
+    'settings.preset_section_hint': 'Choose how AI analyzes your conversations',
+    'settings.custom_presets': 'Custom Presets',
+    'settings.custom_presets_empty': 'No custom presets yet. Create one with AI!',
+    'settings.add_custom_preset': '+ Create with AI',
+    'settings.custom_preset_delete_confirm': 'Delete this custom preset?',
+    'settings.custom_preset_deleted': 'Custom preset deleted!',
+    'settings.preset_detail': 'Preset Details',
+    'settings.preset_analysis_prompt': 'Analysis Prompt',
+    'settings.preset_chat_prompt': 'Chat System Prompt',
+    'settings.preset_save_changes': 'Save Changes',
+    'settings.preset_changes_saved': 'Preset changes saved!',
     'settings.chat_prompt': 'Chat System Prompt',
     'settings.chat_prompt_placeholder': 'Custom chat system prompt...',
     'settings.reset_chat_prompt': 'Reset to Default',
@@ -437,12 +428,9 @@ const translations = {
     'prep.step_attendees': 'Who\'s attending?',
     'prep.step_prompt': 'Any special instructions for AI analysis?',
     'prep.step_standby': 'Meeting setup complete!',
-    'prep.type_general': 'General',
-    'prep.type_weekly': 'Weekly',
-    'prep.type_brainstorm': 'Brainstorm',
-    'prep.type_sales': 'Sales/Client',
-    'prep.type_1on1': '1-on-1',
-    'prep.type_kickoff': 'Kickoff',
+    'prep.type_copilot': 'Copilot',
+    'prep.type_minutes': 'Minutes',
+    'prep.type_learning': 'Learning',
     'prep.skip': 'Skip',
     'prep.use_default': 'Use Default',
     'prep.edit_prompt': 'Edit',
@@ -482,18 +470,12 @@ const translations = {
     'prep.camera_permission': 'Camera permission required',
     'prep.select_preset': 'Select a preset...',
     'prep.delete_preset': 'Delete Preset',
-    'prep.type_general_desc': 'Free-form meeting',
-    'prep.type_weekly_desc': 'Regular weekly report',
-    'prep.type_brainstorm_desc': 'Idea brainstorming',
-    'prep.type_sales_desc': 'Sales/client meeting',
-    'prep.type_1on1_desc': '1:1 coaching/review',
-    'prep.type_kickoff_desc': 'Project kickoff',
-    'prep.type_general_tooltip': 'Balanced analysis — covers all aspects comprehensively',
-    'prep.type_weekly_tooltip': 'Action-focused — tracks tasks and assignees',
-    'prep.type_brainstorm_tooltip': 'Idea-centric — captures and evaluates all ideas',
-    'prep.type_sales_tooltip': 'Client-focused — tracks needs, commitments, follow-ups',
-    'prep.type_1on1_tooltip': 'Feedback-oriented — personal development and action items',
-    'prep.type_kickoff_tooltip': 'Project launch — goals, roles, timeline, risks',
+    'prep.type_copilot_desc': 'Real-time business conversation analysis',
+    'prep.type_minutes_desc': 'Summary, decisions, action items',
+    'prep.type_learning_desc': 'Key concepts & comprehension check',
+    'prep.type_copilot_tooltip': 'Catches what you miss in real-time — topics, contradictions, whispers',
+    'prep.type_minutes_tooltip': 'Traditional minutes — summary, decisions, action items',
+    'prep.type_learning_tooltip': 'Key concepts, comprehension check, generated questions',
     'prep.agenda_goal': 'What is the goal of this meeting?',
     'prep.agenda_goal_hint': 'Goals to achieve...',
     'prep.agenda_context': 'Background/context?',
@@ -942,39 +924,30 @@ const translations = {
     'settings.strategy_full': '전체 회의록',
     'settings.recent_minutes': '최근 시간(분):',
     'settings.meeting_type': '회의 유형',
-    'settings.preset_general': '일반',
-    'settings.preset_weekly': '주간 회의',
-    'settings.preset_brainstorm': '브레인스토밍',
-    'settings.preset_sales': '영업/고객',
-    'settings.preset_1on1': '1:1 미팅',
-    'settings.preset_kickoff': '킥오프',
+    'settings.preset_copilot': '코파일럿',
+    'settings.preset_minutes': '회의록',
+    'settings.preset_learning': '학습/메모',
+    'settings.preset_copilot_desc': '비즈니스 대화를 위한 실시간 분석',
+    'settings.preset_minutes_desc': '전통적 회의록 스타일 정리',
+    'settings.preset_learning_desc': '핵심 개념 추출 & 이해도 체크',
     'settings.preset_custom': '사용자 정의',
     'settings.meeting_context': '회의 배경',
     'settings.context_placeholder': '회의 배경, 목표, 참석자를 설명하세요...',
     'settings.analysis_prompt': '분석 프롬프트',
-    'settings.type_prompt': '유형별 분석 프롬프트',
-    'settings.type_prompt_hint': '회의 유형마다 고유한 분석 프롬프트를 설정합니다',
-    'settings.select_type_for_prompt': '회의 유형',
-    'settings.reset_type_prompt': '기본값으로 초기화',
     'settings.prompt_placeholder': '사용자 정의 분석 프롬프트...',
     'settings.reset_prompt': '기본값으로 초기화',
-    'settings.custom_types': '나만의 회의 유형',
-    'settings.custom_types_hint': '커스텀 분석 프롬프트로 나만의 회의 유형을 만들어보세요',
-    'settings.add_custom_type': '+ 커스텀 유형 추가',
-    'settings.custom_type_name': '유형 이름',
-    'settings.custom_type_name_placeholder': '예: 코드 리뷰',
-    'settings.custom_type_context': '회의 상황',
-    'settings.custom_type_context_placeholder': '예: 코드 리뷰 미팅',
-    'settings.custom_type_guidance': '분석 관점',
-    'settings.custom_type_guidance_placeholder': '예: 코드 품질과 리뷰 피드백에 집중',
-    'settings.custom_type_prompt': '분석 프롬프트 (선택)',
-    'settings.custom_type_prompt_placeholder': '비워두면 기본 프롬프트에 관점이 추가됩니다...',
-    'settings.custom_type_save': '저장',
-    'settings.custom_type_delete': '삭제',
-    'settings.custom_type_delete_confirm': '이 커스텀 유형을 삭제하시겠습니까?',
-    'settings.custom_type_saved': '커스텀 유형이 저장되었습니다!',
-    'settings.custom_type_deleted': '커스텀 유형이 삭제되었습니다!',
-    'settings.custom_type_name_required': '유형 이름을 입력해주세요.',
+    'settings.preset_section': '분석 프리셋',
+    'settings.preset_section_hint': 'AI가 대화를 분석하는 방식을 선택하세요',
+    'settings.custom_presets': '커스텀 프리셋',
+    'settings.custom_presets_empty': '아직 커스텀 프리셋이 없습니다. AI로 만들어보세요!',
+    'settings.add_custom_preset': '+ AI로 새 프리셋 만들기',
+    'settings.custom_preset_delete_confirm': '이 커스텀 프리셋을 삭제하시겠습니까?',
+    'settings.custom_preset_deleted': '커스텀 프리셋이 삭제되었습니다!',
+    'settings.preset_detail': '프리셋 상세',
+    'settings.preset_analysis_prompt': '분석 프롬프트',
+    'settings.preset_chat_prompt': '채팅 시스템 프롬프트',
+    'settings.preset_save_changes': '변경사항 저장',
+    'settings.preset_changes_saved': '프리셋 변경사항이 저장되었습니다!',
     'settings.chat_prompt': '챗 시스템 프롬프트',
     'settings.chat_prompt_placeholder': '사용자 정의 챗 시스템 프롬프트...',
     'settings.reset_chat_prompt': '기본값으로 초기화',
@@ -1229,12 +1202,9 @@ const translations = {
     'prep.step_attendees': '참석자를 선택해주세요',
     'prep.step_prompt': 'AI 분석에 특별 지시사항이 있나요?',
     'prep.step_standby': '회의 준비가 완료되었습니다!',
-    'prep.type_general': '일반',
-    'prep.type_weekly': '주간 회의',
-    'prep.type_brainstorm': '브레인스토밍',
-    'prep.type_sales': '영업/고객',
-    'prep.type_1on1': '1:1 미팅',
-    'prep.type_kickoff': '킥오프',
+    'prep.type_copilot': '코파일럿',
+    'prep.type_minutes': '회의록',
+    'prep.type_learning': '학습/메모',
     'prep.skip': '건너뛰기',
     'prep.use_default': '기본 사용',
     'prep.edit_prompt': '수정',
@@ -1274,18 +1244,12 @@ const translations = {
     'prep.camera_permission': '카메라 권한이 필요합니다',
     'prep.select_preset': '프리셋 선택...',
     'prep.delete_preset': '프리셋 삭제',
-    'prep.type_general_desc': '자유 주제 회의',
-    'prep.type_weekly_desc': '정기 주간 보고',
-    'prep.type_brainstorm_desc': '아이디어 발산 토론',
-    'prep.type_sales_desc': '영업/고객 미팅',
-    'prep.type_1on1_desc': '1:1 면담/코칭',
-    'prep.type_kickoff_desc': '프로젝트 시작',
-    'prep.type_general_tooltip': '종합 분석 — 모든 관점을 균형있게 분석합니다',
-    'prep.type_weekly_tooltip': '액션아이템 중심 — 할 일과 담당자를 추적합니다',
-    'prep.type_brainstorm_tooltip': '아이디어 중심 — 모든 아이디어를 포착하고 평가합니다',
-    'prep.type_sales_tooltip': '고객 중심 — 요구사항, 약속, 후속 조치를 추적합니다',
-    'prep.type_1on1_tooltip': '피드백 중심 — 개인 성장과 실행 항목에 집중합니다',
-    'prep.type_kickoff_tooltip': '프로젝트 시작 — 목표, 역할, 일정, 리스크를 정리합니다',
+    'prep.type_copilot_desc': '비즈니스 대화 실시간 분석',
+    'prep.type_minutes_desc': '요약, 결정 사항, 액션 아이템',
+    'prep.type_learning_desc': '핵심 개념 추출 & 이해도 체크',
+    'prep.type_copilot_tooltip': '놓치는 것을 잡아줍니다 — 논의 주제, 모순, 귓속말',
+    'prep.type_minutes_tooltip': '전통적 회의록 — 요약, 결정 사항, 액션 아이템',
+    'prep.type_learning_tooltip': '핵심 개념, 이해도 체크, 질문 생성',
     'prep.agenda_goal': '이 회의의 목표는?',
     'prep.agenda_goal_hint': '달성해야 할 목표...',
     'prep.agenda_context': '배경/맥락은?',
@@ -1682,140 +1646,124 @@ General rules:
 // Prompt presets for quick selection
 const AI_PROMPT_PRESETS = {
   en: {
-    default: { name: 'Default (Comprehensive)', prompt: null },
-    decision: { name: 'Decision-Focused', prompt: `You are a real-time meeting copilot focused on DECISIONS. Respond in English using Markdown.
+    default: { name: 'Copilot', prompt: null },
+    minutes: { name: 'Minutes', prompt: `You are a meeting minutes assistant. Respond in English using Markdown.
 
-## Headline
-One sentence: what was decided today.
+## Summary
+2-3 sentence overview of the meeting so far.
 
-## 📋 Decisions & Status
-- ✅ **Decided**: decision — rationale and conditions
-- ⏳ **Pending**: topic — what's blocking the decision
-- ⚠️ **Conflict**: topic — contradicting positions
+## 📋 Key Discussions
+List each major topic discussed with key points:
+- **Topic**: key points, arguments, context
 
-## 📌 Decisions Still Needed
-Based on context, what decisions SHOULD be made but haven't been addressed yet.
+## ✅ Decisions Made
+- Decision — rationale and conditions (if any)
+If no decisions yet, omit this section.
 
-## ⚠️ Contradictions Detected
-Flag inconsistencies in decision rationale or conditions. Omit if none.
-
-## 💬 Memo Check
-Cross-reference memos — flag unaddressed items. Omit if none.
-
-## 🔔 Whisper
-1-3 short nudges about decisions: contradictions, missing decisions, risks. Omit if nothing stands out.
-
-Rules: Be specific. Use exact numbers, names, dates. Cumulative — preserve previous content.` },
-    actionItems: { name: 'Action Items Only', prompt: `You are a real-time meeting copilot focused on ACTION ITEMS. Respond in English using Markdown.
-
-## Headline
-2-3 sentence overview of what was discussed.
-
-## 📋 Action Items Tracked
+## 📌 Action Items
 For each action item:
-- ✅ **Confirmed**: **[Owner]** Task — **Deadline**
-- ⏳ **Tentative**: **[Owner]** Task — needs confirmation
-- Priority: High/Medium/Low (infer from context)
+- **[Owner]** Task — **Deadline** (if mentioned)
+- Mark priority: High/Medium/Low when inferable
+If no action items yet, omit this section.
 
-## 📌 Missing Assignments
-Topics discussed but no action item assigned yet.
+## 📝 Notes
+Any important details, numbers, dates, or references mentioned that don't fit above categories. Omit if nothing notable.
 
-## ⚠️ Blockers & Conflicts
-Issues preventing progress, or conflicting assignments.
+Rules:
+- Write as CUMULATIVE: preserve previous content and add new discussion
+- Record specific numbers, dates, names, and technical terms exactly as stated
+- Focus on capturing decisions and action items accurately
+- CRITICAL: All output MUST be in English.` },
+    learning: { name: 'Learning', prompt: `You are a learning assistant helping capture key insights. Respond in English using Markdown.
 
-## 🔔 Whisper
-1-3 short nudges: unassigned tasks, deadline conflicts, missing owners. Omit if nothing stands out.
+## Topic
+What is being taught/discussed — one line.
 
-Rules: Be specific. Include exact names, deadlines, numbers. Cumulative.` },
-    brainstorm: { name: 'Brainstorm / Ideas', prompt: `You are a real-time meeting copilot for BRAINSTORMING sessions. Respond in English using Markdown.
+## 📚 Key Concepts
+For each concept covered:
+- **Concept**: explanation in simple terms
+- Include examples or analogies mentioned
 
-## Headline
-What problem/topic is being brainstormed.
+## 💡 Key Insights
+Important takeaways, principles, or rules mentioned:
+- Insight — why it matters
 
-## 📋 Ideas Discussed
-Group by theme with feasibility markers:
-- ✅ **Supported**: idea — has backing
-- ⏳ **Exploring**: idea — needs more discussion
-- ⚠️ **Challenged**: idea — concerns raised
+## ❓ Comprehension Check
+2-3 questions to verify understanding of the material covered so far. Format as:
+- Q: question
+- A: expected answer (brief)
 
-## 📌 Unexplored Angles
-Perspectives or approaches not yet considered.
+## 🔍 Questions to Explore
+Topics or questions worth investigating further based on the discussion. Omit if nothing stands out.
 
-## 💬 Memo Check
-Cross-reference memos for pre-meeting ideas not yet discussed. Omit if none.
+## 📝 Terms & Definitions
+Key terms and their definitions as explained. Omit if none.
 
-## 🔔 Whisper
-1-3 nudges: connections between ideas, unexplored angles, energy shifts. Omit if nothing stands out.
-
-Rules: Capture ALL ideas, even brief ones. Be specific. Cumulative.` },
+Rules:
+- Write as CUMULATIVE: preserve previous content and add new material
+- Preserve exact terminology, formulas, and references
+- Focus on understanding, not just recording
+- CRITICAL: All output MUST be in English.` },
   },
   ko: {
-    default: { name: '기본 (종합 분석)', prompt: null },
-    decision: { name: '의사결정 중심', prompt: `당신은 의사결정에 집중하는 실시간 회의 코파일럿입니다. 한국어 마크다운으로 응답하세요.
+    default: { name: '코파일럿', prompt: null },
+    minutes: { name: '회의록', prompt: `당신은 회의록 작성 도우미입니다. 한국어 마크다운으로 응답하세요.
 
-## 한줄 요약
-오늘 무엇이 결정되었는지 한 문장.
+## 요약
+2-3문장으로 회의 개요.
 
-## 📋 결정 & 상태
-- ✅ **확정**: 결정 내용 — 근거와 조건
-- ⏳ **미정**: 주제 — 결정을 막는 요인
-- ⚠️ **충돌**: 주제 — 상반된 입장 감지
+## 📋 주요 논의
+논의된 각 주요 주제와 핵심 내용:
+- **주제**: 핵심 포인트, 논거, 맥락
 
-## 📌 아직 필요한 결정
-컨텍스트 상 내려져야 하는데 아직 다뤄지지 않은 결정.
+## ✅ 결정 사항
+- 결정 내용 — 근거와 조건 (있는 경우)
+아직 결정 사항이 없으면 이 섹션 생략.
 
-## ⚠️ 모순 감지
-결정 근거나 조건의 불일치 포착. 없으면 생략.
+## 📌 액션 아이템
+각 실행 항목별:
+- **[담당자]** 할 일 — **기한** (언급된 경우)
+- 우선순위: 높음/보통/낮음 (추론 가능할 때)
+아직 액션 아이템이 없으면 이 섹션 생략.
 
-## 💬 메모 대조
-메모 내용 대조 — 아직 안 나온 것. 없으면 생략.
+## 📝 기타 메모
+위 카테고리에 포함되지 않는 중요한 세부사항, 수치, 날짜, 참고자료. 특별한 것이 없으면 생략.
 
-## 🔔 귓속말
-결정 관련 짧은 알림 1~3개: 모순, 빠진 결정, 리스크. 특별한 게 없으면 생략.
+규칙:
+- 누적형으로 작성: 이전 내용을 보존하면서 새로운 논의를 추가
+- 구체적 수치, 날짜, 이름, 기술 용어는 그대로 기록
+- 결정 사항과 액션 아이템을 정확히 포착하는 데 집중
+- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.` },
+    learning: { name: '학습/메모', prompt: `당신은 핵심 인사이트를 포착하는 학습 도우미입니다. 한국어 마크다운으로 응답하세요.
 
-규칙: 구체적으로. 수치, 이름, 날짜 정확히. 누적형 작성.` },
-    actionItems: { name: '액션아이템 중심', prompt: `당신은 실행 항목에 집중하는 실시간 회의 코파일럿입니다. 한국어 마크다운으로 응답하세요.
+## 주제
+무엇을 배우고/논의하고 있는지 — 한 줄.
 
-## 한줄 요약
-2-3문장으로 논의 개요.
+## 📚 핵심 개념
+다뤄진 각 개념:
+- **개념**: 쉬운 말로 설명
+- 언급된 예시나 비유 포함
 
-## 📋 실행 항목 추적
-각 항목별:
-- ✅ **확정**: **[담당자]** 할 일 — **기한**
-- ⏳ **잠정**: **[담당자]** 할 일 — 확인 필요
-- 우선순위: 높음/보통/낮음 (맥락에서 추론)
+## 💡 핵심 인사이트
+언급된 중요한 교훈, 원칙, 규칙:
+- 인사이트 — 왜 중요한지
 
-## 📌 미배정 항목
-논의되었지만 아직 담당자/액션이 배정되지 않은 것.
+## ❓ 이해도 체크
+지금까지 다뤄진 내용의 이해를 확인하는 질문 2-3개:
+- Q: 질문
+- A: 예상 답변 (간략)
 
-## ⚠️ 장애 요소 & 충돌
-진행을 막는 이슈, 또는 충돌하는 배정.
+## 🔍 더 탐구할 질문
+논의를 바탕으로 더 조사해볼 만한 주제나 질문. 특별한 것이 없으면 생략.
 
-## 🔔 귓속말
-미배정 태스크, 기한 충돌, 담당자 누락 등 짧은 알림 1~3개. 특별한 게 없으면 생략.
+## 📝 용어 & 정의
+설명된 핵심 용어와 정의. 없으면 생략.
 
-규칙: 구체적으로. 이름, 기한, 수치 정확히. 누적형 작성.` },
-    brainstorm: { name: '브레인스토밍', prompt: `당신은 브레인스토밍 세션을 위한 실시간 회의 코파일럿입니다. 한국어 마크다운으로 응답하세요.
-
-## 한줄 요약
-어떤 문제/주제를 브레인스토밍하고 있는지.
-
-## 📋 논의된 아이디어
-주제별 그룹핑 + 실현 가능성 마커:
-- ✅ **지지**: 아이디어 — 지지를 받고 있음
-- ⏳ **탐색 중**: 아이디어 — 더 논의 필요
-- ⚠️ **도전 받음**: 아이디어 — 우려 제기됨
-
-## 📌 탐색되지 않은 관점
-아직 고려되지 않은 시각이나 접근법.
-
-## 💬 메모 대조
-메모에 적어둔 사전 아이디어 중 아직 안 나온 것. 없으면 생략.
-
-## 🔔 귓속말
-아이디어 간 연결점, 미탐색 관점, 에너지 변화 등 짧은 알림 1~3개. 특별한 게 없으면 생략.
-
-규칙: 짧은 것도 포함해 모든 아이디어를 포착. 구체적으로. 누적형 작성.` },
+규칙:
+- 누적형으로 작성: 이전 내용을 보존하면서 새로운 내용 추가
+- 정확한 용어, 공식, 참고자료 보존
+- 단순 기록이 아닌 이해에 초점
+- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.` },
   }
 };
 
@@ -1826,22 +1774,16 @@ export function getPromptPresets() {
 
 // Meeting type → prompt preset auto-mapping
 const MEETING_TYPE_PROMPT_MAP = {
-  general: 'default',
-  weekly: 'actionItems',
-  brainstorm: 'brainstorm',
-  sales: 'decision',
-  '1on1': 'actionItems',
-  kickoff: 'default',
+  copilot: 'default',
+  minutes: 'minutes',
+  learning: 'learning',
 };
 
 // Meeting type → category guidance auto-mapping
 const MEETING_TYPE_CATEGORY_MAP = {
-  general: null,
-  weekly: '정기회의',
-  brainstorm: '브레인스토밍',
-  sales: '고객미팅',
-  '1on1': '1:1',
-  kickoff: '프로젝트',
+  copilot: null,
+  minutes: null,
+  learning: null,
 };
 
 export function getMeetingTypePromptMap() {
@@ -1862,21 +1804,15 @@ export function getTypeDefaultPrompt(meetingType) {
 
 const AI_PRESET_CONTEXTS = {
   en: {
-    general: 'General meeting',
-    weekly: 'Weekly team status meeting. Focus on progress updates, blockers, and action items.',
-    brainstorm: 'Brainstorming session. Focus on ideas generated, evaluations, and next steps.',
-    sales: 'Sales/client meeting. Focus on client needs, commitments, and follow-ups.',
-    '1on1': '1-on-1 meeting. Focus on feedback, career development, and personal action items.',
-    kickoff: 'Project kickoff meeting. Focus on goals, roles, timeline, and risks.',
+    copilot: 'Business conversation. Focus on decisions, contradictions, and missed topics.',
+    minutes: 'Meeting. Focus on summary, key discussions, decisions, and action items.',
+    learning: 'Learning session. Focus on key concepts, insights, and comprehension.',
     custom: '',
   },
   ko: {
-    general: '일반 회의',
-    weekly: '주간 팀 상황 회의. 진행 상황 업데이트, 장애 요소, 실행 항목에 집중.',
-    brainstorm: '브레인스토밍 세션. 생성된 아이디어, 평가, 다음 단계에 집중.',
-    sales: '영업/고객 회의. 고객 요구사항, 약속, 후속 조치에 집중.',
-    '1on1': '1:1 미팅. 피드백, 경력 개발, 개인 실행 항목에 집중.',
-    kickoff: '프로젝트 킥오프 회의. 목표, 역할, 일정, 리스크에 집중.',
+    copilot: '비즈니스 대화. 결정, 모순, 빠진 주제에 집중.',
+    minutes: '회의. 요약, 주요 논의, 결정 사항, 액션 아이템에 집중.',
+    learning: '학습 세션. 핵심 개념, 인사이트, 이해도에 집중.',
     custom: '',
   }
 };

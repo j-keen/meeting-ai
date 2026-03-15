@@ -606,7 +606,7 @@ export function autoSave() {
     title: state.meetingTitle || defaultTitle,
     startTime: state.meetingStartTime,
     duration: getElapsedTimeStr(),
-    preset: state.settings.meetingPreset || 'general',
+    preset: state.settings.meetingPreset || 'copilot',
     location: state.meetingLocation || '',
     meetingContext: state.settings.meetingContext || '',
     analysisContext: state.analysisContext || '',

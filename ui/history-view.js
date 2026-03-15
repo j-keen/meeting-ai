@@ -331,7 +331,7 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     card.dataset.meetingId = meeting.id;
     card.querySelector('.history-card-title').textContent = meeting.title || t('history.untitled');
     card.querySelector('.history-card-date').textContent = new Date(meeting.createdAt).toLocaleDateString(getDateLocale());
-    card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_general');
+    card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_copilot');
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
 
@@ -457,7 +457,7 @@ export function renderMeetingViewer(meeting) {
 
     const typeBadge = document.createElement('span');
     typeBadge.className = 'viewer-badge viewer-badge-type';
-    typeBadge.textContent = meeting.preset || t('settings.preset_general');
+    typeBadge.textContent = meeting.preset || t('settings.preset_copilot');
     badgesEl.appendChild(typeBadge);
   }
 
@@ -510,7 +510,7 @@ export function renderMeetingViewer(meeting) {
   const metaItems = [
     { label: t('viewer.meta_date'), value: new Date(meeting.startTime || meeting.createdAt).toLocaleString(getDateLocale()) },
     { label: t('viewer.meta_duration'), value: meeting.duration || '' },
-    { label: t('viewer.meta_type'), value: meeting.preset || t('settings.preset_general') },
+    { label: t('viewer.meta_type'), value: meeting.preset || t('settings.preset_copilot') },
     { label: t('viewer.meta_location'), value: meeting.location || '' },
   ];
   if (meeting.meetingContext) {
@@ -542,18 +542,15 @@ export function renderMeetingViewer(meeting) {
   reTypeSelect.className = 'btn btn-sm';
   reTypeSelect.id = 'viewerReanalysisType';
   const types = [
-    { value: 'general', label: t('settings.preset_general') },
-    { value: 'weekly', label: t('settings.preset_weekly') },
-    { value: 'brainstorm', label: t('settings.preset_brainstorm') },
-    { value: 'sales', label: t('settings.preset_sales') },
-    { value: '1on1', label: t('settings.preset_1on1') },
-    { value: 'kickoff', label: t('settings.preset_kickoff') },
+    { value: 'copilot', label: t('settings.preset_copilot') },
+    { value: 'minutes', label: t('settings.preset_minutes') },
+    { value: 'learning', label: t('settings.preset_learning') },
   ];
   types.forEach(({ value, label }) => {
     const opt = document.createElement('option');
     opt.value = value;
     opt.textContent = label;
-    if (value === (meeting.preset || 'general')) opt.selected = true;
+    if (value === (meeting.preset || 'copilot')) opt.selected = true;
     reTypeSelect.appendChild(opt);
   });
 

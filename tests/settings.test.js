@@ -114,18 +114,20 @@ function setupSettingsDOM() {
     selLang.appendChild(o);
   });
 
-  // Per-type prompt selector
-  const selTypeForPrompt = makeEl('select', 'selectTypeForPrompt');
-  ['general', 'weekly', 'brainstorm', 'sales', '1on1', 'kickoff'].forEach(v => {
-    const o = makeEl('option');
-    o.value = v;
-    o.textContent = v;
-    selTypeForPrompt.appendChild(o);
+  // Preset cards
+  const presetCards = makeEl('div', 'presetCards');
+  ['copilot', 'minutes', 'learning'].forEach(v => {
+    const card = makeEl('label');
+    card.className = 'preset-card' + (v === 'copilot' ? ' selected' : '');
+    card.dataset.preset = v;
+    presetCards.appendChild(card);
   });
 
-  // Prompt textareas / buttons
-  const textPrompt = makeEl('textarea', 'textPrompt');
-  const btnResetPrompt = makeEl('button', 'btnResetPrompt');
+  // Custom preset list
+  const customPresetList = makeEl('div', 'customPresetList');
+  const btnAddCustomPreset = makeEl('button', 'btnAddCustomPreset');
+
+  // Chat prompt textareas / buttons
   const textChatPrompt = makeEl('textarea', 'textChatPrompt');
   const btnResetChatPrompt = makeEl('button', 'btnResetChatPrompt');
 
@@ -225,8 +227,8 @@ function setupSettingsDOM() {
     panel, overlay, btnSettings, btnClose, btnSave, btnReset, unsavedDot,
     unsavedModal,
     selUiLang, selAiLang, selLang,
-    selTypeForPrompt,
-    textPrompt, btnResetPrompt, textChatPrompt, btnResetChatPrompt,
+    presetCards,
+    customPresetList, btnAddCustomPreset, textChatPrompt, btnResetChatPrompt,
     chatModelSelect,
     chatPresetsList, inputNewChatPreset, btnAddChatPreset, btnResetChatPresets,
     btnOpenContacts, contactsBadge, btnOpenLocations, locationsBadge,
@@ -382,14 +384,6 @@ describe('initSettings', () => {
     tryCloseSettings();
     document.getElementById('btnUnsavedDiscard').click();
     expect(document.getElementById('settingsPanel').classList.contains('open')).toBe(false);
-  });
-
-  it('btnResetPrompt restores the default prompt text', () => {
-    initSettings();
-    const textarea = document.getElementById('textPrompt');
-    textarea.value = 'custom prompt text';
-    document.getElementById('btnResetPrompt').click();
-    expect(textarea.value).toBe('default prompt');
   });
 
   it('btnResetChatPrompt clears the chat system prompt', () => {

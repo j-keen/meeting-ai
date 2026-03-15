@@ -142,7 +142,7 @@ export async function analyzeTranscript({
   const hasChatHistory = chatHistory && chatHistory.length > 0;
   if (!hasTranscript && !hasMemos && !hasInsights && !hasChatHistory) throw new Error('No transcript to analyze');
 
-  const effectivePreset = meetingPreset || 'general';
+  const effectivePreset = meetingPreset || 'copilot';
   const contextText = meetingContext || getPresetContext(effectivePreset);
   const transcriptText = buildTranscriptText(transcript, strategy, recentMinutes, previousSummary);
 
@@ -395,7 +395,7 @@ export async function generateFinalMinutes({
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
 
-  const effectivePreset = meetingPreset || 'general';
+  const effectivePreset = meetingPreset || 'copilot';
   const contextText = meetingContext || getAiPresetContext(effectivePreset);
   const transcriptText = buildTranscriptText(transcript, 'full', 0, null);
 

@@ -7,11 +7,10 @@ import {
   loadLocations, addLocation, deleteLocation, updateLocation, findNearestLocation, findNearbyLocations,
   getLocationFrequency, loadLocationGroups, addLocationGroup, deleteLocationGroup,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
-  loadTypePrompts, saveTypePrompt, deleteTypePrompt,
   loadCustomTypes, addCustomType, deleteCustomType,
 } from './storage.js';
 import { getDefaultPrompt, getPromptForType } from './ai.js';
-import { t, setLanguage, setAiLanguage, getTypeDefaultPrompt } from './i18n.js';
+import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
 
@@ -132,51 +131,11 @@ export function initSettings() {
     markDirty();
   });
 
-  // Per-type prompt editing
-  let _currentEditType = 'general';
+  // Preset cards selection
+  initPresetCards();
 
-  function loadPromptForType(type) {
-    _currentEditType = type;
-    const prompt = getPromptForType(type);
-    $('#textPrompt').value = prompt;
-  }
-
-  // Initialize with current meeting preset or general
-  loadPromptForType(state.settings.meetingPreset || 'general');
-  const typeSelect = $('#selectTypeForPrompt');
-  if (typeSelect) {
-    typeSelect.value = state.settings.meetingPreset || 'general';
-    typeSelect.addEventListener('change', (e) => {
-      loadPromptForType(e.target.value);
-      const deleteBtn = $('#btnDeleteCustomType');
-      if (deleteBtn) {
-        deleteBtn.hidden = !e.target.value.startsWith('custom_');
-      }
-    });
-  }
-
-  // Save per-type prompt on change
-  $('#textPrompt').addEventListener('change', (e) => {
-    const newPrompt = e.target.value;
-    saveTypePrompt(_currentEditType, newPrompt);
-    // Also update state.settings.customPrompt if editing the current active type
-    if (_currentEditType === state.settings.meetingPreset) {
-      state.settings.customPrompt = newPrompt;
-    }
-    markDirty();
-  });
-
-  // Reset per-type prompt to default
-  $('#btnResetPrompt').addEventListener('click', () => {
-    deleteTypePrompt(_currentEditType);
-    const def = getTypeDefaultPrompt(_currentEditType);
-    $('#textPrompt').value = def;
-    if (_currentEditType === state.settings.meetingPreset) {
-      state.settings.customPrompt = def;
-    }
-    markDirty();
-    highlightField($('#textPrompt'));
-  });
+  // Custom presets list
+  initCustomPresets();
 
   // Chat System Prompt
   $('#textChatPrompt').addEventListener('change', (e) => {
@@ -223,90 +182,158 @@ export function initSettings() {
   // ===== Correction Dictionary (modal, immediate save) =====
   initCorrectionDict();
 
-  // ===== Custom Meeting Types =====
-  initCustomTypes();
 }
 
-// ===== Custom Meeting Types =====
+// ===== Preset Cards =====
 
-function initCustomTypes() {
-  refreshTypeDropdowns();
+function initPresetCards() {
+  const container = $('#presetCards');
+  if (!container) return;
 
-  const addBtn = $('#btnAddCustomType');
-  if (!addBtn) return;
+  const currentPreset = state.settings.meetingPreset || 'copilot';
 
-  addBtn.addEventListener('click', () => {
-    const panel = $('#customTypeForm');
-    panel.hidden = !panel.hidden;
-    if (!panel.hidden) {
-      $('#inputCustomTypeName').value = '';
-      $('#inputCustomTypeContext').value = '';
-      $('#inputCustomTypeGuidance').value = '';
-      $('#inputCustomTypePrompt').value = '';
-      $('#inputCustomTypeName').focus();
-    }
+  // Set initial selection
+  container.querySelectorAll('.preset-card').forEach(card => {
+    card.classList.toggle('selected', card.dataset.preset === currentPreset);
   });
 
-  $('#btnSaveCustomType')?.addEventListener('click', () => {
-    const name = $('#inputCustomTypeName').value.trim();
-    if (!name) {
-      emit('toast', { message: t('settings.custom_type_name_required'), type: 'warning' });
-      return;
-    }
-    const type = addCustomType({
-      name,
-      context: $('#inputCustomTypeContext').value.trim(),
-      guidance: $('#inputCustomTypeGuidance').value.trim(),
-      prompt: $('#inputCustomTypePrompt').value.trim(),
-    });
-    emit('toast', { message: t('settings.custom_type_saved'), type: 'success' });
-    $('#customTypeForm').hidden = true;
-    refreshTypeDropdowns();
-    emit('customTypes:change');
-  });
-
-  $('#btnDeleteCustomType')?.addEventListener('click', () => {
-    const typeSelect = $('#selectTypeForPrompt');
-    const val = typeSelect.value;
-    if (!val.startsWith('custom_')) return;
-    if (!confirm(t('settings.custom_type_delete_confirm'))) return;
-    deleteCustomType(val);
-    emit('toast', { message: t('settings.custom_type_deleted'), type: 'success' });
-    typeSelect.value = 'general';
-    $('#textPrompt').value = getPromptForType('general');
-    refreshTypeDropdowns();
-    emit('customTypes:change');
+  container.addEventListener('click', (e) => {
+    const card = e.target.closest('.preset-card');
+    if (!card) return;
+    container.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    const preset = card.dataset.preset;
+    state.settings.meetingPreset = preset;
+    state.settings.customPrompt = getPromptForType(preset);
+    markDirty();
   });
 }
 
-function refreshTypeDropdowns() {
-  const typeSelect = $('#selectTypeForPrompt');
-  if (!typeSelect) return;
+// ===== Custom Presets =====
 
-  // Remove existing custom options
-  typeSelect.querySelectorAll('option[data-custom]').forEach(o => o.remove());
-  typeSelect.querySelectorAll('optgroup[data-custom]').forEach(o => o.remove());
+function initCustomPresets() {
+  refreshCustomPresetList();
+
+  $('#btnAddCustomPreset')?.addEventListener('click', () => {
+    emit('openMeetingPrep');
+  });
+}
+
+function refreshCustomPresetList() {
+  const container = $('#customPresetList');
+  if (!container) return;
 
   const customTypes = loadCustomTypes();
-  if (customTypes.length > 0) {
-    const group = document.createElement('optgroup');
-    group.label = t('settings.custom_types');
-    group.dataset.custom = '1';
-    customTypes.forEach(ct => {
-      const opt = document.createElement('option');
-      opt.value = ct.id;
-      opt.textContent = '\u2605 ' + ct.name;
-      opt.dataset.custom = '1';
-      group.appendChild(opt);
-    });
-    typeSelect.appendChild(group);
+  container.innerHTML = '';
+
+  if (customTypes.length === 0) {
+    container.innerHTML = `<p class="text-muted" style="font-size:12px;" data-i18n="settings.custom_presets_empty">${t('settings.custom_presets_empty')}</p>`;
+    return;
   }
 
-  // Show/hide delete button
-  const deleteBtn = $('#btnDeleteCustomType');
-  if (deleteBtn) {
-    deleteBtn.hidden = !typeSelect.value.startsWith('custom_');
-  }
+  customTypes.forEach(ct => {
+    const item = document.createElement('div');
+    item.className = 'custom-preset-item';
+    if (state.settings.meetingPreset === ct.id) item.classList.add('active');
+    item.dataset.id = ct.id;
+    item.innerHTML = `
+      <div class="custom-preset-item-info">
+        <span class="custom-preset-item-name">${ct.name}</span>
+        <span class="custom-preset-item-desc">${ct.context || ct.guidance || ''}</span>
+      </div>
+      <button class="custom-preset-item-select btn btn-sm">${t('settings.preset_custom')}</button>
+    `;
+
+    // Click item → open detail modal
+    item.querySelector('.custom-preset-item-info').addEventListener('click', () => {
+      openPresetDetailModal(ct);
+    });
+
+    // Select button → activate this preset
+    item.querySelector('.custom-preset-item-select').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.settings.meetingPreset = ct.id;
+      state.settings.customPrompt = getPromptForType(ct.id);
+
+      // Apply extended fields
+      if (ct.chatSystemPrompt) state.settings.chatSystemPrompt = ct.chatSystemPrompt;
+      if (ct.chatPresets?.length) state.settings.chatPresets = ct.chatPresets;
+      if (ct.context) state.settings.meetingContext = ct.context;
+
+      // Deselect built-in preset cards
+      document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
+      refreshCustomPresetList();
+      markDirty();
+      emit('customTypes:change');
+    });
+
+    container.appendChild(item);
+  });
+}
+
+function openPresetDetailModal(ct) {
+  // Create modal dynamically
+  let modal = $('#presetDetailModal');
+  if (modal) modal.remove();
+
+  modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'presetDetailModal';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <h3>${ct.name}</h3>
+        <button class="btn btn-icon" id="btnClosePresetDetail" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
+        ${ct.context ? `<p class="text-muted" style="font-size:12px;margin:0;">${ct.context}</p>` : ''}
+        <label style="font-size:12px;font-weight:600;">${t('settings.preset_analysis_prompt')}</label>
+        <textarea class="settings-textarea" id="presetDetailPrompt" rows="8">${ct.prompt || ''}</textarea>
+        <label style="font-size:12px;font-weight:600;">${t('settings.preset_chat_prompt')}</label>
+        <textarea class="settings-textarea" id="presetDetailChatPrompt" rows="4">${ct.chatSystemPrompt || ''}</textarea>
+        <div style="display:flex;gap:8px;justify-content:space-between;">
+          <button class="btn btn-sm btn-danger" id="btnDeletePresetDetail">${t('settings.custom_type_delete') || 'Delete'}</button>
+          <button class="btn btn-sm btn-primary" id="btnSavePresetDetail">${t('settings.preset_save_changes')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Close
+  modal.querySelector('#btnClosePresetDetail').addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  // Save
+  modal.querySelector('#btnSavePresetDetail').addEventListener('click', () => {
+    ct.prompt = modal.querySelector('#presetDetailPrompt').value;
+    ct.chatSystemPrompt = modal.querySelector('#presetDetailChatPrompt').value;
+    // Update in storage
+    deleteCustomType(ct.id);
+    addCustomType({ ...ct });
+    emit('toast', { message: t('settings.preset_changes_saved'), type: 'success' });
+    emit('customTypes:change');
+    refreshCustomPresetList();
+    modal.remove();
+  });
+
+  // Delete
+  modal.querySelector('#btnDeletePresetDetail').addEventListener('click', () => {
+    if (!confirm(t('settings.custom_preset_delete_confirm'))) return;
+    deleteCustomType(ct.id);
+    if (state.settings.meetingPreset === ct.id) {
+      state.settings.meetingPreset = 'copilot';
+      state.settings.customPrompt = getPromptForType('copilot');
+      document.querySelectorAll('.preset-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.preset === 'copilot');
+      });
+    }
+    emit('toast', { message: t('settings.custom_preset_deleted'), type: 'success' });
+    emit('customTypes:change');
+    refreshCustomPresetList();
+    modal.remove();
+  });
 }
 
 // ===== Save / Revert / Reset =====
@@ -405,10 +432,9 @@ function applySettingsToForm() {
   $('#selectAiLanguage').value = s.aiLanguage;
   $('#selectLanguage').value = s.language;
 
-  // Load per-type prompt for current type
-  const typeSelect = $('#selectTypeForPrompt');
-  const currentType = typeSelect?.value || s.meetingPreset || 'general';
-  $('#textPrompt').value = getPromptForType(currentType);
+  // No per-type prompt editor needed (presets are card-based now)
+  // Refresh custom preset list when settings form is opened
+  refreshCustomPresetList();
   $('#textChatPrompt').value = s.chatSystemPrompt;
 
   const chatModelSelect = $('#chatModelSelect');
@@ -431,7 +457,7 @@ function loadSavedSettings() {
   s.analysisInterval = 180;
   s.analysisCharThreshold = 1000;
   s.autoCorrection = true;
-  s.meetingPreset = saved.meetingPreset || 'general';
+  s.meetingPreset = saved.meetingPreset || 'copilot';
   s.meetingContext = saved.meetingContext || '';
   s.customPrompt = saved.customPrompt || getDefaultPrompt();
   s.chatSystemPrompt = saved.chatSystemPrompt || '';

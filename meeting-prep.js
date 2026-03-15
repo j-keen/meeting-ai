@@ -50,7 +50,7 @@ let maxVisitedStep = 1;
 
 // ===== Form State =====
 let formConfig = {
-  meetingType: 'general',
+  meetingType: 'copilot',
   agenda: '',
   attendees: [],
   referenceMeetingId: null,
@@ -72,7 +72,7 @@ export function initMeetingPrepForm() {
 
 export function openMeetingPrepForm(presetConfig) {
   formConfig = {
-    meetingType: 'general',
+    meetingType: 'copilot',
     agenda: '',
     attendees: [],
     referenceMeetingId: null,
@@ -876,7 +876,7 @@ function renderRefMeetingList() {
     const date = new Date(m.createdAt).toLocaleDateString();
     card.innerHTML = `
       <div class="prep-ref-meeting-card-title">${escapeHtml(m.title || 'Untitled')}</div>
-      <div class="prep-ref-meeting-card-meta">${date} · ${m.preset || 'general'}</div>
+      <div class="prep-ref-meeting-card-meta">${date} · ${m.preset || 'copilot'}</div>
     `;
     card.addEventListener('click', () => selectRefMeeting(m.id));
     listEl.appendChild(card);

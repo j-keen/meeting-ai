@@ -122,7 +122,11 @@ function init() {
   const analysisStyleSelect = $('#selectAnalysisStyle');
   if (analysisStyleSelect) {
     // Set initial value from settings
-    analysisStyleSelect.value = state.settings.meetingPreset || 'general';
+    const initialPreset = state.settings.meetingPreset || 'copilot';
+    // If it's a built-in preset, select it directly; custom presets get added dynamically
+    if (['copilot', 'minutes', 'learning'].includes(initialPreset)) {
+      analysisStyleSelect.value = initialPreset;
+    }
 
     // Populate custom types
     function refreshAnalysisStyleOptions() {
@@ -143,6 +147,11 @@ function init() {
           group.appendChild(opt);
         });
         analysisStyleSelect.appendChild(group);
+      }
+
+      // Set value after custom options are added
+      if (initialPreset.startsWith('custom_')) {
+        analysisStyleSelect.value = initialPreset;
       }
     }
     refreshAnalysisStyleOptions();
@@ -183,6 +192,11 @@ function init() {
       refreshAnalysisStyleOptions();
     });
   }
+
+  // Open meeting prep from settings "Add Custom Preset" button
+  on('openMeetingPrep', () => {
+    openMeetingPrepForm();
+  });
 
   // Copy analysis as markdown
   $('#btnCopyAnalysis').addEventListener('click', () => {
