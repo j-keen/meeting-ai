@@ -305,7 +305,7 @@ export async function generateTags({ summary, transcript, model = 'gemini-2.5-fl
   const langInstruction = lang === 'ko'
     ? '태그를 반드시 한국어로 생성하세요.'
     : 'Generate tags in English.';
-  const prompt = `Based on this meeting summary and transcript, generate 3-5 short tags (keywords) that categorize this meeting. ${langInstruction} Return ONLY a JSON array of strings. No explanation.
+  const prompt = `Based on this meeting summary and transcript, generate up to 10 short tags (keywords) that categorize this meeting. ${langInstruction} Return ONLY a JSON array of strings. No explanation.
 
 Summary: ${summary}
 
@@ -319,7 +319,7 @@ Transcript excerpt: ${transcriptSnippet}`;
 
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
-    if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean).slice(0, 5);
+    if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean).slice(0, 10);
     return [];
   } catch {
     return [];
@@ -527,7 +527,7 @@ export async function generateFinalMinutes({
 }
 
 // AI-powered meeting metadata suggestions
-export async function suggestMeetingMetadata({ transcript, meetingContext, existingParticipants = [], existingTags = [] }) {
+export async function suggestMeetingMetadata({ transcript, meetingContext, existingTags = [] }) {
   if (!isProxyAvailable() || !transcript || transcript.length === 0) return null;
 
   const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
@@ -542,17 +542,15 @@ export async function suggestMeetingMetadata({ transcript, meetingContext, exist
   const prompt = `Based on this meeting transcript, suggest metadata. ${langInstruction}
 
 ${meetingContext ? `Meeting Context: ${meetingContext}\n` : ''}
-Already known participants: ${existingParticipants.join(', ') || 'none'}
 Already known tags: ${existingTags.join(', ') || 'none'}
 
 Transcript:
 ${transcriptText}
 
-Suggest NEW participants (names mentioned but not already listed), NEW tags (keywords not already listed), and categories from this list: ${JSON.stringify(loadCategories().map(c => c.name || c))}.
+Suggest NEW tags (up to 10 keywords not already listed) and categories from this list: ${JSON.stringify(loadCategories().map(c => c.name || c))}.
 
 Return ONLY valid JSON:
 {
-  "participants": ["new name 1", "new name 2"],
   "tags": ["new tag 1", "new tag 2"],
   "categories": ["matching category"]
 }`;
@@ -565,8 +563,7 @@ Return ONLY valid JSON:
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     return {
-      participants: Array.isArray(parsed.participants) ? parsed.participants.map(p => String(p).trim()).filter(Boolean) : [],
-      tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean) : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 10) : [],
       categories: Array.isArray(parsed.categories) ? parsed.categories.map(c => String(c).trim()).filter(Boolean) : [],
     };
   } catch {

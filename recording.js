@@ -845,7 +845,6 @@ function fetchAndCacheMetadata() {
   suggestMeetingMetadata({
     transcript: state.transcript,
     meetingContext: state.settings.meetingContext || '',
-    existingParticipants: state.participants.map(p => p.name || p),
     existingTags: state.tags,
   }).then(result => {
     if (!result) return;
@@ -855,16 +854,6 @@ function fetchAndCacheMetadata() {
 }
 
 function applyAiMetadata(metadata) {
-  // Auto-fill participants (with _isAi flag)
-  const existingNames = state.participants.map(p => (p.name || p).toLowerCase());
-  (metadata.participants || []).forEach(name => {
-    if (!existingNames.includes(name.toLowerCase())) {
-      state.participants.push({ id: 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6), name, _isAi: true });
-      existingNames.push(name.toLowerCase());
-    }
-  });
-  renderEndMeetingParticipants();
-
   // Auto-fill tags (with _isAi marker)
   const existingTags = state.tags.map(t2 => t2.toLowerCase());
   (metadata.tags || []).forEach(tag => {
@@ -963,11 +952,10 @@ export function renderEndMeetingParticipants() {
   const container = $('#endMeetingParticipantsSelected');
   container.innerHTML = '';
   state.participants.forEach(p => {
-    const isAi = !!p._isAi;
     const badge = createUnifiedBadge(p.name || p, () => {
       state.participants = state.participants.filter(pp => pp !== p);
       renderEndMeetingParticipants();
-    }, isAi);
+    });
     container.appendChild(badge);
   });
 }

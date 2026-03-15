@@ -882,8 +882,21 @@
         <div class="end-meeting-row">
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
-            <input type="text" class="unified-input-field" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.add_participant" placeholder="Add name..." autocomplete="off">
-            <div class="unified-dropdown" id="participantDropdown" hidden></div>
+            <div class="participant-tabs">
+              <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
+              <button class="participant-tab" data-participant-tab="register" data-i18n="end_meeting.tab_register">Register</button>
+            </div>
+            <div class="participant-tab-content" id="participantTabSearch">
+              <input type="text" class="unified-input-field" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.search_participant" placeholder="Search name..." autocomplete="off">
+              <div class="unified-dropdown" id="participantDropdown" hidden></div>
+            </div>
+            <div class="participant-tab-content" id="participantTabRegister" hidden>
+              <div class="participant-register-row">
+                <input type="text" class="unified-input-field participant-register-name" id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name" autocomplete="off">
+                <input type="text" class="unified-input-field participant-register-company" id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company" autocomplete="off">
+                <button class="btn btn-sm" id="btnEndMeetingAddParticipant" data-i18n="end_meeting.tab_register">Register</button>
+              </div>
+            </div>
             <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
           </div>
           <div class="end-meeting-section end-meeting-flex-1">

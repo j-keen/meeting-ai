@@ -33,6 +33,7 @@ import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initHintSystem } from './hint-system.js';
 import { initPromptBuilder } from './prompt-builder.js';
+import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
 import { createPresetSaveForm } from './preset-save.js';
 import {
@@ -63,6 +64,7 @@ function init() {
   initChat();
   initMeetingPrepForm();
   initPromptBuilder();
+  initDeepSetup();
   initPromptAdjuster();
 
   // Check if Vertex AI proxy is available (for keyless operation)
@@ -280,9 +282,41 @@ function init() {
     btn.addEventListener('click', () => updateStarRating(parseInt(btn.dataset.star)));
   });
 
+  // Helper: keyboard navigation for dropdowns (ArrowDown/Up/Enter)
+  function handleDropdownKeyboard(e, dropdownId, onSelect) {
+    const dropdown = $(dropdownId);
+    if (dropdown.hidden) return false;
+    const items = dropdown.querySelectorAll('.unified-dropdown-item');
+    if (items.length === 0) return false;
+    const activeItem = dropdown.querySelector('.unified-dropdown-item.active');
+    let idx = [...items].indexOf(activeItem);
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (activeItem) activeItem.classList.remove('active');
+      idx = (idx + 1) % items.length;
+      items[idx].classList.add('active');
+      items[idx].scrollIntoView({ block: 'nearest' });
+      return true;
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (activeItem) activeItem.classList.remove('active');
+      idx = idx <= 0 ? items.length - 1 : idx - 1;
+      items[idx].classList.add('active');
+      items[idx].scrollIntoView({ block: 'nearest' });
+      return true;
+    } else if (e.key === 'Enter' && activeItem) {
+      e.preventDefault();
+      activeItem.click();
+      return true;
+    }
+    return false;
+  }
+
   // Unified tag input (Enter to add, focus for dropdown)
   const tagInput = $('#endMeetingTagInput');
   tagInput.addEventListener('keydown', (e) => {
+    if (handleDropdownKeyboard(e, '#tagDropdown', null)) return;
     if (e.key === 'Enter') {
       e.preventDefault();
       const tag = e.target.value.trim();
@@ -300,19 +334,13 @@ function init() {
   tagInput.addEventListener('input', () => updateTagDropdown(tagInput.value));
   tagInput.addEventListener('focus', () => updateTagDropdown(tagInput.value));
 
-  // Unified participant input (Enter to add, focus for dropdown)
+  // Participant search input (with keyboard navigation)
   const participantInput = $('#endMeetingParticipantInput');
   participantInput.addEventListener('keydown', (e) => {
+    if (handleDropdownKeyboard(e, '#participantDropdown', null)) return;
     if (e.key === 'Enter') {
       e.preventDefault();
-      const name = e.target.value.trim();
-      if (name) {
-        const contact = addContact({ name });
-        state.participants.push({ id: contact.id, name: contact.name });
-        renderEndMeetingParticipants();
-        e.target.value = '';
-        updateParticipantDropdown('');
-      }
+      // In search tab, Enter without active dropdown item does nothing (must select from list)
     } else if (e.key === 'Backspace' && !e.target.value && state.participants.length > 0) {
       state.participants.pop();
       renderEndMeetingParticipants();
@@ -320,6 +348,40 @@ function init() {
   });
   participantInput.addEventListener('input', () => updateParticipantDropdown(participantInput.value));
   participantInput.addEventListener('focus', () => updateParticipantDropdown(participantInput.value));
+
+  // Participant tab switching (search / register)
+  document.querySelectorAll('.participant-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.participant-tab').forEach(b => b.classList.toggle('active', b === btn));
+      const tab = btn.dataset.participantTab;
+      $('#participantTabSearch').hidden = tab !== 'search';
+      $('#participantTabRegister').hidden = tab !== 'register';
+      if (tab === 'search') participantInput.focus();
+      else $('#endMeetingNewParticipantName').focus();
+    });
+  });
+
+  // Participant register: Enter key triggers add
+  $('#endMeetingNewParticipantName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('#btnEndMeetingAddParticipant').click(); }
+  });
+  $('#endMeetingNewParticipantCompany').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('#btnEndMeetingAddParticipant').click(); }
+  });
+
+  // Participant register button
+  $('#btnEndMeetingAddParticipant').addEventListener('click', () => {
+    const nameInput = $('#endMeetingNewParticipantName');
+    const companyInput = $('#endMeetingNewParticipantCompany');
+    const name = nameInput.value.trim();
+    if (!name) return;
+    const contact = addContact({ name, company: companyInput.value.trim() || undefined });
+    state.participants.push({ id: contact.id, name: contact.name });
+    renderEndMeetingParticipants();
+    nameInput.value = '';
+    companyInput.value = '';
+    nameInput.focus();
+  });
 
   // Close dropdowns when clicking outside
   document.addEventListener('click', (e) => {
@@ -761,6 +823,52 @@ function init() {
     if (config.memoHint) {
       const ph = $('#memoPlaceholder');
       if (ph) ph.textContent = config.memoHint;
+    }
+    // Start recording
+    await startRecording();
+  });
+
+  // Deep Setup complete — merge prompt-builder + meeting-prep config and start
+  on('deepSetup:complete', async (config) => {
+    // Analysis prompt
+    if (config.analysisPrompt) {
+      state.settings.customPrompt = config.analysisPrompt;
+      saveSettings({ customPrompt: config.analysisPrompt });
+    }
+    // Chat system prompt
+    if (config.chatSystemPrompt) {
+      state.settings.chatSystemPrompt = config.chatSystemPrompt;
+      saveSettings({ chatSystemPrompt: config.chatSystemPrompt });
+    }
+    // Context
+    if (config.context) {
+      state.settings.meetingContext = config.context;
+      saveSettings({ meetingContext: config.context });
+    }
+    // Chat presets
+    if (config.chatPresets?.length) {
+      state.settings.chatPresets = config.chatPresets;
+      saveSettings({ chatPresets: config.chatPresets });
+    }
+    // Memo hint
+    if (config.memoHint) {
+      const ph = $('#memoPlaceholder');
+      if (ph) ph.textContent = config.memoHint;
+    }
+    // Attendees
+    if (config.attendees?.length) {
+      state.participants = config.attendees;
+    }
+    // Reference + files → analysisContext
+    const parts = [];
+    if (config.referenceAnalysis) {
+      parts.push('[Reference: Previous Session]\n' + config.referenceAnalysis);
+    }
+    if (config.attachedFiles?.length) {
+      config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));
+    }
+    if (parts.length) {
+      state.analysisContext = parts.join('\n\n');
     }
     // Start recording
     await startRecording();
