@@ -123,15 +123,18 @@ export async function exportPDF(markdown, filename) {
     // Flatten: include list items (li) as individual break points, not just top-level elements
     const canvasScale = 2;
     const elements = [];
+    let listGroupCounter = 0;
     for (const el of container.children) {
       const tag = el.tagName;
       if ((tag === 'UL' || tag === 'OL') && el.children.length > 0) {
-        // Add each list item as a separate break point
+        // Add each list item as a separate break point with shared listGroupId
+        const listStartIdx = listGroupCounter++;
         for (const li of el.children) {
           elements.push({
             top: li.offsetTop,
             bottom: li.offsetTop + li.offsetHeight,
             isSectionHeading: false,
+            listGroupId: listStartIdx,
           });
         }
       } else {
@@ -139,6 +142,7 @@ export async function exportPDF(markdown, filename) {
           top: el.offsetTop,
           bottom: el.offsetTop + el.offsetHeight,
           isSectionHeading: el.style.fontSize === '20px',
+          listGroupId: null,
         });
       }
     }
@@ -155,6 +159,9 @@ export async function exportPDF(markdown, filename) {
       ].join(';');
       headerEl.textContent = docTitle;
       document.body.appendChild(headerEl);
+      await document.fonts.ready;
+      headerEl.getBoundingClientRect(); // force layout
+      await new Promise(r => setTimeout(r, 50)); // stabilize rendering
       headerCanvas = await window.html2canvas(headerEl, {
         scale: canvasScale,
         backgroundColor: '#ffffff',
@@ -191,17 +198,23 @@ export async function exportPDF(markdown, filename) {
       const usedCss = el.top - pageStartCss;
 
       // Conditional section break: only break before ## if page is ≥75% full
-      if (el.isSectionHeading && usedCss > maxCssPxPerPage * 0.75) {
+      if (el.isSectionHeading && usedCss > maxCssPxPerPage * 0.90) {
         pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
         pageStartCss = el.top;
         continue;
       }
 
       // Orphan prevention: if a heading sits near page bottom with no room
-      // for at least 2 elements after it, push heading to next page
+      // for at least 3 elements after it, push heading to next page
       if (el.isSectionHeading) {
-        const nextElBottom = elements[i + 1]?.bottom ?? el.bottom;
-        if (nextElBottom - pageStartCss > maxCssPxPerPage && usedCss > 5) {
+        const minFollowCount = 3;
+        const followIdx = Math.min(i + minFollowCount, elements.length - 1);
+        let followBottom = el.bottom;
+        for (let j = i + 1; j <= followIdx; j++) {
+          if (elements[j].isSectionHeading) break;
+          followBottom = elements[j].bottom;
+        }
+        if (followBottom - pageStartCss > maxCssPxPerPage && usedCss > 5) {
           pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
           pageStartCss = el.top;
           continue;
@@ -210,8 +223,22 @@ export async function exportPDF(markdown, filename) {
 
       // Normal overflow: break at element boundary when content exceeds page
       if (el.bottom - pageStartCss > maxCssPxPerPage && usedCss > 5) {
-        pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
-        pageStartCss = el.top;
+        let breakIdx = i;
+        // If breaking in the middle of a list, try to move break point before the list
+        if (el.listGroupId !== null) {
+          for (let j = i - 1; j >= 0; j--) {
+            if (elements[j].top <= pageStartCss) break;
+            if (elements[j].listGroupId !== el.listGroupId) {
+              const altUsed = elements[j + 1].top - pageStartCss;
+              if (altUsed > maxCssPxPerPage * 0.70) {
+                breakIdx = j + 1;
+              }
+              break;
+            }
+          }
+        }
+        pages.push({ start: pageStartCss * canvasScale, end: elements[breakIdx].top * canvasScale });
+        pageStartCss = elements[breakIdx].top;
       }
     }
 

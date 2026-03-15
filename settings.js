@@ -5,11 +5,11 @@ import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
   loadLocations, addLocation, deleteLocation, findNearestLocation,
-  loadCategories, addCategory, deleteCategory, updateCategoryHint,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
+  loadTypePrompts, saveTypePrompt, deleteTypePrompt,
 } from './storage.js';
-import { getDefaultPrompt } from './ai.js';
-import { t, setLanguage, setAiLanguage, getPromptPresets } from './i18n.js';
+import { getDefaultPrompt, getPromptForType } from './ai.js';
+import { t, setLanguage, setAiLanguage, getTypeDefaultPrompt } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
 
@@ -130,90 +130,44 @@ export function initSettings() {
     markDirty();
   });
 
-  // Prompt presets
-  function populatePromptPresets() {
-    const select = $('#selectPromptPreset');
-    const presets = getPromptPresets();
-    // Keep only the first option (placeholder)
-    while (select.options.length > 1) select.remove(1);
-    Object.entries(presets).forEach(([key, { name }]) => {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
-    // Append custom prompt presets
-    const customPromptPresets = state.settings.customPromptPresets || {};
-    Object.keys(customPromptPresets).forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = '__custom__' + name;
-      opt.textContent = '\u2605 ' + name;
-      select.appendChild(opt);
-    });
-  }
-  populatePromptPresets();
+  // Per-type prompt editing
+  let _currentEditType = 'general';
 
-  function updateDeletePresetBtn(key) {
-    const btn = $('#btnDeletePromptPreset');
-    if (btn) btn.style.display = (key && key.startsWith('__custom__')) ? '' : 'none';
+  function loadPromptForType(type) {
+    _currentEditType = type;
+    const prompt = getPromptForType(type);
+    $('#textPrompt').value = prompt;
   }
 
-  $('#selectPromptPreset').addEventListener('change', (e) => {
-    const key = e.target.value;
-    updateDeletePresetBtn(key);
-    if (!key) return;
-    let promptText;
-    if (key.startsWith('__custom__')) {
-      const name = key.slice('__custom__'.length);
-      promptText = (state.settings.customPromptPresets || {})[name];
-    } else {
-      const presets = getPromptPresets();
-      const preset = presets[key];
-      if (!preset) return;
-      promptText = preset.prompt || getDefaultPrompt();
-    }
-    if (promptText) {
-      $('#textPrompt').value = promptText;
-      state.settings.customPrompt = promptText;
-      markDirty();
-      highlightField($('#textPrompt'));
-    }
-  });
+  // Initialize with current meeting preset or general
+  loadPromptForType(state.settings.meetingPreset || 'general');
+  const typeSelect = $('#selectTypeForPrompt');
+  if (typeSelect) {
+    typeSelect.value = state.settings.meetingPreset || 'general';
+    typeSelect.addEventListener('change', (e) => {
+      loadPromptForType(e.target.value);
+    });
+  }
 
-  // Save current prompt as custom preset
-  $('#btnSavePromptPreset').addEventListener('click', () => {
-    const name = prompt(t('preset.name_prompt') || 'Enter preset name:');
-    if (!name) return;
-    if (!state.settings.customPromptPresets) state.settings.customPromptPresets = {};
-    state.settings.customPromptPresets[name] = $('#textPrompt').value;
-    markDirty();
-    populatePromptPresets();
-    $('#selectPromptPreset').value = '__custom__' + name;
-    updateDeletePresetBtn('__custom__' + name);
-  });
-
-  // Delete custom preset
-  $('#btnDeletePromptPreset').addEventListener('click', () => {
-    const key = $('#selectPromptPreset').value;
-    if (!key || !key.startsWith('__custom__')) return;
-    if (!confirm(t('preset.delete_confirm'))) return;
-    const name = key.slice('__custom__'.length);
-    delete (state.settings.customPromptPresets || {})[name];
-    markDirty();
-    populatePromptPresets();
-    $('#selectPromptPreset').value = '';
-    updateDeletePresetBtn('');
-  });
-
-  // Prompt
+  // Save per-type prompt on change
   $('#textPrompt').addEventListener('change', (e) => {
-    state.settings.customPrompt = e.target.value;
+    const newPrompt = e.target.value;
+    saveTypePrompt(_currentEditType, newPrompt);
+    // Also update state.settings.customPrompt if editing the current active type
+    if (_currentEditType === state.settings.meetingPreset) {
+      state.settings.customPrompt = newPrompt;
+    }
     markDirty();
   });
+
+  // Reset per-type prompt to default
   $('#btnResetPrompt').addEventListener('click', () => {
-    const def = getDefaultPrompt();
+    deleteTypePrompt(_currentEditType);
+    const def = getTypeDefaultPrompt(_currentEditType);
     $('#textPrompt').value = def;
-    state.settings.customPrompt = def;
+    if (_currentEditType === state.settings.meetingPreset) {
+      state.settings.customPrompt = def;
+    }
     markDirty();
     highlightField($('#textPrompt'));
   });
@@ -360,7 +314,10 @@ function applySettingsToForm() {
   $('#selectAiLanguage').value = s.aiLanguage;
   $('#selectLanguage').value = s.language;
 
-  $('#textPrompt').value = s.customPrompt;
+  // Load per-type prompt for current type
+  const typeSelect = $('#selectTypeForPrompt');
+  const currentType = typeSelect?.value || s.meetingPreset || 'general';
+  $('#textPrompt').value = getPromptForType(currentType);
   $('#textChatPrompt').value = s.chatSystemPrompt;
 
   const chatModelSelect = $('#chatModelSelect');
@@ -551,16 +508,6 @@ function initDataTab() {
     if (e.target === e.currentTarget) closeLocationsModal();
   });
 
-  // --- Categories Modal ---
-  $('#btnOpenCategories')?.addEventListener('click', () => {
-    $('#categoriesModal').hidden = false;
-    renderDataCategories();
-  });
-  $('#btnCloseCategories')?.addEventListener('click', closeCategoriesModal);
-  $('#categoriesModal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) closeCategoriesModal();
-  });
-
   // Add participant
   function addParticipantFromForm() {
     const name = $('#inputNewParticipantName')?.value.trim();
@@ -723,15 +670,6 @@ function initDataTab() {
   });
 
   // Add category
-  $('#btnAddCategory')?.addEventListener('click', () => {
-    const name = $('#inputNewCategory')?.value.trim();
-    if (!name) return;
-    addCategory(name);
-    $('#inputNewCategory').value = '';
-    renderDataCategories();
-    updateDataBadges();
-  });
-
   // Listen for openContactsModal event (from contact groups)
   on('openContactsModal', () => {
     openSettings();
@@ -756,24 +694,17 @@ function closeContactsModal() {
 function closeLocationsModal() {
   $('#locationsModal').hidden = true;
 }
-function closeCategoriesModal() {
-  $('#categoriesModal').hidden = true;
-}
-
 function updateDataBadges() {
   const contacts = loadContacts();
   const locations = loadLocations();
-  const categories = loadCategories();
 
   // Update badge counts
   setBadge('#contactsBadge', contacts.length);
   setBadge('#locationsBadge', locations.length);
-  setBadge('#categoriesBadge', categories.length);
 
   // Update tooltips (recent 3 items preview)
   setContactTooltip('#btnOpenContacts', contacts.slice(-3).reverse());
   setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse().map(l => typeof l === 'string' ? l : l.name + (l.lat != null ? ' 📍' : '')));
-  setTextTooltip('#btnOpenCategories', categories.slice(-3).reverse());
 }
 
 function setBadge(selector, count) {
@@ -1339,56 +1270,6 @@ function renderDataLocations() {
   });
 }
 
-function renderDataCategories() {
-  const list = $('#dataCategoriesList');
-  if (!list) return;
-  const categories = loadCategories();
-  list.innerHTML = '';
-  if (categories.length === 0) {
-    list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
-    return;
-  }
-  categories.forEach(cat => {
-    const item = document.createElement('div');
-    item.className = 'data-list-item';
-    item.style.flexDirection = 'column';
-    item.style.alignItems = 'stretch';
-    item.style.gap = '4px';
-
-    const topRow = document.createElement('div');
-    topRow.style.display = 'flex';
-    topRow.style.alignItems = 'center';
-    topRow.style.justifyContent = 'space-between';
-
-    const span = document.createElement('span');
-    span.textContent = cat.name;
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'btn btn-xs btn-danger';
-    delBtn.textContent = '\u00d7';
-    delBtn.addEventListener('click', () => {
-      deleteCategory(cat.name);
-      renderDataCategories();
-      updateDataBadges();
-    });
-
-    topRow.append(span, delBtn);
-
-    const hintInput = document.createElement('input');
-    hintInput.type = 'text';
-    hintInput.className = 'settings-input';
-    hintInput.style.fontSize = '11px';
-    hintInput.placeholder = t('settings.category_hint_placeholder');
-    hintInput.value = cat.hint || '';
-    hintInput.addEventListener('change', () => {
-      updateCategoryHint(cat.name, hintInput.value.trim());
-    });
-
-    item.append(topRow, hintInput);
-    list.appendChild(item);
-  });
-}
-
 // ===== Correction Dictionary (Modal) =====
 let correctionSearchQuery = '';
 
@@ -1556,7 +1437,7 @@ export function closeSettings() {
   isDirty = false;
   updateDirtyUI();
   // Close any sub-modals that may have been left open
-  ['#contactsModal', '#locationsModal', '#categoriesModal', '#cardScanModal', '#cameraModal', '#correctionDictModal', '#settingsUnsavedModal'].forEach(sel => {
+  ['#contactsModal', '#locationsModal', '#cardScanModal', '#cameraModal', '#correctionDictModal', '#settingsUnsavedModal'].forEach(sel => {
     const el = $(sel);
     if (el) el.hidden = true;
   });

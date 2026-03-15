@@ -7,7 +7,7 @@ import { checkProxyAvailable } from './gemini-api.js';
 import {
   getMeeting, deleteMeeting, updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
-  addContact, loadCategories,
+  addContact,
   addCorrectionEntry,
   getProUsageCount, incrementProUsage, addLocation,
 } from './storage.js';
@@ -24,7 +24,7 @@ import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
-import { refineSectionContent, getDefaultMinutesPrompt } from './ai.js';
+import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
 import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
 import { handleExport, handleExportMeeting, getExportContent, downloadFile } from './export-md.js';
 import { exportPDF, exportWord } from './export-doc.js';
@@ -342,22 +342,12 @@ function init() {
 
   // Meeting History
   $('#btnHistory').addEventListener('click', () => {
-    // Populate category filter dropdown
-    const catSelect = $('#historyFilterCategory');
-    if (catSelect) {
-      const current = catSelect.value;
-      const cats = loadCategories();
-      catSelect.innerHTML = `<option value="" data-i18n="history.filter_all_categories">${t('history.filter_all_categories')}</option>` +
-        cats.map(c => { const n = c.name || c; return `<option value="${n}">${n}</option>`; }).join('');
-      catSelect.value = current;
-    }
     refreshHistoryGrid();
     $('#historyModal').hidden = false;
   });
   $('#historySearch').addEventListener('input', () => refreshHistoryGridDebounced());
   $('#historyFilterType').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterTag')?.addEventListener('input', () => refreshHistoryGridDebounced());
-  $('#historyFilterCategory')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterRating')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateFrom').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateTo').addEventListener('change', () => refreshHistoryGrid());
@@ -557,9 +547,12 @@ function init() {
         (state.settings.meetingContext ? '\n' : '') + config.agenda;
       saveSettings({ meetingContext: state.settings.meetingContext });
     }
+    // Auto-apply per-type prompt (unless custom prompt was explicitly set in prep)
     if (config.customPrompt) {
       state.settings.customPrompt = config.customPrompt;
       saveSettings({ customPrompt: config.customPrompt });
+    } else if (config.meetingType) {
+      state.settings.customPrompt = getPromptForType(config.meetingType);
     }
 
     // Attendees → state.participants

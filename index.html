@@ -622,9 +622,6 @@
                 <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
                 <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
               </select>
-              <select class="history-filter-control" id="historyFilterCategory">
-                <option value="" data-i18n="history.filter_all_categories">All Categories</option>
-              </select>
               <select class="history-filter-control" id="historyFilterRating">
                 <option value="" data-i18n="history.filter_all_ratings">All Ratings</option>
                 <option value="3">&#9733;3+</option>
@@ -775,12 +772,8 @@
       <div class="modal-body">
         <!-- 0. Meeting Summary Stats -->
         <div class="end-meeting-stats" id="endMeetingStats"></div>
-        <!-- 1. Categories + Importance (top) -->
+        <!-- 1. Importance -->
         <div class="end-meeting-row">
-          <div class="end-meeting-section end-meeting-flex-1">
-            <label class="end-meeting-label" data-i18n="end_meeting.categories">Categories</label>
-            <div class="end-meeting-categories" id="endMeetingCategories"></div>
-          </div>
           <div class="end-meeting-section">
             <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
             <div class="star-rating" id="endMeetingStars">

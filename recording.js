@@ -6,7 +6,7 @@ import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle
 import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, loadSettings, saveSettings,
-  loadContacts, addContact, loadLocations, addLocation, findNearestLocation, loadCategories,
+  loadContacts, addContact, loadLocations, addLocation, findNearestLocation,
   loadCorrectionDict, addCorrectionEntry,
   getProUsageCount, incrementProUsage,
 } from './storage.js';
@@ -29,15 +29,7 @@ export function buildFullProfile() {
 }
 
 function buildCategoryHints() {
-  const cats = loadCategories();
-  const hints = {};
-  for (const cat of cats) {
-    const name = cat.name || cat;
-    if (cat.hint && state.categories.includes(name)) {
-      hints[name] = cat.hint;
-    }
-  }
-  return hints;
+  return {};
 }
 
 // ===== Core Logic =====
@@ -534,8 +526,6 @@ export async function runAnalysis() {
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,
-      categories: state.categories,
-      categoryHints: buildCategoryHints(),
       onStream: (textSoFar) => {
         if (!aiContainer) return;
         if (!streamPreviewEl) {
@@ -710,7 +700,6 @@ function showEndMeetingModal() {
   titleInput.value = state.meetingTitle || '';
 
   renderEndMeetingTags();
-  renderEndMeetingCategories();
   updateStarRating(state.starRating);
   renderEndMeetingParticipants();
 
@@ -864,14 +853,17 @@ function applyAiMetadata(metadata) {
   });
   renderEndMeetingTags();
 
-  // Categories — auto-select
+  // Categories from AI → merge into tags
   if (metadata.categories && metadata.categories.length > 0) {
     metadata.categories.forEach(cat => {
-      if (!state.categories.includes(cat)) {
-        state.categories.push(cat);
+      if (!existingTags.includes(cat.toLowerCase())) {
+        state.tags.push(cat);
+        if (!state._aiTags) state._aiTags = [];
+        state._aiTags.push(cat);
+        existingTags.push(cat.toLowerCase());
       }
     });
-    renderEndMeetingCategories();
+    renderEndMeetingTags();
   }
 }
 
@@ -935,27 +927,6 @@ export function renderEndMeetingTags() {
   });
 }
 
-function renderEndMeetingCategories() {
-  const container = $('#endMeetingCategories');
-  container.innerHTML = '';
-  loadCategories().forEach(cat => {
-    const catName = cat.name || cat;
-    const btn = document.createElement('button');
-    btn.className = 'end-meeting-category-btn';
-    if (state.categories.includes(catName)) btn.classList.add('selected');
-    btn.textContent = catName;
-    btn.addEventListener('click', () => {
-      if (state.categories.includes(catName)) {
-        state.categories = state.categories.filter(c => c !== catName);
-        btn.classList.remove('selected');
-      } else {
-        state.categories.push(catName);
-        btn.classList.add('selected');
-      }
-    });
-    container.appendChild(btn);
-  });
-}
 
 export function updateStarRating(rating) {
   state.starRating = rating;
@@ -1327,8 +1298,6 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     basePromptOverride: promptConfig.basePromptOverride || '',
     userInstruction: promptConfig.userInstruction || '',
     metadata,
-    categories: state.categories,
-    categoryHints: buildCategoryHints(),
     onStream: (textSoFar) => {
       if (!aiContainer) return;
       if (!streamPreviewEl) {
