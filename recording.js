@@ -466,7 +466,7 @@ export async function runAnalysis() {
     showToast(t('toast.no_api_key'), 'warning');
     return;
   }
-  if (state.transcript.length === 0) {
+  if (state.transcript.length === 0 && state.memos.length === 0 && state.chatHistory.length === 0) {
     showToast(t('toast.no_transcript'), 'warning');
     return;
   }
@@ -525,6 +525,7 @@ export async function runAnalysis() {
       previousSummary,
       userInsights: state.userInsights,
       memos: state.memos,
+      chatHistory: state.chatHistory,
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,

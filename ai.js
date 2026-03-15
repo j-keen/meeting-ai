@@ -127,6 +127,7 @@ export async function analyzeTranscript({
   previousSummary = null,
   userInsights = [],
   memos = [],
+  chatHistory = [],
   userProfile = '',
   model = 'gemini-2.5-flash',
   userCorrections = [],
@@ -135,7 +136,11 @@ export async function analyzeTranscript({
   categoryHints = {},
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
-  if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
+  const hasTranscript = transcript && transcript.length > 0;
+  const hasMemos = memos && memos.length > 0;
+  const hasInsights = userInsights && userInsights.length > 0;
+  const hasChatHistory = chatHistory && chatHistory.length > 0;
+  if (!hasTranscript && !hasMemos && !hasInsights && !hasChatHistory) throw new Error('No transcript to analyze');
 
   const effectivePreset = meetingPreset || 'general';
   const contextText = meetingContext || getPresetContext(effectivePreset);
@@ -202,6 +207,15 @@ export async function analyzeTranscript({
     });
   }
 
+  if (hasChatHistory) {
+    messageParts.push('');
+    messageParts.push('[AI Chat History - previous Q&A between the user and AI assistant during this meeting]');
+    chatHistory.forEach(m => {
+      const role = m.role === 'user' ? 'User' : 'AI';
+      messageParts.push(`- ${role}: ${m.text || m.content || ''}`);
+    });
+  }
+
   if (userCorrections && userCorrections.length > 0) {
     messageParts.push('');
     messageParts.push('[User Corrections - The user manually edited parts of the previous analysis. Please take these corrections into account and adjust your analysis accordingly. These are one-time hints, so incorporate the intent naturally rather than repeating them verbatim.]');
@@ -211,8 +225,12 @@ export async function analyzeTranscript({
   }
 
   messageParts.push('');
-  messageParts.push('Transcript:');
-  messageParts.push(transcriptText);
+  if (hasTranscript) {
+    messageParts.push('Transcript:');
+    messageParts.push(transcriptText);
+  } else {
+    messageParts.push('Transcript: (no transcript yet — analyze based on memos and insights above)');
+  }
 
   const langReminder = lang === 'ko'
     ? '\n\n[IMPORTANT] 위 회의록이 어떤 언어이든, 분석 결과는 반드시 한국어로 작성하세요.'
