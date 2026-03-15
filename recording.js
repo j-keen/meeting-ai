@@ -40,6 +40,10 @@ let linesSinceLastAnalysis = 0;
 let lastAnalysisTimestamp = 0;
 let charsSinceLastCorrection = 0;
 
+// Pause tracking
+let pausedDuration = 0;
+let pauseStartTime = null;
+
 // Guard: idle detection + max duration
 const IDLE_WARNING_MS = 15 * 60 * 1000;
 const IDLE_AUTOPAUSE_MS = 20 * 60 * 1000;
@@ -77,6 +81,7 @@ function saveDraft() {
       categories: state.categories,
       participants: state.participants,
       settings: { meetingPreset: state.settings.meetingPreset, meetingContext: state.settings.meetingContext },
+      pausedDuration: getTotalPausedMs(),
       savedAt: Date.now(),
     };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -141,6 +146,8 @@ function recoverDraft(draft) {
   state.meetingId = draft.meetingId;
   state.meetingTitle = draft.meetingTitle || '';
   state.meetingStartTime = draft.meetingStartTime;
+  pausedDuration = draft.pausedDuration || 0;
+  pauseStartTime = null;
   state.meetingLocation = draft.meetingLocation || '';
   state.transcript = draft.transcript || [];
   state.memos = draft.memos || [];
@@ -185,9 +192,13 @@ export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function getTotalPausedMs() {
+  return pausedDuration + (pauseStartTime ? Date.now() - pauseStartTime : 0);
+}
+
 function updateTimer() {
   if (!state.meetingStartTime) return;
-  const diff = Date.now() - state.meetingStartTime;
+  const diff = Date.now() - state.meetingStartTime - getTotalPausedMs();
   const h = Math.floor(diff / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
@@ -204,7 +215,7 @@ export function getElapsedTimeStr() {
     const mins = Math.floor(diff / 60000);
     return t('minutes', { n: mins });
   }
-  const diff = Date.now() - state.meetingStartTime;
+  const diff = Date.now() - state.meetingStartTime - getTotalPausedMs();
   const mins = Math.floor(diff / 60000);
   return t('minutes', { n: mins });
 }
@@ -270,6 +281,9 @@ export async function startRecording() {
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
       state.meetingId = generateId();
+    } else if (pauseStartTime) {
+      pausedDuration += Date.now() - pauseStartTime;
+      pauseStartTime = null;
     }
     // Show meeting title input in header
     const titleInput = $('#meetingTitleInput');
@@ -295,6 +309,7 @@ export async function startRecording() {
 
     const btn = $('#btnRecord');
     btn.classList.remove('paused');
+    $('#meetingTimer').classList.remove('timer-paused');
     btn.classList.add('recording');
     btn.querySelector('.record-label').textContent = t('record.meeting_active');
     $('#meetingStatus').textContent = t('record.status_recording');
@@ -318,6 +333,7 @@ export function stopRecording() {
   stt?.stop();
   stt = null;
   state.isRecording = false;
+  pauseStartTime = Date.now();
   clearInterim();
 
   clearInterval(timerInterval);
@@ -332,6 +348,7 @@ export function stopRecording() {
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
   btn.classList.add('paused');
+  $('#meetingTimer').classList.add('timer-paused');
   btn.querySelector('.record-label').textContent = t('record.paused');
   $('#meetingStatus').textContent = t('record.status_paused');
   const badge = $('#sttEngineBadge');
@@ -568,7 +585,7 @@ export function endMeeting() {
   }
 
   // Confirm dialog for meetings 30min+
-  const elapsed = state.meetingStartTime ? Date.now() - state.meetingStartTime : 0;
+  const elapsed = state.meetingStartTime ? Date.now() - state.meetingStartTime - getTotalPausedMs() : 0;
   if (elapsed >= 30 * 60 * 1000) {
     showEndConfirmDialog(() => {
       proceedEndMeeting();
@@ -1095,6 +1112,8 @@ export function resetMeeting() {
   clearDraftRecovery();
   state.meetingEnded = false;
   state.meetingStartTime = null;
+  pausedDuration = 0;
+  pauseStartTime = null;
   // Clear loaded meeting state
   state.loadedMeetingId = null;
   state.loadedMeetingOriginal = null;
@@ -1131,6 +1150,7 @@ export function resetMeeting() {
   $('#chatMessages').innerHTML = '';
   resetChatEmpty();
   $('#meetingTimer').textContent = '00:00:00';
+  $('#meetingTimer').classList.remove('timer-paused');
   $('#meetingStatus').textContent = '';
   const headerTitleInput = $('#meetingTitleInput');
   if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }

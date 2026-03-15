@@ -200,6 +200,10 @@ h1, h2, h3 { font-weight: 600; }
   min-width: 70px;
 }
 .meeting-status { font-size: 12px; color: var(--text-muted); }
+.meeting-timer.timer-paused {
+  color: var(--text-muted);
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
 
 [data-theme="light"] .icon-theme-dark { display: none; }
 [data-theme="dark"] .icon-theme-light { display: none; }
