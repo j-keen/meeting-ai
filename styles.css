@@ -312,20 +312,19 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .panel-right { flex: 1 1 30%; min-width: 250px; }
 .panel-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
+  gap: 4px;
 }
-.panel-header-left {
+.panel-header-row {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  flex-shrink: 1;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
-.panel-header h2, .panel-header-left h2 { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.panel-header h2 { font-size: 14px; font-weight: 600; white-space: nowrap; }
 .panel-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 @keyframes pulse-text {
@@ -5349,10 +5348,12 @@ body.loaded-mode #btnNewMeeting { display: none; }
   position: relative;
   width: 600px;
   max-width: 95vw;
+  max-height: 80vh;
   height: 80vh;
   display: flex;
   flex-direction: column;
   padding: 24px;
+  overflow: hidden;
 }
 
 .prompt-builder-modal > .modal-close {
@@ -5386,6 +5387,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .pb-view[hidden] {
@@ -5706,6 +5708,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   padding-top: 16px;
   border-top: 1px solid var(--border-light);
   margin-top: 12px;
+  flex-shrink: 0;
 }
 
 .pb-preview-actions-right {

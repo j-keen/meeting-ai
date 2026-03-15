@@ -52,26 +52,26 @@
     <!-- Left Panel: Transcript -->
     <section class="panel panel-left panel-active" id="panelLeft">
       <div class="panel-header">
-        <div class="panel-header-left">
+        <div class="panel-header-row">
           <h2 data-i18n="panel.transcript">Transcript</h2>
-          <div class="panel-hint-container" id="transcriptHintContainer">
-            <span class="panel-hint-text"></span>
-            <span class="panel-hint-dots"></span>
-            <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
-          </div>
-        </div>
-        <div class="panel-actions">
-          <div class="inbox-btn-wrap">
-            <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
-            <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
-              <div class="inbox-preview-items" id="inboxPreviewItems"></div>
-              <div class="inbox-preview-footer">
-                <button class="btn btn-sm inbox-preview-viewall" id="inboxPreviewViewAll"
-                        data-i18n="highlights.view_all">View all</button>
+          <div class="panel-actions">
+            <div class="inbox-btn-wrap">
+              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
+              <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
+                <div class="inbox-preview-items" id="inboxPreviewItems"></div>
+                <div class="inbox-preview-footer">
+                  <button class="btn btn-sm inbox-preview-viewall" id="inboxPreviewViewAll"
+                          data-i18n="highlights.view_all">View all</button>
+                </div>
               </div>
             </div>
+            <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
           </div>
-          <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
+        </div>
+        <div class="panel-hint-container" id="transcriptHintContainer">
+          <span class="panel-hint-text"></span>
+          <span class="panel-hint-dots"></span>
+          <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
         </div>
       </div>
       <div class="whisper-container" id="whisperContainer"></div>
@@ -106,26 +106,26 @@
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
-        <div class="panel-header-left">
+        <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
-          <div class="panel-hint-container" id="analysisHintContainer">
-            <span class="panel-hint-text"></span>
-            <span class="panel-hint-dots"></span>
-            <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
+          <div class="panel-actions">
+            <select class="btn btn-sm" id="selectAnalysisStyle" title="Analysis Style" style="max-width:120px;font-size:11px;">
+              <option value="general" data-i18n="settings.preset_general">General</option>
+              <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
+              <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorm</option>
+              <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+              <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+              <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+            </select>
+            <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
+            <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
+            <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
           </div>
         </div>
-        <div class="panel-actions">
-          <select class="btn btn-sm" id="selectAnalysisStyle" title="Analysis Style" style="max-width:120px;font-size:11px;">
-            <option value="general" data-i18n="settings.preset_general">General</option>
-            <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
-            <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorm</option>
-            <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
-            <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
-            <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
-          </select>
-          <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-          <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-          <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
+        <div class="panel-hint-container" id="analysisHintContainer">
+          <span class="panel-hint-text"></span>
+          <span class="panel-hint-dots"></span>
+          <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
         </div>
       </div>
       <div class="analysis-nav" id="analysisNav" style="display:none">
