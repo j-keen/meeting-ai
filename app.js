@@ -34,6 +34,7 @@ import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } fro
 import { initHintSystem } from './hint-system.js';
 import { initPromptBuilder } from './prompt-builder.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
+import { createPresetSaveForm } from './preset-save.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
@@ -158,10 +159,42 @@ function init() {
     }
     refreshAnalysisStyleOptions();
 
+    // Save-as-preset button visibility
+    const btnSaveAsPreset = $('#btnSaveAsPreset');
+    const presetSaveFormContainer = $('#presetSaveFormContainer');
+
+    function updateSavePresetBtnVisibility() {
+      const defaultPrompt = getPromptForType(state.settings.meetingPreset);
+      const isCustom = state.settings.customPrompt && state.settings.customPrompt !== defaultPrompt;
+      btnSaveAsPreset.style.display = isCustom ? '' : 'none';
+      if (!isCustom && presetSaveFormContainer) presetSaveFormContainer.hidden = true;
+    }
+
+    btnSaveAsPreset.addEventListener('click', () => {
+      if (!presetSaveFormContainer.hidden) {
+        presetSaveFormContainer.hidden = true;
+        return;
+      }
+      presetSaveFormContainer.hidden = false;
+      createPresetSaveForm(presetSaveFormContainer, state.settings.customPrompt, {
+        onSaved(newPreset) {
+          state.settings.meetingPreset = newPreset.id;
+          saveSettings(state.settings);
+          analysisStyleSelect.value = newPreset.id;
+          updateSavePresetBtnVisibility();
+          presetSaveFormContainer.hidden = true;
+        },
+        onCancel() {
+          presetSaveFormContainer.hidden = true;
+        },
+      });
+    });
+
     analysisStyleSelect.addEventListener('change', (e) => {
       const type = e.target.value;
       state.settings.meetingPreset = type;
       state.settings.customPrompt = getPromptForType(type);
+      emit('customPrompt:change');
       // Apply extended custom type fields (from AI prompt builder)
       if (type.startsWith('custom_')) {
         const customTypes = loadCustomTypes();
@@ -192,7 +225,14 @@ function init() {
     // Refresh when custom types change
     on('customTypes:change', () => {
       refreshAnalysisStyleOptions();
+      updateSavePresetBtnVisibility();
     });
+
+    on('customPrompt:change', () => {
+      updateSavePresetBtnVisibility();
+    });
+
+    updateSavePresetBtnVisibility();
   }
 
   // Open meeting prep from settings "Add Custom Preset" button

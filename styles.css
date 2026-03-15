@@ -5995,6 +5995,23 @@ body.loaded-mode #btnNewMeeting { display: none; }
   padding: 0 16px 8px;
 }
 
+.preset-save-form {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; margin: 0 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+.preset-save-form input {
+  padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 6px; font-size: 13px;
+  background: var(--bg); color: var(--text);
+}
+.preset-save-form input:focus { border-color: var(--accent); outline: none; }
+.preset-save-form input.error { border-color: var(--danger); animation: shake 0.3s; }
+.preset-save-form-buttons { display: flex; gap: 6px; justify-content: flex-end; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
 .pa-actions {
   display: flex;
   gap: 8px;

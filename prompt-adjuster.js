@@ -8,6 +8,7 @@ import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
 import { saveSettings } from './storage.js';
+import { createPresetSaveForm } from './preset-save.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -136,6 +137,7 @@ function renderActionButtons(promptText) {
   actionsEl.innerHTML = `
     <button class="btn btn-primary btn-sm pa-apply-btn" data-action="apply">${ko ? '✓ 적용하고 닫기' : '✓ Apply & Close'}</button>
     <button class="btn btn-outline btn-sm pa-apply-btn" data-action="reanalyze">${ko ? '✓ 적용 + 재분석' : '✓ Apply & Re-analyze'}</button>
+    <button class="btn btn-outline btn-sm pa-apply-btn" data-action="savePreset">💾 ${ko ? '프리셋 저장' : 'Save as Preset'}</button>
   `;
 
   actionsEl.querySelector('[data-action="apply"]').addEventListener('click', () => {
@@ -144,6 +146,26 @@ function renderActionButtons(promptText) {
   actionsEl.querySelector('[data-action="reanalyze"]').addEventListener('click', () => {
     applyPrompt(promptText, true);
   });
+  actionsEl.querySelector('[data-action="savePreset"]').addEventListener('click', () => {
+    // Create form container below actions
+    let formContainer = container.querySelector('.pa-preset-form-container');
+    if (!formContainer) {
+      formContainer = document.createElement('div');
+      formContainer.className = 'pa-preset-form-container';
+      container.appendChild(formContainer);
+    }
+    createPresetSaveForm(formContainer, promptText, {
+      onSaved(newPreset) {
+        applyPrompt(promptText, false);
+        state.settings.meetingPreset = newPreset.id;
+        saveSettings(state.settings);
+      },
+      onCancel() {
+        formContainer.remove();
+      },
+    });
+    formContainer.scrollIntoView({ behavior: 'smooth' });
+  });
 
   container.appendChild(actionsEl);
   container.scrollTop = container.scrollHeight;
@@ -151,6 +173,7 @@ function renderActionButtons(promptText) {
 
 function applyPrompt(promptText, reanalyze) {
   state.settings.customPrompt = promptText;
+  emit('customPrompt:change');
   saveSettings(state.settings);
   showToast(t('pa.saved'), 'success');
   closeModal();
