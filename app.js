@@ -9,6 +9,7 @@ import {
   loadSettings, saveSettings, getStorageUsage,
   addContact, loadCategories,
   addCorrectionEntry,
+  getProUsageCount, incrementProUsage, addLocation,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine,
@@ -36,7 +37,8 @@ import {
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   updateParticipantDropdown, updateTagDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
-  checkDraftRecovery,
+  checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
+  clearDraftRecovery,
 } from './recording.js';
 import { prefetchDeepgramToken } from './stt.js';
 
@@ -204,7 +206,8 @@ function init() {
     }
   });
 
-  // Minutes Preview Modal
+  // Minutes Model Selection + Preview Modals
+  initMinutesModelModal();
   initMinutesPreview();
 
   // Inbox badge
@@ -1080,9 +1083,184 @@ function openMinutesPreview({ highlightBadge = false } = {}) {
   modal.hidden = false;
 }
 
+function openMinutesPreviewWithLoading() {
+  const modal = $('#minutesPreviewModal');
+  const content = $('#minutesPreviewContent');
+
+  // Add above-save class so it layers above endMeetingModal
+  modal.classList.add('above-save');
+
+  // Show loading skeleton
+  content.innerHTML = `
+    <div class="minutes-preview-loading">
+      <div class="minutes-preview-progress">
+        <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
+        <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
+      </div>
+      <div class="minutes-skeleton-line heading"></div>
+      <div class="minutes-skeleton-line wide"></div>
+      <div class="minutes-skeleton-line medium"></div>
+      <div class="minutes-skeleton-line wide"></div>
+      <div class="minutes-skeleton-line short"></div>
+      <div class="minutes-skeleton-line heading"></div>
+      <div class="minutes-skeleton-line wide"></div>
+      <div class="minutes-skeleton-line medium"></div>
+      <div class="minutes-skeleton-line short"></div>
+      <div class="minutes-skeleton-line wide"></div>
+    </div>
+  `;
+
+  // Disable toolbar buttons during loading
+  const toolbar = modal.querySelector('.minutes-preview-toolbar');
+  if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = true);
+
+  // Hide model badge during loading
+  const badge = $('#minutesGeneratedBadge');
+  if (badge) badge.hidden = true;
+
+  modal.hidden = false;
+}
+
+function renderMinutesInViewer() {
+  const modal = $('#minutesPreviewModal');
+  const content = $('#minutesPreviewContent');
+  const markdown = state.currentAnalysis?.markdown || '';
+
+  renderMinutesBlocks(content, markdown);
+
+  // Show generated model badge
+  const badge = $('#minutesGeneratedBadge');
+  const genModel = state.currentAnalysis?.generatedModel;
+  if (genModel) {
+    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
+    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.hidden = false;
+  } else {
+    badge.hidden = true;
+  }
+
+  // Re-enable toolbar buttons
+  const toolbar = modal.querySelector('.minutes-preview-toolbar');
+  if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
+
+  updateVersionBadge();
+}
+
+function initMinutesModelModal() {
+  const modelModal = $('#minutesModelModal');
+  if (!modelModal) return;
+
+  // Close button
+  modelModal.querySelector('[data-close]').onclick = () => {
+    modelModal.hidden = true;
+  };
+
+  // Overlay click closes
+  modelModal.addEventListener('click', (e) => {
+    if (e.target === modelModal) modelModal.hidden = true;
+  });
+
+  // Model card click handlers
+  modelModal.querySelectorAll('.minutes-model-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      const model = card.dataset.model;
+
+      // 1. Close model modal
+      modelModal.hidden = true;
+
+      // 2. Set model
+      state._selectedMinutesModel = model;
+      state.settings.geminiModel = model;
+      if (model.includes('pro')) incrementProUsage();
+
+      // 3. Collect metadata from save modal
+      state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
+      state.meetingLocation = ($('#endMeetingLocation')?.value || '').trim();
+      if (state.meetingLocation) addLocation(state.meetingLocation);
+      const dtVal = $('#endMeetingDatetime')?.value;
+      if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
+
+      // 4. Check content
+      const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+      if (!hasContent) {
+        $('#endMeetingModal').hidden = true;
+        showToast(t('toast.empty_meeting'), 'warning');
+        resetMeeting();
+        return;
+      }
+
+      // 5. Run correction if needed
+      const hasUncorrected = state.transcript.some(l => !l.originalText);
+      if (hasUncorrected && state.transcript.length > 0) {
+        await runCorrection(false);
+      }
+
+      // 6. Save state
+      autoSave();
+      clearDraftRecovery();
+      state.meetingEnded = true;
+
+      // 7. Disable save modal form
+      const body = $('#endMeetingModal .modal-body');
+      if (body) body.classList.add('disabled-form');
+
+      // 8. Open viewer with loading
+      openMinutesPreviewWithLoading();
+
+      // 9. Generate minutes
+      try {
+        await generateFinalMeetingMinutes('', state.minutesPromptConfig || {});
+        renderMinutesInViewer();
+      } catch (err) {
+        // Show error in viewer
+        const content = $('#minutesPreviewContent');
+        content.innerHTML = `
+          <div style="padding:24px;text-align:center;color:var(--danger);">
+            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
+          </div>
+        `;
+        // Re-enable toolbar
+        const toolbar = $('#minutesPreviewModal .minutes-preview-toolbar');
+        if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
+      }
+    });
+  });
+}
+
+function onMinutesPreviewClose() {
+  const modal = $('#minutesPreviewModal');
+  modal.classList.remove('above-save');
+
+  // If minutes were generated and save modal is still open, update its footer
+  const saveModal = $('#endMeetingModal');
+  if (!saveModal.hidden && state.currentAnalysis?.markdown) {
+    showSaveFooterWithMinutesReady(() => {
+      // Re-open viewer
+      modal.classList.add('above-save');
+      modal.hidden = false;
+    });
+  }
+}
+
 function initMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
+
+  // ── Close handler for above-save behavior ──
+  const closeBtn = modal.querySelector('[data-close="minutesPreviewModal"]');
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modal.hidden = true;
+    onMinutesPreviewClose();
+  }, true);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      // The generic handler will hide it, then we do our cleanup
+      requestAnimationFrame(() => onMinutesPreviewClose());
+    }
+  });
 
   // ── Regenerate button (popover) ──
   const regenBtn = $('#btnMinutesRegenerate');
@@ -1121,14 +1299,35 @@ function initMinutesPreview() {
       currentRegenPopover = null;
 
       saveMinutesVersion();
-      modal.hidden = true;
-      showToast(t('toast.minutes_generating_bg'), 'info');
+
+      // Show loading skeleton inline in viewer
+      content.innerHTML = `
+        <div class="minutes-preview-loading">
+          <div class="minutes-preview-progress">
+            <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
+            <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
+          </div>
+          <div class="minutes-skeleton-line heading"></div>
+          <div class="minutes-skeleton-line wide"></div>
+          <div class="minutes-skeleton-line medium"></div>
+          <div class="minutes-skeleton-line short"></div>
+          <div class="minutes-skeleton-line wide"></div>
+        </div>
+      `;
+      modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = true);
 
       try {
         await regenerateMinutes(model, '', state.minutesPromptConfig);
+        renderMinutesInViewer();
         showToast(t('toast.final_minutes_done'), 'success');
-        openMinutesPreview({ highlightBadge: true });
       } catch (err) {
+        content.innerHTML = `
+          <div style="padding:24px;text-align:center;color:var(--danger);">
+            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
+          </div>
+        `;
+        modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = false);
         showToast(t('toast.final_minutes_fail') + err.message, 'error');
       }
     });

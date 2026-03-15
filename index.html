@@ -547,6 +547,33 @@
     </div>
   </div>
 
+  <!-- Minutes Model Selection Modal -->
+  <div class="modal-overlay" id="minutesModelModal" hidden>
+    <div class="modal" style="max-width:360px;">
+      <div class="modal-header">
+        <h3 data-i18n="minutes_model.title">Select AI Model</h3>
+        <button class="btn btn-icon modal-close" data-close="minutesModelModal">&times;</button>
+      </div>
+      <div class="modal-body" style="padding:12px 16px;">
+        <button class="minutes-model-card" data-model="gemini-2.5-flash">
+          <span class="minutes-model-card-icon">&#x26A1;</span>
+          <div class="minutes-model-card-info">
+            <span class="minutes-model-card-name">Flash</span>
+            <span class="minutes-model-card-desc" data-i18n="end_meeting.flash_desc">Fast and lightweight</span>
+          </div>
+        </button>
+        <button class="minutes-model-card" data-model="gemini-2.5-pro">
+          <span class="minutes-model-card-icon">&#x2726;</span>
+          <div class="minutes-model-card-info">
+            <span class="minutes-model-card-name">Pro</span>
+            <span class="minutes-model-card-desc" data-i18n="end_meeting.pro_desc">Detailed and precise</span>
+          </div>
+          <span class="minutes-model-card-usage" id="modelModalProUsage" hidden></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- History Modal -->
   <div class="modal-overlay" id="historyModal" hidden>
     <div class="modal modal-large">
@@ -783,26 +810,7 @@
       <div class="end-meeting-footer" id="endMeetingFooter">
         <div class="end-meeting-footer-actions" id="endMeetingFooterActions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <div class="minutes-generate-wrapper" id="minutesGenerateWrapper">
-            <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
-            <div class="minutes-model-popup" id="minutesModelPopup" hidden>
-              <button class="minutes-model-option" data-model="gemini-2.5-flash">
-                <span class="minutes-model-icon">⚡</span>
-                <span class="minutes-model-info">
-                  <span class="minutes-model-name">Flash</span>
-                  <span class="minutes-model-desc" data-i18n="end_meeting.flash_desc">Fast and lightweight</span>
-                </span>
-              </button>
-              <button class="minutes-model-option" data-model="gemini-2.5-pro">
-                <span class="minutes-model-icon">✦</span>
-                <span class="minutes-model-info">
-                  <span class="minutes-model-name">Pro</span>
-                  <span class="minutes-model-desc" data-i18n="end_meeting.pro_desc">Detailed and precise</span>
-                </span>
-                <span class="minutes-model-usage" id="minutesProUsage" hidden></span>
-              </button>
-            </div>
-          </div>
+          <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
         </div>
       </div>

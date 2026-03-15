@@ -4311,9 +4311,114 @@ body.loaded-mode #btnNewMeeting { display: none; }
   }
 }
 
+/* ===== Minutes Model Selection Modal ===== */
+#minutesModelModal {
+  z-index: 210;
+}
+.minutes-model-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  text-align: left;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  margin-bottom: 8px;
+}
+.minutes-model-card:last-child { margin-bottom: 0; }
+.minutes-model-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.minutes-model-card-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  width: 32px;
+  text-align: center;
+}
+.minutes-model-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.minutes-model-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.minutes-model-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.minutes-model-card-usage {
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 /* ===== Minutes Preview Modal ===== */
 #minutesPreviewModal {
   z-index: 250;
+}
+#minutesPreviewModal.above-save {
+  z-index: 220;
+}
+
+/* Minutes preview loading skeleton */
+.minutes-preview-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+}
+.minutes-skeleton-line {
+  height: 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.minutes-skeleton-line.wide { width: 90%; }
+.minutes-skeleton-line.medium { width: 65%; }
+.minutes-skeleton-line.short { width: 40%; }
+.minutes-skeleton-line.heading {
+  height: 20px;
+  width: 50%;
+  margin-top: 8px;
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+.minutes-preview-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.minutes-preview-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.minutes-preview-progress-bar-inner {
+  height: 100%;
+  width: 30%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: progress-slide 1.5s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); width: 30%; }
+  50% { width: 60%; }
+  100% { transform: translateX(350%); width: 30%; }
 }
 .minutes-preview-body {
   display: flex;

@@ -753,69 +753,27 @@ function resetFooterToDefault() {
   cancelBtn.textContent = t('end_meeting.cancel');
   cancelBtn.onclick = () => cancelEndMeeting();
 
-  // Generate Minutes (with popup)
-  const wrapper = document.createElement('div');
-  wrapper.className = 'minutes-generate-wrapper';
-  wrapper.id = 'minutesGenerateWrapper';
-
+  // Generate Minutes button (opens model selection modal)
   const genBtn = document.createElement('button');
   genBtn.className = 'btn btn-accent';
   genBtn.id = 'btnGenerateMinutes';
   genBtn.textContent = t('end_meeting.generate_minutes');
-
-  const popup = document.createElement('div');
-  popup.className = 'minutes-model-popup';
-  popup.id = 'minutesModelPopup';
-  popup.hidden = true;
-  popup.innerHTML = `
-    <button class="minutes-model-option" data-model="gemini-2.5-flash">
-      <span class="minutes-model-icon">⚡</span>
-      <span class="minutes-model-info">
-        <span class="minutes-model-name">Flash</span>
-        <span class="minutes-model-desc">${t('end_meeting.flash_desc')}</span>
-      </span>
-    </button>
-    <button class="minutes-model-option" data-model="gemini-2.5-pro">
-      <span class="minutes-model-icon">✦</span>
-      <span class="minutes-model-info">
-        <span class="minutes-model-name">Pro</span>
-        <span class="minutes-model-desc">${t('end_meeting.pro_desc')}</span>
-      </span>
-      <span class="minutes-model-usage" id="minutesProUsage" hidden></span>
-    </button>
-  `;
-  wrapper.append(genBtn, popup);
-
-  // Show/hide popup on generate button click
-  let closePopupHandler = null;
-  genBtn.onclick = (e) => {
-    e.stopPropagation();
-    const opening = popup.hidden;
-    popup.hidden = !popup.hidden;
-    if (opening) {
-      closePopupHandler = (ev) => {
-        if (!wrapper.contains(ev.target)) {
-          popup.hidden = true;
-          document.removeEventListener('click', closePopupHandler);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closePopupHandler), 0);
+  genBtn.onclick = () => {
+    const modelModal = $('#minutesModelModal');
+    modelModal.hidden = false;
+    // Update Pro usage count
+    const proCount = getProUsageCount();
+    const proUsageEl = $('#modelModalProUsage');
+    if (proUsageEl && proCount > 0) {
+      proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
+      proUsageEl.hidden = false;
     }
   };
 
-  // Model selection
-  popup.querySelectorAll('.minutes-model-option').forEach(opt => {
-    opt.onclick = (e) => {
-      e.stopPropagation();
-      popup.hidden = true;
-      if (closePopupHandler) document.removeEventListener('click', closePopupHandler);
-      const model = opt.dataset.model;
-      if (model.includes('pro')) incrementProUsage();
-      state._selectedMinutesModel = model;
-      state.settings.geminiModel = model;
-      finalizeWithMinutes();
-    };
-  });
+  // Hide generate button if no proxy or no transcript
+  if (!isProxyAvailable() || state.transcript.length === 0) {
+    genBtn.hidden = true;
+  }
 
   // Save (metadata only, no minutes)
   const saveBtn = document.createElement('button');
@@ -824,20 +782,7 @@ function resetFooterToDefault() {
   saveBtn.textContent = t('end_meeting.save');
   saveBtn.onclick = () => finalizeEndMeeting();
 
-  // Hide generate button if no proxy or no transcript
-  if (!isProxyAvailable() || state.transcript.length === 0) {
-    wrapper.hidden = true;
-  }
-
-  // Pro usage count
-  const proCount = getProUsageCount();
-  const proUsageEl = popup.querySelector('#minutesProUsage');
-  if (proUsageEl && proCount > 0) {
-    proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
-    proUsageEl.hidden = false;
-  }
-
-  actions.append(cancelBtn, wrapper, saveBtn);
+  actions.append(cancelBtn, genBtn, saveBtn);
 
   // Re-enable form inputs
   const body = $('#endMeetingModal .modal-body');
@@ -1197,6 +1142,37 @@ function closeAndFinalizeMeeting() {
   showToast(t('toast.meeting_saved'), 'success');
 }
 
+export function showSaveFooterWithMinutesReady(onViewMinutes) {
+  const footer = $('#endMeetingFooter');
+  footer.classList.remove('save-progress-state', 'save-complete-state', 'save-error-state');
+
+  const actions = $('#endMeetingFooterActions');
+  actions.innerHTML = '';
+
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.remove('disabled-form');
+
+  // Cancel
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn';
+  cancelBtn.textContent = t('end_meeting.cancel');
+  cancelBtn.onclick = () => cancelEndMeeting();
+
+  // View Minutes
+  const viewBtn = document.createElement('button');
+  viewBtn.className = 'btn btn-accent';
+  viewBtn.textContent = t('end_meeting.view_minutes');
+  viewBtn.onclick = () => { if (onViewMinutes) onViewMinutes(); };
+
+  // Save
+  const saveBtn = document.createElement('button');
+  saveBtn.className = 'btn btn-primary';
+  saveBtn.textContent = t('end_meeting.save');
+  saveBtn.onclick = () => finalizeEndMeeting();
+
+  actions.append(cancelBtn, viewBtn, saveBtn);
+}
+
 function showSaveProgress() {
   const footer = $('#endMeetingFooter');
   footer.classList.add('save-progress-state');
@@ -1290,7 +1266,7 @@ function cleanupProgressHandlers() {
   }
 }
 
-async function generateFinalMeetingMinutes(template, promptConfig = {}) {
+export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
   showAnalysisSkeletons();
 
   const metadata = {
