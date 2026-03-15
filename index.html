@@ -440,12 +440,15 @@
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
           </div>
           <div class="modal-body">
-            <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
-            <div class="data-add-row" style="margin-top:8px;">
+            <div class="data-add-row" style="margin-bottom:8px;position:relative;">
               <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
-              <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
-              <button class="btn btn-sm" id="btnAddLocationGps" data-i18n-title="settings.location_add_gps" title="Add with current GPS" style="padding:4px 8px;">📍</button>
+              <button class="btn btn-sm" id="btnAddLocationToggle" data-i18n="settings.add">Add ▾</button>
+              <div class="location-add-dropdown" id="locationAddDropdown" hidden>
+                <button class="location-add-option" id="btnAddLocation">📝 <span data-i18n="settings.location_save_simple">Save</span></button>
+                <button class="location-add-option" id="btnAddLocationGps">📍 <span data-i18n="settings.location_save_gps">Save with GPS</span></button>
+              </div>
             </div>
+            <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
           </div>
         </div>
       </div>

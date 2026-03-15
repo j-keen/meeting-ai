@@ -676,36 +676,46 @@ function initDataTab() {
     e.target.value = '';
   });
 
-  // Add location
+  // Add location - toggle dropdown
+  const locDropdown = $('#locationAddDropdown');
+  $('#btnAddLocationToggle')?.addEventListener('click', () => {
+    const name = $('#inputNewLocation')?.value.trim();
+    if (!name) { emit('toast', { message: t('settings.location_name_required'), type: 'warning' }); return; }
+    locDropdown.hidden = !locDropdown.hidden;
+  });
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (locDropdown && !locDropdown.hidden && !e.target.closest('.data-add-row')) {
+      locDropdown.hidden = true;
+    }
+  });
+
+  // Simple add
   $('#btnAddLocation')?.addEventListener('click', () => {
     const name = $('#inputNewLocation')?.value.trim();
     if (!name) return;
     addLocation(name);
     $('#inputNewLocation').value = '';
+    locDropdown.hidden = true;
     renderDataLocations();
     updateDataBadges();
   });
 
-  // Add location with GPS
+  // Add with GPS
   $('#btnAddLocationGps')?.addEventListener('click', () => {
     const name = $('#inputNewLocation')?.value.trim();
-    if (!name) { emit('toast', { message: t('settings.location_name_required'), type: 'warning' }); return; }
-    const btn = $('#btnAddLocationGps');
-    btn.disabled = true;
-    btn.textContent = '⏳';
+    if (!name) return;
+    locDropdown.hidden = true;
+    emit('toast', { message: '📍 GPS...', type: 'info' });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
         $('#inputNewLocation').value = '';
         renderDataLocations();
         updateDataBadges();
-        btn.disabled = false;
-        btn.textContent = '📍';
         emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
       },
       () => {
-        btn.disabled = false;
-        btn.textContent = '📍';
         emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
       },
       { enableHighAccuracy: true, timeout: 10000 }

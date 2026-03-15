@@ -198,6 +198,8 @@ const translations = {
     'settings.location_gps_failed': 'Could not get GPS location',
     'settings.location_add_gps': 'Save current GPS location',
     'settings.location_update_gps': 'Update GPS coordinates',
+    'settings.location_save_simple': 'Save',
+    'settings.location_save_gps': 'Save with GPS',
     'settings.categories_hint': 'Tags used to classify meetings',
     'settings.correction_dict_section_hint': 'Auto-corrects speech recognition errors',
 
@@ -901,6 +903,8 @@ const translations = {
     'settings.location_gps_failed': 'GPS 위치를 가져올 수 없습니다',
     'settings.location_add_gps': '현재 GPS 위치 저장',
     'settings.location_update_gps': 'GPS 좌표 업데이트',
+    'settings.location_save_simple': '저장',
+    'settings.location_save_gps': 'GPS와 함께 저장',
     'settings.categories_hint': '회의 분류에 사용되는 태그',
     'settings.correction_dict_section_hint': '음성 인식 오류를 자동으로 고쳐주는 단어 목록',
 
@@ -1602,6 +1606,42 @@ Rules: Capture ALL ideas, even brief ones. Be specific. Cumulative.` },
 export function getPromptPresets() {
   const lang = getAiLanguage();
   return AI_PROMPT_PRESETS[lang] || AI_PROMPT_PRESETS.en;
+}
+
+// Meeting type → prompt preset auto-mapping
+const MEETING_TYPE_PROMPT_MAP = {
+  general: 'default',
+  weekly: 'actionItems',
+  brainstorm: 'brainstorm',
+  sales: 'decision',
+  '1on1': 'actionItems',
+  kickoff: 'default',
+};
+
+// Meeting type → category guidance auto-mapping
+const MEETING_TYPE_CATEGORY_MAP = {
+  general: null,
+  weekly: '정기회의',
+  brainstorm: '브레인스토밍',
+  sales: '고객미팅',
+  '1on1': '1:1',
+  kickoff: '프로젝트',
+};
+
+export function getMeetingTypePromptMap() {
+  return { ...MEETING_TYPE_PROMPT_MAP };
+}
+
+export function getMeetingTypeCategoryMap() {
+  return { ...MEETING_TYPE_CATEGORY_MAP };
+}
+
+/** Get the default prompt for a given meeting type */
+export function getTypeDefaultPrompt(meetingType) {
+  const presetKey = MEETING_TYPE_PROMPT_MAP[meetingType] || 'default';
+  const presets = getPromptPresets();
+  const preset = presets[presetKey];
+  return preset?.prompt || getAiPrompt();
 }
 
 const AI_PRESET_CONTEXTS = {
