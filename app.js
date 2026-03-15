@@ -125,10 +125,10 @@ function init() {
   });
 
   // Compare prompts modal
-  $('#btnComparePrompts').addEventListener('click', () => openCompareModal());
-  $('#btnRunCompare').addEventListener('click', () => runCompareAnalysis());
-  $('#btnSetDefaultA').addEventListener('click', () => applyComparePromptAsDefault($('#compareTextA').value));
-  $('#btnSetDefaultB').addEventListener('click', () => applyComparePromptAsDefault($('#compareTextB').value));
+  $('#btnComparePrompts')?.addEventListener('click', () => openCompareModal());
+  $('#btnRunCompare')?.addEventListener('click', () => runCompareAnalysis());
+  $('#btnSetDefaultA')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextA').value));
+  $('#btnSetDefaultB')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextB').value));
 
   // Demo data
   $('#btnLoadDemo').addEventListener('click', () => loadDemoData());
