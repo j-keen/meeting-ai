@@ -225,7 +225,7 @@ const translations = {
     'settings.location_include_gps': '📍 Include current location',
     'settings.location_gps_tip': 'GPS saves your current physical coordinates. Register each place while you\'re actually there — otherwise all locations will point to the same spot.',
     'settings.location_gps_tip_dismiss': 'Don\'t show again',
-    'settings.location_nearby_warn': '⚠️ "{names}" is already registered within {dist}m of this location.',
+    'settings.location_duplicate_coords': 'Already registered as "{name}" ({dist}m away)',
     'settings.location_no_gps_tip': '💡 Tip: Register GPS at each location by pressing 📌 while you\'re there — this enables automatic location detection.',
     'settings.location_open_map': 'Open in OpenStreetMap ↗',
     'settings.location_freq_suffix': 'x',
@@ -603,6 +603,8 @@ const translations = {
     'end_meeting.post_resume': 'Resume Meeting',
     'end_meeting.post_new': 'New Meeting',
     'end_meeting.post_close': 'Close',
+    'end_meeting.gps_timeout': 'GPS location timed out',
+    'end_meeting.gps_no_match': 'No matching location found nearby',
 
     // Minutes Generation Modal
     'minutes.select_quality': 'Select Minutes Quality',
@@ -982,7 +984,7 @@ const translations = {
     'settings.location_include_gps': '📍 현재 위치 포함',
     'settings.location_gps_tip': 'GPS는 현재 물리적 위치의 좌표를 저장합니다. 각 장소에 실제로 있을 때 등록하세요 — 그렇지 않으면 모든 장소가 같은 위치로 저장됩니다.',
     'settings.location_gps_tip_dismiss': '다시 보지 않기',
-    'settings.location_nearby_warn': '⚠️ "{names}"이(가) 이 위치에서 {dist}m 이내에 이미 등록되어 있습니다.',
+    'settings.location_duplicate_coords': '이미 "{name}"(으)로 등록된 좌표입니다 ({dist}m)',
     'settings.location_no_gps_tip': '💡 팁: 각 장소에서 📌 버튼을 눌러 GPS를 등록하면 자동 장소 감지가 가능해집니다.',
     'settings.location_open_map': 'OpenStreetMap에서 열기 ↗',
     'settings.location_freq_suffix': '회',
@@ -1360,6 +1362,8 @@ const translations = {
     'end_meeting.post_resume': '이어서 녹음',
     'end_meeting.post_new': '새 회의',
     'end_meeting.post_close': '닫기',
+    'end_meeting.gps_timeout': 'GPS 위치를 가져올 수 없습니다 (시간 초과)',
+    'end_meeting.gps_no_match': '근처에 일치하는 장소가 없습니다',
 
     // Minutes Generation Modal
     'minutes.select_quality': '회의록 품질 선택',

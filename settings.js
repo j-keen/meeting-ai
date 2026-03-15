@@ -776,9 +776,10 @@ function initDataTab() {
       // Check for nearby existing locations within 100m
       const nearby = findNearbyLocations(pos.coords.latitude, pos.coords.longitude, 0.1);
       if (nearby.length > 0) {
-        const names = nearby.map(n => n.location.name).join(', ');
-        const dist = Math.round(nearby[0].distance * 1000);
-        emit('toast', { message: t('settings.location_nearby_warn', { names, dist }), type: 'warning', duration: 5000 });
+        const closest = nearby[0];
+        const dist = Math.round(closest.distance * 1000);
+        emit('toast', { message: t('settings.location_duplicate_coords', { name: closest.location.name, dist }), type: 'error', duration: 5000 });
+        return;
       }
       addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
       emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
@@ -1532,6 +1533,16 @@ function createLocationItem(loc, freq, groups) {
     gpsBtn.textContent = '⏳';
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const nearby = findNearbyLocations(pos.coords.latitude, pos.coords.longitude, 0.1)
+          .filter(n => n.location.name !== loc.name);
+        if (nearby.length > 0) {
+          const closest = nearby[0];
+          const dist = Math.round(closest.distance * 1000);
+          emit('toast', { message: t('settings.location_duplicate_coords', { name: closest.location.name, dist }), type: 'error', duration: 5000 });
+          gpsBtn.disabled = false;
+          gpsBtn.textContent = hasGps ? '📍' : '📌';
+          return;
+        }
         addLocation({ name: loc.name, lat: pos.coords.latitude, lng: pos.coords.longitude });
         renderDataLocations();
         emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });

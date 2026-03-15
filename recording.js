@@ -722,20 +722,25 @@ function showEndMeetingModal() {
   });
 
   // GPS auto-match: detect current location and auto-fill if matching
-  if (!state.meetingLocation && locations.some(l => l.lat != null)) {
+  if (locations.some(l => l.lat != null)) {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const match = findNearestLocation(pos.coords.latitude, pos.coords.longitude);
         if (match && !locationInput.value) {
           locationInput.value = match.location.name;
+          state.meetingLocation = match.location.name;
           const distLabel = match.distance < 1
             ? `${Math.round(match.distance * 1000)}m`
             : `${match.distance.toFixed(1)}km`;
           showToast(`📍 ${match.location.name} (${distLabel})`, 'info');
+        } else if (!match) {
+          showToast(t('end_meeting.gps_no_match'), 'info');
         }
       },
-      () => {}, // silently fail
-      { enableHighAccuracy: true, timeout: 5000 }
+      () => {
+        showToast(t('end_meeting.gps_timeout'), 'info');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
   }
 
