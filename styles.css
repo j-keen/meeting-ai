@@ -331,7 +331,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
 
 /* ===== Meeting Title Input (Header) ===== */
 .meeting-title-input {
-  flex: 1;
   min-width: 0;
   max-width: 360px;
   padding: 3px 8px;
