@@ -5,6 +5,7 @@ import { t } from './i18n.js';
 import { saveSettings, loadMeetingPrepPresets, loadPreparedMeeting, deletePreparedMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { openMeetingPrepForm } from './meeting-prep.js';
+import { openPromptBuilder } from './prompt-builder.js';
 import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -34,6 +35,11 @@ export function showLauncherModal() {
     close();
     state.settings.meetingPreset = 'general';
     emit('recording:toggle');
+  };
+
+  $('#btnLauncherAiSetup').onclick = () => {
+    close();
+    openPromptBuilder();
   };
 
   $('#btnLauncherMeetingPrep').onclick = () => {
@@ -72,7 +78,7 @@ export function showLauncherModal() {
     const typeLabel = prepared.meetingType || 'general';
     const nParticipants = prepared.attendees?.length || 0;
     card.innerHTML = `
-      <span class="launcher-card-badge">4</span>
+      <span class="launcher-card-badge">5</span>
       <span class="launcher-card-icon">&#128204;</span>
       <span class="launcher-card-label">${t('prep.prepared_meeting')}</span>
       <span class="launcher-card-desc">${typeLabel}${nParticipants ? ' \u00b7 ' + t('prep.n_participants', { n: nParticipants }) : ''}</span>
@@ -87,14 +93,15 @@ export function showLauncherModal() {
 
   $('#launcherCloseBtn').onclick = close;
 
-  // Keyboard shortcuts: 1, 2, 3, 4, ESC
+  // Keyboard shortcuts: 1, 2, 3, 4, 5, ESC
   const keyHandler = (e) => {
     if (modal.hidden) return;
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
-    else if (e.key === '2') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
-    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
-    else if (e.key === '4') {
+    else if (e.key === '2') { e.preventDefault(); $('#btnLauncherAiSetup').click(); }
+    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
+    else if (e.key === '4') { e.preventDefault(); $('#btnLauncherPreset').click(); }
+    else if (e.key === '5') {
       e.preventDefault();
       const prepBtn = $('#btnLauncherPrepared');
       if (prepBtn) prepBtn.click();

@@ -32,6 +32,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initHintSystem } from './hint-system.js';
+import { initPromptBuilder } from './prompt-builder.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
@@ -59,6 +60,7 @@ function init() {
   initKeyboardShortcuts();
   initChat();
   initMeetingPrepForm();
+  initPromptBuilder();
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -149,6 +151,20 @@ function init() {
       const type = e.target.value;
       state.settings.meetingPreset = type;
       state.settings.customPrompt = getPromptForType(type);
+      // Apply extended custom type fields (from AI prompt builder)
+      if (type.startsWith('custom_')) {
+        const customTypes = loadCustomTypes();
+        const ct = customTypes.find(c => c.id === type);
+        if (ct) {
+          if (ct.chatSystemPrompt) state.settings.chatSystemPrompt = ct.chatSystemPrompt;
+          if (ct.chatPresets?.length) state.settings.chatPresets = ct.chatPresets;
+          if (ct.memoHint) {
+            const ph = $('#memoPlaceholder');
+            if (ph) ph.textContent = ct.memoHint;
+          }
+          if (ct.context) state.settings.meetingContext = ct.context;
+        }
+      }
       // If recording and has transcript, run analysis immediately
       if (state.transcript.length > 0) {
         runAnalysis();
@@ -625,6 +641,37 @@ function init() {
       state.analysisContext = parts.join('\n\n');
     }
 
+    // Start recording
+    await startRecording();
+  });
+
+  // Prompt Builder complete — apply 3-channel settings and start recording
+  on('promptBuilder:complete', async (config) => {
+    // 1. Analysis prompt
+    if (config.analysisPrompt) {
+      state.settings.customPrompt = config.analysisPrompt;
+      saveSettings({ customPrompt: config.analysisPrompt });
+    }
+    // 2. Chat system prompt override
+    if (config.chatSystemPrompt) {
+      state.settings.chatSystemPrompt = config.chatSystemPrompt;
+      saveSettings({ chatSystemPrompt: config.chatSystemPrompt });
+    }
+    // 3. Meeting context
+    if (config.context) {
+      state.settings.meetingContext = config.context;
+      saveSettings({ meetingContext: config.context });
+    }
+    // 4. Chat presets (suggested questions)
+    if (config.chatPresets?.length) {
+      state.settings.chatPresets = config.chatPresets;
+      saveSettings({ chatPresets: config.chatPresets });
+    }
+    // 5. Memo placeholder hint
+    if (config.memoHint) {
+      const ph = $('#memoPlaceholder');
+      if (ph) ph.textContent = config.memoHint;
+    }
     // Start recording
     await startRecording();
   });
