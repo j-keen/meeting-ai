@@ -1279,7 +1279,8 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     starRating: state.starRating,
   };
 
-  // Streaming preview for final minutes
+  // Streaming preview for final minutes — render into minutes preview modal
+  const previewContent = document.querySelector('#minutesPreviewContent');
   const aiContainer = document.querySelector('#aiSections');
   let streamPreviewEl = null;
   let _renderMd = null;
@@ -1299,22 +1300,23 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     userInstruction: promptConfig.userInstruction || '',
     metadata,
     onStream: (textSoFar) => {
-      if (!aiContainer) return;
+      const target = previewContent || aiContainer;
+      if (!target) return;
       if (!streamPreviewEl) {
-        aiContainer.innerHTML = '';
-        aiContainer.classList.remove('ai-updating');
+        target.innerHTML = '';
+        target.classList.remove('ai-updating');
         streamPreviewEl = document.createElement('div');
         streamPreviewEl.className = 'ai-markdown-content ai-streaming';
-        aiContainer.appendChild(streamPreviewEl);
+        target.appendChild(streamPreviewEl);
       }
       if (_renderMd) {
         streamPreviewEl.innerHTML = _renderMd(textSoFar);
-        aiContainer.scrollTop = aiContainer.scrollHeight;
+        target.scrollTop = target.scrollHeight;
       } else {
         import('./chat.js').then(({ renderMarkdown }) => {
           _renderMd = renderMarkdown;
           streamPreviewEl.innerHTML = renderMarkdown(textSoFar);
-          aiContainer.scrollTop = aiContainer.scrollHeight;
+          target.scrollTop = target.scrollHeight;
         });
       }
     },
