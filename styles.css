@@ -318,8 +318,15 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
 }
-.panel-header h2 { font-size: 14px; font-weight: 600; }
-.panel-actions { display: flex; gap: 6px; }
+.panel-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.panel-header h2, .panel-header-left h2 { font-size: 14px; font-weight: 600; white-space: nowrap; }
+.panel-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 @keyframes pulse-text {
   0%, 100% { opacity: 1; }
@@ -663,13 +670,14 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-top: 1px solid var(--border-light);
   background: var(--bg-primary);
   flex-shrink: 0;
+  align-items: flex-end;
 }
 .memo-input-wrapper {
   position: relative;
   flex: 1;
 }
 .memo-placeholder {
-  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  position: absolute; left: 10px; top: 8px;
   z-index: 1;
   color: var(--text-secondary); opacity: 0.6; pointer-events: none;
   font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -689,7 +697,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 340px;
+  max-width: 100%;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .panel-hint-text.fade-out {
@@ -732,8 +740,12 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-family: var(--font-sans);
   font-size: 13px;
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), height 0.1s ease;
   position: relative;
+  resize: none;
+  overflow-y: hidden;
+  min-height: 30px;
+  line-height: 1.4;
   z-index: 0;
 }
 .transcript-memo-input .memo-input:focus { border-color: var(--accent); }
@@ -5497,7 +5509,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .pb-preview {
   flex: 1;
   overflow-y: auto;
-  max-height: 55vh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;

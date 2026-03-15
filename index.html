@@ -52,7 +52,7 @@
     <!-- Left Panel: Transcript -->
     <section class="panel panel-left panel-active" id="panelLeft">
       <div class="panel-header">
-        <div style="display:flex;align-items:center;gap:8px">
+        <div class="panel-header-left">
           <h2 data-i18n="panel.transcript">Transcript</h2>
           <div class="panel-hint-container" id="transcriptHintContainer">
             <span class="panel-hint-text"></span>
@@ -93,7 +93,7 @@
       </div>
       <div class="transcript-memo-input" id="transcriptMemoInput">
         <div class="memo-input-wrapper">
-          <input type="text" class="memo-input" id="memoInput" aria-label="Add memo">
+          <textarea class="memo-input" id="memoInput" rows="1" aria-label="Add memo"></textarea>
           <span class="memo-placeholder" id="memoPlaceholder" aria-hidden="true"></span>
         </div>
         <button class="btn btn-sm" id="btnAddMemo" data-i18n="memo.add">Add</button>
@@ -106,7 +106,7 @@
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
       <div class="panel-header">
-        <div style="display:flex;align-items:center;gap:8px">
+        <div class="panel-header-left">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-hint-container" id="analysisHintContainer">
             <span class="panel-hint-text"></span>
