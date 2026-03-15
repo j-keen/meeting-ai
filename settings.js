@@ -445,6 +445,7 @@ function renderChatPresets() {
 // ===== Data Tab (Participants, Locations, Categories) =====
 let settingsCameraStream = null;
 let contactSearchQuery = '';
+let contactSearchField = 'all'; // 'all' | 'name' | 'title' | 'company'
 let starFilterActive = false;
 
 function switchContactsTab(tab) {
@@ -453,10 +454,10 @@ function switchContactsTab(tab) {
   });
   $('#contactsTabAdd').hidden = tab !== 'add';
   $('#contactsTabSearch').hidden = tab !== 'search';
+  renderDataParticipants();
   if (tab === 'add') {
     setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
   } else {
-    renderDataParticipants();
     setTimeout(() => $('#inputContactSearch')?.focus(), 50);
   }
 }
@@ -468,11 +469,17 @@ function initDataTab() {
   $('#btnOpenContacts')?.addEventListener('click', () => {
     $('#contactsModal').hidden = false;
     contactSearchQuery = '';
+    contactSearchField = 'all';
     starFilterActive = false;
     const searchInput = $('#inputContactSearch');
     if (searchInput) searchInput.value = '';
     const starBtn = $('#btnStarFilter');
     if (starBtn) starBtn.classList.remove('active');
+    // Reset search filter UI
+    document.querySelectorAll('.search-filter-option').forEach(b => b.classList.remove('active'));
+    document.querySelector('.search-filter-option[data-filter="all"]')?.classList.add('active');
+    const filterLabel = $('#searchFilterLabel');
+    if (filterLabel) filterLabel.textContent = t('settings.search_filter_all');
     switchContactsTab('add');
   });
   $('#btnCloseContacts')?.addEventListener('click', closeContactsModal);
@@ -496,6 +503,28 @@ function initDataTab() {
   $('#inputContactSearch')?.addEventListener('input', (e) => {
     contactSearchQuery = e.target.value.trim().toLowerCase();
     renderDataParticipants();
+  });
+
+  // Search filter dropdown
+  $('#btnSearchFilter')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dd = $('#searchFilterDropdown');
+    dd.hidden = !dd.hidden;
+  });
+  document.querySelectorAll('.search-filter-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      contactSearchField = btn.dataset.filter;
+      document.querySelectorAll('.search-filter-option').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('#searchFilterLabel').textContent = btn.textContent;
+      $('#searchFilterDropdown').hidden = true;
+      renderDataParticipants();
+      $('#inputContactSearch')?.focus();
+    });
+  });
+  document.addEventListener('click', () => {
+    const dd = $('#searchFilterDropdown');
+    if (dd) dd.hidden = true;
   });
 
   // --- Locations Modal ---
@@ -623,50 +652,44 @@ function initDataTab() {
     e.target.value = '';
   });
 
-  // Add location - toggle dropdown
-  const locDropdown = $('#locationAddDropdown');
-  $('#btnAddLocationToggle')?.addEventListener('click', () => {
-    const name = $('#inputNewLocation')?.value.trim();
+  // Add location (shared logic)
+  function handleAddLocation() {
+    const input = $('#inputNewLocation');
+    const name = input?.value.trim();
     if (!name) { emit('toast', { message: t('settings.location_name_required'), type: 'warning' }); return; }
-    locDropdown.hidden = !locDropdown.hidden;
-  });
-  // Close dropdown on outside click
-  document.addEventListener('click', (e) => {
-    if (locDropdown && !locDropdown.hidden && !e.target.closest('.data-add-row')) {
-      locDropdown.hidden = true;
+    const withGps = $('#chkLocationGps')?.checked;
+    if (withGps) {
+      const btn = $('#btnAddLocation');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
+          input.value = '';
+          renderDataLocations();
+          updateDataBadges();
+          emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
+          if (btn) { btn.disabled = false; btn.textContent = t('settings.add'); }
+        },
+        () => {
+          emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
+          if (btn) { btn.disabled = false; btn.textContent = t('settings.add'); }
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      addLocation(name);
+      input.value = '';
+      renderDataLocations();
+      updateDataBadges();
     }
-  });
+  }
 
-  // Simple add
-  $('#btnAddLocation')?.addEventListener('click', () => {
-    const name = $('#inputNewLocation')?.value.trim();
-    if (!name) return;
-    addLocation(name);
-    $('#inputNewLocation').value = '';
-    locDropdown.hidden = true;
-    renderDataLocations();
-    updateDataBadges();
-  });
+  // Add button click
+  $('#btnAddLocation')?.addEventListener('click', handleAddLocation);
 
-  // Add with GPS
-  $('#btnAddLocationGps')?.addEventListener('click', () => {
-    const name = $('#inputNewLocation')?.value.trim();
-    if (!name) return;
-    locDropdown.hidden = true;
-    emit('toast', { message: '📍 GPS...', type: 'info' });
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
-        $('#inputNewLocation').value = '';
-        renderDataLocations();
-        updateDataBadges();
-        emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
-      },
-      () => {
-        emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  // Enter key on input
+  $('#inputNewLocation')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleAddLocation(); }
   });
 
   // Add category
@@ -1111,11 +1134,16 @@ function renderDataParticipants() {
   }
   // Filter by search
   if (contactSearchQuery) {
-    contacts = contacts.filter(c =>
-      c.name.toLowerCase().includes(contactSearchQuery) ||
-      (c.title || '').toLowerCase().includes(contactSearchQuery) ||
-      (c.company || '').toLowerCase().includes(contactSearchQuery)
-    );
+    contacts = contacts.filter(c => {
+      const q = contactSearchQuery;
+      if (contactSearchField === 'name') return c.name.toLowerCase().includes(q);
+      if (contactSearchField === 'title') return (c.title || '').toLowerCase().includes(q);
+      if (contactSearchField === 'company') return (c.company || '').toLowerCase().includes(q);
+      // 'all'
+      return c.name.toLowerCase().includes(q) ||
+        (c.title || '').toLowerCase().includes(q) ||
+        (c.company || '').toLowerCase().includes(q);
+    });
   }
 
   if (contacts.length === 0) {

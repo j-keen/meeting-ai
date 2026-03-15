@@ -374,16 +374,28 @@
             <!-- Search Tab -->
             <div class="contacts-tab-content" id="contactsTabSearch" hidden>
               <div class="contacts-search-row">
-                <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
+                <div class="contacts-search-input-wrap">
+                  <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
+                  <button class="btn-search-filter" id="btnSearchFilter" title="Filter field">
+                    <span id="searchFilterLabel" data-i18n="settings.search_filter_all">All</span> &#9662;
+                  </button>
+                  <div class="search-filter-dropdown" id="searchFilterDropdown" hidden>
+                    <button class="search-filter-option active" data-filter="all" data-i18n="settings.search_filter_all">All</button>
+                    <button class="search-filter-option" data-filter="name" data-i18n="settings.placeholder_name">Name</button>
+                    <button class="search-filter-option" data-filter="title" data-i18n="settings.placeholder_title">Title</button>
+                    <button class="search-filter-option" data-filter="company" data-i18n="settings.placeholder_company">Company</button>
+                  </div>
+                </div>
                 <button class="btn btn-sm btn-star-filter" id="btnStarFilter" title="Show starred only">&#9734;</button>
               </div>
-              <div class="data-list" id="dataParticipantsList" style="max-height:280px;overflow-y:auto;"></div>
-              <div class="contacts-io-row">
-                <button class="btn btn-xs" id="btnExportCsv" title="Export CSV">&#128228; CSV</button>
-                <button class="btn btn-xs" id="btnExportVcf" title="Export vCard">&#128228; vCard</button>
-                <button class="btn btn-xs" id="btnImportContacts" title="Import">&#128229; <span data-i18n="settings.contacts_import">Import</span></button>
-                <input type="file" id="contactsImportFile" accept=".csv,.vcf" hidden>
-              </div>
+            </div>
+            <!-- Contact List (always visible) -->
+            <div class="data-list" id="dataParticipantsList"></div>
+            <div class="contacts-io-row">
+              <button class="btn btn-xs" id="btnExportCsv" title="Export CSV">&#128228; CSV</button>
+              <button class="btn btn-xs" id="btnExportVcf" title="Export vCard">&#128228; vCard</button>
+              <button class="btn btn-xs" id="btnImportContacts" title="Import">&#128229; <span data-i18n="settings.contacts_import">Import</span></button>
+              <input type="file" id="contactsImportFile" accept=".csv,.vcf" hidden>
             </div>
           </div>
         </div>
@@ -435,14 +447,14 @@
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
           </div>
           <div class="modal-body">
-            <div class="data-add-row" style="margin-bottom:8px;position:relative;">
+            <div class="data-add-row" style="margin-bottom:8px;">
               <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
-              <button class="btn btn-sm" id="btnAddLocationToggle" data-i18n="settings.add">Add ▾</button>
-              <div class="location-add-dropdown" id="locationAddDropdown" hidden>
-                <button class="location-add-option" id="btnAddLocation">📝 <span data-i18n="settings.location_save_simple">Save</span></button>
-                <button class="location-add-option" id="btnAddLocationGps">📍 <span data-i18n="settings.location_save_gps">Save with GPS</span></button>
-              </div>
+              <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
             </div>
+            <label class="location-gps-check" style="margin-bottom:8px;">
+              <input type="checkbox" id="chkLocationGps">
+              <span data-i18n="settings.location_include_gps">📍 Include current location</span>
+            </label>
             <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
           </div>
         </div>

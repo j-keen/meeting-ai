@@ -3244,23 +3244,33 @@ body.loaded-mode #btnNewMeeting { display: none; }
 /* ===== Settings Data Tab ===== */
 .data-list {
   margin-bottom: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
 }
 .data-list-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
+  gap: 6px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--border-light);
   font-size: 13px;
 }
 .data-list-item-info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 .data-list-item-sub {
   font-size: 11px;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .data-add-row {
   display: flex;
@@ -3273,33 +3283,18 @@ body.loaded-mode #btnNewMeeting { display: none; }
   padding: 5px 8px;
 }
 
-/* Location add dropdown */
-.location-add-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 4px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 10;
-  overflow: hidden;
-  min-width: 160px;
-}
-.location-add-option {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  background: none;
+/* Location GPS checkbox */
+.location-gps-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
   cursor: pointer;
-  font-size: 13px;
-  text-align: left;
-  color: var(--text-primary);
+  user-select: none;
 }
-.location-add-option:hover {
-  background: var(--bg-secondary);
+.location-gps-check input[type="checkbox"] {
+  margin: 0;
 }
 
 /* ===== Data Modal Buttons & Badges ===== */
@@ -3431,6 +3426,69 @@ body.loaded-mode #btnNewMeeting { display: none; }
   gap: 6px;
   align-items: center;
   margin-bottom: 4px;
+}
+.contacts-search-input-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.contacts-search-input-wrap .data-modal-search {
+  flex: 1;
+  margin-bottom: 0;
+  padding-right: 52px;
+}
+.btn-search-filter {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.4;
+  transition: background 0.15s, color 0.15s;
+}
+.btn-search-filter:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.search-filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10;
+  overflow: hidden;
+  min-width: 90px;
+}
+.search-filter-option {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-primary);
+  transition: background 0.1s;
+}
+.search-filter-option:hover {
+  background: var(--bg-secondary);
+}
+.search-filter-option.active {
+  color: var(--accent);
+  font-weight: 600;
 }
 .contacts-search-row .data-modal-search {
   flex: 1;
