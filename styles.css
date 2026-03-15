@@ -3436,6 +3436,101 @@ body.loaded-mode #btnNewMeeting { display: none; }
   white-space: nowrap;
 }
 
+/* Location frequency badge */
+.location-freq-badge {
+  font-size: 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  padding: 1px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Location group tabs */
+.location-group-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.location-group-tab {
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.location-group-tab:hover {
+  background: var(--bg-tertiary, var(--bg-secondary));
+}
+.location-group-tab.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+/* Location group header separator */
+.location-group-header {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+/* Location group select inside items */
+.location-group-select {
+  font-size: 11px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  max-width: 90px;
+}
+
+/* Location map popup — parent needs relative positioning */
+#locationsModal .modal-body { position: relative; }
+.location-map-popup {
+  position: absolute;
+  z-index: 100;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  padding: 8px;
+  width: 266px;
+}
+.location-map-popup img {
+  width: 250px;
+  height: 180px;
+  border-radius: 6px;
+  object-fit: cover;
+  display: block;
+}
+.location-map-popup-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.location-map-popup-footer a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.location-map-popup-footer a:hover {
+  text-decoration: underline;
+}
+
 /* ===== Data Modal Buttons & Badges ===== */
 .btn-data-modal-open {
   width: 100%;

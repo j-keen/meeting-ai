@@ -186,6 +186,59 @@ export function deleteLocation(name) {
   return data.locations;
 }
 
+export function updateLocation(name, updates) {
+  const data = loadAll();
+  data.locations = migrateLocations(data.locations);
+  const loc = data.locations.find(l => l.name === name);
+  if (!loc) return null;
+  Object.assign(loc, updates);
+  saveAll(data);
+  return loc;
+}
+
+export function getLocationFrequency() {
+  const meetings = listMeetings();
+  const freq = {};
+  for (const m of meetings) {
+    if (m.location) {
+      freq[m.location] = (freq[m.location] || 0) + 1;
+    }
+  }
+  return freq;
+}
+
+// Location Groups CRUD
+export function loadLocationGroups() {
+  const data = loadAll();
+  return data.locationGroups || [];
+}
+
+export function addLocationGroup(name) {
+  const data = loadAll();
+  if (!data.locationGroups) data.locationGroups = [];
+  const group = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+    name,
+    createdAt: Date.now(),
+  };
+  data.locationGroups.push(group);
+  saveAll(data);
+  return group;
+}
+
+export function deleteLocationGroup(id) {
+  const data = loadAll();
+  if (!data.locationGroups) return { success: false };
+  // Remove group assignment from locations
+  data.locations = migrateLocations(data.locations);
+  for (const loc of data.locations) {
+    if (loc.group === id) delete loc.group;
+  }
+  data.locationGroups = data.locationGroups.filter(g => g.id !== id);
+  saveAll(data);
+  return { success: true };
+}
+
 // Find nearest saved location by GPS coordinates (returns { location, distance } or null)
 export function findNearestLocation(lat, lng, maxDistanceKm = 1) {
   const locations = loadLocations().filter(l => l.lat != null && l.lng != null);

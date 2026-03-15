@@ -7,6 +7,7 @@ import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, loadSettings, saveSettings,
   loadContacts, addContact, loadLocations, addLocation, findNearestLocation,
+  getLocationFrequency,
   loadCorrectionDict, addCorrectionEntry,
   getProUsageCount, incrementProUsage,
 } from './storage.js';
@@ -708,7 +709,13 @@ function showEndMeetingModal() {
   const datalist = $('#locationDatalist');
   datalist.innerHTML = '';
   const locations = loadLocations();
-  locations.forEach(loc => {
+  const locFreq = getLocationFrequency();
+  const sortedLocs = [...locations].sort((a, b) => {
+    const fa = locFreq[a.name] || 0, fb = locFreq[b.name] || 0;
+    if (fb !== fa) return fb - fa;
+    return a.name.localeCompare(b.name);
+  });
+  sortedLocs.forEach(loc => {
     const opt = document.createElement('option');
     opt.value = loc.name;
     datalist.appendChild(opt);
@@ -1141,6 +1148,150 @@ async function finalizeWithMinutes() {
   });
 }
 
+function showPostSaveScreen() {
+  const modal = $('#endMeetingModal .modal');
+  if (!modal) return;
+
+  // Build summary text
+  const lines = state.transcript.length;
+  const memos = state.memos.length;
+  const analyses = state.analysisHistory.length;
+  const summaryParts = [];
+  if (lines > 0) summaryParts.push(`${lines} ${t('end_meeting.stat_transcript')}`);
+  if (memos > 0) summaryParts.push(`${memos} ${t('end_meeting.stat_memos')}`);
+  if (analyses > 0) summaryParts.push(`${analyses} ${t('end_meeting.stat_analyses')}`);
+  const summaryText = summaryParts.join(' · ');
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'post-save-overlay';
+  overlay.innerHTML = `
+    <div class="post-save-success">
+      <span class="post-save-check">✓</span>
+      <span class="post-save-title">${t('end_meeting.save_complete')}</span>
+      ${summaryText ? `<span class="post-save-summary">${summaryText}</span>` : ''}
+    </div>
+    <div class="post-save-actions">
+      ${analyses > 0 ? `<button class="post-save-action-btn" data-action="view-minutes">
+        <span class="action-icon">📋</span>
+        <span class="action-label">${t('end_meeting.post_view_minutes')}</span>
+      </button>` : ''}
+      <button class="post-save-action-btn" data-action="export">
+        <span class="action-icon">📤</span>
+        <span class="action-label">${t('end_meeting.post_export')}</span>
+      </button>
+      <button class="post-save-action-btn" data-action="edit">
+        <span class="action-icon">✏️</span>
+        <span class="action-label">${t('end_meeting.post_edit')}</span>
+      </button>
+    </div>
+    <div class="post-save-bottom">
+      <button class="btn" data-action="resume">${t('end_meeting.post_resume')}</button>
+      <button class="btn btn-primary" data-action="new">${t('end_meeting.post_new')}</button>
+      <button class="btn" data-action="close">${t('end_meeting.post_close')}</button>
+    </div>
+  `;
+
+  modal.style.position = 'relative';
+  modal.appendChild(overlay);
+
+  // Event delegation
+  overlay.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+
+    const removeOverlay = () => {
+      overlay.remove();
+      modal.style.position = '';
+    };
+
+    switch (action) {
+      case 'view-minutes':
+        removeOverlay();
+        closeAndFinalizeMeeting();
+        const aiPanel = document.querySelector('#aiSections');
+        if (aiPanel) aiPanel.scrollIntoView({ behavior: 'smooth' });
+        break;
+      case 'export':
+        removeOverlay();
+        closeAndFinalizeMeeting();
+        $('#exportModal').hidden = false;
+        break;
+      case 'edit':
+        removeOverlay();
+        // Re-enable the form — user stays in save modal to edit
+        state.meetingEnded = false;
+        const footer = $('#endMeetingFooter');
+        footer.classList.remove('save-progress-state', 'save-complete-state', 'save-error-state');
+        const footerActions = $('#endMeetingFooterActions');
+        footerActions.innerHTML = '';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn';
+        cancelBtn.textContent = t('end_meeting.cancel');
+        cancelBtn.onclick = () => cancelEndMeeting();
+        const genBtn = document.createElement('button');
+        genBtn.className = 'btn btn-accent';
+        genBtn.textContent = t('end_meeting.generate_minutes');
+        genBtn.id = 'btnGenerateMinutes';
+        genBtn.onclick = () => {
+          const modelModal = $('#minutesModelModal');
+          modelModal.hidden = false;
+          const proCount = getProUsageCount();
+          const proUsageEl = $('#modelModalProUsage');
+          if (proUsageEl && proCount > 0) {
+            proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
+            proUsageEl.hidden = false;
+          }
+        };
+        if (!isProxyAvailable() || state.transcript.length === 0) genBtn.hidden = true;
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'btn btn-primary';
+        saveBtn.textContent = t('end_meeting.save');
+        saveBtn.onclick = () => finalizeEndMeeting();
+        footerActions.append(cancelBtn, genBtn, saveBtn);
+        break;
+      case 'resume':
+        removeOverlay();
+        $('#endMeetingModal').hidden = true;
+        resumeMeeting();
+        break;
+      case 'new':
+        removeOverlay();
+        $('#endMeetingModal').hidden = true;
+        resetMeeting();
+        restoreEndButton(false);
+        break;
+      case 'close':
+        removeOverlay();
+        closeAndFinalizeMeeting();
+        break;
+    }
+  });
+
+  // X button closes to post-end state
+  const closeBtn = $('#endMeetingModal .modal-close');
+  const origClose = closeBtn.onclick;
+  closeBtn.onclick = (e) => {
+    e.stopPropagation();
+    overlay.remove();
+    modal.style.position = '';
+    closeAndFinalizeMeeting();
+  };
+}
+
+function updatePostEndUI() {
+  const recBtn = $('#btnRecord');
+  recBtn.classList.remove('recording', 'paused');
+  recBtn.querySelector('.record-label').textContent = t('record.label');
+  $('#meetingStatus').textContent = t('record.status_ended');
+  const pill = $('#meetingPill');
+  pill.classList.remove('recording');
+  pill.classList.add('paused');
+  const titleInput = $('#meetingTitleInput');
+  if (titleInput) titleInput.hidden = true;
+}
+
 function closeAndFinalizeMeeting() {
   $('#endMeetingModal').hidden = true;
 
@@ -1236,24 +1387,12 @@ function showSaveComplete() {
   // Remove progress overlay click handler
   cleanupProgressHandlers();
 
-  const actions = $('#endMeetingFooterActions');
-  actions.innerHTML = `
-    <div class="save-complete-content">
-      <span class="save-complete-icon">✓</span>
-      <span>${t('end_meeting.minutes_complete')}</span>
-    </div>
-    <div class="save-complete-actions">
-      <button class="btn" id="btnSaveCompleteClose">${t('end_meeting.close')}</button>
-      <button class="btn btn-primary" id="btnViewMinutes">${t('end_meeting.view_minutes')}</button>
-    </div>
-  `;
+  // Re-enable form
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.remove('disabled-form');
 
-  actions.querySelector('#btnSaveCompleteClose').onclick = () => closeAndFinalizeMeeting();
-  actions.querySelector('#btnViewMinutes').onclick = () => {
-    closeAndFinalizeMeeting();
-    const aiPanel = document.querySelector('#aiSections');
-    if (aiPanel) aiPanel.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Show the rich post-save screen
+  showPostSaveScreen();
 }
 
 function showSaveError(errorMsg) {
