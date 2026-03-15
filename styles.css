@@ -5047,46 +5047,13 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--accent);
 }
 
-/* Model pill toggle */
-/* Regen popover */
-.regen-popover {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 20;
-  margin-top: 4px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 8px;
-  min-width: 160px;
+/* Regen modal — reuses minutes-model-card styles, sits above minutes preview */
+#regenModal {
+  z-index: 210;
 }
-.regen-popover-models {
-  display: flex;
-  gap: 4px;
-}
-.regen-model-btn {
-  flex: 1;
-  font-size: 13px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.regen-model-btn.active {
-  background: var(--accent);
-  color: #fff;
+#regenModal .minutes-model-card.active {
   border-color: var(--accent);
-}
-.regen-model-btn:hover:not(.active) {
-  background: var(--bg-tertiary, var(--border-light));
-}
-.regen-confirm-btn {
-  width: 100%;
+  background: var(--accent-bg, rgba(59,130,246,0.08));
 }
 
 /* Export popover */

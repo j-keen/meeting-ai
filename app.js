@@ -1355,41 +1355,34 @@ function initMinutesPreview() {
     }
   });
 
-  // ── Regenerate button (popover) ──
+  // ── Regenerate button (opens modal) ──
   const regenBtn = $('#btnMinutesRegenerate');
-  let currentRegenPopover = null;
-  regenBtn.addEventListener('click', () => {
-    if (currentRegenPopover) { currentRegenPopover.remove(); currentRegenPopover = null; return; }
+  const regenModal = $('#regenModal');
 
+  regenBtn.addEventListener('click', () => {
     // Close export popover if open
     const existingExport = modal.querySelector('.export-popover');
     if (existingExport) { existingExport.remove(); }
 
-    const tmpl = document.getElementById('tmplRegenPopover');
-    const popover = tmpl.content.cloneNode(true).firstElementChild;
-
     // Apply i18n
-    popover.querySelectorAll('[data-i18n]').forEach(el => {
+    regenModal.querySelectorAll('[data-i18n]').forEach(el => {
       el.textContent = t(el.getAttribute('data-i18n'));
     });
 
     // Pre-select current model
     const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
-    popover.querySelectorAll('.regen-model-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.regenModel === currentModel);
-      btn.addEventListener('click', () => {
-        popover.querySelectorAll('.regen-model-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      });
+    regenModal.querySelectorAll('.regen-model-card').forEach(card => {
+      card.classList.toggle('active', card.dataset.regenModel === currentModel);
     });
 
-    // Confirm button
-    popover.querySelector('.regen-confirm-btn').addEventListener('click', async () => {
-      const activeBtn = popover.querySelector('.regen-model-btn.active');
-      const model = activeBtn?.dataset.regenModel || 'gemini-2.5-flash';
+    regenModal.hidden = false;
+  });
 
-      popover.remove();
-      currentRegenPopover = null;
+  // Model card click → execute regeneration
+  regenModal.querySelectorAll('.regen-model-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      const model = card.dataset.regenModel || 'gemini-2.5-flash';
+      regenModal.hidden = true;
 
       saveMinutesVersion();
 
@@ -1424,19 +1417,14 @@ function initMinutesPreview() {
         showToast(t('toast.final_minutes_fail') + err.message, 'error');
       }
     });
+  });
 
-    regenBtn.parentElement.style.position = 'relative';
-    regenBtn.parentElement.appendChild(popover);
-    currentRegenPopover = popover;
-
-    const closeRegen = (ev) => {
-      if (!popover.contains(ev.target) && ev.target !== regenBtn) {
-        popover.remove();
-        currentRegenPopover = null;
-        document.removeEventListener('click', closeRegen);
-      }
-    };
-    setTimeout(() => document.addEventListener('click', closeRegen), 0);
+  // Close regen modal on overlay click or close button
+  regenModal.addEventListener('click', (e) => {
+    if (e.target === regenModal) regenModal.hidden = true;
+  });
+  regenModal.querySelector('[data-close="regenModal"]').addEventListener('click', () => {
+    regenModal.hidden = true;
   });
 
   // ── Export button ──
@@ -1445,8 +1433,8 @@ function initMinutesPreview() {
   exportBtn.addEventListener('click', () => {
     if (currentExportPopover) { currentExportPopover.remove(); currentExportPopover = null; return; }
 
-    // Close regen popover if open
-    if (currentRegenPopover) { currentRegenPopover.remove(); currentRegenPopover = null; }
+    // Close regen modal if open
+    regenModal.hidden = true;
 
     const tmpl = document.getElementById('tmplExportPopover');
     const popover = tmpl.content.cloneNode(true).firstElementChild;
