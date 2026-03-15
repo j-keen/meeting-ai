@@ -103,20 +103,33 @@ export async function exportPDF(markdown, filename) {
 
   const { jsPDF } = window.jspdf;
 
+  // Extract document title from first heading for page header
+  const titleMatch = markdown.match(/^#\s+(.+)$/m);
+  const docTitle = titleMatch ? titleMatch[1].replace(/\*\*/g, '') : '';
+
   // Create off-screen container styled for A4-like rendering
   const container = document.createElement('div');
   container.style.cssText = [
     'position:absolute', 'left:-9999px', 'top:0',
-    'width:660px', 'padding:0', 'background:#fff', 'color:#222',
+    'width:660px', 'padding:20px 0', 'background:#fff', 'color:#222',
     'font-family:"Malgun Gothic","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif',
-    'font-size:14px', 'line-height:1.8', 'padding:20px 0',
+    'font-size:14px', 'line-height:1.8',
   ].join(';');
   container.innerHTML = markdownToHTML(markdown);
   document.body.appendChild(container);
 
   try {
+    // Collect element boundaries for smart page breaking (before canvas render)
+    const childEls = Array.from(container.children);
+    const canvasScale = 2;
+    const elements = childEls.map(el => ({
+      top: el.offsetTop,
+      bottom: el.offsetTop + el.offsetHeight,
+      isSectionHeading: el.style.fontSize === '20px',
+    }));
+
     const canvas = await window.html2canvas(container, {
-      scale: 2,
+      scale: canvasScale,
       useCORS: true,
       backgroundColor: '#ffffff',
     });
@@ -125,33 +138,80 @@ export async function exportPDF(markdown, filename) {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 15;
+    const headerH = docTitle ? 8 : 0;
+    const footerH = 8;
     const usableW = pageW - margin * 2;
-    const usableH = pageH - margin * 2;
+    const usableH = pageH - margin * 2 - headerH - footerH;
 
-    // How many canvas pixels fit per PDF page
+    // mm per canvas pixel
     const imgScale = usableW / canvas.width;
-    const pxPerPage = Math.floor(usableH / imgScale);
+    // max CSS pixels of content per page
+    const maxCssPxPerPage = usableH / imgScale / canvasScale;
 
-    const totalPages = Math.ceil(canvas.height / pxPerPage);
+    // Build pages by grouping elements at natural boundaries
+    const pages = []; // { start, end } in canvas pixels
+    let pageStartCss = 0;
+
+    for (let i = 0; i < elements.length; i++) {
+      const el = elements[i];
+
+      // Force page break before section headings (## level)
+      if (el.isSectionHeading && el.top - pageStartCss > 10) {
+        pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
+        pageStartCss = el.top;
+      }
+
+      // Would this element's bottom exceed current page?
+      if (el.bottom - pageStartCss > maxCssPxPerPage && el.top - pageStartCss > 5) {
+        pages.push({ start: pageStartCss * canvasScale, end: el.top * canvasScale });
+        pageStartCss = el.top;
+      }
+    }
+
+    // Last page
+    if (pageStartCss * canvasScale < canvas.height) {
+      pages.push({ start: pageStartCss * canvasScale, end: canvas.height });
+    }
+
+    if (pages.length === 0) {
+      pages.push({ start: 0, end: canvas.height });
+    }
+
+    const totalPages = pages.length;
 
     for (let i = 0; i < totalPages; i++) {
       if (i > 0) doc.addPage();
 
-      const sliceH = Math.min(pxPerPage, canvas.height - i * pxPerPage);
+      const { start, end } = pages[i];
+      const sliceH = end - start;
+      if (sliceH <= 0) continue;
 
       // Extract page slice from full canvas
       const sliceCanvas = document.createElement('canvas');
       sliceCanvas.width = canvas.width;
       sliceCanvas.height = sliceH;
       const ctx = sliceCanvas.getContext('2d');
-      ctx.drawImage(canvas,
-        0, i * pxPerPage, canvas.width, sliceH,
-        0, 0, canvas.width, sliceH,
-      );
+      ctx.drawImage(canvas, 0, start, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
 
       const imgData = sliceCanvas.toDataURL('image/jpeg', 0.92);
       const renderedH = sliceH * imgScale;
-      doc.addImage(imgData, 'JPEG', margin, margin, usableW, renderedH);
+      const contentY = margin + headerH;
+      doc.addImage(imgData, 'JPEG', margin, contentY, usableW, renderedH);
+
+      // Header: document title on each page
+      if (docTitle) {
+        doc.setFontSize(9);
+        doc.setTextColor(130);
+        doc.text(docTitle, margin, margin + 4);
+        doc.setDrawColor(200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, margin + 6, pageW - margin, margin + 6);
+      }
+
+      // Footer: page number
+      doc.setFontSize(9);
+      doc.setTextColor(150);
+      doc.text(`- ${i + 1} / ${totalPages} -`, pageW / 2, pageH - margin / 2, { align: 'center' });
     }
 
     doc.save(filename.endsWith('.pdf') ? filename : filename + '.pdf');
