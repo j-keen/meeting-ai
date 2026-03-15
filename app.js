@@ -29,6 +29,7 @@ import { handleExport, handleExportMeeting, getExportContent, downloadFile } fro
 import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
+import { initHintSystem } from './hint-system.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
@@ -246,26 +247,8 @@ function init() {
   })();
 
   // Panel hint rotation
-  (() => {
-    const INTERVAL = 3500;
-    const FADE = 300;
-    const configs = [
-      { el: document.querySelector('#panelLeft .panel-hint'), key: 'hint.transcript_edit', count: 5 },
-      { el: document.querySelector('#panelCenter .panel-hint'), key: 'hint.analysis_edit', count: 5 },
-    ];
-    configs.forEach(({ el, key, count }) => {
-      if (!el) return;
-      let idx = 0;
-      setInterval(() => {
-        el.classList.add('fade-out');
-        setTimeout(() => {
-          idx = (idx + 1) % count;
-          el.textContent = t(key + '.' + idx);
-          el.classList.remove('fade-out');
-        }, FADE);
-      }, INTERVAL);
-    });
-  })();
+  // Smart hint system
+  initHintSystem();
 
   // Memo from chat
   on('memo:fromChat', ({ text }) => {
@@ -768,7 +751,6 @@ function loadDemoData() {
     addMemoLine(memo);
   });
 
-  state.tags = ['weekly', 'sprint-review', 'dashboard', 'tech-debt', 'hiring'];
 
   demoUpdateTimer();
   setInterval(demoUpdateTimer, 1000);
