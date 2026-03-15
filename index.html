@@ -715,7 +715,6 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
-          <button class="btn btn-sm" id="btnViewerEditInfo" data-i18n="viewer.edit_info">Edit Info</button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -1277,18 +1276,11 @@
         </div>
       </div>
 
-      <!-- Step 2: People & Context (hybrid: chat + form) -->
+      <!-- Step 2: People & Context (form-only) -->
       <div class="ds-step-panel" data-step="2" hidden>
-        <div class="ds-hybrid-layout">
-          <div class="ds-chat-area ds-chat-half">
-            <div class="pb-messages" id="dsMessages2"></div>
-            <div class="pb-chips" id="dsChips2"></div>
-            <div class="pb-input-wrap">
-              <textarea class="pb-input" id="dsInput2" rows="1" placeholder="..."></textarea>
-              <button class="pb-send-btn" id="btnDsSend2">&#10148;</button>
-            </div>
-          </div>
-          <div class="ds-form-area" id="dsFormArea2">
+        <div class="ds-step2-layout">
+          <p class="ds-step2-desc" id="dsStep2Desc"></p>
+          <div class="ds-form-area ds-form-full" id="dsFormArea2">
             <!-- dynamically rendered: contacts, reference, files -->
           </div>
         </div>

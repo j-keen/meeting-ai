@@ -6117,8 +6117,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   overflow: hidden;
 }
 
-/* Step 2: hybrid layout */
-.ds-hybrid-layout {
+/* Step 2: form-only layout */
+.ds-step2-layout {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -6127,21 +6127,35 @@ body.loaded-mode #btnNewMeeting { display: none; }
   gap: 12px;
 }
 
-.ds-chat-half {
-  flex: 1;
-  min-height: 120px;
+.ds-step2-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  padding: 4px 0;
 }
 
 .ds-form-area {
   overflow-y: auto;
-  max-height: 200px;
-  padding: 12px;
+  padding: 16px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   background: var(--bg-tertiary);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+}
+
+.ds-form-full {
+  flex: 1;
+  max-height: none;
+}
+
+.ds-form-empty {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 12px 0;
+  margin: 0;
 }
 
 .ds-form-section {

@@ -14,7 +14,7 @@ const MODEL = 'gemini-2.5-flash';
 // ===== State =====
 let currentStep = 1;
 const TOTAL_STEPS = 4;
-let stepHistories = { 1: [], 2: [], 3: [] };
+let stepHistories = { 1: [], 3: [] };
 let stepResults = { 1: null, 2: null, 3: null };
 let isStreaming = false;
 let selectedAttendees = [];
@@ -177,6 +177,10 @@ function renderChips(container, chips, onSelect) {
 // ===== Step Navigation =====
 function goToStep(n) {
   if (n < 1 || n > TOTAL_STEPS) return;
+
+  // Collect step 2 data when leaving it
+  if (currentStep === 2 && n !== 2) collectStep2Results();
+
   currentStep = n;
 
   // Update step indicators
@@ -201,7 +205,28 @@ function goToStep(n) {
   if (backBtn) backBtn.hidden = n === 1;
   if (nextBtn) {
     nextBtn.hidden = n === TOTAL_STEPS;
-    nextBtn.disabled = !stepResults[n];
+    // Step 2 is always skippable; others need results
+    nextBtn.disabled = (n === 2) ? false : !stepResults[n];
+  }
+
+  // Step 3: show greeting if first visit
+  if (n === 3 && stepHistories[3].length === 0) {
+    const msgs3 = $('#dsMessages3');
+    if (msgs3 && msgs3.children.length === 0) {
+      const el = document.createElement('div');
+      el.className = 'pb-message pb-message-model';
+      el.innerHTML = `<div class="pb-message-content">${renderMarkdown(t('ds.step3_greeting'))}</div>`;
+      msgs3.appendChild(el);
+
+      const chips3 = $('#dsChips3');
+      if (chips3) {
+        renderChips(chips3, [
+          { ko: '모순되는 말 잡아줘', en: 'Catch contradictions' },
+          { ko: '핵심 용어 정리해줘', en: 'Organize key terms' },
+          { ko: '발표 구조 분석해줘', en: 'Analyze structure' },
+        ], (text) => sendMessage(text));
+      }
+    }
   }
 
   // Step 4: render summary
@@ -222,7 +247,7 @@ function buildContents(step, userText) {
     { role: 'model', parts: [{ text: greeting }] },
   ];
 
-  stepHistories[step].forEach(msg => {
+  (stepHistories[step] || []).forEach(msg => {
     contents.push({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
@@ -241,6 +266,7 @@ async function sendMessage(text) {
   const step = currentStep;
 
   addUserMessage(text);
+  if (!stepHistories[step]) stepHistories[step] = [];
   stepHistories[step].push({ role: 'user', text });
 
   const input = $(`#dsInput${step}`);
@@ -290,7 +316,6 @@ async function sendMessage(text) {
     const json = extractJSON(fullText);
     if (json) {
       stepResults[step] = json;
-      // Enable next button
       const nextBtn = $('#btnDsNext');
       if (nextBtn) nextBtn.disabled = false;
 
@@ -312,7 +337,7 @@ async function sendMessage(text) {
   }
 }
 
-// ===== Step 2: Hybrid (contacts + reference + files) =====
+// ===== Step 2: Form-only (contacts + reference + files) =====
 function renderStep2Form() {
   const formArea = $('#dsFormArea2');
   if (!formArea) return;
@@ -320,29 +345,36 @@ function renderStep2Form() {
   const ko = isKorean();
   const contacts = loadContacts();
 
+  // Set description text
+  const desc = $('#dsStep2Desc');
+  if (desc) desc.textContent = t('ds.step2_greeting');
+
   let html = '';
 
   // Contacts picker
-  html += `<div class="ds-form-section">
-    <label class="ds-form-label">${ko ? '참석자' : 'Attendees'}</label>
-    <div class="ds-contact-chips" id="dsContactChips">`;
-  contacts.forEach(c => {
-    const selected = selectedAttendees.some(a => a.id === c.id);
-    html += `<button class="pb-chip${selected ? ' ds-chip-selected' : ''}" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}</button>`;
-  });
-  html += `</div></div>`;
+  if (contacts.length) {
+    html += `<div class="ds-form-section">
+      <label class="ds-form-label">${ko ? '참석자' : 'Attendees'}</label>
+      <div class="ds-contact-chips" id="dsContactChips">`;
+    contacts.forEach(c => {
+      const selected = selectedAttendees.some(a => a.id === c.id);
+      html += `<button class="pb-chip${selected ? ' ds-chip-selected' : ''}" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}</button>`;
+    });
+    html += `</div></div>`;
+  }
 
-  // Reference meeting picker
-  html += `<div class="ds-form-section">
-    <label class="ds-form-label">${ko ? '참고 세션' : 'Reference Session'}</label>
-    <div class="ds-ref-picker">
+  // Reference session picker
+  const meetings = listMeetings();
+  if (meetings.length) {
+    html += `<div class="ds-form-section">
+      <label class="ds-form-label">${ko ? '참고 세션' : 'Reference Session'}</label>
       <select class="settings-select ds-ref-select" id="dsRefSelect">
         <option value="">${ko ? '선택 안함' : 'None'}</option>`;
-  const meetings = listMeetings();
-  meetings.slice(0, 20).forEach(m => {
-    html += `<option value="${m.id}">${escapeHtml(m.title || m.id)}</option>`;
-  });
-  html += `</select></div></div>`;
+    meetings.slice(0, 20).forEach(m => {
+      html += `<option value="${m.id}">${escapeHtml(m.title || m.id)}</option>`;
+    });
+    html += `</select></div>`;
+  }
 
   // File attachments
   html += `<div class="ds-form-section">
@@ -353,6 +385,11 @@ function renderStep2Form() {
       <div class="ds-file-chips" id="dsFileChips"></div>
     </div>
   </div>`;
+
+  // Empty state message
+  if (!contacts.length && !meetings.length) {
+    html += `<p class="ds-form-empty">${ko ? '등록된 인물이나 세션이 없습니다. 파일만 첨부하거나 건너뛰세요.' : 'No contacts or sessions yet. Attach files or skip.'}</p>`;
+  }
 
   formArea.innerHTML = html;
 
@@ -395,7 +432,7 @@ function renderStep2Form() {
 
 async function handleFileAttach(files) {
   for (const file of files) {
-    if (file.size > 500 * 1024) continue; // skip > 500KB
+    if (file.size > 500 * 1024) continue;
     try {
       const content = await file.text();
       attachedFiles.push({ name: file.name, content: content.slice(0, 10000) });
@@ -423,7 +460,6 @@ function collectStep2Results() {
     attendees: selectedAttendees.map(a => ({ name: a.name, title: a.title, company: a.company })),
     reference: selectedReference ? { title: selectedReference.title, analysis: selectedReference.analysis } : null,
     files: attachedFiles.map(f => ({ name: f.name })),
-    background: stepHistories[2].filter(m => m.role === 'user').map(m => m.text).join(' '),
   };
 }
 
@@ -432,7 +468,6 @@ function renderSummary() {
   const container = $('#dsSummary');
   if (!container) return;
 
-  const ko = isKorean();
   const s1 = stepResults[1] || {};
   const s2 = stepResults[2] || {};
   const s3 = stepResults[3] || {};
@@ -506,7 +541,7 @@ export function openDeepSetup() {
 
   // Reset
   currentStep = 1;
-  stepHistories = { 1: [], 2: [], 3: [] };
+  stepHistories = { 1: [], 3: [] };
   stepResults = { 1: null, 2: null, 3: null };
   selectedAttendees = [];
   selectedReference = null;
@@ -514,8 +549,8 @@ export function openDeepSetup() {
 
   modal.hidden = false;
 
-  // Clear all chat areas
-  [1, 2, 3].forEach(s => {
+  // Clear chat areas
+  [1, 3].forEach(s => {
     const msgs = $(`#dsMessages${s}`);
     if (msgs) msgs.innerHTML = '';
   });
@@ -534,15 +569,6 @@ export function openDeepSetup() {
   // Render step 2 form
   renderStep2Form();
 
-  // Show step 2 greeting (pre-render)
-  const msgs2 = $('#dsMessages2');
-  if (msgs2) {
-    const el = document.createElement('div');
-    el.className = 'pb-message pb-message-model';
-    el.innerHTML = `<div class="pb-message-content">${renderMarkdown(t('ds.step2_greeting'))}</div>`;
-    msgs2.appendChild(el);
-  }
-
   // Focus input
   const input = $('#dsInput1');
   if (input) {
@@ -553,8 +579,8 @@ export function openDeepSetup() {
 
 // ===== Init =====
 export function initDeepSetup() {
-  // Send buttons for steps 1, 2, 3
-  [1, 2, 3].forEach(step => {
+  // Send buttons for chat steps (1 and 3)
+  [1, 3].forEach(step => {
     const sendBtn = $(`#btnDsSend${step}`);
     if (sendBtn) {
       sendBtn.addEventListener('click', () => {
@@ -577,37 +603,12 @@ export function initDeepSetup() {
   // Navigation
   const backBtn = $('#btnDsBack');
   if (backBtn) {
-    backBtn.addEventListener('click', () => {
-      if (currentStep === 3) collectStep2Results();
-      goToStep(currentStep - 1);
-    });
+    backBtn.addEventListener('click', () => goToStep(currentStep - 1));
   }
 
   const nextBtn = $('#btnDsNext');
   if (nextBtn) {
-    nextBtn.addEventListener('click', () => {
-      if (currentStep === 2) collectStep2Results();
-      goToStep(currentStep + 1);
-      // Show step 3 greeting when entering
-      if (currentStep === 3 && stepHistories[3].length === 0) {
-        const msgs3 = $(`#dsMessages3`);
-        if (msgs3 && msgs3.children.length === 0) {
-          const el = document.createElement('div');
-          el.className = 'pb-message pb-message-model';
-          el.innerHTML = `<div class="pb-message-content">${renderMarkdown(t('ds.step3_greeting'))}</div>`;
-          msgs3.appendChild(el);
-
-          const chips3 = $('#dsChips3');
-          if (chips3) {
-            renderChips(chips3, [
-              { ko: '모순되는 말 잡아줘', en: 'Catch contradictions' },
-              { ko: '핵심 용어 정리해줘', en: 'Organize key terms' },
-              { ko: '발표 구조 분석해줘', en: 'Analyze structure' },
-            ], (text) => sendMessage(text));
-          }
-        }
-      }
-    });
+    nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
   }
 
   // Step 4 action buttons
