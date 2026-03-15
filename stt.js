@@ -266,7 +266,7 @@ function createDeepgramEngine(language, micStream) {
             }
           };
 
-          mediaRecorder.start(250); // Send chunks every 250ms
+          mediaRecorder.start(1000); // Send chunks every 1000ms for better context
         };
 
         ws.onmessage = (e) => {
