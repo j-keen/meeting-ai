@@ -1553,7 +1553,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 /* Preset cards */
 .preset-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr;
   gap: 8px;
 }
 .preset-card {
