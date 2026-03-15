@@ -296,6 +296,21 @@ function init() {
 
   // Memo
   const memoInput = $('#memoInput');
+  const MEMO_DRAFT_KEY = 'memo_draft';
+
+  const autoResizeMemo = () => {
+    memoInput.style.height = 'auto';
+    const panel = document.getElementById('panelLeft');
+    const maxH = panel ? panel.offsetHeight * 0.5 : 200;
+    if (memoInput.scrollHeight > maxH) {
+      memoInput.style.height = maxH + 'px';
+      memoInput.style.overflowY = 'auto';
+    } else {
+      memoInput.style.height = memoInput.scrollHeight + 'px';
+      memoInput.style.overflowY = 'hidden';
+    }
+  };
+
   const addMemo = () => {
     const text = memoInput.value.trim();
     if (!text) return;
@@ -303,19 +318,37 @@ function init() {
     state.memos.push(memo);
     addMemoLine(memo);
     memoInput.value = '';
+    localStorage.removeItem(MEMO_DRAFT_KEY);
+    autoResizeMemo();
     emit('memo:add', memo);
     updateInboxBadge();
   };
-  memoInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addMemo(); });
+
+  memoInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addMemo(); }
+  });
+  memoInput.addEventListener('input', () => {
+    autoResizeMemo();
+    const v = memoInput.value;
+    if (v.trim()) localStorage.setItem(MEMO_DRAFT_KEY, v);
+    else localStorage.removeItem(MEMO_DRAFT_KEY);
+  });
   $('#btnAddMemo').addEventListener('click', addMemo);
+
+  // Restore memo draft
+  const savedDraft = localStorage.getItem(MEMO_DRAFT_KEY);
+  if (savedDraft) { memoInput.value = savedDraft; autoResizeMemo(); }
 
   // Memo placeholder
   (() => {
     const input = $('#memoInput');
     const ph = $('#memoPlaceholder');
     ph.textContent = t('memo.placeholder.0');
+    const updatePh = () => { ph.style.display = input.value ? 'none' : ''; };
     input.addEventListener('focus', () => { ph.style.display = 'none'; });
-    input.addEventListener('blur', () => { if (!input.value) ph.style.display = ''; });
+    input.addEventListener('blur', updatePh);
+    input.addEventListener('input', updatePh);
+    updatePh();
   })();
 
   // Panel hint rotation
