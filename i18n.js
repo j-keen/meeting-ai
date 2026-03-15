@@ -312,6 +312,11 @@ const translations = {
     'viewer.reanalyze': 'Re-analyze',
     'viewer.reanalyzing': 'Analyzing...',
     'viewer.reanalysis_done': 'Re-analysis complete!',
+    'viewer.back_to_list': '← Back to list',
+    'viewer.load_hint': 'Edit by loading',
+    'viewer.load_confirm': 'Loading will replace the current meeting. Continue?',
+    'viewer.prev': 'Previous meeting',
+    'viewer.next': 'Next meeting',
     'history.add_tag': '+ tag',
     'history.enter_tag': 'Enter tag:',
 
@@ -1099,6 +1104,11 @@ const translations = {
     'viewer.reanalyze': '재분석',
     'viewer.reanalyzing': '분석 중...',
     'viewer.reanalysis_done': '재분석이 완료되었습니다!',
+    'viewer.back_to_list': '← 목록으로',
+    'viewer.load_hint': '편집하려면 불러오기',
+    'viewer.load_confirm': '현재 회의를 대체하고 이 회의를 불러옵니다. 계속하시겠습니까?',
+    'viewer.prev': '이전 회의',
+    'viewer.next': '다음 회의',
     'history.add_tag': '+ 태그',
     'history.enter_tag': '태그 입력:',
 

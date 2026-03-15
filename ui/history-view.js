@@ -12,6 +12,10 @@ import { isProxyAvailable } from '../gemini-api.js';
 
 const $ = (sel) => document.querySelector(sel);
 
+let viewerAbortController = null;
+let viewerMeetingList = [];
+let viewerCurrentIndex = -1;
+
 function getSectionConfig() {
   return [
     { key: 'summary', icon: '\u{1F4DD}', title: t('card.summary') },
@@ -309,6 +313,9 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     filtered = filtered.filter(m => (m.createdAt || 0) <= to);
   }
 
+  // Store filtered list for viewer navigation
+  viewerMeetingList = filtered.map(m => m.id);
+
   if (filtered.length === 0) {
     const p = document.createElement('p');
     p.className = 'text-muted';
@@ -429,11 +436,74 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
 }
 
 export function renderMeetingViewer(meeting) {
+  // Abort previous listeners
+  if (viewerAbortController) viewerAbortController.abort();
+  viewerAbortController = new AbortController();
+
   const transcriptContainer = $('#viewerTranscript');
   const timelineContainer = $('#viewerTimeline');
   const analysisContainer = $('#viewerAnalysis');
   const metaContainer = $('#viewerMeta');
   $('#viewerTitle').textContent = meeting.title || t('viewer.title');
+
+  // Render badges (date + type)
+  const badgesEl = $('#viewerBadges');
+  if (badgesEl) {
+    badgesEl.innerHTML = '';
+    const dateBadge = document.createElement('span');
+    dateBadge.className = 'viewer-badge viewer-badge-date';
+    dateBadge.textContent = new Date(meeting.startTime || meeting.createdAt).toLocaleDateString(getDateLocale());
+    badgesEl.appendChild(dateBadge);
+
+    const typeBadge = document.createElement('span');
+    typeBadge.className = 'viewer-badge viewer-badge-type';
+    typeBadge.textContent = meeting.preset || t('settings.preset_general');
+    badgesEl.appendChild(typeBadge);
+  }
+
+  // Navigation (prev/next)
+  viewerCurrentIndex = viewerMeetingList.indexOf(meeting.id);
+  const btnPrev = $('#btnViewerPrev');
+  const btnNext = $('#btnViewerNext');
+  if (btnPrev) {
+    btnPrev.disabled = viewerCurrentIndex <= 0;
+    btnPrev.title = t('viewer.prev');
+    btnPrev.onclick = () => {
+      if (viewerCurrentIndex > 0) {
+        emit('meeting:view', { id: viewerMeetingList[viewerCurrentIndex - 1] });
+      }
+    };
+  }
+  if (btnNext) {
+    btnNext.disabled = viewerCurrentIndex < 0 || viewerCurrentIndex >= viewerMeetingList.length - 1;
+    btnNext.title = t('viewer.next');
+    btnNext.onclick = () => {
+      if (viewerCurrentIndex < viewerMeetingList.length - 1) {
+        emit('meeting:view', { id: viewerMeetingList[viewerCurrentIndex + 1] });
+      }
+    };
+  }
+
+  // Back to list button
+  const btnBack = $('#btnViewerBack');
+  if (btnBack) {
+    btnBack.textContent = t('viewer.back_to_list');
+    btnBack.onclick = () => {
+      $('#viewerModal').hidden = true;
+      $('#historyModal').hidden = false;
+    };
+  }
+
+  // Keyboard: ArrowLeft/Right for navigation
+  document.addEventListener('keydown', (e) => {
+    if ($('#viewerModal').hidden) return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+    if (e.key === 'ArrowLeft' && viewerCurrentIndex > 0) {
+      emit('meeting:view', { id: viewerMeetingList[viewerCurrentIndex - 1] });
+    } else if (e.key === 'ArrowRight' && viewerCurrentIndex < viewerMeetingList.length - 1) {
+      emit('meeting:view', { id: viewerMeetingList[viewerCurrentIndex + 1] });
+    }
+  }, { signal: viewerAbortController.signal });
 
   // Render metadata
   metaContainer.innerHTML = '';
@@ -570,7 +640,13 @@ export function renderMeetingViewer(meeting) {
   reanalysisBar.appendChild(reTypeSelect);
   reanalysisBar.appendChild(reModelSelect);
   reanalysisBar.appendChild(reBtn);
-  metaContainer.after(reanalysisBar);
+  const reanalysisSlot = $('#viewerReanalysisSlot');
+  if (reanalysisSlot) {
+    reanalysisSlot.innerHTML = '';
+    reanalysisSlot.appendChild(reanalysisBar);
+  } else {
+    metaContainer.after(reanalysisBar);
+  }
 
   const transcript = meeting.transcript || [];
   const memos = meeting.memos || [];
@@ -708,7 +784,7 @@ export function renderMeetingViewer(meeting) {
       newActive.classList.add('active');
       renderViewerAnalysis(analysisContainer, analyses[matchIdx]);
     }
-  });
+  }, { signal: viewerAbortController.signal });
 
   // Render chat history
   const chatContainer = $('#viewerChat');
@@ -745,15 +821,22 @@ export function renderMeetingViewer(meeting) {
     });
   }
 
-  // Viewer Load button
+  // Viewer Load button with confirmation
   const btnViewerLoad = $('#btnViewerLoad');
   if (btnViewerLoad) {
     btnViewerLoad.textContent = t('viewer.load');
     btnViewerLoad.onclick = () => {
+      if (state.transcript.length > 0 || state.isRecording) {
+        if (!confirm(t('viewer.load_confirm'))) return;
+      }
       emit('meeting:load', { id: meeting.id });
       $('#viewerModal').hidden = true;
     };
   }
+
+  // Load hint i18n
+  const loadHint = $('#viewerModal .viewer-load-hint');
+  if (loadHint) loadHint.textContent = t('viewer.load_hint');
 }
 
 function renderViewerAnalysis(container, analysis) {

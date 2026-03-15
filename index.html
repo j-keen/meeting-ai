@@ -704,14 +704,28 @@
   <!-- Meeting Viewer Modal -->
   <div class="modal-overlay" id="viewerModal" hidden>
     <div class="modal modal-fullscreen">
-      <div class="modal-header">
-        <h3 id="viewerTitle" data-i18n="viewer.title">Meeting Details</h3>
-        <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
-        <button class="btn btn-icon modal-close" data-close="viewerModal">&times;</button>
+      <div class="modal-header viewer-header">
+        <div class="viewer-header-left">
+          <button class="btn btn-sm btn-ghost" id="btnViewerBack" data-i18n="viewer.back_to_list">← Back to list</button>
+        </div>
+        <div class="viewer-header-center">
+          <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerPrev" title="Previous meeting">‹</button>
+          <h3 id="viewerTitle" data-i18n="viewer.title">Meeting Details</h3>
+          <span id="viewerBadges" class="viewer-badges"></span>
+          <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
+        </div>
+        <div class="viewer-header-right">
+          <div class="viewer-load-wrapper">
+            <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
+            <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
+          </div>
+          <button class="btn btn-icon modal-close" data-close="viewerModal">&times;</button>
+        </div>
       </div>
       <div class="modal-body viewer-body">
         <div class="viewer-main">
           <div class="viewer-meta" id="viewerMeta"></div>
+          <div id="viewerReanalysisSlot"></div>
           <div class="viewer-columns">
             <div class="viewer-transcript" id="viewerTranscript"></div>
             <div class="viewer-timeline" id="viewerTimeline"></div>
