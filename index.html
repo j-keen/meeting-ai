@@ -360,24 +360,55 @@
             <h3 data-i18n="settings.contacts_title">Contacts</h3>
             <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
           </div>
+          <div class="contacts-modal-tabs">
+            <button class="contacts-modal-tab active" data-contacts-tab="add" data-i18n="settings.contacts_tab_add">Add</button>
+            <button class="contacts-modal-tab" data-contacts-tab="search" data-i18n="settings.contacts_tab_search">Search</button>
+          </div>
           <div class="modal-body">
-            <div class="data-add-row">
-              <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
-              <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
-              <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
-              <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
-            </div>
-            <div class="data-add-row" style="margin-top:6px;">
-              <button class="btn btn-sm" id="btnSettingsScanCard">&#128247; <span data-i18n="settings.scan_card">Scan Business Card</span></button>
-              <div class="prep-photo-popup" id="settingsPhotoPopup" hidden>
-                <button class="prep-photo-option" id="btnSettingsPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
-                <button class="prep-photo-option" id="btnSettingsPhotoCamera" data-i18n="prep.photo_camera">Take photo</button>
+            <!-- Add Tab -->
+            <div class="contacts-tab-content" id="contactsTabAdd">
+              <div class="data-add-row">
+                <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
+                <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
+                <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
+                <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
               </div>
-              <input type="file" id="settingsImageFileInput" accept="image/*" hidden>
+              <button class="btn btn-sm btn-card-scan" id="btnSettingsScanCard" style="margin-top:8px;">&#128247; <span data-i18n="settings.scan_card_btn">Add from Business Card</span></button>
+              <input type="file" id="settingsImageFileInput" accept="image/*" multiple hidden>
             </div>
-            <div class="contact-drop-zone" id="contactDropZone" data-i18n="settings.drop_card_image">Drop business card image here</div>
-            <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts..." style="margin-top:8px;">
-            <div class="data-list" id="dataParticipantsList" style="max-height:260px;overflow-y:auto;"></div>
+            <!-- Search Tab -->
+            <div class="contacts-tab-content" id="contactsTabSearch" hidden>
+              <div class="contacts-search-row">
+                <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
+                <button class="btn btn-sm btn-star-filter" id="btnStarFilter" title="Show starred only">&#9734;</button>
+              </div>
+              <div class="data-list" id="dataParticipantsList" style="max-height:320px;overflow-y:auto;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Business Card Scan Modal -->
+      <div class="modal-overlay" id="cardScanModal" style="z-index:310;" hidden>
+        <div class="modal" style="max-width:480px;">
+          <div class="modal-header">
+            <h3 data-i18n="settings.scan_card">Scan Business Card</h3>
+            <button class="btn btn-icon" id="btnCloseCardScan" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="card-scan-drop-zone" id="cardScanDropZone">
+              <div class="card-scan-drop-icon">&#128247;</div>
+              <p data-i18n="settings.drop_card_image">Drop business card image here</p>
+              <p class="text-muted" style="font-size:11px;" data-i18n="settings.drop_card_hint">or click below to upload</p>
+            </div>
+            <div class="card-scan-actions">
+              <button class="btn btn-sm" id="btnCardScanUpload">&#128206; <span data-i18n="prep.photo_upload">Upload image file</span></button>
+              <button class="btn btn-sm" id="btnCardScanCamera">&#128247; <span data-i18n="prep.photo_camera">Take photo</span></button>
+            </div>
+            <input type="file" id="cardScanFileInput" accept="image/*" multiple hidden>
+            <!-- Queue: multiple card processing -->
+            <div class="card-scan-queue" id="cardScanQueue" hidden></div>
+            <!-- OCR Result -->
             <div class="prep-card-result" id="settingsCardResult" hidden>
               <div class="prep-card-fields">
                 <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">
@@ -404,6 +435,7 @@
             <div class="data-add-row" style="margin-top:8px;">
               <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
               <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
+              <button class="btn btn-sm" id="btnAddLocationGps" data-i18n-title="settings.location_add_gps" title="Add with current GPS" style="padding:4px 8px;">📍</button>
             </div>
           </div>
         </div>

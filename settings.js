@@ -4,7 +4,7 @@ import { state, emit, on } from './event-bus.js';
 import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
-  loadLocations, addLocation, deleteLocation,
+  loadLocations, addLocation, deleteLocation, findNearestLocation,
   loadCategories, addCategory, deleteCategory,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
 } from './storage.js';
@@ -488,6 +488,21 @@ function renderChatPresets() {
 // ===== Data Tab (Participants, Locations, Categories) =====
 let settingsCameraStream = null;
 let contactSearchQuery = '';
+let starFilterActive = false;
+
+function switchContactsTab(tab) {
+  document.querySelectorAll('.contacts-modal-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.contactsTab === tab);
+  });
+  $('#contactsTabAdd').hidden = tab !== 'add';
+  $('#contactsTabSearch').hidden = tab !== 'search';
+  if (tab === 'add') {
+    setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
+  } else {
+    renderDataParticipants();
+    setTimeout(() => $('#inputContactSearch')?.focus(), 50);
+  }
+}
 
 function initDataTab() {
   updateDataBadges();
@@ -496,15 +511,31 @@ function initDataTab() {
   $('#btnOpenContacts')?.addEventListener('click', () => {
     $('#contactsModal').hidden = false;
     contactSearchQuery = '';
+    starFilterActive = false;
     const searchInput = $('#inputContactSearch');
     if (searchInput) searchInput.value = '';
-    renderDataParticipants();
-    setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
+    const starBtn = $('#btnStarFilter');
+    if (starBtn) starBtn.classList.remove('active');
+    switchContactsTab('add');
   });
   $('#btnCloseContacts')?.addEventListener('click', closeContactsModal);
   $('#contactsModal')?.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeContactsModal();
   });
+
+  // Contacts modal tabs
+  document.querySelectorAll('.contacts-modal-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchContactsTab(btn.dataset.contactsTab));
+  });
+
+  // Star filter
+  $('#btnStarFilter')?.addEventListener('click', () => {
+    starFilterActive = !starFilterActive;
+    $('#btnStarFilter').classList.toggle('active', starFilterActive);
+    $('#btnStarFilter').innerHTML = starFilterActive ? '&#9733;' : '&#9734;';
+    renderDataParticipants();
+  });
+
   $('#inputContactSearch')?.addEventListener('input', (e) => {
     contactSearchQuery = e.target.value.trim().toLowerCase();
     renderDataParticipants();
@@ -552,39 +583,39 @@ function initDataTab() {
     });
   });
 
-  // Business card scan
-  $('#btnSettingsScanCard')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const popup = $('#settingsPhotoPopup');
-    popup.hidden = !popup.hidden;
+  // --- Card Scan Modal ---
+  $('#btnSettingsScanCard')?.addEventListener('click', () => {
+    openCardScanModal();
   });
-  $('#btnSettingsPhotoUpload')?.addEventListener('click', () => {
-    $('#settingsPhotoPopup').hidden = true;
-    $('#settingsImageFileInput').click();
+  $('#btnCloseCardScan')?.addEventListener('click', closeCardScanModal);
+  $('#cardScanModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeCardScanModal();
   });
-  $('#btnSettingsPhotoCamera')?.addEventListener('click', () => {
-    $('#settingsPhotoPopup').hidden = true;
+
+  // Card scan upload & camera
+  $('#btnCardScanUpload')?.addEventListener('click', () => {
+    $('#cardScanFileInput').click();
+  });
+  $('#btnCardScanCamera')?.addEventListener('click', () => {
     openSettingsCamera();
   });
-  $('#settingsImageFileInput')?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result.split(',')[1];
-      processSettingsOcr(base64);
-    };
-    reader.readAsDataURL(file);
+  $('#cardScanFileInput')?.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) addFilesToScanQueue(files);
     e.target.value = '';
   });
-  // Close photo popup on outside click
-  document.addEventListener('click', (e) => {
-    const popup = $('#settingsPhotoPopup');
-    if (popup && !popup.hidden && !e.target.closest('#btnSettingsScanCard') && !popup.contains(e.target)) {
-      popup.hidden = true;
+
+  // Also support legacy file input (from add tab)
+  $('#settingsImageFileInput')?.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+    if (files.length > 0) {
+      openCardScanModal();
+      addFilesToScanQueue(files);
     }
+    e.target.value = '';
   });
-  // Camera modal buttons (shared with meeting prep camera modal)
+
+  // Camera modal buttons
   $('#btnCameraCapture')?.addEventListener('click', () => {
     const video = $('#cameraPreview');
     const canvas = $('#cameraCanvas');
@@ -595,12 +626,12 @@ function initDataTab() {
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
     const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
     closeSettingsCamera();
-    processSettingsOcr(base64);
+    addBase64ToScanQueue(base64, t('prep.photo_camera'));
   });
   $('#btnCameraCancel')?.addEventListener('click', closeSettingsCamera);
 
-  // Drag & Drop business card
-  const dropZone = $('#contactDropZone');
+  // Drag & Drop in card scan modal
+  const dropZone = $('#cardScanDropZone');
   if (dropZone) {
     dropZone.addEventListener('dragenter', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -608,18 +639,12 @@ function initDataTab() {
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (!file || !file.type.startsWith('image/')) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result.split(',')[1];
-        processSettingsOcr(base64);
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length > 0) addFilesToScanQueue(files);
     });
   }
 
-  // Save card contact
+  // Save card contact (single OCR result)
   $('#btnSettingsSaveCard')?.addEventListener('click', () => {
     const name = $('#settingsCardName').value.trim();
     if (!name) return;
@@ -646,6 +671,32 @@ function initDataTab() {
     updateDataBadges();
   });
 
+  // Add location with GPS
+  $('#btnAddLocationGps')?.addEventListener('click', () => {
+    const name = $('#inputNewLocation')?.value.trim();
+    if (!name) { emit('toast', { message: t('settings.location_name_required'), type: 'warning' }); return; }
+    const btn = $('#btnAddLocationGps');
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        addLocation({ name, lat: pos.coords.latitude, lng: pos.coords.longitude });
+        $('#inputNewLocation').value = '';
+        renderDataLocations();
+        updateDataBadges();
+        btn.disabled = false;
+        btn.textContent = '📍';
+        emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
+      },
+      () => {
+        btn.disabled = false;
+        btn.textContent = '📍';
+        emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  });
+
   // Add category
   $('#btnAddCategory')?.addEventListener('click', () => {
     const name = $('#inputNewCategory')?.value.trim();
@@ -658,17 +709,18 @@ function initDataTab() {
 
   // Listen for openContactsModal event (from contact groups)
   on('openContactsModal', () => {
-    // Make sure settings is open and data tab is active
     openSettings();
     const dataTab = document.querySelector('.settings-tab[data-tab="data"]');
     if (dataTab) dataTab.click();
     setTimeout(() => {
       $('#contactsModal').hidden = false;
       contactSearchQuery = '';
+      starFilterActive = false;
       const searchInput = $('#inputContactSearch');
       if (searchInput) searchInput.value = '';
-      renderDataParticipants();
-      setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
+      const starBtn = $('#btnStarFilter');
+      if (starBtn) starBtn.classList.remove('active');
+      switchContactsTab('add');
     }, 100);
   });
 }
@@ -695,7 +747,7 @@ function updateDataBadges() {
 
   // Update tooltips (recent 3 items preview)
   setContactTooltip('#btnOpenContacts', contacts.slice(-3).reverse());
-  setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse());
+  setTextTooltip('#btnOpenLocations', locations.slice(-3).reverse().map(l => typeof l === 'string' ? l : l.name + (l.lat != null ? ' 📍' : '')));
   setTextTooltip('#btnOpenCategories', categories.slice(-3).reverse());
 }
 
@@ -769,12 +821,126 @@ function closeSettingsCamera() {
   $('#cameraModal').hidden = true;
 }
 
-async function processSettingsOcr(base64) {
-  const btn = $('#btnSettingsScanCard');
-  const origText = btn.innerHTML;
-  btn.innerHTML = `&#8987; ${t('prep.scanning')}`;
-  btn.disabled = true;
+// --- Card Scan Modal & Multi-scan Queue ---
+let scanQueue = [];
+let scanProcessing = false;
 
+function openCardScanModal() {
+  $('#cardScanModal').hidden = false;
+  $('#settingsCardResult').hidden = true;
+  // Don't clear queue if already processing
+}
+
+function closeCardScanModal() {
+  $('#cardScanModal').hidden = true;
+}
+
+function addFilesToScanQueue(files) {
+  const queueEl = $('#cardScanQueue');
+  queueEl.hidden = false;
+
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const base64 = dataUrl.split(',')[1];
+      const item = { base64, name: file.name, dataUrl, status: 'waiting' };
+      scanQueue.push(item);
+      renderScanQueue();
+      processScanQueue();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function addBase64ToScanQueue(base64, label) {
+  const queueEl = $('#cardScanQueue');
+  queueEl.hidden = false;
+  const dataUrl = `data:image/jpeg;base64,${base64}`;
+  const item = { base64, name: label || 'Camera', dataUrl, status: 'waiting' };
+  scanQueue.push(item);
+  renderScanQueue();
+  processScanQueue();
+}
+
+function renderScanQueue() {
+  const queueEl = $('#cardScanQueue');
+  if (!queueEl) return;
+  queueEl.innerHTML = '';
+  scanQueue.forEach((item, i) => {
+    const row = document.createElement('div');
+    row.className = 'card-scan-queue-item';
+    const img = document.createElement('img');
+    img.src = item.dataUrl;
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    nameSpan.textContent = item.name;
+    const statusSpan = document.createElement('span');
+    statusSpan.className = 'card-scan-queue-status ' + item.status;
+    if (item.status === 'waiting') statusSpan.textContent = t('settings.card_queue_waiting');
+    else if (item.status === 'processing') statusSpan.textContent = t('settings.card_queue_processing');
+    else if (item.status === 'done') statusSpan.textContent = `✓ ${item.resultName || t('settings.card_queue_done')}`;
+    else if (item.status === 'error') statusSpan.textContent = `✗ ${t('settings.card_queue_error')}`;
+    row.append(img, nameSpan, statusSpan);
+    queueEl.appendChild(row);
+  });
+}
+
+async function processScanQueue() {
+  if (scanProcessing) return;
+  scanProcessing = true;
+
+  while (scanQueue.some(item => item.status === 'waiting')) {
+    const item = scanQueue.find(item => item.status === 'waiting');
+    if (!item) break;
+    item.status = 'processing';
+    renderScanQueue();
+
+    try {
+      const result = await ocrBusinessCard(item.base64);
+      if (result && result.name) {
+        addContact({
+          name: result.name,
+          title: result.title || '',
+          company: result.company || '',
+          email: result.email || '',
+          phone: result.phone || '',
+        });
+        item.status = 'done';
+        item.resultName = result.name;
+        renderDataParticipants();
+        updateDataBadges();
+      } else {
+        item.status = 'error';
+      }
+    } catch (err) {
+      console.error('OCR error:', err);
+      item.status = 'error';
+    }
+    renderScanQueue();
+  }
+
+  scanProcessing = false;
+
+  // If only one card was scanned and it failed or no queue, show single result editor
+  const lastItem = scanQueue[scanQueue.length - 1];
+  if (scanQueue.length === 1 && lastItem?.status === 'error') {
+    emit('toast', { message: t('prep.scan_failed'), type: 'error' });
+  } else if (scanQueue.filter(i => i.status === 'done').length > 0) {
+    const doneCount = scanQueue.filter(i => i.status === 'done').length;
+    emit('toast', { message: `${doneCount} ${t('prep.card_saved')}`, type: 'success' });
+  }
+
+  // Clear queue after a delay
+  setTimeout(() => {
+    scanQueue = [];
+    const queueEl = $('#cardScanQueue');
+    if (queueEl) { queueEl.innerHTML = ''; queueEl.hidden = true; }
+  }, 3000);
+}
+
+// Single card OCR (for manual review flow - when only 1 image)
+async function processSettingsOcr(base64) {
   try {
     const result = await ocrBusinessCard(base64);
     if (result) {
@@ -788,9 +954,6 @@ async function processSettingsOcr(base64) {
   } catch (err) {
     emit('toast', { message: t('prep.scan_failed'), type: 'error' });
     console.error('OCR error:', err);
-  } finally {
-    btn.innerHTML = origText;
-    btn.disabled = false;
   }
 }
 
@@ -800,6 +963,10 @@ function renderDataParticipants() {
   let contacts = loadContacts();
   list.innerHTML = '';
 
+  // Filter by starred
+  if (starFilterActive) {
+    contacts = contacts.filter(c => c.starred);
+  }
   // Filter by search
   if (contactSearchQuery) {
     contacts = contacts.filter(c =>
@@ -920,16 +1087,43 @@ function renderDataLocations() {
     const item = document.createElement('div');
     item.className = 'data-list-item';
     const span = document.createElement('span');
-    span.textContent = loc;
+    const hasGps = loc.lat != null && loc.lng != null;
+    span.textContent = loc.name + (hasGps ? ' 📍' : '');
+    if (hasGps) span.title = `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`;
+    const btnGroup = document.createElement('span');
+    btnGroup.style.cssText = 'display:flex;gap:4px;';
+    // GPS button (add/update coordinates)
+    const gpsBtn = document.createElement('button');
+    gpsBtn.className = 'btn btn-xs';
+    gpsBtn.textContent = hasGps ? '📍' : '📌';
+    gpsBtn.title = hasGps ? t('settings.location_update_gps') : t('settings.location_add_gps');
+    gpsBtn.addEventListener('click', () => {
+      gpsBtn.disabled = true;
+      gpsBtn.textContent = '⏳';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          addLocation({ name: loc.name, lat: pos.coords.latitude, lng: pos.coords.longitude });
+          renderDataLocations();
+          emit('toast', { message: t('settings.location_gps_saved'), type: 'success' });
+        },
+        () => {
+          gpsBtn.disabled = false;
+          gpsBtn.textContent = hasGps ? '📍' : '📌';
+          emit('toast', { message: t('settings.location_gps_failed'), type: 'error' });
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-xs btn-danger';
     delBtn.textContent = '\u00d7';
-    item.append(span, delBtn);
     delBtn.addEventListener('click', () => {
-      deleteLocation(loc);
+      deleteLocation(loc.name);
       renderDataLocations();
       updateDataBadges();
     });
+    btnGroup.append(gpsBtn, delBtn);
+    item.append(span, btnGroup);
     list.appendChild(item);
   });
 }

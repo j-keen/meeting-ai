@@ -13,6 +13,7 @@ import {
   loadLocations,
   addLocation,
   deleteLocation,
+  findNearestLocation,
   loadCategories,
   addCategory,
   deleteCategory,
@@ -261,18 +262,39 @@ describe('loadLocations', () => {
   it('returns empty array initially', () => {
     expect(loadLocations()).toEqual([]);
   });
+
+  it('migrates old string format to object format', () => {
+    const data = JSON.parse(localStorage.getItem('meeting-ai-data') || '{}');
+    data.locations = ['Old Place'];
+    localStorage.setItem('meeting-ai-data', JSON.stringify(data));
+    const locs = loadLocations();
+    expect(locs).toEqual([{ name: 'Old Place' }]);
+  });
 });
 
 describe('addLocation', () => {
-  it('adds a new location and returns the list', () => {
+  it('adds a new location by string and returns the list', () => {
     const list = addLocation('Seoul HQ');
-    expect(list).toContain('Seoul HQ');
+    expect(list).toEqual([{ name: 'Seoul HQ' }]);
+  });
+
+  it('adds a location with GPS coordinates', () => {
+    const list = addLocation({ name: 'Office', lat: 37.5, lng: 127.0 });
+    expect(list).toEqual([{ name: 'Office', lat: 37.5, lng: 127.0 }]);
   });
 
   it('does not add duplicates', () => {
     addLocation('Room A');
     addLocation('Room A');
-    expect(loadLocations().filter(l => l === 'Room A')).toHaveLength(1);
+    expect(loadLocations().filter(l => l.name === 'Room A')).toHaveLength(1);
+  });
+
+  it('updates GPS coordinates on duplicate name', () => {
+    addLocation('Room B');
+    addLocation({ name: 'Room B', lat: 37.5, lng: 127.0 });
+    const locs = loadLocations().filter(l => l.name === 'Room B');
+    expect(locs).toHaveLength(1);
+    expect(locs[0].lat).toBe(37.5);
   });
 });
 
@@ -281,12 +303,33 @@ describe('deleteLocation', () => {
     addLocation('Zone 1');
     addLocation('Zone 2');
     const list = deleteLocation('Zone 1');
-    expect(list).not.toContain('Zone 1');
-    expect(list).toContain('Zone 2');
+    expect(list.find(l => l.name === 'Zone 1')).toBeUndefined();
+    expect(list.find(l => l.name === 'Zone 2')).toBeDefined();
   });
 
   it('returns empty array when no locations key exists', () => {
     expect(deleteLocation('ghost')).toEqual([]);
+  });
+});
+
+describe('findNearestLocation', () => {
+  it('returns null when no GPS locations exist', () => {
+    addLocation('No GPS');
+    expect(findNearestLocation(37.5, 127.0)).toBeNull();
+  });
+
+  it('finds the nearest location within range', () => {
+    addLocation({ name: 'Office', lat: 37.5000, lng: 127.0000 });
+    addLocation({ name: 'Far Place', lat: 38.0, lng: 128.0 });
+    const result = findNearestLocation(37.5001, 127.0001);
+    expect(result).not.toBeNull();
+    expect(result.location.name).toBe('Office');
+    expect(result.distance).toBeLessThan(0.1); // less than 100m
+  });
+
+  it('returns null when all locations are out of range', () => {
+    addLocation({ name: 'Far', lat: 38.0, lng: 128.0 });
+    expect(findNearestLocation(37.5, 127.0)).toBeNull(); // > 1km default
   });
 });
 

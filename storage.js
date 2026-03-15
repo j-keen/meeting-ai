@@ -146,28 +146,70 @@ export function deleteContact(id) {
   return saveAll(data);
 }
 
-// Locations CRUD
-export function loadLocations() {
-  const data = loadAll();
-  return data.locations || [];
+// Locations CRUD — each location is { name, lat?, lng? }
+// Backward compat: migrate old string[] format on load
+function migrateLocations(arr) {
+  if (!arr) return [];
+  return arr.map(l => typeof l === 'string' ? { name: l } : l);
 }
 
-export function addLocation(name) {
+export function loadLocations() {
   const data = loadAll();
-  if (!data.locations) data.locations = [];
-  if (!data.locations.includes(name)) {
-    data.locations.push(name);
-    saveAll(data);
+  return migrateLocations(data.locations);
+}
+
+export function addLocation(nameOrObj) {
+  const data = loadAll();
+  data.locations = migrateLocations(data.locations);
+  const loc = typeof nameOrObj === 'string' ? { name: nameOrObj } : nameOrObj;
+  if (!loc.name) return data.locations;
+  const existing = data.locations.find(l => l.name === loc.name);
+  if (existing) {
+    // Update coordinates if provided
+    if (loc.lat != null && loc.lng != null) {
+      existing.lat = loc.lat;
+      existing.lng = loc.lng;
+    }
+  } else {
+    data.locations.push(loc);
   }
+  saveAll(data);
   return data.locations;
 }
 
 export function deleteLocation(name) {
   const data = loadAll();
   if (!data.locations) return [];
-  data.locations = data.locations.filter(l => l !== name);
+  data.locations = migrateLocations(data.locations);
+  data.locations = data.locations.filter(l => l.name !== name);
   saveAll(data);
   return data.locations;
+}
+
+// Find nearest saved location by GPS coordinates (returns { location, distance } or null)
+export function findNearestLocation(lat, lng, maxDistanceKm = 1) {
+  const locations = loadLocations().filter(l => l.lat != null && l.lng != null);
+  if (locations.length === 0) return null;
+
+  let nearest = null;
+  let minDist = Infinity;
+  for (const loc of locations) {
+    const d = haversineKm(lat, lng, loc.lat, loc.lng);
+    if (d < minDist) {
+      minDist = d;
+      nearest = loc;
+    }
+  }
+  return minDist <= maxDistanceKm ? { location: nearest, distance: minDist } : null;
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 // Categories CRUD
