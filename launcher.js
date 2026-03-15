@@ -6,18 +6,10 @@ import { saveSettings, loadMeetingPrepPresets, loadPreparedMeeting, deletePrepar
 import { showToast } from './ui.js';
 import { openMeetingPrepForm } from './meeting-prep.js';
 import { openPromptBuilder } from './prompt-builder.js';
+import { openDeepSetup } from './deep-setup.js';
 import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
-
-// Dynamic import for deep-setup (fallback to meeting-prep if not available)
-let openDeepSetup;
-try {
-  const mod = await import('./deep-setup.js');
-  openDeepSetup = mod.openDeepSetup;
-} catch {
-  openDeepSetup = () => openMeetingPrepForm();
-}
 
 // ===== Launcher Modal =====
 export function showLauncherModal() {
