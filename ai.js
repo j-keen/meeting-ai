@@ -243,10 +243,10 @@ export async function generateMeetingTitle({ transcript, existingTitle }) {
 
   const lang = getAiLanguage();
   const langInstruction = lang === 'ko'
-    ? '한국어로 제목과 태그를 생성하세요.'
-    : 'Generate title and tags in English.';
+    ? '한국어로 제목을 생성하세요.'
+    : 'Generate title in English.';
 
-  const prompt = `Based on this meeting transcript, generate a concise meeting title and relevant tags. ${langInstruction}
+  const prompt = `Based on this meeting transcript, generate a concise meeting title. ${langInstruction2}
 
 ${existingTitle ? `Current title: "${existingTitle}" - suggest alternatives that might be better.\n` : ''}
 Transcript:
@@ -255,8 +255,7 @@ ${transcriptText}
 Return ONLY valid JSON:
 {
   "title": "suggested main title (concise, under 50 chars)",
-  "alternatives": ["2-3 alternative titles"],
-  "tags": ["3-5 relevant keyword tags"]
+  "alternatives": ["2-3 alternative titles"]
 }`;
 
   try {

@@ -885,11 +885,6 @@ function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
     };
     renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
 
-    // Merge tags (only once per cache)
-    state.aiTitleCached.tags.forEach(tag => {
-      if (!state.tags.includes(tag)) state.tags.push(tag);
-    });
-    renderEndMeetingTags();
   });
 }
 
