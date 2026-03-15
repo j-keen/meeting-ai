@@ -119,7 +119,7 @@
             </select>
             <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
             <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
+            <button class="btn btn-sm" id="btnPromptSettings" title="Adjust Prompt">🎯 <span data-i18n="panel.prompt_adjust">Adjust</span></button>
           </div>
         </div>
         <div class="panel-hint-toggle-bar" data-target="analysisHintContainer">
@@ -1216,6 +1216,26 @@
             <button class="btn btn-primary" id="btnPbStart" data-i18n="pb.start">▶ Start</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Prompt Adjuster Modal -->
+  <div class="modal-overlay" id="promptAdjusterModal" hidden>
+    <div class="modal pa-modal">
+      <button class="modal-close" id="paCloseBtn">&times;</button>
+      <h2 class="pb-title" data-i18n="pa.title">Adjust Prompt</h2>
+      <div class="pa-current-prompt-bar" id="paCurrentPromptBar" data-expanded="false">
+        <span class="pa-prompt-label" data-i18n="pa.current_prompt">Current prompt:</span>
+        <span class="pa-prompt-preview"></span>
+        <span class="pa-prompt-toggle">▼</span>
+        <div class="pa-prompt-full" hidden></div>
+      </div>
+      <div class="pb-messages" id="paMessages"></div>
+      <div class="pb-chips" id="paChips"></div>
+      <div class="pb-input-wrap">
+        <textarea class="pb-input" id="paInput" rows="1" data-i18n-placeholder="pa.input_placeholder" placeholder="How should I adjust the prompt?"></textarea>
+        <button class="pb-send-btn" id="paSendBtn">&#10148;</button>
       </div>
     </div>
   </div>

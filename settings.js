@@ -13,6 +13,7 @@ import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
+import { openPromptAdjuster } from './prompt-adjuster.js';
 
 
 const $ = (sel) => document.querySelector(sel);
@@ -151,16 +152,9 @@ export function initSettings() {
 
 
 
-  // Prompt settings shortcut (from AI panel header)
+  // Prompt adjuster shortcut (from AI panel header)
   $('#btnPromptSettings')?.addEventListener('click', () => {
-    openSettings();
-    // Switch to Prompt tab
-    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-    const promptTab = document.querySelector('.settings-tab[data-tab="analysis"]');
-    const promptContent = document.querySelector('.settings-tab-content[data-tab="analysis"]');
-    if (promptTab) promptTab.classList.add('active');
-    if (promptContent) promptContent.classList.add('active');
+    openPromptAdjuster();
   });
 
   // Chat model select

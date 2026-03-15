@@ -33,6 +33,7 @@ import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initHintSystem } from './hint-system.js';
 import { initPromptBuilder } from './prompt-builder.js';
+import { initPromptAdjuster } from './prompt-adjuster.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
@@ -61,6 +62,7 @@ function init() {
   initChat();
   initMeetingPrepForm();
   initPromptBuilder();
+  initPromptAdjuster();
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -388,6 +390,7 @@ function init() {
 
   // Analysis rerun from chat
   on('analysis:rerun', () => runAnalysis());
+  on('promptAdjuster:reanalyze', () => runAnalysis());
 
   // Toast from other modules
   on('toast', ({ message, type }) => showToast(message, type || 'success'));
