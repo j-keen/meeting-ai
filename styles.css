@@ -3743,23 +3743,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: #f5a623;
   border-color: #f5a623;
 }
-.btn-card-scan {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px;
-  border: 1px dashed var(--border-color);
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
-}
-.btn-card-scan:hover {
-  border-color: var(--accent);
-  background: var(--bg-hover);
-}
 
 /* ===== Card Scan Modal ===== */
 .card-scan-drop-zone {

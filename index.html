@@ -390,7 +390,6 @@
                 <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
                 <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
               </div>
-              <button class="btn btn-sm btn-card-scan" id="btnSettingsScanCard" style="margin-top:8px;">&#128247; <span data-i18n="settings.scan_card_btn">Add from Business Card</span></button>
               <input type="file" id="settingsImageFileInput" accept="image/*" multiple hidden>
             </div>
             <!-- Search Tab -->
@@ -414,9 +413,10 @@
             <!-- Contact List (always visible) -->
             <div class="data-list" id="dataParticipantsList"></div>
             <div class="contacts-io-row">
-              <button class="btn btn-xs" id="btnExportCsv" title="Export CSV">&#128228; CSV</button>
-              <button class="btn btn-xs" id="btnExportVcf" title="Export vCard">&#128228; vCard</button>
-              <button class="btn btn-xs" id="btnImportContacts" title="Import">&#128229; <span data-i18n="settings.contacts_import">Import</span></button>
+              <button class="btn btn-xs" id="btnSettingsScanCard" title="Scan business card">&#128247; <span data-i18n="settings.scan_card_btn">Scan Card</span></button>
+              <button class="btn btn-xs" id="btnImportContacts" title="Add from file">&#128229; <span data-i18n="settings.contacts_import">Add from File</span></button>
+              <button class="btn btn-xs" id="btnExportCsv" title="Save as spreadsheet">&#128228; <span data-i18n="settings.export_csv">Save as Excel</span></button>
+              <button class="btn btn-xs" id="btnExportVcf" title="Save as contacts file">&#128228; <span data-i18n="settings.export_vcf">Save as Contacts</span></button>
               <input type="file" id="contactsImportFile" accept=".csv,.vcf" hidden>
             </div>
           </div>
