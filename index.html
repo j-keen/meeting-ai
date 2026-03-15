@@ -14,12 +14,15 @@
   <header class="header">
     <div class="header-left">
       <h1 class="logo">Meeting AI</h1>
-      <span class="meeting-timer" id="meetingTimer">00:00:00</span>
-      <input type="text" class="meeting-title-input" id="meetingTitleInput" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title..." hidden>
-      <span class="meeting-status" id="meetingStatus"></span>
     </div>
-    <div class="header-center"></div>
+    <input type="text" class="meeting-title-input" id="meetingTitleInput" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title..." hidden>
     <div class="header-right">
+      <div class="meeting-pill" id="meetingPill" hidden>
+        <span class="meeting-pill-dot"></span>
+        <span class="meeting-timer" id="meetingTimer">00:00:00</span>
+        <span class="meeting-pill-sep">&middot;</span>
+        <span class="meeting-status" id="meetingStatus"></span>
+      </div>
       <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
         <span class="icon-theme-light" data-i18n="header.theme_dark">Dark</span>
         <span class="icon-theme-dark" data-i18n="header.theme_light">Light</span>

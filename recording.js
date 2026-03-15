@@ -175,6 +175,10 @@ function recoverDraft(draft) {
   const titleInput = $('#meetingTitleInput');
   if (titleInput) { titleInput.value = state.meetingTitle; titleInput.hidden = false; }
   $('#meetingTimer').textContent = '00:00:00';
+  const draftPill = $('#meetingPill');
+  draftPill.hidden = false;
+  draftPill.classList.remove('recording');
+  draftPill.classList.add('paused');
   $('#meetingStatus').textContent = t('draft.recovered_status');
 
   // Show post-end buttons so user can resume or save
@@ -309,9 +313,12 @@ export async function startRecording() {
 
     const btn = $('#btnRecord');
     btn.classList.remove('paused');
-    $('#meetingTimer').classList.remove('timer-paused');
     btn.classList.add('recording');
     btn.querySelector('.record-label').textContent = t('record.meeting_active');
+    const pill = $('#meetingPill');
+    pill.hidden = false;
+    pill.classList.remove('paused');
+    pill.classList.add('recording');
     $('#meetingStatus').textContent = t('record.status_recording');
     $('#btnEndMeeting').hidden = false;
 
@@ -348,8 +355,10 @@ export function stopRecording() {
   const btn = $('#btnRecord');
   btn.classList.remove('recording');
   btn.classList.add('paused');
-  $('#meetingTimer').classList.add('timer-paused');
   btn.querySelector('.record-label').textContent = t('record.paused');
+  const pill = $('#meetingPill');
+  pill.classList.remove('recording');
+  pill.classList.add('paused');
   $('#meetingStatus').textContent = t('record.status_paused');
   const badge = $('#sttEngineBadge');
   if (badge) badge.hidden = true;
@@ -1014,6 +1023,9 @@ export async function finalizeEndMeeting() {
   showPostEndButtons();
 
   $('#meetingStatus').textContent = t('record.status_ended');
+  const pill2 = $('#meetingPill');
+  pill2.classList.remove('recording');
+  pill2.classList.add('paused');
   const titleInput = $('#meetingTitleInput');
   if (titleInput) titleInput.hidden = true;
   showToast(t('toast.meeting_saved'), 'success');
@@ -1150,7 +1162,9 @@ export function resetMeeting() {
   $('#chatMessages').innerHTML = '';
   resetChatEmpty();
   $('#meetingTimer').textContent = '00:00:00';
-  $('#meetingTimer').classList.remove('timer-paused');
+  const pill = $('#meetingPill');
+  pill.hidden = true;
+  pill.classList.remove('recording', 'paused');
   $('#meetingStatus').textContent = '';
   const headerTitleInput = $('#meetingTitleInput');
   if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }
