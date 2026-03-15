@@ -3353,6 +3353,43 @@ body.loaded-mode #btnNewMeeting { display: none; }
   min-width: 30px;
 }
 
+/* ===== Star toggle button ===== */
+.btn-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  padding: 0 4px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.btn-star:hover {
+  color: #f5a623;
+}
+.btn-star.starred {
+  color: #f5a623;
+}
+
+/* ===== Contact Drop Zone ===== */
+.contact-drop-zone {
+  margin-top: 6px;
+  padding: 14px;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  cursor: default;
+}
+.contact-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb, 79, 70, 229), 0.08);
+  color: var(--accent);
+}
+
 /* ===== Correction Dictionary Modal ===== */
 .correction-dict-modal-overlay {
   z-index: 300;

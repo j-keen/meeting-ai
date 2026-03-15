@@ -499,6 +499,7 @@ function initDataTab() {
     const searchInput = $('#inputContactSearch');
     if (searchInput) searchInput.value = '';
     renderDataParticipants();
+    setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
   });
   $('#btnCloseContacts')?.addEventListener('click', closeContactsModal);
   $('#contactsModal')?.addEventListener('click', (e) => {
@@ -530,7 +531,7 @@ function initDataTab() {
   });
 
   // Add participant
-  $('#btnAddParticipant')?.addEventListener('click', () => {
+  function addParticipantFromForm() {
     const name = $('#inputNewParticipantName')?.value.trim();
     if (!name) return;
     const title = $('#inputNewParticipantTitle')?.value.trim() || '';
@@ -541,6 +542,14 @@ function initDataTab() {
     $('#inputNewParticipantCompany').value = '';
     renderDataParticipants();
     updateDataBadges();
+    $('#inputNewParticipantName').focus();
+  }
+  $('#btnAddParticipant')?.addEventListener('click', addParticipantFromForm);
+  // Enter key to add
+  ['#inputNewParticipantName', '#inputNewParticipantTitle', '#inputNewParticipantCompany'].forEach(sel => {
+    $(sel)?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addParticipantFromForm(); }
+    });
   });
 
   // Business card scan
@@ -589,6 +598,26 @@ function initDataTab() {
     processSettingsOcr(base64);
   });
   $('#btnCameraCancel')?.addEventListener('click', closeSettingsCamera);
+
+  // Drag & Drop business card
+  const dropZone = $('#contactDropZone');
+  if (dropZone) {
+    dropZone.addEventListener('dragenter', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (!file || !file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        processSettingsOcr(base64);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   // Save card contact
   $('#btnSettingsSaveCard')?.addEventListener('click', () => {
@@ -639,6 +668,7 @@ function initDataTab() {
       const searchInput = $('#inputContactSearch');
       if (searchInput) searchInput.value = '';
       renderDataParticipants();
+      setTimeout(() => $('#inputNewParticipantName')?.focus(), 50);
     }, 100);
   });
 }
@@ -783,9 +813,26 @@ function renderDataParticipants() {
     list.innerHTML = `<p class="text-muted" style="font-size:12px;padding:8px 0;">${t('settings.no_items')}</p>`;
     return;
   }
+  // Sort: starred first, then by name
+  contacts.sort((a, b) => {
+    if (a.starred && !b.starred) return -1;
+    if (!a.starred && b.starred) return 1;
+    return 0;
+  });
   contacts.forEach(c => {
     const item = document.createElement('div');
     item.className = 'data-list-item';
+
+    // Star toggle button
+    const starBtn = document.createElement('button');
+    starBtn.className = 'btn-star' + (c.starred ? ' starred' : '');
+    starBtn.textContent = c.starred ? '\u2605' : '\u2606';
+    starBtn.title = t('settings.toggle_star');
+    starBtn.addEventListener('click', () => {
+      updateContact(c.id, { starred: !c.starred });
+      renderDataParticipants();
+    });
+
     const info = document.createElement('div');
     info.className = 'data-list-item-info';
 
@@ -850,7 +897,7 @@ function renderDataParticipants() {
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-xs btn-danger';
     delBtn.textContent = '\u00d7';
-    item.append(info, delBtn);
+    item.append(starBtn, info, delBtn);
     delBtn.addEventListener('click', () => {
       deleteContact(c.id);
       renderDataParticipants();

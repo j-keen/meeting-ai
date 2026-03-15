@@ -361,15 +361,13 @@
             <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
           </div>
           <div class="modal-body">
-            <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
-            <div class="data-list" id="dataParticipantsList" style="max-height:300px;overflow-y:auto;"></div>
-            <div class="data-add-row" style="margin-top:8px;">
+            <div class="data-add-row">
               <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
               <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
               <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
               <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
             </div>
-            <div class="data-add-row" style="margin-top:8px;">
+            <div class="data-add-row" style="margin-top:6px;">
               <button class="btn btn-sm" id="btnSettingsScanCard">&#128247; <span data-i18n="settings.scan_card">Scan Business Card</span></button>
               <div class="prep-photo-popup" id="settingsPhotoPopup" hidden>
                 <button class="prep-photo-option" id="btnSettingsPhotoUpload" data-i18n="prep.photo_upload">Upload image file</button>
@@ -377,6 +375,9 @@
               </div>
               <input type="file" id="settingsImageFileInput" accept="image/*" hidden>
             </div>
+            <div class="contact-drop-zone" id="contactDropZone" data-i18n="settings.drop_card_image">Drop business card image here</div>
+            <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts..." style="margin-top:8px;">
+            <div class="data-list" id="dataParticipantsList" style="max-height:260px;overflow-y:auto;"></div>
             <div class="prep-card-result" id="settingsCardResult" hidden>
               <div class="prep-card-fields">
                 <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">

@@ -121,6 +121,7 @@ export function addContact(contact) {
   const data = loadAll();
   if (!data.contacts) data.contacts = [];
   contact.id = contact.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  contact.starred = contact.starred || false;
   contact.createdAt = Date.now();
   contact.updatedAt = Date.now();
   data.contacts.push(contact);

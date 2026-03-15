@@ -602,6 +602,8 @@ const translations = {
     'settings.open_categories': 'Manage Categories',
     'settings.search_contacts': 'Search contacts...',
     'settings.click_to_edit_detail': 'Click to edit details',
+    'settings.toggle_star': 'Toggle favorite',
+    'settings.drop_card_image': 'Drop business card image here',
     'settings.add_contacts_from_group': 'Add Contacts',
 
     // History filters
@@ -1284,6 +1286,8 @@ const translations = {
     'settings.open_categories': '카테고리 관리',
     'settings.search_contacts': '연락처 검색...',
     'settings.click_to_edit_detail': '클릭하여 편집',
+    'settings.toggle_star': '즐겨찾기 토글',
+    'settings.drop_card_image': '명함 이미지를 여기에 드롭하세요',
     'settings.add_contacts_from_group': '연락처 추가',
 
     // History filters
