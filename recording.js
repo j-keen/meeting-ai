@@ -1660,9 +1660,11 @@ function restoreEndButton(showEnd = true) {
   const resume = $('#btnResumeMeeting');
   const exportBtn = $('#btnPostExport');
   const newBtn = $('#btnNewMeeting');
+  const editInfoBtn = $('#btnEditSaveInfo');
   if (resume) resume.remove();
   if (exportBtn) exportBtn.remove();
   if (newBtn) newBtn.remove();
+  if (editInfoBtn) editInfoBtn.remove();
 }
 
 export function resetMeeting() {
@@ -1677,6 +1679,9 @@ export function resetMeeting() {
   const banner = document.querySelector('#loadedMeetingBanner');
   if (banner) banner.hidden = true;
   document.body.classList.remove('loaded-mode');
+  // Remove edit save info button if present
+  const editInfoBtn = document.querySelector('#btnEditSaveInfo');
+  if (editInfoBtn) editInfoBtn.remove();
   // Reset record button and hide end meeting button
   const recBtn = $('#btnRecord');
   recBtn.classList.remove('recording', 'paused');

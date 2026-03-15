@@ -6,7 +6,7 @@ import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
 import { analyzeTranscript, getPromptForType } from '../ai.js';
-import { saveMeeting, getMeeting, loadCustomTypes } from '../storage.js';
+import { saveMeeting, loadCustomTypes } from '../storage.js';
 import { showToast } from '../ui.js';
 import { isProxyAvailable } from '../gemini-api.js';
 
@@ -819,15 +819,6 @@ export function renderMeetingViewer(meeting) {
       div.appendChild(content);
       chatContainer.appendChild(div);
     });
-  }
-
-  // Edit Info button — opens save modal in edit mode
-  const btnEditInfo = $('#btnViewerEditInfo');
-  if (btnEditInfo) {
-    btnEditInfo.textContent = t('viewer.edit_info');
-    btnEditInfo.onclick = () => {
-      emit('meeting:editInfo', { id: meeting.id });
-    };
   }
 
   // Viewer Load button with confirmation

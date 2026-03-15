@@ -300,7 +300,6 @@ const translations = {
     'viewer.chat_title': 'AI Chat',
     'viewer.memo_badge': 'MEMO',
     'viewer.load': 'Load',
-    'viewer.edit_info': 'Edit Info',
     'viewer.reanalyze': 'Re-analyze',
     'viewer.reanalyzing': 'Analyzing...',
     'viewer.reanalysis_done': 'Re-analysis complete!',
@@ -612,6 +611,7 @@ const translations = {
     // End Meeting Modal
     'end_meeting.title': 'Save Meeting',
     'end_meeting.edit_title': 'Edit Meeting Info',
+    'end_meeting.edit_info_btn': 'Save Info',
     'end_meeting.meeting_title': 'Meeting Title',
     'end_meeting.tags': 'Tags',
     'end_meeting.categories': 'Categories',
@@ -1116,7 +1116,6 @@ const translations = {
     'viewer.chat_title': 'AI 채팅',
     'viewer.memo_badge': '메모',
     'viewer.load': '불러오기',
-    'viewer.edit_info': '정보 수정',
     'viewer.reanalyze': '재분석',
     'viewer.reanalyzing': '분석 중...',
     'viewer.reanalysis_done': '재분석이 완료되었습니다!',
@@ -1428,6 +1427,7 @@ const translations = {
     // End Meeting Modal
     'end_meeting.title': '회의 저장',
     'end_meeting.edit_title': '회의 정보 수정',
+    'end_meeting.edit_info_btn': '저장정보',
     'end_meeting.meeting_title': '회의 제목',
     'end_meeting.tags': '태그',
     'end_meeting.categories': '카테고리',

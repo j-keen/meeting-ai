@@ -634,11 +634,6 @@ function init() {
 
   on('meeting:export', ({ id }) => handleExportMeeting(id));
 
-  on('meeting:editInfo', ({ id }) => {
-    const meeting = getMeeting(id);
-    if (meeting) showEndMeetingModal(meeting);
-  });
-
   // ===== Load past meeting into home screen =====
   on('meeting:load', ({ id }) => {
     if (state.isRecording) {
@@ -717,6 +712,20 @@ function init() {
     banner.hidden = false;
     document.body.classList.add('loaded-mode');
     $('#meetingStatus').textContent = t('history.load');
+
+    // Show [저장정보] button in bottom bar (where End Meeting button is)
+    const endBtn = $('#btnEndMeeting');
+    const existing = $('#btnEditSaveInfo');
+    if (existing) existing.remove();
+    const btnEditInfo = document.createElement('button');
+    btnEditInfo.className = 'btn btn-end-meeting';
+    btnEditInfo.id = 'btnEditSaveInfo';
+    btnEditInfo.innerHTML = `<span>📋</span> <span>${t('end_meeting.edit_info_btn')}</span>`;
+    btnEditInfo.onclick = () => {
+      const m = getMeeting(state.loadedMeetingId);
+      if (m) showEndMeetingModal(m);
+    };
+    endBtn.parentNode.insertBefore(btnEditInfo, endBtn.nextSibling);
 
     // Close history & viewer modals
     $('#historyModal').hidden = true;
