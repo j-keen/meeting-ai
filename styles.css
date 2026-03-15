@@ -2726,39 +2726,34 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--warning);
 }
 
-/* Unified input wrapper (participants & tags) */
-.unified-input-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+/* Unified input field (participants & tags) */
+.unified-input-field {
+  width: 100%;
+  padding: 6px 10px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
-  cursor: text;
-  transition: border-color var(--transition-fast);
-  min-height: 34px;
-}
-.unified-input-wrapper:focus-within {
-  border-color: var(--accent);
-}
-.unified-input-badges {
-  display: contents;
-}
-.unified-input {
-  flex: 1;
-  min-width: 80px;
-  border: none;
-  outline: none;
-  background: transparent;
   font-size: 12px;
   font-family: var(--font-sans);
   color: var(--text-primary);
-  padding: 2px 0;
+  outline: none;
+  transition: border-color var(--transition-fast);
+  box-sizing: border-box;
 }
-.unified-input::placeholder {
+.unified-input-field:focus {
+  border-color: var(--accent);
+}
+.unified-input-field::placeholder {
   color: var(--text-muted);
+}
+.unified-badges-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.unified-badges-area:empty {
+  display: none;
 }
 
 /* Badge inside unified input — confirmed */
@@ -3012,7 +3007,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .end-meeting-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   padding: 14px 24px;
   border-top: 1px solid var(--border-light);

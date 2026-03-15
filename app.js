@@ -171,7 +171,6 @@ function init() {
   });
   tagInput.addEventListener('input', () => updateTagDropdown(tagInput.value));
   tagInput.addEventListener('focus', () => updateTagDropdown(tagInput.value));
-  $('#tagInputWrapper').addEventListener('click', () => tagInput.focus());
 
   // Unified participant input (Enter to add, focus for dropdown)
   const participantInput = $('#endMeetingParticipantInput');
@@ -193,14 +192,13 @@ function init() {
   });
   participantInput.addEventListener('input', () => updateParticipantDropdown(participantInput.value));
   participantInput.addEventListener('focus', () => updateParticipantDropdown(participantInput.value));
-  $('#participantInputWrapper').addEventListener('click', () => participantInput.focus());
 
   // Close dropdowns when clicking outside
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#participantInputWrapper') && !e.target.closest('#participantDropdown')) {
+    if (!e.target.closest('#endMeetingParticipantInput') && !e.target.closest('#participantDropdown')) {
       $('#participantDropdown').hidden = true;
     }
-    if (!e.target.closest('#tagInputWrapper') && !e.target.closest('#tagDropdown')) {
+    if (!e.target.closest('#endMeetingTagInput') && !e.target.closest('#tagDropdown')) {
       $('#tagDropdown').hidden = true;
     }
   });
