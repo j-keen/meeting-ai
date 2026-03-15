@@ -69,9 +69,31 @@ function initPanel(panel, containerId) {
   };
   panels[panel] = p;
 
-  dismissBtn.addEventListener('click', () => {
+  dismissBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     dismiss();
   });
+
+  // Accordion: click hint container to collapse
+  container.addEventListener('click', () => {
+    toggleHintCollapse(panel);
+  });
+
+  // Accordion: toggle bar
+  const toggleBar = container.parentElement.querySelector(`.panel-hint-toggle-bar[data-target="${containerId}"]`);
+  if (toggleBar) {
+    toggleBar.addEventListener('click', () => {
+      toggleHintCollapse(panel);
+    });
+    p.toggleBar = toggleBar;
+  }
+
+  // Restore collapsed state
+  const settings = loadSettings();
+  if (settings.hintsCollapsed) {
+    container.classList.add('collapsed');
+    if (toggleBar) toggleBar.querySelector('.panel-hint-toggle').classList.add('collapsed');
+  }
 
   refreshPool(panel);
   startRotation(panel);
@@ -91,6 +113,7 @@ function refreshPool(panel) {
       saveSettings(settings);
     }
     p.container.classList.add('hidden');
+    if (p.toggleBar) p.toggleBar.classList.add('hidden');
     return;
   }
 
@@ -98,10 +121,12 @@ function refreshPool(panel) {
   const settings = loadSettings();
   if (settings.hintsHidden) {
     p.container.classList.add('hidden');
+    if (p.toggleBar) p.toggleBar.classList.add('hidden');
     return;
   }
 
   p.container.classList.remove('hidden');
+  if (p.toggleBar) p.toggleBar.classList.remove('hidden');
   p.pool = resolvePool(panel, level, context);
   p.idx = 0;
 
@@ -177,12 +202,27 @@ function incrementEditCount() {
   refreshAll();
 }
 
+function toggleHintCollapse(panel) {
+  const settings = loadSettings();
+  const collapsed = !settings.hintsCollapsed;
+  settings.hintsCollapsed = collapsed;
+  saveSettings(settings);
+
+  for (const [, p] of Object.entries(panels)) {
+    p.container.classList.toggle('collapsed', collapsed);
+    if (p.toggleBar) {
+      p.toggleBar.querySelector('.panel-hint-toggle').classList.toggle('collapsed', collapsed);
+    }
+  }
+}
+
 function dismiss() {
   const settings = loadSettings();
   settings.hintsHidden = true;
   saveSettings(settings);
   for (const p of Object.values(panels)) {
     p.container.classList.add('hidden');
+    if (p.toggleBar) p.toggleBar.classList.add('hidden');
   }
 }
 
