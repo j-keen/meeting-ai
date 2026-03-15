@@ -1171,7 +1171,7 @@ function initMinutesModelModal() {
       // 2. Set model
       state._selectedMinutesModel = model;
       state.settings.geminiModel = model;
-      if (model.includes('pro')) incrementProUsage();
+      try { if (model.includes('pro')) incrementProUsage(); } catch { /* ignore */ }
 
       // 3. Collect metadata from save modal
       state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
@@ -1189,23 +1189,23 @@ function initMinutesModelModal() {
         return;
       }
 
-      // 5. Run correction if needed
+      // 5. Open viewer with loading (early, before async ops)
+      openMinutesPreviewWithLoading();
+
+      // 6. Run correction if needed
       const hasUncorrected = state.transcript.some(l => !l.originalText);
       if (hasUncorrected && state.transcript.length > 0) {
         await runCorrection(false);
       }
 
-      // 6. Save state
-      autoSave();
+      // 7. Save state
+      try { autoSave(); } catch { /* ignore save error */ }
       clearDraftRecovery();
       state.meetingEnded = true;
 
-      // 7. Disable save modal form
+      // 8. Disable save modal form
       const body = $('#endMeetingModal .modal-body');
       if (body) body.classList.add('disabled-form');
-
-      // 8. Open viewer with loading
-      openMinutesPreviewWithLoading();
 
       // 9. Generate minutes
       try {
