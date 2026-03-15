@@ -28,6 +28,18 @@ export function buildFullProfile() {
   return state.settings.userProfile || '';
 }
 
+function buildCategoryHints() {
+  const cats = loadCategories();
+  const hints = {};
+  for (const cat of cats) {
+    const name = cat.name || cat;
+    if (cat.hint && state.categories.includes(name)) {
+      hints[name] = cat.hint;
+    }
+  }
+  return hints;
+}
+
 // ===== Core Logic =====
 let stt = null;
 let timerInterval = null;
@@ -522,6 +534,8 @@ export async function runAnalysis() {
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,
+      categories: state.categories,
+      categoryHints: buildCategoryHints(),
       onStream: (textSoFar) => {
         if (!aiContainer) return;
         if (!streamPreviewEl) {
@@ -925,16 +939,17 @@ function renderEndMeetingCategories() {
   const container = $('#endMeetingCategories');
   container.innerHTML = '';
   loadCategories().forEach(cat => {
+    const catName = cat.name || cat;
     const btn = document.createElement('button');
     btn.className = 'end-meeting-category-btn';
-    if (state.categories.includes(cat)) btn.classList.add('selected');
-    btn.textContent = cat;
+    if (state.categories.includes(catName)) btn.classList.add('selected');
+    btn.textContent = catName;
     btn.addEventListener('click', () => {
-      if (state.categories.includes(cat)) {
-        state.categories = state.categories.filter(c => c !== cat);
+      if (state.categories.includes(catName)) {
+        state.categories = state.categories.filter(c => c !== catName);
         btn.classList.remove('selected');
       } else {
-        state.categories.push(cat);
+        state.categories.push(catName);
         btn.classList.add('selected');
       }
     });
@@ -1312,6 +1327,8 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     basePromptOverride: promptConfig.basePromptOverride || '',
     userInstruction: promptConfig.userInstruction || '',
     metadata,
+    categories: state.categories,
+    categoryHints: buildCategoryHints(),
     onStream: (textSoFar) => {
       if (!aiContainer) return;
       if (!streamPreviewEl) {

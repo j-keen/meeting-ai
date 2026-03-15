@@ -120,13 +120,47 @@ export async function exportPDF(markdown, filename) {
 
   try {
     // Collect element boundaries for smart page breaking (before canvas render)
-    const childEls = Array.from(container.children);
+    // Flatten: include list items (li) as individual break points, not just top-level elements
     const canvasScale = 2;
-    const elements = childEls.map(el => ({
-      top: el.offsetTop,
-      bottom: el.offsetTop + el.offsetHeight,
-      isSectionHeading: el.style.fontSize === '20px',
-    }));
+    const elements = [];
+    for (const el of container.children) {
+      const tag = el.tagName;
+      if ((tag === 'UL' || tag === 'OL') && el.children.length > 0) {
+        // Add each list item as a separate break point
+        for (const li of el.children) {
+          elements.push({
+            top: li.offsetTop,
+            bottom: li.offsetTop + li.offsetHeight,
+            isSectionHeading: false,
+          });
+        }
+      } else {
+        elements.push({
+          top: el.offsetTop,
+          bottom: el.offsetTop + el.offsetHeight,
+          isSectionHeading: el.style.fontSize === '20px',
+        });
+      }
+    }
+
+    // Pre-render header text via canvas for Korean font support
+    let headerCanvas = null;
+    if (docTitle) {
+      const headerEl = document.createElement('div');
+      headerEl.style.cssText = [
+        'position:absolute', 'left:-9999px', 'top:0',
+        'width:660px', 'padding:2px 0', 'background:#fff',
+        'font-family:"Malgun Gothic","Noto Sans KR","Apple SD Gothic Neo","Segoe UI",sans-serif',
+        'font-size:11px', 'color:#828282',
+      ].join(';');
+      headerEl.textContent = docTitle;
+      document.body.appendChild(headerEl);
+      headerCanvas = await window.html2canvas(headerEl, {
+        scale: canvasScale,
+        backgroundColor: '#ffffff',
+      });
+      headerEl.remove();
+    }
 
     const canvas = await window.html2canvas(container, {
       scale: canvasScale,
@@ -211,14 +245,15 @@ export async function exportPDF(markdown, filename) {
       const contentY = margin + headerH;
       doc.addImage(imgData, 'JPEG', margin, contentY, usableW, renderedH);
 
-      // Header: document title on each page
-      if (docTitle) {
-        doc.setFontSize(9);
-        doc.setTextColor(130);
-        doc.text(docTitle, margin, margin + 4);
+      // Header: document title on each page (rendered via canvas for Korean support)
+      if (docTitle && headerCanvas) {
+        const hImgData = headerCanvas.toDataURL('image/png');
+        const hRenderedW = usableW;
+        const hRenderedH = headerCanvas.height * (hRenderedW / headerCanvas.width);
+        doc.addImage(hImgData, 'PNG', margin, margin, hRenderedW, hRenderedH);
         doc.setDrawColor(200);
         doc.setLineWidth(0.3);
-        doc.line(margin, margin + 6, pageW - margin, margin + 6);
+        doc.line(margin, margin + headerH - 2, pageW - margin, margin + headerH - 2);
       }
 
       // Footer: page number

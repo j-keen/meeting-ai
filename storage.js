@@ -213,18 +213,33 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 }
 
 // Categories CRUD
-const DEFAULT_CATEGORIES = ['정기회의', '브레인스토밍', '고객미팅', '1:1', '프로젝트', '교육'];
+const DEFAULT_CATEGORIES = [
+  { name: '정기회의', hint: '' },
+  { name: '브레인스토밍', hint: '' },
+  { name: '고객미팅', hint: '' },
+  { name: '1:1', hint: '' },
+  { name: '프로젝트', hint: '' },
+  { name: '교육', hint: '' },
+  { name: '리뷰', hint: '' },
+  { name: '보고', hint: '' },
+];
+
+function migrateCategories(cats) {
+  return cats.map(c => typeof c === 'string' ? { name: c, hint: '' } : c);
+}
 
 export function loadCategories() {
   const data = loadAll();
-  return data.categories || [...DEFAULT_CATEGORIES];
+  if (!data.categories) return [...DEFAULT_CATEGORIES];
+  return migrateCategories(data.categories);
 }
 
-export function addCategory(name) {
+export function addCategory(name, hint = '') {
   const data = loadAll();
-  if (!data.categories) data.categories = [...DEFAULT_CATEGORIES];
-  if (!data.categories.includes(name)) {
-    data.categories.push(name);
+  if (!data.categories) data.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  data.categories = migrateCategories(data.categories);
+  if (!data.categories.some(c => c.name === name)) {
+    data.categories.push({ name, hint });
     saveAll(data);
   }
   return data.categories;
@@ -233,9 +248,44 @@ export function addCategory(name) {
 export function deleteCategory(name) {
   const data = loadAll();
   if (!data.categories) return [];
-  data.categories = data.categories.filter(c => c !== name);
+  data.categories = migrateCategories(data.categories).filter(c => c.name !== name);
   saveAll(data);
   return data.categories;
+}
+
+export function updateCategoryHint(name, hint) {
+  const data = loadAll();
+  if (!data.categories) data.categories = DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  data.categories = migrateCategories(data.categories);
+  const cat = data.categories.find(c => c.name === name);
+  if (cat) {
+    cat.hint = hint;
+    saveAll(data);
+  }
+  return data.categories;
+}
+
+// Per-type custom prompts
+export function loadTypePrompts() {
+  const data = loadAll();
+  return data.settings?.typePrompts || {};
+}
+
+export function saveTypePrompt(type, prompt) {
+  const data = loadAll();
+  if (!data.settings) data.settings = {};
+  if (!data.settings.typePrompts) data.settings.typePrompts = {};
+  data.settings.typePrompts[type] = prompt;
+  return saveAll(data);
+}
+
+export function deleteTypePrompt(type) {
+  const data = loadAll();
+  if (data.settings?.typePrompts) {
+    delete data.settings.typePrompts[type];
+    return saveAll(data);
+  }
+  return { success: true };
 }
 
 // Meeting Prep Presets

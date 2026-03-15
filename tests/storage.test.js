@@ -33,7 +33,16 @@ import {
   getStorageUsage,
 } from '../storage.js';
 
-const DEFAULT_CATEGORIES = ['정기회의', '브레인스토밍', '고객미팅', '1:1', '프로젝트', '교육'];
+const DEFAULT_CATEGORIES = [
+  { name: '정기회의', hint: '' },
+  { name: '브레인스토밍', hint: '' },
+  { name: '고객미팅', hint: '' },
+  { name: '1:1', hint: '' },
+  { name: '프로젝트', hint: '' },
+  { name: '교육', hint: '' },
+  { name: '리뷰', hint: '' },
+  { name: '보고', hint: '' },
+];
 
 beforeEach(() => {
   localStorage.clear();
@@ -345,14 +354,15 @@ describe('loadCategories', () => {
 describe('addCategory', () => {
   it('adds a new category to the default list', () => {
     const list = addCategory('회고');
-    expect(list).toContain('회고');
-    expect(list).toContain('정기회의'); // defaults preserved
+    const names = list.map(c => c.name || c);
+    expect(names).toContain('회고');
+    expect(names).toContain('정기회의'); // defaults preserved
   });
 
   it('does not add duplicate categories', () => {
     addCategory('중복');
     addCategory('중복');
-    expect(loadCategories().filter(c => c === '중복')).toHaveLength(1);
+    expect(loadCategories().filter(c => (c.name || c) === '중복')).toHaveLength(1);
   });
 });
 
@@ -360,7 +370,8 @@ describe('deleteCategory', () => {
   it('removes the named category', () => {
     addCategory('ToDelete');
     const list = deleteCategory('ToDelete');
-    expect(list).not.toContain('ToDelete');
+    const names = list.map(c => c.name || c);
+    expect(names).not.toContain('ToDelete');
   });
 
   it('returns empty array when no categories key in storage', () => {

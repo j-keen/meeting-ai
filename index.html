@@ -261,19 +261,21 @@
         </section>
 
         <section class="settings-section">
-          <h3 data-i18n="settings.analysis_prompt">Analysis Prompt <span class="settings-hint" data-i18n="settings.analysis_prompt_hint">Instructions sent to AI for analysis</span></h3>
+          <h3 data-i18n="settings.type_prompt">Analysis Prompt by Type <span class="settings-hint" data-i18n="settings.type_prompt_hint">Each meeting type has its own analysis prompt</span></h3>
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-            <label data-i18n="settings.prompt_preset" style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Prompt Preset</label>
-            <select class="settings-select" id="selectPromptPreset" style="flex:1;">
-              <option value="" data-i18n="settings.prompt_preset_select">Select a preset...</option>
+            <label data-i18n="settings.select_type_for_prompt" style="font-size:12px;color:var(--text-muted);white-space:nowrap;">Meeting Type</label>
+            <select class="settings-select" id="selectTypeForPrompt" style="flex:1;">
+              <option value="general" data-i18n="settings.preset_general">General</option>
+              <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
+              <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorming</option>
+              <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+              <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+              <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
             </select>
-            <button class="btn btn-sm" id="btnDeletePromptPreset" style="display:none" title="Delete">&times;</button>
           </div>
           <textarea class="settings-textarea" id="textPrompt" rows="8" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_prompt">Reset to Default</button>
-            <button class="btn btn-sm" id="btnSavePromptPreset">💾 <span data-i18n="preset.save">Save as Preset</span></button>
-            <button class="btn btn-sm" id="btnComparePrompts">🔀 <span data-i18n="panel.compare">Compare</span></button>
+            <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_type_prompt">Reset to Default</button>
           </div>
         </section>
       </div>
@@ -310,13 +312,6 @@
           <button class="btn btn-sm btn-data-modal-open" id="btnOpenLocations">
             <span data-i18n="settings.open_locations">Manage Locations</span>
             <span class="data-modal-badge" id="locationsBadge"></span>
-          </button>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.categories">Categories <span class="settings-hint" data-i18n="settings.categories_hint">Tags used to classify meetings</span></h3>
-          <button class="btn btn-sm btn-data-modal-open" id="btnOpenCategories">
-            <span data-i18n="settings.open_categories">Manage Categories</span>
-            <span class="data-modal-badge" id="categoriesBadge"></span>
           </button>
         </section>
         <section class="settings-section">
@@ -453,22 +448,6 @@
         </div>
       </div>
 
-      <!-- Categories Modal -->
-      <div class="modal-overlay data-modal-overlay" id="categoriesModal" hidden>
-        <div class="modal" style="max-width:420px;">
-          <div class="modal-header">
-            <h3 data-i18n="settings.categories">Categories</h3>
-            <button class="btn btn-icon" id="btnCloseCategories" aria-label="Close">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="data-list" id="dataCategoriesList" style="max-height:300px;overflow-y:auto;"></div>
-            <div class="data-add-row" style="margin-top:8px;">
-              <input type="text" class="settings-input" id="inputNewCategory" data-i18n-placeholder="settings.placeholder_category" placeholder="Category name">
-              <button class="btn btn-sm" id="btnAddCategory" data-i18n="settings.add">Add</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
     <div class="settings-footer" id="settingsFooter">
       <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>

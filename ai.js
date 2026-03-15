@@ -1,7 +1,9 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
-import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t } from './i18n.js';
+import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t, getTypeDefaultPrompt, getMeetingTypeCategoryMap } from './i18n.js';
 import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { getCategoryGuidance } from './category-prompts.js';
+import { loadCategories, loadTypePrompts } from './storage.js';
 
 // Normalize array items: if Gemini returns objects instead of strings, flatten them
 function flattenItems(arr) {
@@ -19,6 +21,13 @@ export function getDefaultPrompt() {
 
 export function getPresetContext(preset) {
   return getAiPresetContext(preset);
+}
+
+/** Get the effective prompt for a meeting type (custom override > type default > global default) */
+export function getPromptForType(meetingType) {
+  const typePrompts = loadTypePrompts();
+  if (typePrompts[meetingType]) return typePrompts[meetingType];
+  return getTypeDefaultPrompt(meetingType);
 }
 
 function buildTranscriptText(transcript, strategy, recentMinutes, previousSummary) {
@@ -94,18 +103,41 @@ export async function analyzeTranscript({
   model = 'gemini-2.5-flash',
   userCorrections = [],
   onStream = null,
+  categories = [],
+  categoryHints = {},
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
 
-  const contextText = meetingContext || getPresetContext(meetingPreset || 'general');
+  const effectivePreset = meetingPreset || 'general';
+  const contextText = meetingContext || getPresetContext(effectivePreset);
   const transcriptText = buildTranscriptText(transcript, strategy, recentMinutes, previousSummary);
 
-  const systemPrompt = prompt || getAiPrompt();
+  const lang = getAiLanguage();
+
+  // Auto-resolve category guidance from meeting type if no explicit categories
+  let effectiveCategories = categories;
+  if (!effectiveCategories || effectiveCategories.length === 0) {
+    const catMap = getMeetingTypeCategoryMap();
+    const mappedCat = catMap[effectivePreset];
+    if (mappedCat) effectiveCategories = [mappedCat];
+  }
+  const guidance = getCategoryGuidance(effectiveCategories, lang, categoryHints);
+
+  // Use per-type prompt: explicit prompt > type-specific prompt > global default
+  const systemPrompt = prompt || getPromptForType(effectivePreset);
   const messageParts = [
     `Meeting Context: ${contextText}`,
     `Elapsed Time: ${elapsedTime || 'unknown'}`,
   ];
+
+  // Inject category-specific guidance
+  if (guidance.nameRules) {
+    messageParts.push('', guidance.nameRules);
+  }
+  if (guidance.analysis) {
+    messageParts.push('', guidance.analysis);
+  }
 
   if (userProfile) {
     messageParts.push('');
@@ -140,7 +172,6 @@ export async function analyzeTranscript({
   messageParts.push('Transcript:');
   messageParts.push(transcriptText);
 
-  const lang = getAiLanguage();
   const langReminder = lang === 'ko'
     ? '\n\n[IMPORTANT] 위 회의록이 어떤 언어이든, 분석 결과는 반드시 한국어로 작성하세요.'
     : '\n\n[IMPORTANT] Regardless of the transcript language, respond ONLY in English.';
@@ -296,11 +327,14 @@ export async function generateFinalMinutes({
   userInstruction = '',
   metadata = {},
   onStream = null,
+  categories = [],
+  categoryHints = {},
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
 
-  const contextText = meetingContext || getAiPresetContext(meetingPreset || 'general');
+  const effectivePreset = meetingPreset || 'general';
+  const contextText = meetingContext || getAiPresetContext(effectivePreset);
   const transcriptText = buildTranscriptText(transcript, 'full', 0, null);
 
   // Gather previous analysis summaries for context
@@ -311,6 +345,14 @@ export async function generateFinalMinutes({
     .join('\n---\n');
 
   const lang = getAiLanguage();
+  // Auto-resolve category guidance from meeting type if no explicit categories
+  let effectiveCategories = categories;
+  if (!effectiveCategories || effectiveCategories.length === 0) {
+    const catMap = getMeetingTypeCategoryMap();
+    const mappedCat = catMap[effectivePreset];
+    if (mappedCat) effectiveCategories = [mappedCat];
+  }
+  const guidance = getCategoryGuidance(effectiveCategories, lang, categoryHints);
   const prompt = basePromptOverride || (lang === 'ko' ? FINAL_MINUTES_PROMPT.ko : FINAL_MINUTES_PROMPT.en);
 
   const messageParts = [
@@ -318,6 +360,14 @@ export async function generateFinalMinutes({
     `Total Duration: ${elapsedTime || 'unknown'}`,
     `Total Lines: ${transcript.length}`,
   ];
+
+  // Inject category-specific guidance
+  if (guidance.nameRules) {
+    messageParts.push('', guidance.nameRules);
+  }
+  if (guidance.minutes) {
+    messageParts.push('', guidance.minutes);
+  }
 
   // Inject metadata if provided
   if (metadata && Object.keys(metadata).length > 0) {
@@ -436,7 +486,7 @@ Already known tags: ${existingTags.join(', ') || 'none'}
 Transcript:
 ${transcriptText}
 
-Suggest NEW participants (names mentioned but not already listed), NEW tags (keywords not already listed), and categories from this list: ["회의", "미팅", "브레인스토밍", "리뷰", "보고", "교육", "면담", "기타"].
+Suggest NEW participants (names mentioned but not already listed), NEW tags (keywords not already listed), and categories from this list: ${JSON.stringify(loadCategories().map(c => c.name || c))}.
 
 Return ONLY valid JSON:
 {

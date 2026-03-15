@@ -348,7 +348,7 @@ function init() {
       const current = catSelect.value;
       const cats = loadCategories();
       catSelect.innerHTML = `<option value="" data-i18n="history.filter_all_categories">${t('history.filter_all_categories')}</option>` +
-        cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        cats.map(c => { const n = c.name || c; return `<option value="${n}">${n}</option>`; }).join('');
       catSelect.value = current;
     }
     refreshHistoryGrid();

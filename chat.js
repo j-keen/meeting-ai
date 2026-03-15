@@ -3,6 +3,8 @@
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { getCategoryGuidance } from './category-prompts.js';
+import { loadCategories } from './storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -295,6 +297,25 @@ function buildChatSystemPrompt() {
       : `You are an AI assistant. Meeting context is provided below, but you can discuss any topic freely.
 Available tools: add_context, add_memo, rerun_analysis
 Respond in English.`;
+
+  // Inject category-specific persona and name handling rules
+  if (state.categories && state.categories.length > 0) {
+    const cats = loadCategories();
+    const hints = {};
+    for (const cat of cats) {
+      const name = cat.name || cat;
+      if (cat.hint && state.categories.includes(name)) {
+        hints[name] = cat.hint;
+      }
+    }
+    const guidance = getCategoryGuidance(state.categories, lang, hints);
+    if (guidance.nameRules) {
+      prompt += '\n\n' + guidance.nameRules;
+    }
+    if (guidance.chat) {
+      prompt += '\n\n' + guidance.chat;
+    }
+  }
 
   if (state.transcript.length > 0) {
     const MAX_CHARS = 100000;

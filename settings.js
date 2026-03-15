@@ -1555,4 +1555,9 @@ export function closeSettings() {
   $('#settingsPanel').setAttribute('aria-hidden', 'true');
   isDirty = false;
   updateDirtyUI();
+  // Close any sub-modals that may have been left open
+  ['#contactsModal', '#locationsModal', '#categoriesModal', '#cardScanModal', '#cameraModal', '#correctionDictModal', '#settingsUnsavedModal'].forEach(sel => {
+    const el = $(sel);
+    if (el) el.hidden = true;
+  });
 }
