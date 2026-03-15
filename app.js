@@ -38,7 +38,7 @@ import { initPromptAdjuster } from './prompt-adjuster.js';
 import { createPresetSaveForm } from './preset-save.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
-  runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting,
+  runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting, showEndMeetingModal,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   updateParticipantDropdown, updateTagDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
@@ -275,7 +275,18 @@ function init() {
 
   // End Meeting Modal events — save/cancel buttons are now created dynamically in recording.js
   // Modal close button (X)
-  $('#endMeetingModal .modal-close').addEventListener('click', () => cancelEndMeeting());
+  $('#endMeetingModal .modal-close').addEventListener('click', () => {
+    if (state._editMode) {
+      // Restore previous state when closing edit mode
+      if (state._editPrevState) {
+        Object.assign(state, state._editPrevState);
+        delete state._editPrevState;
+      }
+      state._editMode = false;
+      state._editMeetingId = null;
+    }
+    cancelEndMeeting();
+  });
 
   // Star rating clicks
   document.querySelectorAll('#endMeetingStars .star-btn').forEach(btn => {
@@ -622,6 +633,11 @@ function init() {
   });
 
   on('meeting:export', ({ id }) => handleExportMeeting(id));
+
+  on('meeting:editInfo', ({ id }) => {
+    const meeting = getMeeting(id);
+    if (meeting) showEndMeetingModal(meeting);
+  });
 
   // ===== Load past meeting into home screen =====
   on('meeting:load', ({ id }) => {

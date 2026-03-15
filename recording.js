@@ -5,7 +5,7 @@ import { createSTT } from './stt.js';
 import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
-  saveMeeting, loadSettings, saveSettings,
+  saveMeeting, getMeeting, loadSettings, saveSettings,
   loadContacts, addContact, loadLocations, addLocation, findNearestLocation,
   getLocationFrequency,
   loadCorrectionDict, addCorrectionEntry,
@@ -682,24 +682,67 @@ function showEndConfirmDialog(onConfirm) {
 
 let _minutesGenerationPromise = null; // Track ongoing minutes generation
 
-function showEndMeetingModal() {
+// editMeeting: meeting object from storage (for viewer edit mode)
+export function showEndMeetingModal(editMeeting) {
+  const isEditMode = !!editMeeting;
+  state._editMode = isEditMode;
+  state._editMeetingId = editMeeting?.id || null;
+
+  // If editing a saved meeting, load its data into state temporarily
+  if (isEditMode) {
+    state._editPrevState = {
+      meetingTitle: state.meetingTitle,
+      meetingLocation: state.meetingLocation,
+      meetingStartTime: state.meetingStartTime,
+      starRating: state.starRating,
+      tags: [...state.tags],
+      participants: [...state.participants],
+    };
+    state.meetingTitle = editMeeting.title || '';
+    state.meetingLocation = editMeeting.location || '';
+    state.meetingStartTime = editMeeting.startTime || editMeeting.createdAt;
+    state.starRating = editMeeting.starRating || 3;
+    state.tags = [...(editMeeting.tags || [])];
+    state._aiTags = [];
+    state.participants = [...(editMeeting.participants || [])];
+  }
+
   const modal = $('#endMeetingModal');
   modal.hidden = false;
 
+  // Update modal title for edit mode
+  const modalTitle = modal.querySelector('.modal-header h3');
+  if (modalTitle) {
+    modalTitle.textContent = isEditMode ? t('end_meeting.edit_title') : t('end_meeting.title');
+  }
+
   // Reset footer to default state
-  resetFooterToDefault();
+  resetFooterToDefault(isEditMode);
 
   // Render meeting summary stats
   const statsEl = $('#endMeetingStats');
   if (statsEl) {
     const stats = [];
-    stats.push(`${t('end_meeting.stat_duration')}: ${getElapsedTimeStr()}`);
-    stats.push(`${t('end_meeting.stat_transcript')}: ${state.transcript.length}`);
-    const bookmarkCount = state.transcript.filter(l => l.bookmarked).length;
-    if (bookmarkCount > 0) stats.push(`${t('end_meeting.stat_bookmarks')}: ${bookmarkCount}`);
-    if (state.memos.length > 0) stats.push(`${t('end_meeting.stat_memos')}: ${state.memos.length}`);
-    if (state.analysisHistory.length > 0) stats.push(`${t('end_meeting.stat_analyses')}: ${state.analysisHistory.length}`);
-    if (state.chatHistory.length > 0) stats.push(`${t('end_meeting.stat_chats')}: ${state.chatHistory.length}`);
+    if (isEditMode) {
+      stats.push(`${t('end_meeting.stat_transcript')}: ${(editMeeting.transcript || []).length}`);
+      const bookmarkCount = (editMeeting.transcript || []).filter(l => l.bookmarked).length;
+      if (bookmarkCount > 0) stats.push(`${t('end_meeting.stat_bookmarks')}: ${bookmarkCount}`);
+      if ((editMeeting.memos || []).length > 0) stats.push(`${t('end_meeting.stat_memos')}: ${editMeeting.memos.length}`);
+      if ((editMeeting.analysisHistory || []).length > 0) stats.push(`${t('end_meeting.stat_analyses')}: ${editMeeting.analysisHistory.length}`);
+      // Show last modified timestamp
+      if (editMeeting.updatedAt) {
+        const updDate = new Date(editMeeting.updatedAt);
+        stats.push(`${t('end_meeting.last_modified')}: ${updDate.toLocaleString()}`);
+      }
+    } else {
+      stats.push(`${t('end_meeting.stat_duration')}: ${getElapsedTimeStr()}`);
+      stats.push(`${t('end_meeting.stat_transcript')}: ${state.transcript.length}`);
+      const bookmarkCount = state.transcript.filter(l => l.bookmarked).length;
+      if (bookmarkCount > 0) stats.push(`${t('end_meeting.stat_bookmarks')}: ${bookmarkCount}`);
+      if (state.memos.length > 0) stats.push(`${t('end_meeting.stat_memos')}: ${state.memos.length}`);
+      if (state.analysisHistory.length > 0) stats.push(`${t('end_meeting.stat_analyses')}: ${state.analysisHistory.length}`);
+      if (state.chatHistory.length > 0) stats.push(`${t('end_meeting.stat_chats')}: ${state.chatHistory.length}`);
+    }
     statsEl.textContent = stats.join('  ·  ');
   }
 
@@ -756,10 +799,10 @@ function showEndMeetingModal() {
     );
   }
 
-  // AI title/tag generation (with caching)
+  // AI title/tag generation (with caching) — skip in edit mode
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
-  if (isProxyAvailable() && state.transcript.length > 0) {
+  if (!isEditMode && isProxyAvailable() && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
     chipsEl.innerHTML = '';
 
@@ -785,7 +828,7 @@ function showEndMeetingModal() {
   }
 }
 
-function resetFooterToDefault() {
+function resetFooterToDefault(isEditMode = false) {
   const footer = $('#endMeetingFooter');
   footer.classList.remove('save-progress-state', 'save-complete-state', 'save-error-state');
 
@@ -797,36 +840,62 @@ function resetFooterToDefault() {
   cancelBtn.className = 'btn';
   cancelBtn.id = 'btnEndMeetingCancel';
   cancelBtn.textContent = t('end_meeting.cancel');
-  cancelBtn.onclick = () => cancelEndMeeting();
+  cancelBtn.onclick = () => {
+    if (isEditMode) cancelEditMeeting();
+    else cancelEndMeeting();
+  };
 
   // Generate Minutes button (opens model selection modal)
   const genBtn = document.createElement('button');
   genBtn.className = 'btn btn-accent';
   genBtn.id = 'btnGenerateMinutes';
   genBtn.textContent = t('end_meeting.generate_minutes');
-  genBtn.onclick = () => {
-    const modelModal = $('#minutesModelModal');
-    modelModal.hidden = false;
-    // Update Pro usage count
-    const proCount = getProUsageCount();
-    const proUsageEl = $('#modelModalProUsage');
-    if (proUsageEl && proCount > 0) {
-      proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
-      proUsageEl.hidden = false;
-    }
-  };
+  if (isEditMode) {
+    // In edit mode: save metadata, load meeting, let user generate from loaded state
+    const editMeetingId = state._editMeetingId;
+    genBtn.onclick = () => {
+      saveEditMeeting();
+      emit('meeting:load', { id: editMeetingId });
+      $('#viewerModal').hidden = true;
+      // Open minutes model modal after a tick (to allow state to settle)
+      setTimeout(() => {
+        const modelModal = $('#minutesModelModal');
+        if (modelModal) modelModal.hidden = false;
+      }, 100);
+    };
+  } else {
+    genBtn.onclick = () => {
+      const modelModal = $('#minutesModelModal');
+      modelModal.hidden = false;
+      // Update Pro usage count
+      const proCount = getProUsageCount();
+      const proUsageEl = $('#modelModalProUsage');
+      if (proUsageEl && proCount > 0) {
+        proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
+        proUsageEl.hidden = false;
+      }
+    };
+  }
+
+  // Determine transcript for checking
+  const transcript = isEditMode
+    ? (getMeeting(state._editMeetingId)?.transcript || [])
+    : state.transcript;
 
   // Hide generate button if no proxy or no transcript
-  if (!isProxyAvailable() || state.transcript.length === 0) {
+  if (!isProxyAvailable() || transcript.length === 0) {
     genBtn.hidden = true;
   }
 
-  // Save (metadata only, no minutes)
+  // Save
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-primary';
   saveBtn.id = 'btnEndMeetingSave';
   saveBtn.textContent = t('end_meeting.save');
-  saveBtn.onclick = () => finalizeEndMeeting();
+  saveBtn.onclick = () => {
+    if (isEditMode) saveEditMeeting();
+    else finalizeEndMeeting();
+  };
 
   actions.append(cancelBtn, genBtn, saveBtn);
 
@@ -1499,6 +1568,50 @@ export async function regenerateMinutes(model, template, promptConfig = {}) {
 
 export function cancelEndMeeting() {
   $('#endMeetingModal').hidden = true;
+}
+
+// Edit mode: save metadata changes to the stored meeting
+function saveEditMeeting() {
+  const meetingId = state._editMeetingId;
+  const meeting = getMeeting(meetingId);
+  if (!meeting) return;
+
+  // Capture form values
+  meeting.title = $('#endMeetingTitle').value.trim();
+  meeting.location = $('#endMeetingLocation').value.trim();
+  if (meeting.location) addLocation(meeting.location);
+  const dtVal = $('#endMeetingDatetime').value;
+  if (dtVal) meeting.startTime = new Date(dtVal).getTime();
+  meeting.starRating = state.starRating;
+  meeting.tags = [...state.tags];
+  meeting.participants = [...state.participants];
+
+  saveMeeting(meeting);
+
+  // Restore previous state
+  restoreEditState();
+  $('#endMeetingModal').hidden = true;
+  showToast(t('end_meeting.edit_saved'), 'success');
+
+  // Refresh viewer if open
+  if (!$('#viewerModal').hidden) {
+    emit('meeting:view', { id: meetingId });
+  }
+}
+
+// Edit mode: cancel and restore previous state
+function cancelEditMeeting() {
+  restoreEditState();
+  $('#endMeetingModal').hidden = true;
+}
+
+function restoreEditState() {
+  if (state._editPrevState) {
+    Object.assign(state, state._editPrevState);
+    delete state._editPrevState;
+  }
+  state._editMode = false;
+  state._editMeetingId = null;
 }
 
 function showPostEndButtons() {

@@ -715,6 +715,7 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
+          <button class="btn btn-sm" id="btnViewerEditInfo" data-i18n="viewer.edit_info">Edit Info</button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -922,7 +923,7 @@
   <div class="modal-overlay" id="meetingPrepModal" hidden>
     <div class="modal modal-large" style="max-width:640px;">
       <div class="modal-header">
-        <h3 data-i18n="prep.form_title">Meeting Prep</h3>
+        <h3 data-i18n="prep.form_title">Listen Prep</h3>
         <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
       </div>
 
@@ -943,7 +944,7 @@
         <!-- Step 1: Meeting Type -->
         <div class="prep-step-panel active" data-step="1" id="prepStep1">
           <div class="prep-section">
-            <label class="prep-section-label" data-i18n="prep.step_type">What kind of meeting is this?</label>
+            <label class="prep-section-label" data-i18n="prep.step_type">What's the situation?</label>
             <div class="prep-type-list" id="prepTypeGrid">
               <label class="prep-type-radio selected" data-type="copilot">
                 <span class="prep-type-radio-indicator"></span>
@@ -1093,7 +1094,7 @@
         <!-- Step 4: Reference Meeting -->
         <div class="prep-step-panel" data-step="4" id="prepStep4">
           <div class="prep-section">
-            <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Meeting</label>
+            <label class="prep-section-label" data-i18n="prep.reference_meeting">Reference Session</label>
             <div class="prep-reference-chip" id="prepReferenceChip" hidden>
               <span id="prepReferenceChipText"></span>
               <button class="prep-reference-chip-remove" id="btnRemoveReference">&times;</button>
@@ -1122,7 +1123,7 @@
         <div class="prep-step-panel" data-step="5" id="prepStep5">
           <div class="prep-section">
             <label class="prep-section-label" data-i18n="prep.files_label">Files</label>
-            <p class="prep-file-guide" data-i18n="prep.file_guide">회의 자료, 참고 문서, 이전 회의록 등을 첨부하세요</p>
+            <p class="prep-file-guide" data-i18n="prep.file_guide">Attach reference docs, materials, or previous session notes.</p>
             <div class="prep-file-drop" id="prepFileDrop">
               <span data-i18n="prep.file_drop_hint">Drop files here or click to browse</span>
               <input type="file" id="prepFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
@@ -1133,7 +1134,7 @@
             <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as Preset</span></button>
             <div style="display:flex;gap:8px;">
               <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for Later</button>
-              <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Meeting</button>
+              <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Session</button>
             </div>
           </div>
         </div>
@@ -1172,29 +1173,23 @@
         </div>
         <hr class="launcher-divider">
       </div>
-      <!-- 4 action cards -->
-      <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new meeting</p>
+      <!-- 3 action cards -->
+      <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new session</p>
       <div class="launcher-actions-grid">
-        <button class="launcher-card" id="btnLauncherQuickStart">
+        <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
           <span class="launcher-card-badge">1</span>
-          <span class="launcher-card-icon">&#9889;</span>
-          <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
-          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Start recording immediately</span>
-        </button>
-        <button class="launcher-card launcher-card-ai-setup" id="btnLauncherAiSetup">
-          <span class="launcher-card-badge">2</span>
           <span class="launcher-card-icon">&#129302;</span>
-          <span class="launcher-card-label" data-i18n="meeting.ai_setup">AI Setup</span>
-          <span class="launcher-card-desc" data-i18n="meeting.ai_setup_desc">AI creates a custom setup for you</span>
+          <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
+          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">AI sets up for your situation</span>
         </button>
-        <button class="launcher-card" id="btnLauncherMeetingPrep">
-          <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon">&#128221;</span>
-          <span class="launcher-card-label" data-i18n="meeting.meeting_prep">Meeting Prep</span>
-          <span class="launcher-card-desc" data-i18n="meeting.meeting_prep_desc">Set up meeting details step by step</span>
+        <button class="launcher-card" id="btnLauncherDeepSetup">
+          <span class="launcher-card-badge">2</span>
+          <span class="launcher-card-icon">&#127911;</span>
+          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Listen Prep</span>
+          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Deep setup, step by step</span>
         </button>
         <button class="launcher-card" id="btnLauncherPreset">
-          <span class="launcher-card-badge">4</span>
+          <span class="launcher-card-badge">3</span>
           <span class="launcher-card-icon">&#128203;</span>
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
@@ -1209,7 +1204,7 @@
   <div class="modal-overlay" id="promptBuilderModal" hidden>
     <div class="modal prompt-builder-modal">
       <button class="modal-close" id="pbCloseBtn">&times;</button>
-      <h2 class="pb-title" data-i18n="pb.title">AI Setup</h2>
+      <h2 class="pb-title" data-i18n="pb.title">Quick Start</h2>
 
       <!-- Chat View -->
       <div class="pb-view" id="pbChatView">
@@ -1249,6 +1244,88 @@
           <textarea class="pb-input" id="paInput" rows="1" data-i18n-placeholder="pa.input_placeholder" placeholder="e.g., More concise, focus on action items..."></textarea>
           <button class="pb-send-btn" id="paSendBtn">&#10148;</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deep Setup Modal -->
+  <div class="modal-overlay" id="deepSetupModal" hidden>
+    <div class="modal deep-setup-modal">
+      <button class="modal-close ds-close">&times;</button>
+      <h2 class="ds-title" data-i18n="ds.title">Listen Prep</h2>
+
+      <!-- Step Indicator -->
+      <div class="prep-wizard-steps" id="dsSteps">
+        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="ds.step1">Situation</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="ds.step2">People & Context</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3">Focus Points</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="ds.step4">Ready</span></button>
+      </div>
+
+      <!-- Step 1: Situation (AI chat) -->
+      <div class="ds-step-panel" data-step="1">
+        <div class="ds-chat-area">
+          <div class="pb-messages" id="dsMessages1"></div>
+          <div class="pb-chips" id="dsChips1"></div>
+          <div class="pb-input-wrap">
+            <textarea class="pb-input" id="dsInput1" rows="1" placeholder="..."></textarea>
+            <button class="pb-send-btn" id="btnDsSend1">&#10148;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: People & Context (hybrid: chat + form) -->
+      <div class="ds-step-panel" data-step="2" hidden>
+        <div class="ds-hybrid-layout">
+          <div class="ds-chat-area ds-chat-half">
+            <div class="pb-messages" id="dsMessages2"></div>
+            <div class="pb-chips" id="dsChips2"></div>
+            <div class="pb-input-wrap">
+              <textarea class="pb-input" id="dsInput2" rows="1" placeholder="..."></textarea>
+              <button class="pb-send-btn" id="btnDsSend2">&#10148;</button>
+            </div>
+          </div>
+          <div class="ds-form-area" id="dsFormArea2">
+            <!-- dynamically rendered: contacts, reference, files -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Focus Points (AI chat) -->
+      <div class="ds-step-panel" data-step="3" hidden>
+        <div class="ds-chat-area">
+          <div class="pb-messages" id="dsMessages3"></div>
+          <div class="pb-chips" id="dsChips3"></div>
+          <div class="pb-input-wrap">
+            <textarea class="pb-input" id="dsInput3" rows="1" placeholder="..."></textarea>
+            <button class="pb-send-btn" id="btnDsSend3">&#10148;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Summary -->
+      <div class="ds-step-panel" data-step="4" hidden>
+        <div class="ds-summary-area">
+          <h3 class="ds-step4-title" data-i18n="ds.step4_title">Ready to go!</h3>
+          <div id="dsSummary"></div>
+          <div class="ds-step4-actions">
+            <button class="btn btn-text" id="btnDsEdit" data-i18n="ds.btn_edit">&larr; Edit</button>
+            <div class="ds-step4-actions-right">
+              <button class="btn btn-outline" id="btnDsSavePreset" data-i18n="ds.btn_save_preset">💾 Save as Preset</button>
+              <button class="btn btn-primary" id="btnDsStart" data-i18n="ds.btn_start">▶ Start</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="ds-wizard-nav">
+        <button class="btn btn-sm" id="btnDsBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-sm btn-primary" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
       </div>
     </div>
   </div>

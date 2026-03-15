@@ -4722,6 +4722,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
   background: var(--bg-tertiary);
   color: var(--text-muted);
 }
+.launcher-preset-prepared {
+  border-bottom: 1px solid var(--border-light);
+  font-weight: 500;
+}
 .prep-participants-row {
   position: relative;
   display: flex;
