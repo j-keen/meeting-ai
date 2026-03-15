@@ -333,6 +333,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .meeting-title-input {
   flex: 1;
   min-width: 0;
+  max-width: 360px;
   padding: 3px 8px;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
