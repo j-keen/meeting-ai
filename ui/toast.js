@@ -30,3 +30,58 @@ function removeToast(el) {
   el.classList.add('toast-out');
   setTimeout(() => el.remove(), 300);
 }
+
+// Whisper toast — shown at top of transcript panel, auto-dismiss 3s, click to pin
+export function showWhisperToast(text) {
+  const container = $('#whisperContainer');
+  if (!container) return;
+
+  const el = document.createElement('div');
+  el.className = 'whisper-toast';
+
+  const icon = document.createElement('span');
+  icon.className = 'whisper-icon';
+  icon.textContent = '🔔';
+
+  const msg = document.createElement('span');
+  msg.className = 'whisper-text';
+  msg.textContent = text;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'whisper-close';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    removeWhisper(el);
+  });
+
+  el.appendChild(icon);
+  el.appendChild(msg);
+  el.appendChild(closeBtn);
+
+  // Click to pin/unpin
+  let pinned = false;
+  let autoTimer = setTimeout(() => {
+    if (!pinned) removeWhisper(el);
+  }, 5000);
+
+  el.addEventListener('click', () => {
+    pinned = !pinned;
+    el.classList.toggle('whisper-pinned', pinned);
+    if (pinned) {
+      clearTimeout(autoTimer);
+    } else {
+      autoTimer = setTimeout(() => removeWhisper(el), 3000);
+    }
+  });
+
+  container.appendChild(el);
+  // Trigger enter animation
+  requestAnimationFrame(() => el.classList.add('whisper-visible'));
+}
+
+function removeWhisper(el) {
+  if (el.classList.contains('whisper-out')) return;
+  el.classList.add('whisper-out');
+  setTimeout(() => el.remove(), 300);
+}

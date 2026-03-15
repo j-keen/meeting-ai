@@ -2369,6 +2369,84 @@ body.loaded-mode #btnNewMeeting { display: none; }
   to { opacity: 0; transform: translateY(10px); }
 }
 
+/* Whisper toasts — transcript panel top */
+.whisper-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px;
+}
+.whisper-container:empty {
+  display: none;
+}
+.whisper-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  position: relative;
+}
+.whisper-toast.whisper-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.whisper-toast.whisper-out {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.whisper-toast.whisper-pinned {
+  border-color: var(--accent-hover);
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.whisper-toast.whisper-pinned::after {
+  content: '📌';
+  font-size: 10px;
+  position: absolute;
+  top: 2px;
+  right: 24px;
+}
+.whisper-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.whisper-text {
+  flex: 1;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.whisper-close {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.whisper-close:hover {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .whisper-toast {
+  background: rgba(79, 110, 247, 0.12);
+  border-color: rgba(79, 110, 247, 0.4);
+}
+[data-theme="dark"] .whisper-toast.whisper-pinned {
+  background: rgba(79, 110, 247, 0.18);
+  box-shadow: 0 0 0 1px rgba(79, 110, 247, 0.5);
+}
+
 /* Export modal */
 .export-content-select {
   display: flex; gap: 8px; margin-bottom: 14px;

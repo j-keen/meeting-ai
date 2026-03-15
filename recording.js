@@ -12,7 +12,8 @@ import {
   getProUsageCount, incrementProUsage,
 } from './storage.js';
 import {
-  showToast, showCenterToast, addTranscriptLine, showInterim, clearInterim,
+  showToast, showCenterToast, showWhisperToast,
+  addTranscriptLine, showInterim, clearInterim,
   showAnalysisSkeletons, renderAnalysis, renderHighlights,
   updateTranscriptLineUI, removeTranscriptLineUI,
   showTranscriptConnecting, showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
@@ -559,6 +560,15 @@ export async function runAnalysis() {
     state.analysisHistory.push(result);
     renderAnalysis(result);
 
+    // Show whisper toasts
+    if (result.whispers && result.whispers.length > 0) {
+      if (!state.whisperHistory) state.whisperHistory = [];
+      result.whispers.forEach((w, i) => {
+        state.whisperHistory.push({ text: w, timestamp: Date.now(), analysisIndex: state.analysisHistory.length - 1 });
+        setTimeout(() => showWhisperToast(w), i * 400);
+      });
+    }
+
     // Auto-generate tags
     if (result.summary && state.tags.length === 0) {
       generateTags({
@@ -608,6 +618,7 @@ export function autoSave() {
     starRating: state.starRating,
     categories: state.categories,
     participants: state.participants,
+    whisperHistory: state.whisperHistory || [],
   };
   const result = saveMeeting(meeting);
   if (result.warning === 'storage_high') {

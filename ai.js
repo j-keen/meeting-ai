@@ -89,6 +89,26 @@ function extractHeadline(markdown) {
   return (firstLine || '').replace(/^#+\s*/, '').trim().slice(0, 80);
 }
 
+/** Extract whisper section from markdown, returning cleaned markdown + whispers array */
+function extractWhispers(markdown) {
+  // Match ## 🔔 Whisper or ## 🔔 귓속말 section (until next ## or end)
+  const whisperRegex = /^## 🔔\s*(?:Whisper|귓속말)\s*\n([\s\S]*?)(?=\n## |\n$|$)/m;
+  const match = markdown.match(whisperRegex);
+  if (!match) return { cleaned: markdown, whispers: [] };
+
+  // Extract individual whisper items (lines starting with -)
+  const whisperBlock = match[1].trim();
+  const whispers = whisperBlock
+    .split('\n')
+    .map(line => line.replace(/^[-*]\s*/, '').trim())
+    .filter(line => line.length > 0);
+
+  // Remove the whisper section from the displayed markdown
+  const cleaned = markdown.replace(whisperRegex, '').replace(/\n{3,}/g, '\n\n').trim();
+
+  return { cleaned, whispers };
+}
+
 /** Remove any AI preamble text before the first markdown heading */
 function stripPreamble(text) {
   const idx = text.indexOf('#');
@@ -241,10 +261,12 @@ export async function analyzeTranscript({
       }
 
       // Markdown response (new default)
+      const { cleaned, whispers } = extractWhispers(rawText);
       return {
-        markdown: rawText,
-        flow: extractHeadline(rawText),
-        summary: rawText,
+        markdown: cleaned,
+        flow: extractHeadline(cleaned),
+        summary: cleaned,
+        whispers,
         timestamp: Date.now(),
       };
     } catch (err) {
