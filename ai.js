@@ -1,7 +1,7 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t } from './i18n.js';
-import { callGemini, isProxyAvailable } from './gemini-api.js';
+import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
 
 // Normalize array items: if Gemini returns objects instead of strings, flatten them
 function flattenItems(arr) {
@@ -93,6 +93,7 @@ export async function analyzeTranscript({
   userProfile = '',
   model = 'gemini-2.5-flash',
   userCorrections = [],
+  onStream = null,
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript to analyze');
@@ -159,8 +160,17 @@ export async function analyzeTranscript({
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const data = await callGemini(model, body);
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      let rawText;
+
+      if (onStream) {
+        const result = await callGeminiStream(model, body, (_chunk, fullSoFar) => {
+          onStream(fullSoFar);
+        });
+        rawText = result.text;
+      } else {
+        const data = await callGemini(model, body);
+        rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
 
       // Try JSON parse for backward compatibility with old-style prompts
       const parsed = parseGeminiResponse(rawText);
@@ -286,6 +296,7 @@ export async function generateFinalMinutes({
   basePromptOverride = '',
   userInstruction = '',
   metadata = {},
+  onStream = null,
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
@@ -381,8 +392,17 @@ export async function generateFinalMinutes({
     generationConfig: { temperature: isProModel ? 0.3 : 0.2 }
   };
 
-  const data = await callGemini(model, body);
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  let rawText;
+  if (onStream) {
+    const result = await callGeminiStream(model, body, (_chunk, fullSoFar) => {
+      onStream(fullSoFar);
+    });
+    rawText = result.text;
+  } else {
+    const data = await callGemini(model, body);
+    rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+
   const cleanedText = stripPreamble(rawText);
 
   return {

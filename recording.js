@@ -279,6 +279,7 @@ export async function startRecording() {
 
     // Set recording state only AFTER stt.start() succeeds
     state.isRecording = true;
+    emit('recording:started');
 
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
@@ -338,6 +339,7 @@ export function stopRecording() {
   stt?.stop();
   stt = null;
   state.isRecording = false;
+  emit('recording:stopped');
   pauseStartTime = Date.now();
   clearInterim();
 
@@ -501,6 +503,11 @@ export async function runAnalysis() {
       ? [...state.analysisCorrections]
       : [];
 
+    // Streaming preview: show markdown as it arrives
+    const aiContainer = document.querySelector('#aiSections');
+    let streamPreviewEl = null;
+    let _renderMd = null;
+
     const result = await analyzeTranscript({
       transcript: state.transcript,
       prompt: state.settings.customPrompt,
@@ -515,6 +522,26 @@ export async function runAnalysis() {
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,
+      onStream: (textSoFar) => {
+        if (!aiContainer) return;
+        if (!streamPreviewEl) {
+          aiContainer.innerHTML = '';
+          aiContainer.classList.remove('ai-updating');
+          streamPreviewEl = document.createElement('div');
+          streamPreviewEl.className = 'ai-markdown-content ai-streaming';
+          aiContainer.appendChild(streamPreviewEl);
+        }
+        if (_renderMd) {
+          streamPreviewEl.innerHTML = _renderMd(textSoFar);
+          aiContainer.scrollTop = aiContainer.scrollHeight;
+        } else {
+          import('./chat.js').then(({ renderMarkdown }) => {
+            _renderMd = renderMarkdown;
+            streamPreviewEl.innerHTML = renderMarkdown(textSoFar);
+            aiContainer.scrollTop = aiContainer.scrollHeight;
+          });
+        }
+      },
     });
 
     // Clear corrections after they've been sent (one-shot)
@@ -598,6 +625,7 @@ export function endMeeting() {
 }
 
 function proceedEndMeeting() {
+  emit('meeting:ending');
   stopRecording();
   clearDraftRecovery();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
@@ -1275,6 +1303,11 @@ async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     starRating: state.starRating,
   };
 
+  // Streaming preview for final minutes
+  const aiContainer = document.querySelector('#aiSections');
+  let streamPreviewEl = null;
+  let _renderMd = null;
+
   const result = await generateFinalMinutes({
     transcript: state.transcript,
     analysisHistory: state.analysisHistory,
@@ -1289,6 +1322,26 @@ async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     basePromptOverride: promptConfig.basePromptOverride || '',
     userInstruction: promptConfig.userInstruction || '',
     metadata,
+    onStream: (textSoFar) => {
+      if (!aiContainer) return;
+      if (!streamPreviewEl) {
+        aiContainer.innerHTML = '';
+        aiContainer.classList.remove('ai-updating');
+        streamPreviewEl = document.createElement('div');
+        streamPreviewEl.className = 'ai-markdown-content ai-streaming';
+        aiContainer.appendChild(streamPreviewEl);
+      }
+      if (_renderMd) {
+        streamPreviewEl.innerHTML = _renderMd(textSoFar);
+        aiContainer.scrollTop = aiContainer.scrollHeight;
+      } else {
+        import('./chat.js').then(({ renderMarkdown }) => {
+          _renderMd = renderMarkdown;
+          streamPreviewEl.innerHTML = renderMarkdown(textSoFar);
+          aiContainer.scrollTop = aiContainer.scrollHeight;
+        });
+      }
+    },
   });
 
   state.currentAnalysis = result;

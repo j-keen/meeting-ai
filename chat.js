@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGemini, isProxyAvailable } from './gemini-api.js';
+import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -230,20 +230,50 @@ async function sendChatMessage(userText) {
       generationConfig: { temperature: 0.5 }
     };
 
-    const data = await callGemini(model, body);
+    // Create streaming message element
+    const empty = $('#chatEmpty');
+    if (empty) empty.style.display = 'none';
+    const tmpl = $('#tmplChatMessage');
+    const streamEl = tmpl.content.cloneNode(true).querySelector('.chat-message');
+    streamEl.classList.add('model');
+    const streamContent = streamEl.querySelector('.chat-message-content');
+    streamContent.textContent = '';
+
     typingEl.remove();
-    const candidate = data.candidates?.[0];
-    if (!candidate) throw new Error('No response from AI');
+    container.appendChild(streamEl);
 
-    const parts = candidate.content?.parts || [];
+    const { text: fullText, parts } = await callGeminiStream(model, body, (chunk, fullSoFar) => {
+      streamContent.innerHTML = renderMarkdown(fullSoFar);
+      container.scrollTop = container.scrollHeight;
+    });
 
+    // Check for function calls in parts
+    let hasFunctionCall = false;
     for (const part of parts) {
       if (part.functionCall) {
+        hasFunctionCall = true;
+        streamEl.remove();
         await handleFunctionCall(part.functionCall);
-      } else if (part.text) {
-        renderChatMessage('model', part.text);
-        state.chatHistory.push({ role: 'model', text: part.text, timestamp: Date.now() });
       }
+    }
+
+    if (fullText) {
+      // Finalize the streamed message
+      streamEl.dataset.text = fullText;
+      streamContent.innerHTML = renderMarkdown(fullText);
+
+      // Add action buttons
+      const actions = streamEl.querySelector('.chat-message-actions');
+      const btn = document.createElement('button');
+      btn.textContent = '↻';
+      btn.title = t('chat.regenerate');
+      btn.addEventListener('click', () => handleRegenerate(streamEl));
+      actions.appendChild(btn);
+
+      state.chatHistory.push({ role: 'model', text: fullText, timestamp: Date.now() });
+    } else if (!hasFunctionCall) {
+      streamEl.remove();
+      throw new Error('No response from AI');
     }
   } catch (err) {
     typingEl.remove();

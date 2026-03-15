@@ -54,7 +54,11 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.transcript">Transcript</h2>
-          <span class="panel-hint" data-i18n="hint.transcript_edit.0">Double-click to edit · improves AI quality</span>
+          <div class="panel-hint-container" id="transcriptHintContainer">
+            <span class="panel-hint-text"></span>
+            <span class="panel-hint-dots"></span>
+            <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
+          </div>
         </div>
         <div class="panel-actions">
           <div class="inbox-btn-wrap">
@@ -103,7 +107,11 @@
       <div class="panel-header">
         <div style="display:flex;align-items:center;gap:8px">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
-          <span class="panel-hint" data-i18n="hint.analysis_edit.0">Click blocks to edit · reflected in next analysis</span>
+          <div class="panel-hint-container" id="analysisHintContainer">
+            <span class="panel-hint-text"></span>
+            <span class="panel-hint-dots"></span>
+            <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
+          </div>
         </div>
         <div class="panel-actions">
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>

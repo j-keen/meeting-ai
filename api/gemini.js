@@ -35,8 +35,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'VERTEX_API_KEY not configured' });
   }
 
+  const isStream = req.query.stream === 'true';
+
   try {
-    const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:generateContent?key=${apiKey}`;
+    const action = isStream ? 'streamGenerateContent' : 'generateContent';
+    const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:${action}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -44,12 +47,31 @@ export default async function handler(req, res) {
       body: JSON.stringify(req.body),
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const data = await response.json();
       return res.status(response.status).json(data);
     }
 
+    if (isStream) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(decoder.decode(value, { stream: true }));
+        }
+      } catch (streamErr) {
+        console.error('Stream read error:', streamErr.message);
+      }
+      return res.end();
+    }
+
+    const data = await response.json();
     return res.status(200).json(data);
   } catch (err) {
     console.error('Vertex AI proxy error:', err.message);

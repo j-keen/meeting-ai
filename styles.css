@@ -675,16 +675,53 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: calc(100% - 20px);
 }
-.panel-hint {
+.panel-hint-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+.panel-hint-container.hidden { display: none; }
+.panel-hint-text {
   font-size: 0.7rem;
   color: var(--text-secondary);
   opacity: 0.6;
   white-space: nowrap;
-  transition: opacity 0.3s ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 340px;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
-.panel-hint.fade-out {
+.panel-hint-text.fade-out {
   opacity: 0;
+  transform: translateY(-4px);
 }
+.panel-hint-dots {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.panel-hint-dots .dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--text-secondary);
+  opacity: 0.25;
+  transition: opacity 0.2s;
+}
+.panel-hint-dots .dot.active { opacity: 0.7; }
+.panel-hint-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  padding: 0 2px;
+  line-height: 1;
+}
+.panel-hint-container:hover .panel-hint-dismiss { opacity: 0.5; }
+.panel-hint-dismiss:hover { opacity: 1 !important; }
 .transcript-memo-input .memo-input {
   width: 100%;
   padding: 5px 10px;
@@ -872,6 +909,18 @@ body.loaded-mode #btnNewMeeting { display: none; }
   pointer-events: none;
   transition: opacity var(--transition-normal);
 }
+/* Streaming cursor animation */
+.ai-markdown-content.ai-streaming::after {
+  content: '▍';
+  display: inline;
+  animation: blink-cursor 0.8s step-end infinite;
+  color: var(--accent);
+  font-weight: bold;
+}
+@keyframes blink-cursor {
+  50% { opacity: 0; }
+}
+
 /* Active editing block */
 .ai-block.editing {
   border-left-color: var(--accent);
