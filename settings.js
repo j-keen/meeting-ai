@@ -1855,5 +1855,3 @@ export function closeSettings() {
     if (el) el.hidden = true;
   });
 }
-
-export { refreshTypeDropdowns };
