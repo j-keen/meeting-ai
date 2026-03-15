@@ -5,7 +5,7 @@ import {
   saveSettings, loadSettings,
   loadContacts, addContact, updateContact, deleteContact,
   loadLocations, addLocation, deleteLocation, findNearestLocation,
-  loadCategories, addCategory, deleteCategory,
+  loadCategories, addCategory, deleteCategory, updateCategoryHint,
   loadCorrectionDict, addCorrectionEntry, deleteCorrectionEntry,
 } from './storage.js';
 import { getDefaultPrompt } from './ai.js';
@@ -661,6 +661,21 @@ function initDataTab() {
     emit('toast', { message: t('prep.card_saved'), type: 'success' });
   });
 
+  // Save all scanned cards (review mode)
+  $('#cardScanSaveAll')?.addEventListener('click', saveAllScannedCards);
+
+  // --- Export / Import ---
+  $('#btnExportCsv')?.addEventListener('click', exportContactsCsv);
+  $('#btnExportVcf')?.addEventListener('click', exportContactsVcf);
+  $('#btnImportContacts')?.addEventListener('click', () => {
+    $('#contactsImportFile').click();
+  });
+  $('#contactsImportFile')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) importContactsFromFile(file);
+    e.target.value = '';
+  });
+
   // Add location
   $('#btnAddLocation')?.addEventListener('click', () => {
     const name = $('#inputNewLocation')?.value.trim();
@@ -821,14 +836,15 @@ function closeSettingsCamera() {
   $('#cameraModal').hidden = true;
 }
 
-// --- Card Scan Modal & Multi-scan Queue ---
+// --- Card Scan Modal & Multi-scan Queue (Review Mode) ---
 let scanQueue = [];
 let scanProcessing = false;
 
 function openCardScanModal() {
   $('#cardScanModal').hidden = false;
   $('#settingsCardResult').hidden = true;
-  // Don't clear queue if already processing
+  const reviewPanel = $('#cardScanReviewPanel');
+  if (reviewPanel) reviewPanel.hidden = true;
 }
 
 function closeCardScanModal() {
@@ -844,7 +860,7 @@ function addFilesToScanQueue(files) {
     reader.onload = () => {
       const dataUrl = reader.result;
       const base64 = dataUrl.split(',')[1];
-      const item = { base64, name: file.name, dataUrl, status: 'waiting' };
+      const item = { base64, name: file.name, dataUrl, status: 'waiting', result: null };
       scanQueue.push(item);
       renderScanQueue();
       processScanQueue();
@@ -857,7 +873,7 @@ function addBase64ToScanQueue(base64, label) {
   const queueEl = $('#cardScanQueue');
   queueEl.hidden = false;
   const dataUrl = `data:image/jpeg;base64,${base64}`;
-  const item = { base64, name: label || 'Camera', dataUrl, status: 'waiting' };
+  const item = { base64, name: label || 'Camera', dataUrl, status: 'waiting', result: null };
   scanQueue.push(item);
   renderScanQueue();
   processScanQueue();
@@ -867,7 +883,7 @@ function renderScanQueue() {
   const queueEl = $('#cardScanQueue');
   if (!queueEl) return;
   queueEl.innerHTML = '';
-  scanQueue.forEach((item, i) => {
+  scanQueue.forEach((item) => {
     const row = document.createElement('div');
     row.className = 'card-scan-queue-item';
     const img = document.createElement('img');
@@ -879,7 +895,8 @@ function renderScanQueue() {
     statusSpan.className = 'card-scan-queue-status ' + item.status;
     if (item.status === 'waiting') statusSpan.textContent = t('settings.card_queue_waiting');
     else if (item.status === 'processing') statusSpan.textContent = t('settings.card_queue_processing');
-    else if (item.status === 'done') statusSpan.textContent = `✓ ${item.resultName || t('settings.card_queue_done')}`;
+    else if (item.status === 'done') statusSpan.textContent = `✓ ${t('settings.card_queue_done')}`;
+    else if (item.status === 'saved') statusSpan.textContent = `✓ ${t('settings.card_queue_saved')}`;
     else if (item.status === 'error') statusSpan.textContent = `✗ ${t('settings.card_queue_error')}`;
     row.append(img, nameSpan, statusSpan);
     queueEl.appendChild(row);
@@ -899,17 +916,8 @@ async function processScanQueue() {
     try {
       const result = await ocrBusinessCard(item.base64);
       if (result && result.name) {
-        addContact({
-          name: result.name,
-          title: result.title || '',
-          company: result.company || '',
-          email: result.email || '',
-          phone: result.phone || '',
-        });
         item.status = 'done';
-        item.resultName = result.name;
-        renderDataParticipants();
-        updateDataBadges();
+        item.result = result;
       } else {
         item.status = 'error';
       }
@@ -922,39 +930,232 @@ async function processScanQueue() {
 
   scanProcessing = false;
 
-  // If only one card was scanned and it failed or no queue, show single result editor
-  const lastItem = scanQueue[scanQueue.length - 1];
-  if (scanQueue.length === 1 && lastItem?.status === 'error') {
+  // Show review panel with all scanned results
+  const doneItems = scanQueue.filter(i => i.status === 'done');
+  if (doneItems.length > 0) {
+    renderScanReviewPanel();
+  } else if (scanQueue.length > 0 && scanQueue.every(i => i.status === 'error')) {
     emit('toast', { message: t('prep.scan_failed'), type: 'error' });
-  } else if (scanQueue.filter(i => i.status === 'done').length > 0) {
-    const doneCount = scanQueue.filter(i => i.status === 'done').length;
-    emit('toast', { message: `${doneCount} ${t('prep.card_saved')}`, type: 'success' });
+    setTimeout(() => {
+      scanQueue = [];
+      const queueEl = $('#cardScanQueue');
+      if (queueEl) { queueEl.innerHTML = ''; queueEl.hidden = true; }
+    }, 2000);
   }
+}
 
+function renderScanReviewPanel() {
+  const panel = $('#cardScanReviewPanel');
+  if (!panel) return;
+  panel.hidden = false;
+  panel.innerHTML = '';
+
+  const doneItems = scanQueue.filter(i => i.status === 'done');
+
+  doneItems.forEach((item, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card-review-item';
+    card.dataset.queueIdx = scanQueue.indexOf(item);
+
+    const thumb = document.createElement('img');
+    thumb.src = item.dataUrl;
+    thumb.className = 'card-review-thumb';
+
+    const fields = document.createElement('div');
+    fields.className = 'card-review-fields';
+    const r = item.result;
+    const fieldDefs = [
+      { key: 'name', placeholder: 'Name', value: r.name || '' },
+      { key: 'title', placeholder: 'Title', value: r.title || '' },
+      { key: 'company', placeholder: 'Company', value: r.company || '' },
+      { key: 'email', placeholder: 'Email', value: r.email || '' },
+      { key: 'phone', placeholder: 'Phone', value: r.phone || '' },
+    ];
+    fieldDefs.forEach(f => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'settings-input card-review-input';
+      input.placeholder = f.placeholder;
+      input.value = f.value;
+      input.dataset.field = f.key;
+      fields.appendChild(input);
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-xs btn-danger card-review-remove';
+    removeBtn.textContent = '\u00d7';
+    removeBtn.addEventListener('click', () => {
+      const qi = parseInt(card.dataset.queueIdx);
+      scanQueue[qi].status = 'error'; // mark as skipped
+      card.remove();
+      renderScanQueue();
+      // If no more cards to review, hide panel
+      if (panel.querySelectorAll('.card-review-item').length === 0) {
+        panel.hidden = true;
+        $('#cardScanSaveAll').hidden = true;
+      }
+    });
+
+    card.append(thumb, fields, removeBtn);
+    panel.appendChild(card);
+  });
+
+  // Save All button
+  let saveAllBtn = $('#cardScanSaveAll');
+  if (!saveAllBtn) return;
+  saveAllBtn.hidden = false;
+  saveAllBtn.textContent = `${t('settings.card_save_all')} (${doneItems.length})`;
+}
+
+function saveAllScannedCards() {
+  const panel = $('#cardScanReviewPanel');
+  if (!panel) return;
+  const cards = panel.querySelectorAll('.card-review-item');
+  let savedCount = 0;
+  cards.forEach(card => {
+    const qi = parseInt(card.dataset.queueIdx);
+    const inputs = card.querySelectorAll('.card-review-input');
+    const data = {};
+    inputs.forEach(inp => { data[inp.dataset.field] = inp.value.trim(); });
+    if (!data.name) return;
+    addContact(data);
+    scanQueue[qi].status = 'saved';
+    savedCount++;
+  });
+  renderScanQueue();
+  renderDataParticipants();
+  updateDataBadges();
+  panel.hidden = true;
+  $('#cardScanSaveAll').hidden = true;
+  if (savedCount > 0) {
+    emit('toast', { message: `${savedCount} ${t('prep.card_saved')}`, type: 'success' });
+  }
   // Clear queue after a delay
   setTimeout(() => {
     scanQueue = [];
     const queueEl = $('#cardScanQueue');
     if (queueEl) { queueEl.innerHTML = ''; queueEl.hidden = true; }
-  }, 3000);
+  }, 2000);
 }
 
-// Single card OCR (for manual review flow - when only 1 image)
-async function processSettingsOcr(base64) {
-  try {
-    const result = await ocrBusinessCard(base64);
-    if (result) {
-      $('#settingsCardName').value = result.name || '';
-      $('#settingsCardTitle').value = result.title || '';
-      $('#settingsCardCompany').value = result.company || '';
-      $('#settingsCardEmail').value = result.email || '';
-      $('#settingsCardPhone').value = result.phone || '';
-      $('#settingsCardResult').hidden = false;
-    }
-  } catch (err) {
-    emit('toast', { message: t('prep.scan_failed'), type: 'error' });
-    console.error('OCR error:', err);
+// --- Contacts Export / Import ---
+function exportContactsCsv() {
+  const contacts = loadContacts();
+  if (contacts.length === 0) {
+    emit('toast', { message: t('settings.no_items'), type: 'warning' });
+    return;
   }
+  const headers = ['name', 'title', 'company', 'email', 'phone', 'starred'];
+  const csvRows = [headers.join(',')];
+  contacts.forEach(c => {
+    const row = headers.map(h => {
+      const val = (c[h] ?? '').toString();
+      // Escape CSV values
+      return val.includes(',') || val.includes('"') || val.includes('\n')
+        ? `"${val.replace(/"/g, '""')}"` : val;
+    });
+    csvRows.push(row.join(','));
+  });
+  const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contacts_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportContactsVcf() {
+  const contacts = loadContacts();
+  if (contacts.length === 0) {
+    emit('toast', { message: t('settings.no_items'), type: 'warning' });
+    return;
+  }
+  const vcards = contacts.map(c => {
+    const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+    lines.push(`FN:${c.name}`);
+    if (c.title) lines.push(`TITLE:${c.title}`);
+    if (c.company) lines.push(`ORG:${c.company}`);
+    if (c.email) lines.push(`EMAIL:${c.email}`);
+    if (c.phone) lines.push(`TEL:${c.phone}`);
+    lines.push('END:VCARD');
+    return lines.join('\r\n');
+  });
+  const blob = new Blob([vcards.join('\r\n')], { type: 'text/vcard;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `contacts_${new Date().toISOString().slice(0, 10)}.vcf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importContactsFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = reader.result;
+    let imported = 0;
+    if (file.name.endsWith('.vcf')) {
+      // Parse vCard
+      const cards = text.split('BEGIN:VCARD').filter(s => s.trim());
+      cards.forEach(card => {
+        const get = (key) => {
+          const m = card.match(new RegExp(`^${key}[;:](.*)$`, 'mi'));
+          return m ? m[1].trim() : '';
+        };
+        const name = get('FN');
+        if (!name) return;
+        addContact({
+          name,
+          title: get('TITLE'),
+          company: get('ORG'),
+          email: get('EMAIL'),
+          phone: get('TEL'),
+        });
+        imported++;
+      });
+    } else {
+      // Parse CSV
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length < 2) return;
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^"(.*)"$/, '$1'));
+      for (let i = 1; i < lines.length; i++) {
+        const values = parseCsvLine(lines[i]);
+        const obj = {};
+        headers.forEach((h, idx) => { obj[h] = values[idx] || ''; });
+        if (!obj.name) return;
+        if (obj.starred) obj.starred = obj.starred === 'true';
+        addContact(obj);
+        imported++;
+      }
+    }
+    renderDataParticipants();
+    updateDataBadges();
+    if (imported > 0) {
+      emit('toast', { message: `${imported} ${t('settings.contacts_imported')}`, type: 'success' });
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') { inQuotes = false; }
+      else { current += ch; }
+    } else {
+      if (ch === '"') { inQuotes = true; }
+      else if (ch === ',') { result.push(current); current = ''; }
+      else { current += ch; }
+    }
+  }
+  result.push(current);
+  return result;
 }
 
 function renderDataParticipants() {
@@ -1140,17 +1341,40 @@ function renderDataCategories() {
   categories.forEach(cat => {
     const item = document.createElement('div');
     item.className = 'data-list-item';
+    item.style.flexDirection = 'column';
+    item.style.alignItems = 'stretch';
+    item.style.gap = '4px';
+
+    const topRow = document.createElement('div');
+    topRow.style.display = 'flex';
+    topRow.style.alignItems = 'center';
+    topRow.style.justifyContent = 'space-between';
+
     const span = document.createElement('span');
-    span.textContent = cat;
+    span.textContent = cat.name;
+
     const delBtn = document.createElement('button');
     delBtn.className = 'btn btn-xs btn-danger';
     delBtn.textContent = '\u00d7';
-    item.append(span, delBtn);
     delBtn.addEventListener('click', () => {
-      deleteCategory(cat);
+      deleteCategory(cat.name);
       renderDataCategories();
       updateDataBadges();
     });
+
+    topRow.append(span, delBtn);
+
+    const hintInput = document.createElement('input');
+    hintInput.type = 'text';
+    hintInput.className = 'settings-input';
+    hintInput.style.fontSize = '11px';
+    hintInput.placeholder = t('settings.category_hint_placeholder');
+    hintInput.value = cat.hint || '';
+    hintInput.addEventListener('change', () => {
+      updateCategoryHint(cat.name, hintInput.value.trim());
+    });
+
+    item.append(topRow, hintInput);
     list.appendChild(item);
   });
 }

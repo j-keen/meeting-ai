@@ -3372,22 +3372,197 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: #f5a623;
 }
 
-/* ===== Contact Drop Zone ===== */
-.contact-drop-zone {
-  margin-top: 6px;
-  padding: 14px;
+/* ===== Contacts Modal Tabs ===== */
+.contacts-modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 16px;
+}
+.contacts-modal-tab {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  text-align: center;
+}
+.contacts-modal-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.contacts-modal-tab:hover { color: var(--text-primary); }
+.contacts-tab-content { /* shown by default */ }
+.contacts-search-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.contacts-search-row .data-modal-search {
+  flex: 1;
+  margin-bottom: 0;
+}
+.btn-star-filter {
+  font-size: 16px;
+  padding: 4px 6px;
+  line-height: 1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-star-filter.active {
+  color: #f5a623;
+  border-color: #f5a623;
+}
+.btn-card-scan {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.btn-card-scan:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+/* ===== Card Scan Modal ===== */
+.card-scan-drop-zone {
+  padding: 32px 16px;
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-md);
   text-align: center;
-  font-size: 12px;
   color: var(--text-muted);
   transition: border-color 0.2s, background 0.2s, color 0.2s;
   cursor: default;
 }
-.contact-drop-zone.drag-over {
+.card-scan-drop-zone.drag-over {
   border-color: var(--accent);
   background: rgba(var(--accent-rgb, 79, 70, 229), 0.08);
   color: var(--accent);
+}
+.card-scan-drop-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+.card-scan-drop-zone p {
+  margin: 4px 0;
+  font-size: 13px;
+}
+.card-scan-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+}
+.card-scan-queue {
+  margin-top: 10px;
+}
+.card-scan-queue-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 12px;
+}
+.card-scan-queue-item img {
+  width: 48px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+.card-scan-queue-status {
+  flex: 1;
+  color: var(--text-muted);
+}
+.card-scan-queue-status.done {
+  color: var(--success, #22c55e);
+}
+.card-scan-queue-status.error {
+  color: var(--danger, #ef4444);
+}
+.card-scan-queue-status.processing {
+  color: var(--accent);
+}
+.card-scan-queue-status.saved {
+  color: var(--success, #22c55e);
+}
+
+/* Review panel for multi-scan */
+.card-scan-review-panel {
+  margin-top: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.card-review-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+  background: var(--bg-secondary);
+  position: relative;
+}
+.card-review-thumb {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.card-review-fields {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.card-review-input {
+  font-size: 11px !important;
+  padding: 3px 6px !important;
+  flex: 1;
+  min-width: 80px;
+}
+.card-review-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.card-scan-save-all {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Export/Import row */
+.contacts-io-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+  justify-content: flex-end;
 }
 
 /* ===== Correction Dictionary Modal ===== */

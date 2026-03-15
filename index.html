@@ -382,7 +382,13 @@
                 <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
                 <button class="btn btn-sm btn-star-filter" id="btnStarFilter" title="Show starred only">&#9734;</button>
               </div>
-              <div class="data-list" id="dataParticipantsList" style="max-height:320px;overflow-y:auto;"></div>
+              <div class="data-list" id="dataParticipantsList" style="max-height:280px;overflow-y:auto;"></div>
+              <div class="contacts-io-row">
+                <button class="btn btn-xs" id="btnExportCsv" title="Export CSV">&#128228; CSV</button>
+                <button class="btn btn-xs" id="btnExportVcf" title="Export vCard">&#128228; vCard</button>
+                <button class="btn btn-xs" id="btnImportContacts" title="Import">&#128229; <span data-i18n="settings.contacts_import">Import</span></button>
+                <input type="file" id="contactsImportFile" accept=".csv,.vcf" hidden>
+              </div>
             </div>
           </div>
         </div>
@@ -408,7 +414,10 @@
             <input type="file" id="cardScanFileInput" accept="image/*" multiple hidden>
             <!-- Queue: multiple card processing -->
             <div class="card-scan-queue" id="cardScanQueue" hidden></div>
-            <!-- OCR Result -->
+            <!-- Review panel: editable cards before saving -->
+            <div class="card-scan-review-panel" id="cardScanReviewPanel" hidden></div>
+            <button class="btn btn-sm btn-primary card-scan-save-all" id="cardScanSaveAll" hidden data-i18n="settings.card_save_all">Save All</button>
+            <!-- Single OCR Result (fallback) -->
             <div class="prep-card-result" id="settingsCardResult" hidden>
               <div class="prep-card-fields">
                 <input type="text" class="settings-input" id="settingsCardName" placeholder="Name">
