@@ -1054,7 +1054,7 @@ function updateVersionBadge() {
   badge.textContent = count;
 }
 
-function openMinutesPreview() {
+function openMinutesPreview({ highlightBadge = false } = {}) {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
   const markdown = state.currentAnalysis?.markdown || '';
@@ -1068,6 +1068,12 @@ function openMinutesPreview() {
     const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
     badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
     badge.hidden = false;
+    if (highlightBadge) {
+      badge.classList.remove('highlight');
+      void badge.offsetWidth; // force reflow to restart animation
+      badge.classList.add('highlight');
+      setTimeout(() => badge.classList.remove('highlight'), 1500);
+    }
   } else {
     badge.hidden = true;
   }
@@ -1123,7 +1129,7 @@ function initMinutesPreview() {
       try {
         await regenerateMinutes(model, '', state.minutesPromptConfig);
         showToast(t('toast.final_minutes_done'), 'success');
-        openMinutesPreview();
+        openMinutesPreview({ highlightBadge: true });
       } catch (err) {
         showToast(t('toast.final_minutes_fail') + err.message, 'error');
       }

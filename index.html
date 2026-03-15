@@ -511,26 +511,26 @@
       </div>
       <div class="modal-body minutes-preview-body">
         <div class="minutes-preview-toolbar">
-          <button class="btn btn-sm" id="btnMinutesPromptEdit">
-            <span>&#x270E;</span>
-            <span data-i18n="minutes_preview.prompt_edit">Prompt</span>
+          <div class="minutes-generated-badge" id="minutesGeneratedBadge" hidden></div>
+          <button class="btn btn-sm" id="btnMinutesRegenerate">
+            <span>&#x1F504;</span>
+            <span data-i18n="minutes_preview.regenerate">Regenerate</span>
           </button>
+          <div style="flex:1"></div>
           <button class="btn btn-sm" id="btnMinutesVersions" hidden>
             <span>&#x1F4C4;</span>
             <span data-i18n="minutes_preview.prev_versions">Versions</span>
             <span class="version-count-badge" id="minutesVersionBadge">0</span>
           </button>
+          <button class="btn btn-sm" id="btnMinutesPromptEdit">
+            <span>&#x270E;</span>
+            <span data-i18n="minutes_preview.prompt_edit">Minutes Style</span>
+          </button>
           <button class="btn btn-sm" id="btnMinutesExport">
             <span>&#x2B07;</span>
             <span data-i18n="minutes_preview.export">Export</span>
           </button>
-          <div style="flex:1"></div>
-          <button class="btn btn-sm btn-accent" id="btnMinutesRegenerate">
-            <span>&#x1F504;</span>
-            <span data-i18n="minutes_preview.regenerate">Regenerate</span>
-          </button>
         </div>
-        <div class="minutes-generated-badge" id="minutesGeneratedBadge" hidden></div>
         <div class="minutes-preview-content" id="minutesPreviewContent"></div>
       </div>
     </div>
