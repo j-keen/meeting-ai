@@ -568,11 +568,10 @@ const translations = {
     'pb.chip_advisory': 'Advisory/Mentoring',
 
     // Prompt Adjuster
-    'panel.prompt_adjust': 'Adjust',
-    'pa.title': 'Adjust Prompt',
-    'pa.input_placeholder': 'How should I adjust the prompt?',
-    'pa.greeting': 'I\'ve reviewed your current prompt. How would you like to adjust it?\nClick a chip below or type your request.',
-    'pa.current_prompt': 'Current prompt:',
+    'panel.prompt_adjust': 'Change Style',
+    'pa.title': 'Change Analysis Style',
+    'pa.input_placeholder': 'e.g., More concise, focus on action items...',
+    'pa.greeting': 'What would you like to change about the AI analysis?\nFor example: "Too long", "Focus on key points", "Add sentiment analysis" — just tell me!',
     'pa.saved': 'Prompt updated!',
     'pa.reanalyzing': 'Re-analyzing with updated prompt...',
     'toast.recording_started': 'Recording started. Speak to transcribe.',
@@ -1351,11 +1350,10 @@ const translations = {
     'pb.chip_advisory': '자문/멘토링',
 
     // Prompt Adjuster
-    'panel.prompt_adjust': '조정',
-    'pa.title': '프롬프트 조정',
-    'pa.input_placeholder': '프롬프트를 어떻게 수정할까요?',
-    'pa.greeting': '현재 프롬프트를 확인했습니다. 어떻게 수정할까요?\n아래 칩을 클릭하거나 직접 입력하세요.',
-    'pa.current_prompt': '현재 프롬프트:',
+    'panel.prompt_adjust': '분석 스타일 변경',
+    'pa.title': '분석 스타일 변경',
+    'pa.input_placeholder': '예: 핵심만 간결하게, 액션아이템 위주로...',
+    'pa.greeting': '지금 AI 분석 결과가 어떤 부분이 마음에 안 드시나요?\n예를 들어 "너무 길어", "핵심만 보고 싶어", "감정 분석도 넣어줘" 등 자유롭게 말씀해주세요!',
     'pa.saved': '프롬프트가 업데이트되었습니다!',
     'pa.reanalyzing': '업데이트된 프롬프트로 재분석 중...',
     'toast.recording_started': '녹음이 시작되었습니다. 말씀하시면 자동으로 기록됩니다.',
