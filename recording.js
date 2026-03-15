@@ -6,7 +6,7 @@ import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle
 import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, getMeeting, loadSettings, saveSettings,
-  loadContacts, addContact, loadLocations, addLocation, findNearestLocation,
+  loadContacts, addContact, loadLocations, addLocation,
   getLocationFrequency,
   loadCorrectionDict, addCorrectionEntry,
   getProUsageCount, incrementProUsage,
@@ -776,27 +776,24 @@ export function showEndMeetingModal(editMeeting) {
     datalist.appendChild(opt);
   });
 
-  // GPS auto-match: detect current location and auto-fill if matching
-  if (locations.some(l => l.lat != null)) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const match = findNearestLocation(pos.coords.latitude, pos.coords.longitude);
-        if (match && !locationInput.value) {
-          locationInput.value = match.location.name;
-          state.meetingLocation = match.location.name;
-          const distLabel = match.distance < 1
-            ? `${Math.round(match.distance * 1000)}m`
-            : `${match.distance.toFixed(1)}km`;
-          showToast(`📍 ${match.location.name} (${distLabel})`, 'info');
-        } else if (!match) {
-          showToast(t('end_meeting.gps_no_match'), 'info');
-        }
-      },
-      () => {
-        showToast(t('end_meeting.gps_timeout'), 'info');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+  // Recent location chips (top 3 by frequency)
+  const chipsContainer = $('#recentLocationChips');
+  if (chipsContainer) {
+    chipsContainer.innerHTML = '';
+    const recentLocs = sortedLocs.filter(l => (locFreq[l.name] || 0) > 0).slice(0, 3);
+    for (const loc of recentLocs) {
+      const chip = document.createElement('button');
+      chip.className = 'recent-location-chip';
+      chip.textContent = loc.name;
+      if (loc.memo) chip.title = loc.memo;
+      chip.addEventListener('click', () => {
+        locationInput.value = loc.name;
+        state.meetingLocation = loc.name;
+        chipsContainer.querySelectorAll('.recent-location-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+      chipsContainer.appendChild(chip);
+    }
   }
 
   // AI title/tag generation (with caching) — skip in edit mode
@@ -1667,7 +1664,7 @@ function restoreEndButton(showEnd = true) {
   if (editInfoBtn) editInfoBtn.remove();
 }
 
-export function resetMeeting() {
+export function resetMeeting(skipLauncher = false) {
   clearDraftRecovery();
   state.meetingEnded = false;
   state.meetingStartTime = null;
@@ -1723,5 +1720,5 @@ export function resetMeeting() {
   // Reset inbox badge
   const inboxBadge = document.querySelector('#inboxBadge');
   if (inboxBadge) inboxBadge.hidden = true;
-  showLauncherModal();
+  if (!skipLauncher) showLauncherModal();
 }

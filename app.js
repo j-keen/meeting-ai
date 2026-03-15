@@ -643,8 +643,8 @@ function init() {
     const meeting = getMeeting(id);
     if (!meeting) return;
 
-    // Reset current state
-    resetMeeting();
+    // Reset current state (skip launcher since we're loading a meeting)
+    resetMeeting(true);
 
     // Restore all fields from saved meeting
     state.meetingId = meeting.id;
