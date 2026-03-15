@@ -588,6 +588,14 @@ const translations = {
     'end_meeting.minutes_complete': 'Minutes complete!',
     'end_meeting.minutes_error': 'Minutes generation failed',
     'end_meeting.close': 'Close',
+    'end_meeting.saving': 'Saving...',
+    'end_meeting.save_complete': 'Meeting saved!',
+    'end_meeting.post_view_minutes': 'View Minutes',
+    'end_meeting.post_export': 'Export',
+    'end_meeting.post_edit': 'Edit Info',
+    'end_meeting.post_resume': 'Resume Meeting',
+    'end_meeting.post_new': 'New Meeting',
+    'end_meeting.post_close': 'Close',
 
     // Minutes Generation Modal
     'minutes.select_quality': 'Select Minutes Quality',
@@ -1330,6 +1338,14 @@ const translations = {
     'end_meeting.minutes_complete': '회의록 완성!',
     'end_meeting.minutes_error': '회의록 생성 실패',
     'end_meeting.close': '닫기',
+    'end_meeting.saving': '저장 중...',
+    'end_meeting.save_complete': '회의가 저장되었습니다!',
+    'end_meeting.post_view_minutes': '회의록 보기',
+    'end_meeting.post_export': '내보내기',
+    'end_meeting.post_edit': '정보 수정',
+    'end_meeting.post_resume': '이어서 녹음',
+    'end_meeting.post_new': '새 회의',
+    'end_meeting.post_close': '닫기',
 
     // Minutes Generation Modal
     'minutes.select_quality': '회의록 품질 선택',

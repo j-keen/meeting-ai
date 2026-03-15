@@ -114,6 +114,14 @@
           </div>
         </div>
         <div class="panel-actions">
+          <select class="btn btn-sm" id="selectAnalysisStyle" title="Analysis Style" style="max-width:120px;font-size:11px;">
+            <option value="general" data-i18n="settings.preset_general">General</option>
+            <option value="weekly" data-i18n="settings.preset_weekly">Weekly</option>
+            <option value="brainstorm" data-i18n="settings.preset_brainstorm">Brainstorm</option>
+            <option value="sales" data-i18n="settings.preset_sales">Sales/Client</option>
+            <option value="1on1" data-i18n="settings.preset_1on1">1-on-1</option>
+            <option value="kickoff" data-i18n="settings.preset_kickoff">Kickoff</option>
+          </select>
           <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
           <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
           <button class="btn btn-sm" id="btnPromptSettings" title="AI Analysis Settings">&#9881; <span data-i18n="panel.prompt_settings">AI Analysis Settings</span></button>
@@ -276,6 +284,20 @@
           <textarea class="settings-textarea" id="textPrompt" rows="8" data-i18n-placeholder="settings.prompt_placeholder" placeholder="Custom analysis prompt..."></textarea>
           <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn btn-sm" id="btnResetPrompt" data-i18n="settings.reset_type_prompt">Reset to Default</button>
+          </div>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.custom_types">Custom Meeting Types <span class="settings-hint" data-i18n="settings.custom_types_hint">Create your own meeting types</span></h3>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <button class="btn btn-sm" id="btnAddCustomType" data-i18n="settings.add_custom_type">+ Add Custom Type</button>
+            <button class="btn btn-sm btn-danger" id="btnDeleteCustomType" hidden data-i18n="settings.custom_type_delete">Delete</button>
+          </div>
+          <div id="customTypeForm" hidden style="display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--bg-secondary);border-radius:8px;">
+            <input type="text" class="settings-input" id="inputCustomTypeName" data-i18n-placeholder="settings.custom_type_name_placeholder" placeholder="e.g., Code Review">
+            <input type="text" class="settings-input" id="inputCustomTypeContext" data-i18n-placeholder="settings.custom_type_context_placeholder" placeholder="e.g., Code review meeting">
+            <input type="text" class="settings-input" id="inputCustomTypeGuidance" data-i18n-placeholder="settings.custom_type_guidance_placeholder" placeholder="e.g., Focus on code quality...">
+            <textarea class="settings-textarea" id="inputCustomTypePrompt" rows="3" data-i18n-placeholder="settings.custom_type_prompt_placeholder" placeholder="Leave empty to use default prompt..."></textarea>
+            <button class="btn btn-sm btn-primary" id="btnSaveCustomType" data-i18n="settings.custom_type_save">Save Type</button>
           </div>
         </section>
       </div>
@@ -455,6 +477,11 @@
               <input type="checkbox" id="chkLocationGps">
               <span data-i18n="settings.location_include_gps">📍 Include current location</span>
             </label>
+            <div class="location-gps-tip" id="locationGpsTip" hidden>
+              <p data-i18n="settings.location_gps_tip">GPS saves your current physical coordinates. Register each place while you're actually there, otherwise all locations will point to the same spot.</p>
+              <button class="btn btn-xs" id="btnDismissGpsTip" data-i18n="settings.location_gps_tip_dismiss">Don't show again</button>
+            </div>
+            <div id="locationNoGpsTip" hidden class="location-gps-tip location-gps-tip--subtle"></div>
             <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
           </div>
         </div>

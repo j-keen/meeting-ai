@@ -3,7 +3,7 @@
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t, getTypeDefaultPrompt, getMeetingTypeCategoryMap } from './i18n.js';
 import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
-import { loadCategories, loadTypePrompts } from './storage.js';
+import { loadCategories, loadTypePrompts, loadCustomTypes } from './storage.js';
 
 // Normalize array items: if Gemini returns objects instead of strings, flatten them
 function flattenItems(arr) {
@@ -27,6 +27,14 @@ export function getPresetContext(preset) {
 export function getPromptForType(meetingType) {
   const typePrompts = loadTypePrompts();
   if (typePrompts[meetingType]) return typePrompts[meetingType];
+
+  // Check custom types
+  if (meetingType && meetingType.startsWith('custom_')) {
+    const customTypes = loadCustomTypes();
+    const ct = customTypes.find(t => t.id === meetingType);
+    if (ct && ct.prompt) return ct.prompt;
+  }
+
   return getTypeDefaultPrompt(meetingType);
 }
 
@@ -123,6 +131,20 @@ export async function analyzeTranscript({
     if (mappedCat) effectiveCategories = [mappedCat];
   }
   const guidance = getCategoryGuidance(effectiveCategories, lang, categoryHints);
+
+  // Custom type guidance
+  if (effectivePreset && effectivePreset.startsWith('custom_')) {
+    const customTypes = loadCustomTypes();
+    const ct = customTypes.find(t => t.id === effectivePreset);
+    if (ct) {
+      if (ct.guidance && !guidance.analysis) {
+        guidance.analysis = `[Analysis Guidance] ${ct.guidance}`;
+      }
+      if (ct.context && !contextText) {
+        // Use custom context if no other context is set
+      }
+    }
+  }
 
   // Use per-type prompt: explicit prompt > type-specific prompt > global default
   const systemPrompt = prompt || getPromptForType(effectivePreset);

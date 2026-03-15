@@ -5,6 +5,10 @@
 import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
+import { analyzeTranscript, getPromptForType } from '../ai.js';
+import { saveMeeting, loadCustomTypes } from '../storage.js';
+import { showToast } from '../ui.js';
+import { isProxyAvailable } from '../gemini-api.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -458,6 +462,115 @@ export function renderMeetingViewer(meeting) {
 
     metaContainer.appendChild(item);
   });
+
+  // Re-analysis controls
+  const reanalysisBar = document.createElement('div');
+  reanalysisBar.className = 'viewer-reanalysis-bar';
+
+  // Type select
+  const reTypeSelect = document.createElement('select');
+  reTypeSelect.className = 'btn btn-sm';
+  reTypeSelect.id = 'viewerReanalysisType';
+  const types = [
+    { value: 'general', label: t('settings.preset_general') },
+    { value: 'weekly', label: t('settings.preset_weekly') },
+    { value: 'brainstorm', label: t('settings.preset_brainstorm') },
+    { value: 'sales', label: t('settings.preset_sales') },
+    { value: '1on1', label: t('settings.preset_1on1') },
+    { value: 'kickoff', label: t('settings.preset_kickoff') },
+  ];
+  types.forEach(({ value, label }) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    if (value === (meeting.preset || 'general')) opt.selected = true;
+    reTypeSelect.appendChild(opt);
+  });
+
+  // Add custom types
+  const customTypes = loadCustomTypes();
+  if (customTypes.length > 0) {
+    const group = document.createElement('optgroup');
+    group.label = '★ Custom';
+    customTypes.forEach(ct => {
+      const opt = document.createElement('option');
+      opt.value = ct.id;
+      opt.textContent = '★ ' + ct.name;
+      if (ct.id === meeting.preset) opt.selected = true;
+      group.appendChild(opt);
+    });
+    reTypeSelect.appendChild(group);
+  }
+
+  // Model select
+  const reModelSelect = document.createElement('select');
+  reModelSelect.className = 'btn btn-sm';
+  reModelSelect.id = 'viewerReanalysisModel';
+  [
+    { value: 'gemini-2.5-flash', label: 'Flash' },
+    { value: 'gemini-2.5-pro', label: 'Pro' },
+  ].forEach(({ value, label }) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = label;
+    reModelSelect.appendChild(opt);
+  });
+
+  // Re-analyze button
+  const reBtn = document.createElement('button');
+  reBtn.className = 'btn btn-sm btn-primary';
+  reBtn.textContent = t('viewer.reanalyze');
+  reBtn.addEventListener('click', async () => {
+    if (!isProxyAvailable()) {
+      showToast(t('toast.no_api_key'), 'warning');
+      return;
+    }
+    const transcript = meeting.transcript || [];
+    if (transcript.length === 0) {
+      showToast(t('toast.no_transcript'), 'warning');
+      return;
+    }
+
+    reBtn.disabled = true;
+    reBtn.textContent = t('viewer.reanalyzing');
+
+    try {
+      const selectedType = reTypeSelect.value;
+      const selectedModel = reModelSelect.value;
+      const prompt = getPromptForType(selectedType);
+
+      const result = await analyzeTranscript({
+        transcript,
+        prompt,
+        meetingContext: meeting.meetingContext || '',
+        meetingPreset: selectedType,
+        elapsedTime: meeting.duration || '',
+        strategy: 'full',
+        model: selectedModel,
+      });
+
+      // Add to analysis history
+      if (!meeting.analysisHistory) meeting.analysisHistory = [];
+      meeting.analysisHistory.push(result);
+      meeting.preset = selectedType;
+      saveMeeting(meeting);
+
+      // Re-render the viewer
+      renderMeetingViewer(meeting);
+      showToast(t('viewer.reanalysis_done'), 'success');
+    } catch (err) {
+      console.error('Re-analysis error:', err);
+      showToast(t('toast.analysis_fail') + err.message, 'error');
+    } finally {
+      reBtn.disabled = false;
+      reBtn.textContent = t('viewer.reanalyze');
+    }
+  });
+
+  reanalysisBar.appendChild(reTypeSelect);
+  reanalysisBar.appendChild(reModelSelect);
+  reanalysisBar.appendChild(reBtn);
+  metaContainer.after(reanalysisBar);
 
   const transcript = meeting.transcript || [];
   const memos = meeting.memos || [];

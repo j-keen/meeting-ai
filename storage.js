@@ -203,6 +203,14 @@ export function findNearestLocation(lat, lng, maxDistanceKm = 1) {
   return minDist <= maxDistanceKm ? { location: nearest, distance: minDist } : null;
 }
 
+// Find locations within a radius (returns array of { location, distance })
+export function findNearbyLocations(lat, lng, maxDistanceKm = 0.1) {
+  const locations = loadLocations().filter(l => l.lat != null && l.lng != null);
+  return locations
+    .map(loc => ({ location: loc, distance: haversineKm(lat, lng, loc.lat, loc.lng) }))
+    .filter(r => r.distance <= maxDistanceKm);
+}
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const toRad = d => d * Math.PI / 180;
@@ -430,6 +438,30 @@ export function incrementProUsage() {
   count++;
   localStorage.setItem(PRO_USAGE_KEY, JSON.stringify({ count, month: currentMonth }));
   return count;
+}
+
+// Custom Meeting Types CRUD
+export function loadCustomTypes() {
+  const data = loadAll();
+  return data.customTypes || [];
+}
+
+export function addCustomType(type) {
+  const data = loadAll();
+  if (!data.customTypes) data.customTypes = [];
+  type.id = type.id || 'custom_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  type.createdAt = Date.now();
+  data.customTypes.push(type);
+  saveAll(data);
+  return type;
+}
+
+export function deleteCustomType(id) {
+  const data = loadAll();
+  if (!data.customTypes) return [];
+  data.customTypes = data.customTypes.filter(t => t.id !== id);
+  saveAll(data);
+  return data.customTypes;
 }
 
 export { getStorageUsage };

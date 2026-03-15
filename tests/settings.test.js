@@ -22,13 +22,17 @@ vi.mock('../storage.js', () => ({
   loadLocations: vi.fn(() => []),
   addLocation: vi.fn(),
   deleteLocation: vi.fn(),
-  loadCategories: vi.fn(() => [{ name: '정기회의', hint: '' }]),
-  addCategory: vi.fn(),
-  deleteCategory: vi.fn(),
-  updateCategoryHint: vi.fn(),
+  loadTypePrompts: vi.fn(() => ({})),
+  saveTypePrompt: vi.fn(),
+  deleteTypePrompt: vi.fn(),
   loadCorrectionDict: vi.fn(() => []),
   addCorrectionEntry: vi.fn(),
   deleteCorrectionEntry: vi.fn(),
+  findNearbyLocations: vi.fn(() => []),
+  findNearestLocation: vi.fn(),
+  loadCustomTypes: vi.fn(() => []),
+  addCustomType: vi.fn(),
+  deleteCustomType: vi.fn(),
 }));
 
 vi.mock('../ai.js', () => ({

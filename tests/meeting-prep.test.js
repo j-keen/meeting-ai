@@ -22,6 +22,7 @@ vi.mock('../storage.js', () => ({
   addGroup: vi.fn(() => ({ id: 'g1', name: 'Group', contactIds: [] })),
   updateGroup: vi.fn(),
   deleteGroup: vi.fn(),
+  loadCustomTypes: vi.fn(() => []),
 }));
 
 vi.mock('../gemini-api.js', () => ({

@@ -5,6 +5,7 @@ vi.mock('../stt.js', () => ({ createSTT: vi.fn(), prefetchDeepgramToken: vi.fn()
 vi.mock('../ai.js', () => ({
   analyzeTranscript: vi.fn(),
   getDefaultPrompt: vi.fn(),
+  getPromptForType: vi.fn(() => 'default prompt'),
   generateTags: vi.fn(),
   correctSentences: vi.fn(),
   generateMeetingTitle: vi.fn(),
@@ -44,7 +45,6 @@ vi.mock('../storage.js', () => ({
   addContact: vi.fn(),
   loadLocations: vi.fn(() => []),
   addLocation: vi.fn(),
-  loadCategories: vi.fn(() => []),
   loadPreparedMeeting: vi.fn(),
   deletePreparedMeeting: vi.fn(),
   loadMeetingPrepPresets: vi.fn(() => []),

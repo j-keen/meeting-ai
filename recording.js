@@ -1071,6 +1071,19 @@ export async function finalizeEndMeeting() {
     return;
   }
 
+  // Show saving indicator
+  const footer = $('#endMeetingFooter');
+  const actions = $('#endMeetingFooterActions');
+  footer.classList.add('save-progress-state');
+  actions.innerHTML = `
+    <div class="save-progress-content">
+      <div class="save-progress-bar"><div class="save-progress-bar-inner"></div></div>
+      <span class="save-progress-text">${t('end_meeting.saving')}</span>
+    </div>
+  `;
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.add('disabled-form');
+
   const hasUncorrected = state.transcript.some(l => !l.originalText);
   if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
     await runCorrection(false);
@@ -1079,7 +1092,11 @@ export async function finalizeEndMeeting() {
   autoSave();
   clearDraftRecovery();
   state.meetingEnded = true;
-  closeAndFinalizeMeeting();
+
+  // Show post-save screen instead of closing
+  footer.classList.remove('save-progress-state');
+  if (body) body.classList.remove('disabled-form');
+  showPostSaveScreen();
 }
 
 // Save + generate minutes with selected model

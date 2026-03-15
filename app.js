@@ -10,6 +10,7 @@ import {
   addContact,
   addCorrectionEntry,
   getProUsageCount, incrementProUsage, addLocation,
+  loadCustomTypes,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine,
@@ -114,6 +115,58 @@ function init() {
     }, 1000);
     runAnalysis();
   });
+
+  // Analysis style dropdown
+  const analysisStyleSelect = $('#selectAnalysisStyle');
+  if (analysisStyleSelect) {
+    // Set initial value from settings
+    analysisStyleSelect.value = state.settings.meetingPreset || 'general';
+
+    // Populate custom types
+    function refreshAnalysisStyleOptions() {
+      // Remove old custom options
+      analysisStyleSelect.querySelectorAll('option[data-custom]').forEach(o => o.remove());
+      analysisStyleSelect.querySelectorAll('optgroup[data-custom]').forEach(o => o.remove());
+
+      const customTypes = loadCustomTypes();
+      if (customTypes.length > 0) {
+        const group = document.createElement('optgroup');
+        group.label = '\u2605 Custom';
+        group.dataset.custom = '1';
+        customTypes.forEach(ct => {
+          const opt = document.createElement('option');
+          opt.value = ct.id;
+          opt.textContent = '\u2605 ' + ct.name;
+          opt.dataset.custom = '1';
+          group.appendChild(opt);
+        });
+        analysisStyleSelect.appendChild(group);
+      }
+    }
+    refreshAnalysisStyleOptions();
+
+    analysisStyleSelect.addEventListener('change', (e) => {
+      const type = e.target.value;
+      state.settings.meetingPreset = type;
+      state.settings.customPrompt = getPromptForType(type);
+      // If recording and has transcript, run analysis immediately
+      if (state.transcript.length > 0) {
+        runAnalysis();
+      }
+    });
+
+    // Sync when meeting prep completes
+    on('meetingPrep:complete', (config) => {
+      if (config.meetingType) {
+        analysisStyleSelect.value = config.meetingType;
+      }
+    });
+
+    // Refresh when custom types change
+    on('customTypes:change', () => {
+      refreshAnalysisStyleOptions();
+    });
+  }
 
   // Copy analysis as markdown
   $('#btnCopyAnalysis').addEventListener('click', () => {

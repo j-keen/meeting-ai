@@ -5,6 +5,7 @@ import {
   loadContacts, addContact, updateContact, saveMeetingPrepPreset,
   savePreparedMeeting, listMeetings, getMeeting,
   loadGroups, addGroup, updateGroup, deleteGroup,
+  loadCustomTypes,
 } from './storage.js';
 import { callGemini } from './gemini-api.js';
 import { t } from './i18n.js';
@@ -157,6 +158,33 @@ function resetFormUI() {
   // Type selection
   document.querySelectorAll('.prep-type-radio').forEach(radio => {
     radio.classList.toggle('selected', radio.dataset.type === formConfig.meetingType);
+  });
+
+  // Add tooltips to type cards
+  document.querySelectorAll('.prep-type-radio').forEach(radio => {
+    const type = radio.dataset.type;
+    if (type && !type.startsWith('custom_')) {
+      const tooltipKey = `prep.type_${type}_tooltip`;
+      const tooltipText = t(tooltipKey);
+      if (tooltipText !== tooltipKey) {
+        radio.setAttribute('data-tooltip', tooltipText);
+      }
+    }
+  });
+
+  // Add custom type cards
+  const grid = $('#prepTypeGrid');
+  // Remove old custom cards
+  grid.querySelectorAll('.prep-type-radio[data-custom]').forEach(el => el.remove());
+
+  const customTypes = loadCustomTypes();
+  customTypes.forEach(ct => {
+    const card = document.createElement('div');
+    card.className = 'prep-type-radio' + (formConfig.meetingType === ct.id ? ' selected' : '');
+    card.dataset.type = ct.id;
+    card.dataset.custom = '1';
+    card.innerHTML = `<div class="prep-type-icon">\u2605</div><div class="prep-type-name">${escapeHtml(ct.name)}</div><div class="prep-type-desc">${escapeHtml(ct.context || ct.guidance || '')}</div>`;
+    grid.appendChild(card);
   });
 
   // Agenda fields
