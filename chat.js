@@ -55,6 +55,21 @@ let attachedFileContent = null;
 let attachedFileName = null;
 let chatInputHandler = null;
 
+const CHAT_DRAFT_KEY = 'chat_draft';
+
+function autoResizeChat(el) {
+  el.style.height = 'auto';
+  const panel = document.getElementById('panelRight');
+  const maxH = panel ? panel.offsetHeight * 0.5 : 200;
+  if (el.scrollHeight > maxH) {
+    el.style.height = maxH + 'px';
+    el.style.overflowY = 'auto';
+  } else {
+    el.style.height = el.scrollHeight + 'px';
+    el.style.overflowY = 'hidden';
+  }
+}
+
 export function initChat() {
   const sendBtn = $('#btnChatSend');
   const input = $('#chatInput');
@@ -68,6 +83,17 @@ export function initChat() {
       handleSend();
     }
   });
+
+  input.addEventListener('input', () => {
+    autoResizeChat(input);
+    const v = input.value;
+    if (v.trim()) localStorage.setItem(CHAT_DRAFT_KEY, v);
+    else localStorage.removeItem(CHAT_DRAFT_KEY);
+  });
+
+  // Restore chat draft
+  const savedDraft = localStorage.getItem(CHAT_DRAFT_KEY);
+  if (savedDraft) { input.value = savedDraft; autoResizeChat(input); }
 
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -173,6 +199,8 @@ function handleSend() {
   // If meeting prep mode is active, route input to prep handler
   if (chatInputHandler) {
     input.value = '';
+    localStorage.removeItem(CHAT_DRAFT_KEY);
+    autoResizeChat(input);
     chatInputHandler(text);
     return;
   }
@@ -181,6 +209,8 @@ function handleSend() {
   if (attachedFileName) displayText += `\n[${attachedFileName}]`;
 
   input.value = '';
+  localStorage.removeItem(CHAT_DRAFT_KEY);
+  autoResizeChat(input);
   renderChatMessage('user', displayText);
 
   const fullText = attachedFileContent
