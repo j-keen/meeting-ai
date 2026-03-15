@@ -1395,16 +1395,31 @@ body.loaded-mode #btnNewMeeting { display: none; }
   text-transform: none;
   letter-spacing: 0;
 }
-.settings-label .settings-hint {
-  margin: 0 0 2px;
-}
 .settings-label {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
   margin-bottom: 12px;
   font-size: 13px;
   color: var(--text-secondary);
+}
+.settings-label > span {
+  flex: 1;
+  min-width: 100px;
+}
+.settings-label .settings-hint {
+  order: 2;
+  flex-basis: 100%;
+  margin: 0;
+  display: block;
+}
+.settings-label .settings-select,
+.settings-label .settings-input:not([type="text"]) {
+  width: auto;
+  min-width: 140px;
+  max-width: 200px;
+  order: 1;
 }
 .settings-input, .settings-select, .settings-textarea {
   padding: 7px 10px;
@@ -4184,29 +4199,45 @@ body.loaded-mode #btnNewMeeting { display: none; }
 }
 
 /* Model pill toggle */
-.minutes-model-pill {
-  display: flex;
-  border-radius: 20px;
-  overflow: hidden;
+/* Regen popover */
+.regen-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  margin-top: 4px;
+  background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  min-width: 160px;
 }
-.pill-seg {
-  padding: 4px 14px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
+.regen-popover-models {
+  display: flex;
+  gap: 4px;
+}
+.regen-model-btn {
+  flex: 1;
+  font-size: 13px;
+  border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.pill-seg.active {
+.regen-model-btn.active {
   background: var(--accent);
   color: #fff;
+  border-color: var(--accent);
 }
-.pill-seg:hover:not(.active) {
+.regen-model-btn:hover:not(.active) {
   background: var(--bg-tertiary, var(--border-light));
+}
+.regen-confirm-btn {
+  width: 100%;
 }
 
 /* Export popover */

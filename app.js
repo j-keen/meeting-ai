@@ -1061,12 +1061,6 @@ function openMinutesPreview() {
 
   renderMinutesBlocks(content, markdown);
 
-  // Set pill active state based on selected model (not generated model)
-  const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
-  modal.querySelectorAll('.pill-seg').forEach(seg => {
-    seg.classList.toggle('active', seg.dataset.pillModel === currentModel);
-  });
-
   // Show generated model badge
   const badge = $('#minutesGeneratedBadge');
   const genModel = state.currentAnalysis?.generatedModel;
@@ -1078,49 +1072,75 @@ function openMinutesPreview() {
     badge.hidden = true;
   }
 
-  updateRegenerateLabel();
   updateVersionBadge();
   modal.hidden = false;
-}
-
-function updateRegenerateLabel() {
-  const modal = $('#minutesPreviewModal');
-  const active = modal.querySelector('.pill-seg.active');
-  const modelLabel = active?.dataset.pillModel?.includes('pro') ? 'Pro' : 'Flash';
-  $('#btnMinutesRegenerateLabel').textContent = t('minutes_preview.regenerate', { model: modelLabel });
 }
 
 function initMinutesPreview() {
   const modal = $('#minutesPreviewModal');
   const content = $('#minutesPreviewContent');
 
-  // ── Model pill toggle (selection only, no regeneration) ──
-  modal.querySelectorAll('.pill-seg').forEach(seg => {
-    seg.addEventListener('click', () => {
-      if (seg.classList.contains('active')) return;
-      modal.querySelectorAll('.pill-seg').forEach(s => s.classList.remove('active'));
-      seg.classList.add('active');
-      updateRegenerateLabel();
+  // ── Regenerate button (popover) ──
+  const regenBtn = $('#btnMinutesRegenerate');
+  let currentRegenPopover = null;
+  regenBtn.addEventListener('click', () => {
+    if (currentRegenPopover) { currentRegenPopover.remove(); currentRegenPopover = null; return; }
+
+    // Close export popover if open
+    const existingExport = modal.querySelector('.export-popover');
+    if (existingExport) { existingExport.remove(); }
+
+    const tmpl = document.getElementById('tmplRegenPopover');
+    const popover = tmpl.content.cloneNode(true).firstElementChild;
+
+    // Apply i18n
+    popover.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = t(el.getAttribute('data-i18n'));
     });
-  });
 
-  // ── Regenerate button ──
-  $('#btnMinutesRegenerate').addEventListener('click', async () => {
-    const active = modal.querySelector('.pill-seg.active');
-    const model = active?.dataset.pillModel || 'gemini-2.5-flash';
+    // Pre-select current model
+    const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
+    popover.querySelectorAll('.regen-model-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.regenModel === currentModel);
+      btn.addEventListener('click', () => {
+        popover.querySelectorAll('.regen-model-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
 
-    saveMinutesVersion();
+    // Confirm button
+    popover.querySelector('.regen-confirm-btn').addEventListener('click', async () => {
+      const activeBtn = popover.querySelector('.regen-model-btn.active');
+      const model = activeBtn?.dataset.regenModel || 'gemini-2.5-flash';
 
-    modal.hidden = true;
-    showToast(t('toast.minutes_generating_bg'), 'info');
+      popover.remove();
+      currentRegenPopover = null;
 
-    try {
-      await regenerateMinutes(model, '', state.minutesPromptConfig);
-      showToast(t('toast.final_minutes_done'), 'success');
-      openMinutesPreview();
-    } catch (err) {
-      showToast(t('toast.final_minutes_fail') + err.message, 'error');
-    }
+      saveMinutesVersion();
+      modal.hidden = true;
+      showToast(t('toast.minutes_generating_bg'), 'info');
+
+      try {
+        await regenerateMinutes(model, '', state.minutesPromptConfig);
+        showToast(t('toast.final_minutes_done'), 'success');
+        openMinutesPreview();
+      } catch (err) {
+        showToast(t('toast.final_minutes_fail') + err.message, 'error');
+      }
+    });
+
+    regenBtn.parentElement.style.position = 'relative';
+    regenBtn.parentElement.appendChild(popover);
+    currentRegenPopover = popover;
+
+    const closeRegen = (ev) => {
+      if (!popover.contains(ev.target) && ev.target !== regenBtn) {
+        popover.remove();
+        currentRegenPopover = null;
+        document.removeEventListener('click', closeRegen);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', closeRegen), 0);
   });
 
   // ── Export button ──
@@ -1128,6 +1148,9 @@ function initMinutesPreview() {
   let currentExportPopover = null;
   exportBtn.addEventListener('click', () => {
     if (currentExportPopover) { currentExportPopover.remove(); currentExportPopover = null; return; }
+
+    // Close regen popover if open
+    if (currentRegenPopover) { currentRegenPopover.remove(); currentRegenPopover = null; }
 
     const tmpl = document.getElementById('tmplExportPopover');
     const popover = tmpl.content.cloneNode(true).firstElementChild;

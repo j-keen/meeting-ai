@@ -238,8 +238,7 @@
       <div class="settings-tab-content" data-tab="analysis">
         <section class="settings-section">
           <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
-          <div class="settings-row-2col">
-            <label class="settings-label">
+          <label class="settings-label">
               <span data-i18n="settings.ai_language">AI Analysis Language</span>
               <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results in</small>
               <select class="settings-select" id="selectAiLanguage">
@@ -248,7 +247,6 @@
                 <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
               </select>
             </label>
-          </div>
         </section>
 
         <section class="settings-section">
@@ -513,10 +511,6 @@
       </div>
       <div class="modal-body minutes-preview-body">
         <div class="minutes-preview-toolbar">
-          <div class="minutes-model-pill">
-            <button class="pill-seg" data-pill-model="gemini-2.5-flash">Flash</button>
-            <button class="pill-seg" data-pill-model="gemini-2.5-pro">Pro ✦</button>
-          </div>
           <button class="btn btn-sm" id="btnMinutesPromptEdit">
             <span>&#x270E;</span>
             <span data-i18n="minutes_preview.prompt_edit">Prompt</span>
@@ -533,7 +527,7 @@
           <div style="flex:1"></div>
           <button class="btn btn-sm btn-accent" id="btnMinutesRegenerate">
             <span>&#x1F504;</span>
-            <span id="btnMinutesRegenerateLabel">Regenerate with Flash</span>
+            <span data-i18n="minutes_preview.regenerate">Regenerate</span>
           </button>
         </div>
         <div class="minutes-generated-badge" id="minutesGeneratedBadge" hidden></div>
@@ -1255,6 +1249,16 @@
       <button class="btn btn-sm export-pop-btn" data-preview-format="clipboard">
         <span class="export-fmt-icon">&#128203;</span> <span data-i18n="export.clipboard">Copy</span>
       </button>
+    </div>
+  </template>
+
+  <template id="tmplRegenPopover">
+    <div class="regen-popover">
+      <div class="regen-popover-models">
+        <button class="btn btn-sm regen-model-btn" data-regen-model="gemini-2.5-flash">Flash</button>
+        <button class="btn btn-sm regen-model-btn" data-regen-model="gemini-2.5-pro">Pro ✦</button>
+      </div>
+      <button class="btn btn-sm btn-accent regen-confirm-btn" data-i18n="minutes_preview.regen_confirm">Confirm</button>
     </div>
   </template>
 
