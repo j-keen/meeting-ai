@@ -733,7 +733,6 @@ function initDataTab() {
 
   // --- Export / Import ---
   $('#btnExportCsv')?.addEventListener('click', exportContactsCsv);
-  $('#btnExportVcf')?.addEventListener('click', exportContactsVcf);
   $('#btnImportContacts')?.addEventListener('click', () => {
     $('#contactsImportFile').click();
   });
@@ -1166,31 +1165,6 @@ function exportContactsCsv() {
   const a = document.createElement('a');
   a.href = url;
   a.download = `contacts_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function exportContactsVcf() {
-  const contacts = loadContacts();
-  if (contacts.length === 0) {
-    emit('toast', { message: t('settings.no_items'), type: 'warning' });
-    return;
-  }
-  const vcards = contacts.map(c => {
-    const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
-    lines.push(`FN:${c.name}`);
-    if (c.title) lines.push(`TITLE:${c.title}`);
-    if (c.company) lines.push(`ORG:${c.company}`);
-    if (c.email) lines.push(`EMAIL:${c.email}`);
-    if (c.phone) lines.push(`TEL:${c.phone}`);
-    lines.push('END:VCARD');
-    return lines.join('\r\n');
-  });
-  const blob = new Blob([vcards.join('\r\n')], { type: 'text/vcard;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `contacts_${new Date().toISOString().slice(0, 10)}.vcf`;
   a.click();
   URL.revokeObjectURL(url);
 }
