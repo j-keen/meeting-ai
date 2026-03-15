@@ -10,6 +10,15 @@ import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
+// Dynamic import for deep-setup (fallback to meeting-prep if not available)
+let openDeepSetup;
+try {
+  const mod = await import('./deep-setup.js');
+  openDeepSetup = mod.openDeepSetup;
+} catch {
+  openDeepSetup = () => openMeetingPrepForm();
+}
+
 // ===== Launcher Modal =====
 export function showLauncherModal() {
   const modal = $('#launcherModal');
@@ -30,28 +39,24 @@ export function showLauncherModal() {
     document.removeEventListener('keydown', keyHandler);
   };
 
-  // Card click handlers
-  $('#btnLauncherQuickStart').onclick = async () => {
-    close();
-    state.settings.meetingPreset = 'copilot';
-    emit('recording:toggle');
-  };
-
-  $('#btnLauncherAiSetup').onclick = () => {
+  // Card 1: Quick Start (opens prompt builder)
+  $('#btnLauncherQuickStart').onclick = () => {
     close();
     openPromptBuilder();
   };
 
-  $('#btnLauncherMeetingPrep').onclick = () => {
+  // Card 2: Deep Setup (경청 준비)
+  $('#btnLauncherDeepSetup').onclick = () => {
     close();
-    openMeetingPrepForm();
+    openDeepSetup();
   };
 
   // Card 3: Preset
   const presets = loadMeetingPrepPresets();
+  const prepared = loadPreparedMeeting();
   const presetCard = $('#btnLauncherPreset');
   const presetHint = presetCard.querySelector('.launcher-card-hint');
-  if (!presets.length) {
+  if (!presets.length && !prepared) {
     presetCard.classList.add('launcher-card-disabled');
     presetCard.disabled = true;
     if (presetHint) presetHint.hidden = false;
@@ -61,57 +66,25 @@ export function showLauncherModal() {
     if (presetHint) presetHint.hidden = true;
   }
   presetCard.onclick = () => {
-    if (!presets.length) return;
-    showPresetDropdown(presets, close);
+    if (!presets.length && !prepared) return;
+    showPresetDropdown(presets, prepared, close);
   };
-
-  // 4th card: Prepared meeting (if exists)
-  const existingPrepCard = document.querySelector('.launcher-card-prepared');
-  if (existingPrepCard) existingPrepCard.remove();
-
-  const prepared = loadPreparedMeeting();
-  if (prepared) {
-    const grid = document.querySelector('.launcher-actions-grid');
-    const card = document.createElement('button');
-    card.className = 'launcher-card launcher-card-prepared';
-    card.id = 'btnLauncherPrepared';
-    const typeLabel = prepared.meetingType || 'copilot';
-    const nParticipants = prepared.attendees?.length || 0;
-    card.innerHTML = `
-      <span class="launcher-card-badge">5</span>
-      <span class="launcher-card-icon">&#128204;</span>
-      <span class="launcher-card-label">${t('prep.prepared_meeting')}</span>
-      <span class="launcher-card-desc">${typeLabel}${nParticipants ? ' \u00b7 ' + t('prep.n_participants', { n: nParticipants }) : ''}</span>
-    `;
-    card.onclick = async () => {
-      close();
-      deletePreparedMeeting();
-      emit('meetingPrep:complete', prepared);
-    };
-    grid.appendChild(card);
-  }
 
   $('#launcherCloseBtn').onclick = close;
 
-  // Keyboard shortcuts: 1, 2, 3, 4, 5, ESC
+  // Keyboard shortcuts: 1, 2, 3, ESC
   const keyHandler = (e) => {
     if (modal.hidden) return;
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
-    else if (e.key === '2') { e.preventDefault(); $('#btnLauncherAiSetup').click(); }
-    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherMeetingPrep').click(); }
-    else if (e.key === '4') { e.preventDefault(); $('#btnLauncherPreset').click(); }
-    else if (e.key === '5') {
-      e.preventDefault();
-      const prepBtn = $('#btnLauncherPrepared');
-      if (prepBtn) prepBtn.click();
-    }
+    else if (e.key === '2') { e.preventDefault(); $('#btnLauncherDeepSetup').click(); }
+    else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
     else if (e.key === 'Escape') { close(); }
   };
   document.addEventListener('keydown', keyHandler);
 }
 
-function showPresetDropdown(presets, closeFn) {
+function showPresetDropdown(presets, prepared, closeFn) {
   // Remove existing dropdown
   const existing = document.querySelector('.launcher-preset-list');
   if (existing) { existing.remove(); return; }
@@ -120,6 +93,25 @@ function showPresetDropdown(presets, closeFn) {
   card.style.position = 'relative';
   const list = document.createElement('div');
   list.className = 'launcher-preset-list';
+
+  // Prepared session at top (if exists)
+  if (prepared) {
+    const item = document.createElement('div');
+    item.className = 'launcher-preset-item launcher-preset-prepared';
+    const typeLabel = prepared.meetingType || 'copilot';
+    const nParticipants = prepared.attendees?.length || 0;
+    item.innerHTML = `<span>📌 ${escapeHtml(t('prep.prepared_meeting'))}${nParticipants ? ' · ' + t('prep.n_participants', { n: nParticipants }) : ''}</span><span class="launcher-preset-item-type">${typeLabel}</span>`;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      list.remove();
+      closeFn();
+      deletePreparedMeeting();
+      emit('meetingPrep:complete', prepared);
+    });
+    list.appendChild(item);
+  }
+
+  // Regular presets
   presets.forEach((p, i) => {
     const item = document.createElement('div');
     item.className = 'launcher-preset-item';
