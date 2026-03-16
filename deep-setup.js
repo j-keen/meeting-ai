@@ -1,9 +1,13 @@
-// deep-setup.js - 4-step AI-guided "경청 준비" (Listen Prep) wizard
+// deep-setup.js - 4-step "경청 준비" (Listen Prep) wizard
+// Step 1: Basic Info (datetime, location, attendees) — form
+// Step 2: Context (description, reference meetings, files) — form, skippable
+// Step 3: AI Setup (focus points via AI chat) — chat
+// Step 4: Ready (summary + start)
 
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
-import { addCustomType, addContact, loadContacts, listMeetings, getMeeting } from './storage.js';
+import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, linkMeetings } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
@@ -14,20 +18,16 @@ const MODEL = 'gemini-2.5-flash';
 // ===== State =====
 let currentStep = 1;
 const TOTAL_STEPS = 4;
-let stepHistories = { 1: [], 3: [] };
+let stepHistories = { 3: [] };
 let stepResults = { 1: null, 2: null, 3: null };
 let isStreaming = false;
 let selectedAttendees = [];
+let selectedReferences = [];
 let attachedFiles = [];
-
-// ===== Scenario Chips =====
-const SCENARIO_CHIPS = [
-  { ko: '업무 미팅', en: 'Work Meeting' },
-  { ko: '상담/컨설팅', en: 'Consultation' },
-  { ko: '발표/면접 연습', en: 'Presentation/Interview' },
-  { ko: '브레인스토밍', en: 'Brainstorming' },
-  { ko: '배움/강의', en: 'Learning/Lecture' },
-];
+let meetingDescription = '';
+let meetingDatetime = '';
+let meetingLocation = '';
+let allMeetings = [];
 
 // ===== Helpers =====
 function isKorean() { return getAiLanguage() === 'ko'; }
@@ -38,40 +38,46 @@ function extractJSON(text) {
   try { return JSON.parse(match[1].trim()); } catch { return null; }
 }
 
-// ===== Step Meta Prompts =====
-function getStep1Prompt() {
-  const ko = isKorean();
-  return ko
-    ? `사용자가 어떤 대화/상황에 들어가는지 이해하세요. 사용자가 자유롭게 설명할 수 있도록 편안한 톤으로 대화하세요.
-
-사용자가 짧게 답하면 (예: "미팅") 자연스럽게 후속 질문 1개를 해서 상황을 좀 더 파악하세요.
-사용자가 충분히 설명했으면 바로 JSON을 출력하세요. 최대 2턴.
-
-반드시 아래 JSON을 코드블록(\`\`\`json ... \`\`\`)으로 출력:
-{ "situation": "상황을 구체적으로 요약", "type": "상황 유형" }
-
-톤: "~해드릴게요" 스타일, 편하지만 프로페셔널하게.`
-    : `Understand what conversation/situation the user is entering. Be conversational and warm.
-
-If the user gives a short answer (e.g., "a meeting"), ask one natural follow-up to learn more.
-If they explain enough, output JSON right away. 2 turns max.
-
-Output this JSON in a code block (\`\`\`json ... \`\`\`):
-{ "situation": "specific situation summary", "type": "situation type" }
-
-Tone: casual but professional, like a trusted colleague.`;
+function nowDatetimeLocal() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
 }
 
+// ===== Chosung Search =====
+const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function getChosung(char) {
+  const code = char.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  return CHOSUNG[Math.floor((code - 0xAC00) / 588)];
+}
+function extractChosung(str) { return [...str].map(ch => getChosung(ch) || ch).join(''); }
+function isAllChosung(str) { return [...str].every(ch => CHOSUNG.includes(ch)); }
+function matchField(value, query) {
+  if (!query || !value) return !query;
+  const v = value.toLowerCase();
+  const q = query.toLowerCase();
+  if (v.includes(q)) return true;
+  if (isAllChosung(query)) return extractChosung(value).includes(query);
+  return false;
+}
+
+function matchContactByName(c, query) {
+  if (!query) return true;
+  return matchField(c.name, query) || matchField(c.title || '', query) || matchField(c.company || '', query);
+}
+
+// ===== Step 3: AI Prompt =====
 function getStep3Prompt(prevResults) {
   const ko = isKorean();
   const ctx = JSON.stringify(prevResults, null, 2);
   return ko
     ? `당신은 사용자의 "믿을 수 있는 동료"입니다. 실시간 음성-AI 분석 앱에서 옆자리에 앉아 대화를 함께 듣고 도와주는 역할입니다.
 
-이전 단계 결과:
+이전 단계에서 사용자가 입력한 미팅 정보:
 ${ctx}
 
-사용자의 상황에 맞는 집중 포인트 3~5개를 제안하고, "이 중에 빼고 싶은 거 있으세요?" 라고 물어보세요. 네거티브 선택 방식이 유저가 결정하기 편합니다. 답변을 듣고 최적의 설정을 만들어주세요.
+사용자의 상황에 맞는 집중 포인트 3~5개를 제안하고, "빼고 싶은 거 있으면 말씀해주세요. 없으면 이대로 바로 세팅할게요!" 라고 물어보세요. 답변을 듣고 최적의 설정을 만들어주세요.
 
 ## 앱이 하는 일
 1. **실시간 코파일럿 분석**: 대화를 듣고 AI가 주기적으로 인사이트를 정리
@@ -98,10 +104,10 @@ ${ctx}
 톤: 격식 없이 편하게, 하지만 프로페셔널하게.`
     : `You are the user's "trusted teammate." In this real-time voice-AI analysis app, you sit beside them and help out.
 
-Previous step results:
+Meeting info from previous steps:
 ${ctx}
 
-Suggest 3-5 focus points tailored to the user's situation, then ask "Is there anything you'd like to remove from these?" The negative selection approach makes it easier for users to decide. Then create the optimal setup.
+Suggest 3-5 focus points tailored to the user's situation, then ask "Let me know if you'd like to remove any — otherwise I'll set it up as is!" Then create the optimal setup.
 
 ## What the app does
 1. **Real-time Copilot Analysis**: Listens and surfaces insights periodically
@@ -128,9 +134,9 @@ One turn max. Generate the setup JSON right away.
 Tone: casual but professional.`;
 }
 
-// ===== Render Helpers =====
+// ===== Chat Render Helpers =====
 function getChatContainer() {
-  return $(`#dsMessages${currentStep}`);
+  return $('#dsMessages3');
 }
 
 function addMessage(role, html) {
@@ -147,13 +153,8 @@ function addMessage(role, html) {
   return contentEl;
 }
 
-function addUserMessage(text) {
-  addMessage('user', escapeHtml(text));
-}
-
-function addAiMessage(html) {
-  return addMessage('model', html);
-}
+function addUserMessage(text) { addMessage('user', escapeHtml(text)); }
+function addAiMessage(html) { return addMessage('model', html); }
 
 function showTypingIndicator() {
   const container = getChatContainer();
@@ -187,7 +188,8 @@ function renderChips(container, chips, onSelect) {
 function goToStep(n) {
   if (n < 1 || n > TOTAL_STEPS) return;
 
-  // Collect step 2 data when leaving it
+  // Collect form data when leaving steps
+  if (currentStep === 1 && n !== 1) collectStep1Results();
   if (currentStep === 2 && n !== 2) collectStep2Results();
 
   currentStep = n;
@@ -211,11 +213,13 @@ function goToStep(n) {
   // Update nav buttons
   const backBtn = $('#btnDsBack');
   const nextBtn = $('#btnDsNext');
+  const skipBtn = $('#btnDsSkip');
   if (backBtn) backBtn.hidden = n === 1;
+  if (skipBtn) skipBtn.hidden = n !== 2;
   if (nextBtn) {
     nextBtn.hidden = n === TOTAL_STEPS;
-    // Step 2 is always skippable; others need results
-    nextBtn.disabled = (n === 2) ? false : !stepResults[n];
+    // Step 1: always enabled (datetime auto-filled), Step 2: always (skippable), Step 3: needs AI result
+    nextBtn.disabled = (n === 1 || n === 2) ? false : !stepResults[3];
   }
 
   // Step 3: show greeting if first visit
@@ -245,18 +249,19 @@ function goToStep(n) {
 }
 
 // ===== AI Communication =====
-function buildContents(step, userText) {
-  let systemPrompt;
-  if (step === 1) systemPrompt = getStep1Prompt();
-  else if (step === 3) systemPrompt = getStep3Prompt({ step1: stepResults[1], step2: stepResults[2] });
-
-  const greeting = t(`ds.step${step}_greeting`);
+function buildContents(userText) {
+  const allResults = {
+    step1: stepResults[1],
+    step2: stepResults[2],
+  };
+  const systemPrompt = getStep3Prompt(allResults);
+  const greeting = t('ds.step3_greeting');
   const contents = [
     { role: 'user', parts: [{ text: systemPrompt }] },
     { role: 'model', parts: [{ text: greeting }] },
   ];
 
-  (stepHistories[step] || []).forEach(msg => {
+  (stepHistories[3] || []).forEach(msg => {
     contents.push({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
@@ -272,17 +277,14 @@ function buildContents(step, userText) {
 
 async function sendMessage(text) {
   if (!text.trim() || isStreaming) return;
-  const step = currentStep;
 
   addUserMessage(text);
-  if (!stepHistories[step]) stepHistories[step] = [];
-  stepHistories[step].push({ role: 'user', text });
+  stepHistories[3].push({ role: 'user', text });
 
-  const input = $(`#dsInput${step}`);
+  const input = $('#dsInput3');
   if (input) input.value = '';
 
-  // Hide chips
-  const chips = $(`#dsChips${step}`);
+  const chips = $('#dsChips3');
   if (chips) chips.style.display = 'none';
 
   if (!isProxyAvailable()) {
@@ -293,13 +295,13 @@ async function sendMessage(text) {
   }
 
   isStreaming = true;
-  const sendBtn = $(`#btnDsSend${step}`);
+  const sendBtn = $('#btnDsSend3');
   if (sendBtn) sendBtn.disabled = true;
 
   const typingEl = showTypingIndicator();
 
   try {
-    const contents = buildContents(step, text);
+    const contents = buildContents(text);
     const body = { contents, generationConfig: { temperature: 0.7 } };
 
     const container = getChatContainer();
@@ -319,19 +321,19 @@ async function sendMessage(text) {
 
     streamContent.innerHTML = renderMarkdown(fullText);
     container.scrollTop = container.scrollHeight;
-    stepHistories[step].push({ role: 'model', text: fullText });
+    stepHistories[3].push({ role: 'model', text: fullText });
 
     // Extract JSON result
     const json = extractJSON(fullText);
     if (json) {
-      stepResults[step] = json;
+      stepResults[3] = json;
       const nextBtn = $('#btnDsNext');
       if (nextBtn) nextBtn.disabled = false;
 
       // Auto-advance after a short delay
       setTimeout(() => {
-        if (currentStep === step && step < TOTAL_STEPS) {
-          goToStep(step + 1);
+        if (currentStep === 3) {
+          goToStep(4);
         }
       }, 800);
     }
@@ -346,48 +348,32 @@ async function sendMessage(text) {
   }
 }
 
-// ===== Chosung Search =====
-const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
-function getChosung(char) {
-  const code = char.charCodeAt(0);
-  if (code < 0xAC00 || code > 0xD7A3) return null;
-  return CHOSUNG[Math.floor((code - 0xAC00) / 588)];
-}
-function extractChosung(str) { return [...str].map(ch => getChosung(ch) || ch).join(''); }
-function isAllChosung(str) { return [...str].every(ch => CHOSUNG.includes(ch)); }
-function matchField(value, query) {
-  if (!query || !value) return !query;
-  const v = value.toLowerCase();
-  const q = query.toLowerCase();
-  if (v.includes(q)) return true;
-  if (isAllChosung(query)) return extractChosung(value).includes(query);
-  return false;
-}
-
-// Name field searches across all fields (이름 칸에서 직급/회사도 검색)
-function matchContactByName(c, query) {
-  if (!query) return true;
-  return matchField(c.name, query) || matchField(c.title || '', query) || matchField(c.company || '', query);
-}
-
-let allMeetings = [];
-let selectedReferences = [];
-
-// ===== Step 2: Form-only (contacts + reference + files) =====
-function renderStep2Form() {
-  const formArea = $('#dsFormArea2');
+// ===== Step 1: Basic Info Form (datetime, location, attendees) =====
+function renderStep1Form() {
+  const formArea = $('#dsFormArea1');
   if (!formArea) return;
 
   const ko = isKorean();
-  allMeetings = listMeetings();
-
-  const desc = $('#dsStep2Desc');
-  if (desc) desc.textContent = t('ds.step2_greeting');
+  const desc = $('#dsStep1Desc');
+  if (desc) desc.textContent = t('ds.step1_desc');
 
   formArea.innerHTML = `
-    <!-- ① 참석자 -->
+    <!-- ① 날짜/시간 -->
     <div class="ds-form-section">
-      <label class="ds-form-label">${ko ? '참석자' : 'Attendees'}</label>
+      <label class="ds-form-label">${t('ds.datetime')}</label>
+      <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
+    </div>
+
+    <!-- ② 장소 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${t('ds.location')}</label>
+      <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
+      <div class="ds-autocomplete-dropdown" id="dsLocationDropdown" hidden></div>
+    </div>
+
+    <!-- ③ 참석자 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${t('ds.attendees')}</label>
       <div class="ds-attendee-register">
         <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
         <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
@@ -398,34 +384,109 @@ function renderStep2Form() {
       <div class="ds-selected-badges" id="dsSelectedBadges"></div>
       <div class="ds-contact-pool" id="dsContactPool"></div>
     </div>
-
-    <!-- ② 참고할 이전 미팅 -->
-    <div class="ds-form-section">
-      <label class="ds-form-label">${ko ? '참고할 이전 미팅' : 'Reference Meetings'} <span class="ds-ref-count" id="dsRefCount"></span></label>
-      <div class="ds-ref-box">
-        <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
-        <div class="ds-ref-list" id="dsRefList"></div>
-      </div>
-    </div>
-
-    <!-- ③ 파일 첨부 -->
-    <div class="ds-form-section">
-      <label class="ds-form-label">${ko ? '파일 첨부' : 'Files'}</label>
-      <div class="ds-file-drops">
-        <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt .doc</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
-        <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx .json</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
-        <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .txt .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
-        <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js .html ...</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
-      </div>
-      <div class="ds-file-attached" id="dsFileAttached"></div>
-    </div>
   `;
 
-  renderContactPool();
   renderSelectedBadges();
-  renderRefList('');
-  renderFileAttached();
-  bindStep2Events();
+  renderContactPool();
+  bindStep1Events();
+}
+
+function bindStep1Events() {
+  // Location autocomplete
+  const locInput = $('#dsLocation');
+  const locDropdown = $('#dsLocationDropdown');
+  if (locInput && locDropdown) {
+    locInput.addEventListener('input', () => {
+      const q = locInput.value.trim();
+      if (!q) { locDropdown.hidden = true; return; }
+      const locations = loadLocations();
+      const matches = locations.filter(l => matchField(l.name, q)).slice(0, 8);
+      if (!matches.length) { locDropdown.hidden = true; return; }
+      locDropdown.innerHTML = matches.map(l =>
+        `<div class="ds-ac-item" data-loc-name="${escapeHtml(l.name)}">${escapeHtml(l.name)}${l.memo ? ' <span class="text-muted">' + escapeHtml(l.memo) + '</span>' : ''}</div>`
+      ).join('');
+      locDropdown.hidden = false;
+      locDropdown.querySelectorAll('.ds-ac-item').forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          locInput.value = item.dataset.locName;
+          locDropdown.hidden = true;
+        });
+      });
+    });
+    locInput.addEventListener('blur', () => setTimeout(() => { locDropdown.hidden = true; }, 150));
+  }
+
+  // Attendee autocomplete & registration (same as before)
+  bindAttendeeEvents();
+}
+
+function bindAttendeeEvents() {
+  const nameInput = $('#dsAttendeeName');
+  const titleInput = $('#dsAttendeeTitle');
+  const companyInput = $('#dsAttendeeCompany');
+
+  function showAcDropdown(matchFn) {
+    const dropdown = $('#dsAutocomplete');
+    if (!dropdown) return;
+    const contacts = loadContacts();
+    const selectedIds = new Set(selectedAttendees.map(a => a.id));
+    const matches = contacts.filter(c => !selectedIds.has(c.id) && matchFn(c)).slice(0, 8);
+    if (!matches.length) { dropdown.hidden = true; return; }
+    dropdown.innerHTML = matches.map(c =>
+      `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
+    ).join('');
+    dropdown.hidden = false;
+    dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const contact = contacts.find(c => c.id === item.dataset.contactId);
+        if (contact) {
+          selectedAttendees.push(contact);
+          renderSelectedBadges();
+          renderContactPool();
+          if (nameInput) nameInput.value = '';
+          if (titleInput) titleInput.value = '';
+          if (companyInput) companyInput.value = '';
+          dropdown.hidden = true;
+        }
+      });
+    });
+  }
+
+  const hideAc = () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150);
+
+  if (nameInput) {
+    nameInput.addEventListener('input', () => showAcDropdown(c => matchContactByName(c, nameInput.value.trim())));
+    nameInput.addEventListener('blur', hideAc);
+  }
+  if (titleInput) {
+    titleInput.addEventListener('input', () => showAcDropdown(c => matchField(c.title || '', titleInput.value.trim())));
+    titleInput.addEventListener('blur', hideAc);
+  }
+  if (companyInput) {
+    companyInput.addEventListener('input', () => showAcDropdown(c => matchField(c.company || '', companyInput.value.trim())));
+    companyInput.addEventListener('blur', hideAc);
+  }
+
+  // Register button
+  const addBtn = $('#btnDsAddAttendee');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const name = nameInput?.value.trim();
+      if (!name) return;
+      const title = titleInput?.value.trim() || '';
+      const company = companyInput?.value.trim() || '';
+      const contact = addContact({ name, title, company });
+      selectedAttendees.push(contact);
+      renderSelectedBadges();
+      renderContactPool();
+      if (nameInput) nameInput.value = '';
+      if (titleInput) titleInput.value = '';
+      if (companyInput) companyInput.value = '';
+      showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
+    });
+  }
 }
 
 function renderSelectedBadges() {
@@ -466,32 +527,61 @@ function renderContactPool() {
   });
 }
 
-function showAutocomplete(query) {
-  const dropdown = $('#dsAutocomplete');
-  if (!dropdown || !query) { if (dropdown) dropdown.hidden = true; return; }
-  const contacts = loadContacts();
-  const selectedIds = new Set(selectedAttendees.map(a => a.id));
-  const matches = contacts.filter(c => !selectedIds.has(c.id) && matchContactByName(c, query)).slice(0, 8);
-  if (!matches.length) { dropdown.hidden = true; return; }
-  dropdown.innerHTML = matches.map(c =>
-    `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
-  ).join('');
-  dropdown.hidden = false;
-  dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
-    item.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      const contact = contacts.find(c => c.id === item.dataset.contactId);
-      if (contact) {
-        selectedAttendees.push(contact);
-        renderSelectedBadges();
-        renderContactPool();
-        $('#dsAttendeeName').value = '';
-        $('#dsAttendeeTitle').value = '';
-        $('#dsAttendeeCompany').value = '';
-        dropdown.hidden = true;
-      }
-    });
-  });
+function collectStep1Results() {
+  meetingDatetime = $('#dsDatetime')?.value || nowDatetimeLocal();
+  meetingLocation = $('#dsLocation')?.value.trim() || '';
+  // Save new location to DB if it doesn't exist
+  if (meetingLocation) addLocation(meetingLocation);
+  stepResults[1] = {
+    datetime: meetingDatetime,
+    location: meetingLocation,
+    attendees: selectedAttendees.map(a => ({ name: a.name, title: a.title, company: a.company })),
+  };
+}
+
+// ===== Step 2: Context Form (description, reference meetings, files) =====
+function renderStep2Form() {
+  const formArea = $('#dsFormArea2');
+  if (!formArea) return;
+
+  const ko = isKorean();
+  allMeetings = listMeetings();
+
+  const desc = $('#dsStep2Desc');
+  if (desc) desc.textContent = t('ds.step2_desc');
+
+  formArea.innerHTML = `
+    <!-- ① 한줄 설명 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${t('ds.description')}</label>
+      <input type="text" class="ds-input-sm" id="dsDescription" placeholder="${t('ds.description_placeholder')}" value="${escapeHtml(meetingDescription)}">
+    </div>
+
+    <!-- ② 참고 미팅 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
+      <div class="ds-ref-box">
+        <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+        <div class="ds-ref-list" id="dsRefList"></div>
+      </div>
+    </div>
+
+    <!-- ③ 파일 첨부 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${t('ds.files')}</label>
+      <div class="ds-file-drops">
+        <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt .doc</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
+        <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx .json</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
+        <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .txt .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
+        <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js .html ...</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+      </div>
+      <div class="ds-file-attached" id="dsFileAttached"></div>
+    </div>
+  `;
+
+  renderRefList('');
+  renderFileAttached();
+  bindStep2Events();
 }
 
 function renderRefList(query) {
@@ -562,7 +652,6 @@ function renderFileAttached() {
       renderFileAttached();
     });
   });
-  // Update drop zone indicators
   document.querySelectorAll('.ds-drop-zone').forEach(zone => {
     const cat = zone.dataset.category;
     const count = attachedFiles.filter(f => f.category === cat).length;
@@ -571,80 +660,6 @@ function renderFileAttached() {
 }
 
 function bindStep2Events() {
-  // Autocomplete on name input
-  const nameInput = $('#dsAttendeeName');
-  const titleInput = $('#dsAttendeeTitle');
-  const companyInput = $('#dsAttendeeCompany');
-
-  if (nameInput) {
-    nameInput.addEventListener('input', () => showAutocomplete(nameInput.value.trim()));
-    nameInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
-    // Title field: autocomplete only by title
-    titleInput.addEventListener('input', () => {
-      const q = titleInput.value.trim();
-      const dropdown = $('#dsAutocomplete');
-      if (!q) { if (dropdown) dropdown.hidden = true; return; }
-      const contacts = loadContacts();
-      const selectedIds = new Set(selectedAttendees.map(a => a.id));
-      const matches = contacts.filter(c => !selectedIds.has(c.id) && matchField(c.title || '', q)).slice(0, 8);
-      if (!matches.length) { if (dropdown) dropdown.hidden = true; return; }
-      dropdown.innerHTML = matches.map(c =>
-        `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
-      ).join('');
-      dropdown.hidden = false;
-      dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          const contact = contacts.find(c => c.id === item.dataset.contactId);
-          if (contact) { selectedAttendees.push(contact); renderSelectedBadges(); renderContactPool(); nameInput.value = ''; titleInput.value = ''; companyInput.value = ''; dropdown.hidden = true; }
-        });
-      });
-    });
-    titleInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
-    // Company field: autocomplete only by company
-    companyInput.addEventListener('input', () => {
-      const q = companyInput.value.trim();
-      const dropdown = $('#dsAutocomplete');
-      if (!q) { if (dropdown) dropdown.hidden = true; return; }
-      const contacts = loadContacts();
-      const selectedIds = new Set(selectedAttendees.map(a => a.id));
-      const matches = contacts.filter(c => !selectedIds.has(c.id) && matchField(c.company || '', q)).slice(0, 8);
-      if (!matches.length) { if (dropdown) dropdown.hidden = true; return; }
-      dropdown.innerHTML = matches.map(c =>
-        `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
-      ).join('');
-      dropdown.hidden = false;
-      dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          const contact = contacts.find(c => c.id === item.dataset.contactId);
-          if (contact) { selectedAttendees.push(contact); renderSelectedBadges(); renderContactPool(); nameInput.value = ''; titleInput.value = ''; companyInput.value = ''; dropdown.hidden = true; }
-        });
-      });
-    });
-    companyInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
-  }
-
-  // Register button
-  const addBtn = $('#btnDsAddAttendee');
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      const name = $('#dsAttendeeName')?.value.trim();
-      if (!name) return;
-      const title = $('#dsAttendeeTitle')?.value.trim() || '';
-      const company = $('#dsAttendeeCompany')?.value.trim() || '';
-      // Save to storage (인물 DB)
-      const contact = addContact({ name, title, company });
-      selectedAttendees.push(contact);
-      renderSelectedBadges();
-      renderContactPool();
-      if ($('#dsAttendeeName')) $('#dsAttendeeName').value = '';
-      if ($('#dsAttendeeTitle')) $('#dsAttendeeTitle').value = '';
-      if ($('#dsAttendeeCompany')) $('#dsAttendeeCompany').value = '';
-      showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
-    });
-  }
-
   // Reference search
   const refSearch = $('#dsRefSearch');
   if (refSearch) {
@@ -672,8 +687,9 @@ function bindStep2Events() {
 }
 
 function collectStep2Results() {
+  meetingDescription = $('#dsDescription')?.value.trim() || '';
   stepResults[2] = {
-    attendees: selectedAttendees.map(a => ({ name: a.name, title: a.title, company: a.company })),
+    description: meetingDescription,
     references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: r.analysis })),
     files: attachedFiles.map(f => ({ name: f.name, category: f.category })),
   };
@@ -690,17 +706,43 @@ function renderSummary() {
 
   let html = `<div class="ds-summary-card">`;
 
-  // Situation
-  html += `<div class="ds-summary-section">
-    <div class="ds-summary-label">${t('ds.summary_situation')}</div>
-    <div class="ds-summary-value">${escapeHtml(s1.situation || s3.summary || '-')}</div>
-  </div>`;
+  // Datetime
+  if (s1.datetime) {
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${t('ds.summary_datetime')}</div>
+      <div class="ds-summary-value">${new Date(s1.datetime).toLocaleString()}</div>
+    </div>`;
+  }
+
+  // Location
+  if (s1.location) {
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${t('ds.summary_location')}</div>
+      <div class="ds-summary-value">${escapeHtml(s1.location)}</div>
+    </div>`;
+  }
+
+  // Description
+  if (s2.description) {
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${t('ds.summary_description')}</div>
+      <div class="ds-summary-value">${escapeHtml(s2.description)}</div>
+    </div>`;
+  }
 
   // Attendees
-  if (s2.attendees?.length) {
+  if (s1.attendees?.length) {
     html += `<div class="ds-summary-section">
       <div class="ds-summary-label">${t('ds.summary_attendees')}</div>
-      <div class="ds-summary-value">${s2.attendees.map(a => escapeHtml(a.name + (a.title ? '/' + a.title : ''))).join(', ')}</div>
+      <div class="ds-summary-value">${s1.attendees.map(a => escapeHtml(a.name + (a.title ? '/' + a.title : ''))).join(', ')}</div>
+    </div>`;
+  }
+
+  // Situation / Summary from AI
+  if (s3.summary) {
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${t('ds.summary_situation')}</div>
+      <div class="ds-summary-value">${escapeHtml(s3.summary)}</div>
     </div>`;
   }
 
@@ -709,6 +751,14 @@ function renderSummary() {
     html += `<div class="ds-summary-section">
       <div class="ds-summary-label">${t('ds.summary_focus')}</div>
       <ul class="ds-summary-list">${s3.focusPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+    </div>`;
+  }
+
+  // Linked reference meetings
+  if (selectedReferences.length) {
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${t('ds.summary_links')}</div>
+      <div class="ds-summary-value">${selectedReferences.map(r => escapeHtml(r.title || r.id)).join(', ')}</div>
     </div>`;
   }
 
@@ -724,9 +774,15 @@ function closeModal() {
 }
 
 function handleStart() {
+  // Create bidirectional links for reference meetings
+  // We'll emit the meetingId later; for now store reference IDs
   const config = {
     ...(stepResults[3] || {}),
+    datetime: meetingDatetime,
+    location: meetingLocation,
+    description: meetingDescription,
     attendees: selectedAttendees,
+    referenceIds: selectedReferences.map(r => r.id),
     referenceAnalysis: selectedReferences.map(r => r.analysis || '').filter(Boolean).join('\n\n---\n\n') || null,
     attachedFiles: attachedFiles,
   };
@@ -757,19 +813,20 @@ export function openDeepSetup() {
 
   // Reset
   currentStep = 1;
-  stepHistories = { 1: [], 3: [] };
+  stepHistories = { 3: [] };
   stepResults = { 1: null, 2: null, 3: null };
   selectedAttendees = [];
   selectedReferences = [];
   attachedFiles = [];
+  meetingDescription = '';
+  meetingDatetime = nowDatetimeLocal();
+  meetingLocation = '';
 
   modal.hidden = false;
 
-  // Clear chat areas
-  [1, 3].forEach(s => {
-    const msgs = $(`#dsMessages${s}`);
-    if (msgs) msgs.innerHTML = '';
-  });
+  // Clear chat area
+  const msgs3 = $('#dsMessages3');
+  if (msgs3) msgs3.innerHTML = '';
 
   // Reset summary
   const summary = $('#dsSummary');
@@ -777,44 +834,33 @@ export function openDeepSetup() {
 
   goToStep(1);
 
-  // Show step 1 greeting + chips
-  addAiMessage(renderMarkdown(t('ds.step1_greeting')));
-  const chips1 = $('#dsChips1');
-  renderChips(chips1, SCENARIO_CHIPS, (text) => sendMessage(text));
+  // Render step 1 form (datetime, location, attendees)
+  renderStep1Form();
 
-  // Render step 2 form
+  // Pre-render step 2 form
   renderStep2Form();
-
-  // Focus input
-  const input = $('#dsInput1');
-  if (input) {
-    input.value = '';
-    setTimeout(() => input.focus(), 100);
-  }
 }
 
 // ===== Init =====
 export function initDeepSetup() {
-  // Send buttons for chat steps (1 and 3)
-  [1, 3].forEach(step => {
-    const sendBtn = $(`#btnDsSend${step}`);
-    if (sendBtn) {
-      sendBtn.addEventListener('click', () => {
-        const input = $(`#dsInput${step}`);
-        if (input?.value.trim()) sendMessage(input.value.trim());
-      });
-    }
+  // Send button for chat step 3
+  const sendBtn = $('#btnDsSend3');
+  if (sendBtn) {
+    sendBtn.addEventListener('click', () => {
+      const input = $('#dsInput3');
+      if (input?.value.trim()) sendMessage(input.value.trim());
+    });
+  }
 
-    const input = $(`#dsInput${step}`);
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          if (input.value.trim()) sendMessage(input.value.trim());
-        }
-      });
-    }
-  });
+  const input3 = $('#dsInput3');
+  if (input3) {
+    input3.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (input3.value.trim()) sendMessage(input3.value.trim());
+      }
+    });
+  }
 
   // Navigation
   const backBtn = $('#btnDsBack');
@@ -825,6 +871,15 @@ export function initDeepSetup() {
   const nextBtn = $('#btnDsNext');
   if (nextBtn) {
     nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
+  }
+
+  // Skip button (Step 2)
+  const skipBtn = $('#btnDsSkip');
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      collectStep2Results();
+      goToStep(3);
+    });
   }
 
   // Step 4 action buttons
