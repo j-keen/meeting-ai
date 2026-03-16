@@ -898,6 +898,10 @@
             <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
             <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
             <div class="unified-dropdown" id="tagDropdown" hidden></div>
+            <div class="ai-tag-loading" id="aiTagLoading" hidden>
+              <span class="ai-loading-spinner"></span>
+              <span data-i18n="end_meeting.tags_generating">Generating tag suggestions...</span>
+            </div>
             <div class="unified-badges-area" id="endMeetingTags"></div>
           </div>
         </div>

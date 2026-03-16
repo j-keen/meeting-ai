@@ -3018,6 +3018,60 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-muted);
   font-style: italic;
 }
+/* AI loading spinner */
+.ai-loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ai-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+/* AI retry button */
+.ai-retry-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all var(--transition-fast);
+}
+.ai-retry-btn:hover {
+  background: var(--accent);
+  color: var(--text-inverse);
+}
+/* AI error label */
+.ai-suggestions-label.ai-error {
+  color: var(--danger, #e53935);
+  font-style: normal;
+}
+/* Tag area spinner */
+.ai-tag-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+/* Chip/badge entrance animation */
+@keyframes ai-chip-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ai-title-chip, .unified-badge.ai-filled {
+  animation: ai-chip-enter 0.25s ease-out both;
+}
 #btnRegenerateTitles {
   font-size: 12px;
   padding: 2px 6px;

@@ -807,14 +807,12 @@ export function showEndMeetingModal(editMeeting) {
       suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
       renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
     } else {
-      suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_generating');
       fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
     }
 
     $('#btnRegenerateTitles').onclick = () => {
       state.aiTitleCached = null;
       chipsEl.innerHTML = '';
-      suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_generating');
       fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
     };
 
@@ -903,20 +901,36 @@ function resetFooterToDefault(isEditMode = false) {
 
 // AI metadata suggestion rendering — auto-fill into badges
 function fetchAndCacheMetadata() {
+  const tagLoading = $('#aiTagLoading');
   if (state.aiMetadataCached) {
     applyAiMetadata(state.aiMetadataCached);
+    if (tagLoading) tagLoading.hidden = true;
     return;
   }
+
+  if (tagLoading) tagLoading.hidden = false;
 
   suggestMeetingMetadata({
     transcript: state.transcript,
     meetingContext: state.settings.meetingContext || '',
     existingTags: state.tags,
   }).then(result => {
+    if (tagLoading) tagLoading.hidden = true;
     if (!result) return;
     state.aiMetadataCached = result;
     applyAiMetadata(result);
-  }).catch(() => { /* silent */ });
+  }).catch(() => {
+    if (tagLoading) {
+      tagLoading.hidden = false;
+      tagLoading.innerHTML = `<span class="ai-suggestions-label ai-error">${t('end_meeting.tags_error')}</span>` +
+        `<button class="ai-retry-btn" id="btnRetryTags">${t('end_meeting.retry')}</button>`;
+      tagLoading.querySelector('#btnRetryTags').onclick = () => {
+        tagLoading.innerHTML = `<span class="ai-loading-spinner"></span><span>${t('end_meeting.tags_generating')}</span>`;
+        state.aiMetadataCached = null;
+        fetchAndCacheMetadata();
+      };
+    }
+  });
 }
 
 function applyAiMetadata(metadata) {
@@ -966,9 +980,10 @@ function createUnifiedBadge(text, onRemove, isAi = false) {
 
 function renderTitleChips(titles, container, titleInput) {
   container.innerHTML = '';
-  titles.forEach(title => {
+  titles.forEach((title, i) => {
     const chip = document.createElement('button');
     chip.className = 'ai-title-chip';
+    chip.style.animationDelay = `${i * 0.08}s`;
     chip.textContent = title;
     chip.addEventListener('click', () => { titleInput.value = title; });
     container.appendChild(chip);
@@ -976,12 +991,20 @@ function renderTitleChips(titles, container, titleInput) {
 }
 
 function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
+  const label = suggestionsEl.querySelector('.ai-suggestions-label');
+  label.classList.remove('ai-error');
+  label.innerHTML = `<span class="ai-loading-spinner"></span>${t('end_meeting.title_generating')}`;
+  // Remove old retry button if any
+  const oldRetry = suggestionsEl.querySelector('.ai-retry-btn');
+  if (oldRetry) oldRetry.remove();
+
   generateMeetingTitle({
     transcript: state.transcript,
     existingTitle: state.meetingTitle,
   }).then(result => {
     if (!result) { suggestionsEl.hidden = true; return; }
-    suggestionsEl.querySelector('.ai-suggestions-label').textContent = t('end_meeting.title_hint');
+    label.innerHTML = '';
+    label.textContent = t('end_meeting.title_hint');
 
     state.aiTitleCached = {
       titles: [result.title, ...(result.alternatives || [])].filter(Boolean),
@@ -989,12 +1012,22 @@ function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
     };
     renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
 
+  }).catch(() => {
+    label.classList.add('ai-error');
+    label.innerHTML = '';
+    label.textContent = t('end_meeting.title_error');
+    const retryBtn = document.createElement('button');
+    retryBtn.className = 'ai-retry-btn';
+    retryBtn.textContent = t('end_meeting.retry');
+    retryBtn.onclick = () => fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
+    label.after(retryBtn);
   });
 }
 
 export function renderEndMeetingTags() {
   const container = $('#endMeetingTags');
   container.innerHTML = '';
+  let aiIdx = 0;
   state.tags.forEach(tag => {
     const isAi = state._aiTags && state._aiTags.includes(tag);
     const badge = createUnifiedBadge(tag, () => {
@@ -1002,6 +1035,10 @@ export function renderEndMeetingTags() {
       if (state._aiTags) state._aiTags = state._aiTags.filter(t2 => t2 !== tag);
       renderEndMeetingTags();
     }, isAi);
+    if (isAi) {
+      badge.style.animationDelay = `${aiIdx * 0.08}s`;
+      aiIdx++;
+    }
     container.appendChild(badge);
   });
 }
