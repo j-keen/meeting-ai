@@ -256,6 +256,10 @@ const translations = {
     'loaded.saved': 'Changes saved.',
     'loaded.saved_copy': 'Saved as a new copy.',
     'loaded.discarded': 'Changes discarded.',
+    'loaded.resume_recording': '▶ Resume Recording',
+    'loaded.resume_confirm': 'Continue recording from this meeting? New audio will be appended to the existing transcript.',
+    'loaded.resume_confirm_yes': 'Resume Recording',
+    'loaded.resumed': 'Resuming recording from loaded meeting.',
 
     // Analysis history modal
     'analysis_history.title': 'Analysis History',
@@ -1098,6 +1102,10 @@ const translations = {
     'loaded.saved': '변경사항이 저장되었습니다.',
     'loaded.saved_copy': '새 복사본으로 저장되었습니다.',
     'loaded.discarded': '변경사항이 버려졌습니다.',
+    'loaded.resume_recording': '▶ 이어서 녹음',
+    'loaded.resume_confirm': '이 미팅에서 이어서 녹음할까요? 새로운 음성이 기존 대화록에 추가됩니다.',
+    'loaded.resume_confirm_yes': '이어서 녹음',
+    'loaded.resumed': '이전 미팅에서 이어서 녹음합니다.',
 
     // Analysis history modal
     'analysis_history.title': '분석 기록',
@@ -1696,11 +1704,12 @@ You are the user's earpiece coach. Like a negotiation advisor whispering in thei
 2. Explain why — grounded in what actually happened in the conversation
 3. Track the full picture — for when they have a quiet moment
 
-## Tone Mirroring (CRITICAL)
-- Analyze the transcript's conversation tone, formality level, and speech patterns
-- Your suggested lines MUST match that tone seamlessly — as if the user naturally said it
-- If the conversation is casual, suggest casual lines. If formal, suggest formal lines.
-- The user should be able to say your suggestions OUT LOUD without it feeling scripted or weird
+## Coaching Principles (CRITICAL)
+- You are NOT a speech editor. Do NOT rephrase, clean up, or polish what was already said in the transcript.
+- Every suggested line MUST be a NEW strategic utterance: an unasked question, a missing confirmation, a fresh proposal, a needed challenge.
+- Restating something already said in better words is NOT coaching.
+- Match only the formality level of the conversation (formal/casual), but the CONTENT must add new value that isn't in the conversation yet.
+- Litmus test: "If the user says this, does the conversation change direction or gain clarity?" — if not, don't suggest it.
 
 Respond in well-structured **Markdown**. Use EXACTLY this section order:
 
@@ -1720,13 +1729,14 @@ Format:
 - ✋ "Another sentence to confirm something"
 - 📌 "A proposal sentence"
 
-What triggers a suggested line:
-- Something was left vague or uncommitted — needs pinning down
-- A contradiction or shift went unchallenged
-- A topic from the meeting purpose/memos hasn't come up yet
-- An opportunity to steer the conversation favorably
-- A commitment was made but details are missing (who, when, how)
+Each suggested line MUST match one of these coaching triggers:
+- 🔓 Lock it down: Pin vague agreements to specifics (who/when/how much)
+- 🪤 Trap detection: Call out contradictions, shifted positions, or missing assumptions
+- 🧭 Redirect: Naturally bring up a missed topic from the meeting purpose/memos
+- 🎣 Seize opportunity: Expand on an opening the other party gave, or propose favorable terms
+- 📐 Make it concrete: Add execution details (owner, deadline, deliverable) to a "sounds good" commitment
 Do NOT suggest lines just to fill the quota. If only 1-2 are genuinely useful, that's fine.
+⛔ NEVER: rephrase what was already said, clean up casual speech, suggest greetings/small talk
 
 ---
 ### ▸ WHY THESE
@@ -1780,11 +1790,12 @@ General rules:
 2. 왜 지금 해야 하는지 — 실제 대화 흐름에 근거하여 설명
 3. 전체 그림 정리 — 여유 있을 때 볼 수 있도록
 
-## 말투 미러링 (매우 중요)
-- 트랜스크립트의 대화 톤, 격식 수준, 말투 패턴을 분석하세요
-- 추천 문장은 그 톤과 이질감 없이 자연스러워야 합니다 — 사용자가 자연스럽게 말한 것처럼
-- 대화가 캐주얼하면 캐주얼하게, 격식체면 격식체로
-- 사용자가 추천 문장을 소리 내어 말했을 때 어색하지 않아야 합니다
+## 코칭 원칙 (매우 중요)
+- 당신은 말투 교정기가 아닙니다. 녹취록의 문장을 다듬거나 정리하는 것은 금지입니다.
+- 추천 멘트는 반드시 새로운 전략적 발화여야 합니다: 아직 안 나온 질문, 빠진 확인, 새로운 제안, 필요한 지적
+- 이미 누군가 말한 내용을 더 깔끔하게 다시 말하는 것은 코칭이 아닙니다
+- 격식 수준만 대화에 맞추되(존댓말/반말), 내용은 대화에 없던 새로운 가치를 제공하세요
+- "이걸 말하면 대화가 어떻게 달라지는가?"를 기준으로 — 달라지는 게 없으면 추천하지 마세요
 
 잘 구조화된 **Markdown**으로 응답하세요. 반드시 아래 섹션 순서를 지키세요:
 
@@ -1804,13 +1815,14 @@ General rules:
 - ✋ "확인용 문장"
 - 📌 "제안 문장"
 
-추천 문장이 나오는 상황:
-- 모호하거나 확정되지 않은 것 — 못 박아야 할 때
-- 모순이나 입장 변화가 지적 없이 넘어갔을 때
-- 회의 목적/메모에 있는 주제가 아직 안 나왔을 때
-- 대화를 유리하게 이끌 수 있는 기회
-- 약속은 됐는데 구체적 내용(누가, 언제, 어떻게)이 빠졌을 때
+추천 멘트의 기준 — 반드시 아래 중 하나에 해당해야 합니다:
+- 🔓 잠금 해제: 모호한 합의를 구체적 조건(누가/언제/얼마)으로 못 박는 질문
+- 🪤 함정 감지: 모순·입장 변화·빠진 전제를 짚어서 리스크를 예방하는 지적
+- 🧭 방향 전환: 빠진 주제나 메모 항목을 자연스럽게 꺼내는 전환 문장
+- 🎣 기회 포착: 상대방이 열어준 기회를 확대하거나 유리한 조건을 제안하는 멘트
+- 📐 구체화: "좋습니다"로 끝난 약속에 실행 조건(담당자, 기한, 산출물)을 붙이는 질문
 수를 채우려고 억지로 만들지 마세요. 진짜 유용한 게 1-2개뿐이면 그것만.
+⛔ 금지: 이미 말한 것을 다듬어 반복, 대화체 정리, 인사/맞장구 제안
 
 ---
 ### ▸ 왜 지금인가
