@@ -20,7 +20,7 @@ import {
   showToast, showCenterToast, updateTranscriptLineUI, removeTranscriptLineUI,
   getAnalysisAsText,
 } from './ui.js';
-import { refreshHistoryGrid, refreshHistoryGridDebounced } from './history.js';
+import { refreshHistoryGrid, refreshHistoryGridDebounced, resetHistorySort } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
@@ -38,7 +38,7 @@ import { initPromptAdjuster } from './prompt-adjuster.js';
 import { initStyleHistory, pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
 import {
-  generateId, startRecording, stopRecording, endMeeting,
+  generateId, startRecording, stopRecording, endMeeting, resumeFromLoaded,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting, showEndMeetingModal,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   updateParticipantDropdown, updateTagDropdown,
@@ -578,6 +578,7 @@ function init() {
 
   // Meeting History
   $('#btnHistory').addEventListener('click', () => {
+    resetHistorySort();
     refreshHistoryGrid();
     $('#historyModal').hidden = false;
   });
@@ -587,6 +588,7 @@ function init() {
   $('#historyFilterRating')?.addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateFrom').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterDateTo').addEventListener('change', () => refreshHistoryGrid());
+  $('#historySortBy')?.addEventListener('change', () => refreshHistoryGrid());
 
   // Transcript events
   on('transcript:bookmark', ({ id }) => {
@@ -735,6 +737,13 @@ function init() {
     $('#historyModal').hidden = true;
     $('#viewerModal').hidden = true;
     updateInboxBadge();
+  });
+
+  // Banner: resume recording from loaded meeting
+  $('#loadedBannerResume').addEventListener('click', async () => {
+    if (!confirm(t('loaded.resume_confirm'))) return;
+    showToast(t('loaded.resumed'), 'info');
+    await resumeFromLoaded();
   });
 
   // Banner close -> save dialog

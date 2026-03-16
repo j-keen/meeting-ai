@@ -37,6 +37,7 @@
     <span class="loaded-banner-icon">📂</span>
     <span id="loadedBannerTitle"></span>
     <span id="loadedBannerDate" class="loaded-banner-date"></span>
+    <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서 녹음</button>
     <button class="loaded-banner-close" id="loadedBannerClose">&times;</button>
   </div>
 
@@ -679,6 +680,13 @@
                 <option value="3">&#9733;3+</option>
                 <option value="4">&#9733;4+</option>
                 <option value="5">&#9733;5</option>
+              </select>
+              <select class="history-filter-control" id="historySortBy">
+                <option value="newest" data-i18n="history.sort_newest">Newest first</option>
+                <option value="oldest" data-i18n="history.sort_oldest">Oldest first</option>
+                <option value="rating_desc" data-i18n="history.sort_rating">Highest rated</option>
+                <option value="duration_desc" data-i18n="history.sort_duration">Longest</option>
+                <option value="title_asc" data-i18n="history.sort_title">Title A-Z</option>
               </select>
             </div>
             <div class="history-filter-row">

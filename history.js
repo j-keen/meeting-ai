@@ -14,7 +14,13 @@ export function getHistoryFilters() {
     filterRating: $('#historyFilterRating')?.value || '',
     dateFrom: $('#historyFilterDateFrom')?.value || '',
     dateTo: $('#historyFilterDateTo')?.value || '',
+    sortBy: $('#historySortBy')?.value || 'newest',
   };
+}
+
+export function resetHistorySort() {
+  const sortEl = $('#historySortBy');
+  if (sortEl) sortEl.value = 'newest';
 }
 
 let historySearchTimer = null;

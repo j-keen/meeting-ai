@@ -769,6 +769,28 @@ const translations = {
     'history.filter_all_ratings': 'All Ratings',
     'history.filter_tag': 'Filter by tag...',
 
+    // Sort options
+    'history.sort_newest': 'Newest first',
+    'history.sort_oldest': 'Oldest first',
+    'history.sort_rating': 'Highest rated',
+    'history.sort_duration': 'Longest',
+    'history.sort_title': 'Title A-Z',
+
+    // Relative time
+    'history.time_just_now': 'Just now',
+    'history.time_minutes_ago': '{n}m ago',
+    'history.time_hours_ago': '{n}h ago',
+    'history.time_days_ago': '{n}d ago',
+    'history.time_weeks_ago': '{n}w ago',
+    'history.time_months_ago': '{n}mo ago',
+
+    // Group headers
+    'history.group_today': 'Today',
+    'history.group_yesterday': 'Yesterday',
+    'history.group_this_week': 'This week',
+    'history.group_this_month': 'This month',
+    'history.group_older': 'Older',
+
     // Meeting title placeholder
     'meeting.title_placeholder': 'Meeting title...',
 
@@ -1614,6 +1636,28 @@ const translations = {
     'history.filter_all_categories': '모든 카테고리',
     'history.filter_all_ratings': '모든 별점',
     'history.filter_tag': '태그로 필터...',
+
+    // Sort options
+    'history.sort_newest': '최신순',
+    'history.sort_oldest': '오래된순',
+    'history.sort_rating': '높은 평점순',
+    'history.sort_duration': '긴 시간순',
+    'history.sort_title': '제목 가나다순',
+
+    // Relative time
+    'history.time_just_now': '방금 전',
+    'history.time_minutes_ago': '{n}분 전',
+    'history.time_hours_ago': '{n}시간 전',
+    'history.time_days_ago': '{n}일 전',
+    'history.time_weeks_ago': '{n}주 전',
+    'history.time_months_ago': '{n}개월 전',
+
+    // Group headers
+    'history.group_today': '오늘',
+    'history.group_yesterday': '어제',
+    'history.group_this_week': '이번 주',
+    'history.group_this_month': '이번 달',
+    'history.group_older': '이전',
 
     // Meeting title placeholder
     'meeting.title_placeholder': '회의 제목...',

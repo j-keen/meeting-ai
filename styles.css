@@ -247,6 +247,17 @@ h1, h2, h3 { font-weight: 600; }
 }
 .loaded-banner-icon { font-size: 16px; }
 .loaded-banner-date { color: var(--text-muted); font-size: 12px; margin-left: auto; }
+.loaded-banner-resume {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.loaded-banner-resume:hover { opacity: 0.85; }
 .loaded-banner-close {
   background: none;
   border: none;
@@ -1995,6 +2006,27 @@ body.loaded-mode #btnNewMeeting { display: none; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.history-group-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 12px 4px 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-top: 4px;
+}
+.history-group-header:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+.history-card-relative-time {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 400;
 }
 .history-card {
   border: 1px solid var(--border-color);

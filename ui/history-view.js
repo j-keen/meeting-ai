@@ -272,7 +272,72 @@ function formatTimeFromMs(ms) {
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterRating = '', dateFrom = '', dateTo = '' } = {}) {
+// Relative time formatting
+function formatRelativeTime(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+
+  if (minutes < 1) return t('history.time_just_now');
+  if (minutes < 60) return t('history.time_minutes_ago', { n: minutes });
+  if (hours < 24) return t('history.time_hours_ago', { n: hours });
+  if (days < 7) return t('history.time_days_ago', { n: days });
+  if (weeks < 5) return t('history.time_weeks_ago', { n: weeks });
+  return t('history.time_months_ago', { n: months });
+}
+
+// Get group label for a meeting timestamp
+function getTimeGroup(timestamp) {
+  const now = new Date();
+  const date = new Date(timestamp);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const weekStart = new Date(today.getTime() - today.getDay() * 86400000);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  if (date >= today) return t('history.group_today');
+  if (date >= yesterday) return t('history.group_yesterday');
+  if (date >= weekStart) return t('history.group_this_week');
+  if (date >= monthStart) return t('history.group_this_month');
+  return t('history.group_older');
+}
+
+// Sort meetings by sortBy option
+function sortMeetings(meetings, sortBy) {
+  const sorted = [...meetings];
+  switch (sortBy) {
+    case 'oldest':
+      return sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    case 'rating_desc':
+      return sorted.sort((a, b) => (b.starRating || 0) - (a.starRating || 0));
+    case 'duration_desc':
+      return sorted.sort((a, b) => {
+        const durA = parseDurationMs(a.duration);
+        const durB = parseDurationMs(b.duration);
+        return durB - durA;
+      });
+    case 'title_asc':
+      return sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    case 'newest':
+    default:
+      return sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+}
+
+// Parse duration string "MM:SS" to milliseconds
+function parseDurationMs(dur) {
+  if (!dur) return 0;
+  const parts = dur.split(':').map(Number);
+  if (parts.length === 2) return (parts[0] * 60 + parts[1]) * 1000;
+  if (parts.length === 3) return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
+  return 0;
+}
+
+export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterRating = '', dateFrom = '', dateTo = '', sortBy = 'newest' } = {}) {
   const grid = $('#historyGrid');
   grid.innerHTML = '';
   let filtered = meetings;
@@ -310,6 +375,9 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     filtered = filtered.filter(m => (m.createdAt || 0) <= to);
   }
 
+  // Sort
+  filtered = sortMeetings(filtered, sortBy);
+
   // Store filtered list for viewer navigation
   viewerMeetingList = filtered.map(m => m.id);
 
@@ -322,12 +390,39 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     return;
   }
 
+  // Group headers only for date-based sorts
+  const useGroups = sortBy === 'newest' || sortBy === 'oldest';
+  let lastGroup = '';
+
   filtered.forEach(meeting => {
+    // Insert group header if needed
+    if (useGroups) {
+      const group = getTimeGroup(meeting.createdAt);
+      if (group !== lastGroup) {
+        lastGroup = group;
+        const header = document.createElement('div');
+        header.className = 'history-group-header';
+        header.textContent = group;
+        grid.appendChild(header);
+      }
+    }
+
     const tmpl = $('#tmplHistoryCard');
     const card = tmpl.content.cloneNode(true).querySelector('.history-card');
     card.dataset.meetingId = meeting.id;
     card.querySelector('.history-card-title').textContent = meeting.title || t('history.untitled');
-    card.querySelector('.history-card-date').textContent = new Date(meeting.createdAt).toLocaleDateString(getDateLocale());
+
+    // Date: absolute + relative time
+    const dateEl = card.querySelector('.history-card-date');
+    const absDate = new Date(meeting.createdAt).toLocaleDateString(getDateLocale());
+    const relTime = formatRelativeTime(meeting.createdAt);
+    dateEl.textContent = absDate;
+    dateEl.title = absDate;
+
+    const relSpan = document.createElement('span');
+    relSpan.className = 'history-card-relative-time';
+    relSpan.textContent = relTime;
+    dateEl.appendChild(relSpan);
     card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_copilot');
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
