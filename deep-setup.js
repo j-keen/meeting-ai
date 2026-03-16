@@ -71,7 +71,7 @@ function getStep3Prompt(prevResults) {
 이전 단계 결과:
 ${ctx}
 
-사용자에게 "제가 특히 집중해서 잡아드릴 것"을 물어보고, 답변을 듣고 최적의 설정을 만들어주세요.
+사용자의 상황에 맞는 집중 포인트 3~5개를 제안하고, "이 중에 빼고 싶은 거 있으세요?" 라고 물어보세요. 네거티브 선택 방식이 유저가 결정하기 편합니다. 답변을 듣고 최적의 설정을 만들어주세요.
 
 ## 앱이 하는 일
 1. **실시간 코파일럿 분석**: 대화를 듣고 AI가 주기적으로 인사이트를 정리
@@ -101,7 +101,7 @@ ${ctx}
 Previous step results:
 ${ctx}
 
-Ask the user what they want you to especially focus on, then create the optimal setup.
+Suggest 3-5 focus points tailored to the user's situation, then ask "Is there anything you'd like to remove from these?" The negative selection approach makes it easier for users to decide. Then create the optimal setup.
 
 ## What the app does
 1. **Real-time Copilot Analysis**: Listens and surfaces insights periodically

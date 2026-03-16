@@ -35,6 +35,7 @@ import { initHintSystem } from './hint-system.js';
 import { initPromptBuilder } from './prompt-builder.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
+import { initStyleHistory, pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
 import {
   generateId, startRecording, stopRecording, endMeeting,
@@ -43,7 +44,7 @@ import {
   updateParticipantDropdown, updateTagDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
-  clearDraftRecovery,
+  clearDraftRecovery, saveActiveSession,
 } from './recording.js';
 import { prefetchDeepgramToken } from './stt.js';
 
@@ -66,6 +67,7 @@ function init() {
   initPromptBuilder();
   initDeepSetup();
   initPromptAdjuster();
+  initStyleHistory();
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -193,6 +195,8 @@ function init() {
     });
 
     analysisStyleSelect.addEventListener('change', (e) => {
+      // Save current style to history before changing
+      pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'dropdown');
       const type = e.target.value;
       state.settings.meetingPreset = type;
       state.settings.customPrompt = getPromptForType(type);
@@ -783,6 +787,10 @@ function init() {
   });
 
   on('meetingPrep:complete', async (config) => {
+    // Save current style to history before prep overwrites it
+    if (config.meetingType || config.customPrompt) {
+      pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'prep');
+    }
     // Apply meeting prep settings
     if (config.meetingType) {
       state.settings.meetingPreset = config.meetingType;
@@ -824,6 +832,10 @@ function init() {
 
   // Prompt Builder complete — apply 3-channel settings and start recording
   on('promptBuilder:complete', async (config) => {
+    // Save current style to history before builder overwrites it
+    if (config.analysisPrompt) {
+      pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'builder');
+    }
     // 1. Analysis prompt
     if (config.analysisPrompt) {
       state.settings.customPrompt = config.analysisPrompt;
@@ -855,6 +867,10 @@ function init() {
 
   // Deep Setup complete — merge prompt-builder + meeting-prep config and start
   on('deepSetup:complete', async (config) => {
+    // Save current style to history before deep setup overwrites it
+    if (config.analysisPrompt) {
+      pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'builder');
+    }
     // Analysis prompt
     if (config.analysisPrompt) {
       state.settings.customPrompt = config.analysisPrompt;
@@ -899,9 +915,12 @@ function init() {
     await startRecording();
   });
 
-  // beforeunload auto-save (skip in loaded mode to avoid overwriting)
+  // beforeunload auto-save + crash recovery (skip in loaded mode to avoid overwriting)
   window.addEventListener('beforeunload', () => {
-    if (state.meetingId && !state.loadedMeetingId) autoSave();
+    if (state.meetingId && !state.loadedMeetingId) {
+      autoSave();
+      saveActiveSession();
+    }
   });
 
   // Storage usage check

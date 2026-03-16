@@ -120,6 +120,7 @@
             <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
             <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
             <button class="btn btn-sm" id="btnPromptSettings" title="Adjust Prompt">🎯 <span data-i18n="panel.prompt_adjust">Adjust</span></button>
+            <button class="btn btn-sm" id="btnStyleHistory" title="Style History">↩</button>
             <button class="btn btn-sm" id="btnSaveAsPreset" data-i18n-title="preset_save.btn_tooltip" style="display:none">💾</button>
           </div>
         </div>
@@ -1224,6 +1225,21 @@
             <button class="btn btn-primary" id="btnPbStart" data-i18n="pb.start">▶ Start</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Style History Modal -->
+  <div class="modal-overlay" id="styleHistoryModal" hidden>
+    <div class="modal modal-large" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 data-i18n="sh.title">Style History</h3>
+        <button class="btn btn-icon modal-close" id="shCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body sh-body">
+        <div id="shCurrentPrompt" class="sh-current-section"></div>
+        <div id="shList" class="sh-list-section"></div>
+        <div id="shDetail" class="sh-detail-section" style="display:none"></div>
       </div>
     </div>
   </div>

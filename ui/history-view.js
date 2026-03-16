@@ -331,6 +331,14 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
 
+    // Interrupted badge
+    if (meeting.interrupted) {
+      const badge = document.createElement('span');
+      badge.className = 'history-card-interrupted';
+      badge.textContent = t('history.interrupted');
+      card.querySelector('.history-card-meta').appendChild(badge);
+    }
+
     // Star rating in meta
     if (meeting.starRating) {
       const ratingEl = document.createElement('span');

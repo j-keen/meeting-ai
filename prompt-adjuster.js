@@ -9,6 +9,7 @@ import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
 import { saveSettings } from './storage.js';
 import { createPresetSaveForm } from './preset-save.js';
+import { pushStyleHistory } from './style-history.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -172,6 +173,8 @@ function renderActionButtons(promptText) {
 }
 
 function applyPrompt(promptText, reanalyze) {
+  // Save current style to history before applying
+  pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'adjuster');
   state.settings.customPrompt = promptText;
   emit('customPrompt:change');
   saveSettings(state.settings);

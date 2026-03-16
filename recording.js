@@ -23,6 +23,7 @@ import {
 } from './ui.js';
 import { t, getDateLocale, getAiLanguage } from './i18n.js';
 import { showLauncherModal } from './launcher.js';
+import { loadChatHistory } from './chat.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -60,93 +61,157 @@ let idleWarningShown = false;
 let maxDurationTimeout = null;
 
 
-// ===== Draft Recovery (sessionStorage) =====
+// ===== Draft Recovery (sessionStorage + localStorage crash recovery) =====
 const DRAFT_KEY = 'meeting-ai-draft';
+const ACTIVE_SESSION_KEY = 'meeting-ai-active-session';
 let draftSaveInterval = null;
+
+function buildDraftData() {
+  return {
+    meetingId: state.meetingId,
+    meetingTitle: state.meetingTitle,
+    meetingStartTime: state.meetingStartTime,
+    meetingLocation: state.meetingLocation,
+    transcript: state.transcript,
+    memos: state.memos,
+    chatHistory: state.chatHistory,
+    analysisHistory: state.analysisHistory,
+    currentAnalysis: state.currentAnalysis,
+    userInsights: state.userInsights,
+    tags: state.tags,
+    starRating: state.starRating,
+    categories: state.categories,
+    participants: state.participants,
+    settings: { meetingPreset: state.settings.meetingPreset, meetingContext: state.settings.meetingContext },
+    pausedDuration: getTotalPausedMs(),
+    savedAt: Date.now(),
+  };
+}
 
 function saveDraft() {
   if (!state.meetingId) return;
   const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
   if (!hasContent) return;
   try {
-    const draft = {
-      meetingId: state.meetingId,
-      meetingTitle: state.meetingTitle,
-      meetingStartTime: state.meetingStartTime,
-      meetingLocation: state.meetingLocation,
-      transcript: state.transcript,
-      memos: state.memos,
-      chatHistory: state.chatHistory,
-      analysisHistory: state.analysisHistory,
-      currentAnalysis: state.currentAnalysis,
-      userInsights: state.userInsights,
-      tags: state.tags,
-      starRating: state.starRating,
-      categories: state.categories,
-      participants: state.participants,
-      settings: { meetingPreset: state.settings.meetingPreset, meetingContext: state.settings.meetingContext },
-      pausedDuration: getTotalPausedMs(),
-      savedAt: Date.now(),
-    };
+    const draft = buildDraftData();
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   } catch { /* ignore quota errors */ }
 }
 
+// Save active session to localStorage (survives browser crash)
+export function saveActiveSession() {
+  if (!state.meetingId) return;
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) return;
+  try {
+    const data = buildDraftData();
+    data.isActiveSession = true;
+    localStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify(data));
+  } catch { /* ignore quota errors */ }
+}
+
+function clearActiveSession() {
+  try { localStorage.removeItem(ACTIVE_SESSION_KEY); } catch { /* ignore */ }
+}
+
 export function clearDraftRecovery() {
   sessionStorage.removeItem(DRAFT_KEY);
+  clearActiveSession();
   if (draftSaveInterval) { clearInterval(draftSaveInterval); draftSaveInterval = null; }
 }
 
 function startDraftSaving() {
   if (draftSaveInterval) clearInterval(draftSaveInterval);
-  draftSaveInterval = setInterval(saveDraft, 15000); // every 15s
+  draftSaveInterval = setInterval(() => {
+    saveDraft();
+    saveActiveSession();
+  }, 15000); // every 15s
 }
 
 export function checkDraftRecovery() {
+  // Priority 1: sessionStorage draft (normal refresh — more recent)
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
-    if (!raw) return;
-    const draft = JSON.parse(raw);
-    // Only show recovery if draft is less than 12 hours old
-    if (Date.now() - draft.savedAt > 12 * 60 * 60 * 1000) {
+    if (raw) {
+      const draft = JSON.parse(raw);
+      if (Date.now() - draft.savedAt <= 12 * 60 * 60 * 1000) {
+        showDraftRecoveryBanner(draft, 'session');
+        return;
+      }
       sessionStorage.removeItem(DRAFT_KEY);
+    }
+  } catch { sessionStorage.removeItem(DRAFT_KEY); }
+
+  // Priority 2: localStorage active session (crash recovery)
+  try {
+    const raw = localStorage.getItem(ACTIVE_SESSION_KEY);
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    // Only recover if less than 6 hours old (max meeting duration)
+    if (Date.now() - session.savedAt > MAX_RECORDING_MS) {
+      clearActiveSession();
       return;
     }
-    showDraftRecoveryBanner(draft);
-  } catch { sessionStorage.removeItem(DRAFT_KEY); }
+    // Multi-tab guard: check if another tab is already running this meeting
+    // Use a brief lock check via sessionStorage
+    const tabLockKey = 'meeting-ai-tab-' + session.meetingId;
+    if (sessionStorage.getItem(tabLockKey)) return; // this tab already has it
+    showDraftRecoveryBanner(session, 'crash');
+  } catch { clearActiveSession(); }
 }
 
-function showDraftRecoveryBanner(draft) {
+function showDraftRecoveryBanner(draft, source) {
   const existing = $('#draftRecoveryBanner');
   if (existing) existing.remove();
 
   const timeStr = new Date(draft.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const lines = draft.transcript?.length || 0;
+  const isCrashRecovery = source === 'crash';
 
   const banner = document.createElement('div');
   banner.id = 'draftRecoveryBanner';
   banner.className = 'draft-recovery-banner';
+
+  const message = isCrashRecovery
+    ? t('draft.crash_recovery_message', { time: timeStr, lines })
+    : t('draft.recovery_message', { time: timeStr, lines });
+
   banner.innerHTML = `
-    <span>${t('draft.recovery_message', { time: timeStr, lines })}</span>
+    <span>${message}</span>
     <div class="draft-recovery-actions">
       <button class="btn btn-sm btn-primary" id="btnDraftRecover">${t('draft.recover')}</button>
+      ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd" style="border:1px solid var(--accent)">${t('draft.save_and_end')}</button>` : ''}
       <button class="btn btn-sm" id="btnDraftDiscard">${t('draft.discard')}</button>
     </div>
   `;
   document.body.prepend(banner);
 
   $('#btnDraftRecover').onclick = () => {
-    recoverDraft(draft);
+    recoverDraft(draft, source);
     banner.remove();
   };
+  if (isCrashRecovery) {
+    const saveEndBtn = $('#btnDraftSaveEnd');
+    if (saveEndBtn) {
+      saveEndBtn.onclick = () => {
+        recoverDraft(draft, source);
+        banner.remove();
+        // Go directly to end meeting modal
+        setTimeout(() => endMeeting(), 100);
+      };
+    }
+  }
   $('#btnDraftDiscard').onclick = () => {
     sessionStorage.removeItem(DRAFT_KEY);
+    clearActiveSession();
     banner.remove();
   };
 }
 
-function recoverDraft(draft) {
+function recoverDraft(draft, source) {
   sessionStorage.removeItem(DRAFT_KEY);
+  if (source === 'crash') clearActiveSession();
+
   state.meetingId = draft.meetingId;
   state.meetingTitle = draft.meetingTitle || '';
   state.meetingStartTime = draft.meetingStartTime;
@@ -168,22 +233,41 @@ function recoverDraft(draft) {
     if (draft.settings.meetingContext) state.settings.meetingContext = draft.settings.meetingContext;
   }
 
+  // Multi-tab lock: mark this tab as owning this meeting
+  sessionStorage.setItem('meeting-ai-tab-' + state.meetingId, '1');
+
   // Render recovered transcript
   state.transcript.forEach(line => addTranscriptLine(line));
   // Render recovered memos
   state.memos.forEach(memo => addMemoLine(memo));
+  // Render recovered chat history
+  loadChatHistory();
   // Render analysis if available
   if (state.currentAnalysis) renderAnalysis(state.currentAnalysis);
-  // Show meeting as ended (user can resume or save)
+  // Show meeting as paused (user can resume or save)
   state.meetingEnded = true;
   const titleInput = $('#meetingTitleInput');
   if (titleInput) { titleInput.value = state.meetingTitle; titleInput.hidden = false; }
-  $('#meetingTimer').textContent = '00:00:00';
+
+  // Restore timer display
+  if (state.meetingStartTime) {
+    const diff = draft.savedAt - state.meetingStartTime - (draft.pausedDuration || 0);
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    $('#meetingTimer').textContent =
+      `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  } else {
+    $('#meetingTimer').textContent = '00:00:00';
+  }
+
   const draftPill = $('#meetingPill');
   draftPill.hidden = false;
   draftPill.classList.remove('recording');
   draftPill.classList.add('paused');
-  $('#meetingStatus').textContent = t('draft.recovered_status');
+  $('#meetingStatus').textContent = source === 'crash'
+    ? t('draft.crash_recovered_status')
+    : t('draft.recovered_status');
 
   // Show post-end buttons so user can resume or save
   const endBtn = $('#btnEndMeeting');
@@ -193,7 +277,10 @@ function recoverDraft(draft) {
   const launcher = $('#launcherModal');
   if (launcher) launcher.hidden = true;
 
-  showToast(t('toast.draft_recovered'), 'success');
+  const toastMsg = source === 'crash'
+    ? t('toast.crash_recovered')
+    : t('toast.draft_recovered');
+  showToast(toastMsg, 'success');
 }
 
 export function generateId() {
@@ -620,6 +707,7 @@ export function autoSave() {
     categories: state.categories,
     participants: state.participants,
     whisperHistory: state.whisperHistory || [],
+    interrupted: !state.meetingEnded,
   };
   const result = saveMeeting(meeting);
   if (result.warning === 'storage_high') {
@@ -1204,9 +1292,9 @@ export async function finalizeEndMeeting() {
     await runCorrection(false);
   }
 
+  state.meetingEnded = true;
   autoSave();
   clearDraftRecovery();
-  state.meetingEnded = true;
 
   // Show post-save screen instead of closing
   footer.classList.remove('save-progress-state');
@@ -1237,9 +1325,9 @@ async function finalizeWithMinutes() {
     await runCorrection(false);
   }
 
+  state.meetingEnded = true;
   autoSave();
   clearDraftRecovery();
-  state.meetingEnded = true;
 
   // Show progress in footer
   showSaveProgress();
