@@ -43,14 +43,24 @@ function extractJSON(text) {
 function getStep1Prompt() {
   const ko = isKorean();
   return ko
-    ? `사용자가 어떤 상황(대화/미팅/세션)에 들어가는지 파악하세요.
-사용자의 답변을 듣고 반드시 아래 JSON을 코드블록(\`\`\`json ... \`\`\`)으로 출력하세요:
-{ "situation": "상황 요약", "type": "상황 유형 (예: 비즈니스 미팅, 상담, 발표, 학습 등)" }
-짧고 간결하게 대화하세요. 1턴이면 충분합니다.`
-    : `Figure out what situation (conversation/meeting/session) the user is entering.
-After hearing their answer, output this JSON in a code block (\`\`\`json ... \`\`\`):
-{ "situation": "situation summary", "type": "situation type (e.g., business meeting, consultation, presentation, learning)" }
-Keep it short. One turn should be enough.`;
+    ? `사용자가 어떤 대화/상황에 들어가는지 이해하세요. 사용자가 자유롭게 설명할 수 있도록 편안한 톤으로 대화하세요.
+
+사용자가 짧게 답하면 (예: "미팅") 자연스럽게 후속 질문 1개를 해서 상황을 좀 더 파악하세요.
+사용자가 충분히 설명했으면 바로 JSON을 출력하세요. 최대 2턴.
+
+반드시 아래 JSON을 코드블록(\`\`\`json ... \`\`\`)으로 출력:
+{ "situation": "상황을 구체적으로 요약", "type": "상황 유형" }
+
+톤: "~해드릴게요" 스타일, 편하지만 프로페셔널하게.`
+    : `Understand what conversation/situation the user is entering. Be conversational and warm.
+
+If the user gives a short answer (e.g., "a meeting"), ask one natural follow-up to learn more.
+If they explain enough, output JSON right away. 2 turns max.
+
+Output this JSON in a code block (\`\`\`json ... \`\`\`):
+{ "situation": "specific situation summary", "type": "situation type" }
+
+Tone: casual but professional, like a trusted colleague.`;
 }
 
 function getStep3Prompt(prevResults) {
