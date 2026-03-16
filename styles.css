@@ -6079,7 +6079,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   flex-direction: column;
   gap: 6px;
 }
-
 .ds-form-label {
   font-size: 12px;
   font-weight: 600;
@@ -6088,35 +6087,156 @@ body.loaded-mode #btnNewMeeting { display: none; }
   letter-spacing: 0.5px;
 }
 
-.ds-contact-chips {
+/* ① Attendees */
+.ds-attendee-register {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ds-input-sm {
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 13px;
+  flex: 1;
+  min-width: 0;
+}
+.ds-input-sm:focus { outline: none; border-color: var(--accent); }
+.ds-autocomplete-dropdown {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.12));
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+}
+.ds-ac-item {
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ds-ac-item:hover { background: var(--bg-hover); }
+.ds-selected-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-height: 0;
 }
-
-.ds-chip-selected {
-  background: var(--accent-bg) !important;
-  border-color: var(--accent) !important;
-  color: var(--accent) !important;
-}
-
-.ds-ref-select {
-  width: 100%;
-}
-
-.ds-file-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.ds-badge {
+  display: inline-flex;
   align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
 }
-
-.ds-file-chips {
+.ds-badge-remove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+.ds-contact-pool {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  max-height: 80px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.ds-pool-chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ds-pool-chip:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
+/* ② Reference meetings */
+.ds-ref-count {
+  font-weight: 400;
+  color: var(--accent);
+  font-size: 11px;
+}
+.ds-ref-box {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.ds-ref-search {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  border-radius: 0;
+}
+.ds-ref-list {
+  max-height: 130px;
+  overflow-y: auto;
+}
+.ds-ref-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ds-ref-item:hover { background: var(--bg-hover); }
+.ds-ref-checked { background: var(--accent-bg); }
+.ds-ref-item input[type="checkbox"] { flex-shrink: 0; }
+.ds-ref-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-ref-date { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+.ds-ref-empty { padding: 12px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+
+/* ③ File drop zones */
+.ds-file-drops {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.ds-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 12px 4px;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+.ds-drop-zone:hover, .ds-drop-hover { border-color: var(--accent); background: var(--accent-bg); }
+.ds-drop-has-file { border-color: var(--success, #22c55e); border-style: solid; }
+.ds-drop-icon { font-size: 20px; }
+.ds-drop-label { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+.ds-drop-hint { font-size: 10px; color: var(--text-tertiary); }
+.ds-file-attached {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
 .ds-file-chip {
   display: inline-flex;
   align-items: center;
@@ -6128,7 +6248,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 12px;
   color: var(--text-secondary);
 }
-
 .ds-file-remove {
   border: none;
   background: none;
@@ -6136,6 +6255,11 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-tertiary);
   font-size: 14px;
   padding: 0 2px;
+}
+
+@media (max-width: 480px) {
+  .ds-attendee-register { flex-wrap: wrap; }
+  .ds-file-drops { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* Step 4: Summary */

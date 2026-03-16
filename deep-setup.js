@@ -3,7 +3,7 @@
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
-import { addCustomType, loadContacts, listMeetings, getMeeting } from './storage.js';
+import { addCustomType, addContact, loadContacts, listMeetings, getMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
@@ -18,7 +18,6 @@ let stepHistories = { 1: [], 3: [] };
 let stepResults = { 1: null, 2: null, 3: null };
 let isStreaming = false;
 let selectedAttendees = [];
-let selectedReference = null;
 let attachedFiles = [];
 
 // ===== Scenario Chips =====
@@ -347,129 +346,336 @@ async function sendMessage(text) {
   }
 }
 
+// ===== Chosung Search =====
+const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function getChosung(char) {
+  const code = char.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return null;
+  return CHOSUNG[Math.floor((code - 0xAC00) / 588)];
+}
+function extractChosung(str) { return [...str].map(ch => getChosung(ch) || ch).join(''); }
+function isAllChosung(str) { return [...str].every(ch => CHOSUNG.includes(ch)); }
+function matchField(value, query) {
+  if (!query || !value) return !query;
+  const v = value.toLowerCase();
+  const q = query.toLowerCase();
+  if (v.includes(q)) return true;
+  if (isAllChosung(query)) return extractChosung(value).includes(query);
+  return false;
+}
+
+// Name field searches across all fields (이름 칸에서 직급/회사도 검색)
+function matchContactByName(c, query) {
+  if (!query) return true;
+  return matchField(c.name, query) || matchField(c.title || '', query) || matchField(c.company || '', query);
+}
+
+let allMeetings = [];
+let selectedReferences = [];
+
 // ===== Step 2: Form-only (contacts + reference + files) =====
 function renderStep2Form() {
   const formArea = $('#dsFormArea2');
   if (!formArea) return;
 
   const ko = isKorean();
-  const contacts = loadContacts();
+  allMeetings = listMeetings();
 
-  // Set description text
   const desc = $('#dsStep2Desc');
   if (desc) desc.textContent = t('ds.step2_greeting');
 
-  let html = '';
-
-  // Contacts picker
-  if (contacts.length) {
-    html += `<div class="ds-form-section">
+  formArea.innerHTML = `
+    <!-- ① 참석자 -->
+    <div class="ds-form-section">
       <label class="ds-form-label">${ko ? '참석자' : 'Attendees'}</label>
-      <div class="ds-contact-chips" id="dsContactChips">`;
-    contacts.forEach(c => {
-      const selected = selectedAttendees.some(a => a.id === c.id);
-      html += `<button class="pb-chip${selected ? ' ds-chip-selected' : ''}" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}</button>`;
-    });
-    html += `</div></div>`;
-  }
-
-  // Reference session picker
-  const meetings = listMeetings();
-  if (meetings.length) {
-    html += `<div class="ds-form-section">
-      <label class="ds-form-label">${ko ? '참고 세션' : 'Reference Session'}</label>
-      <select class="settings-select ds-ref-select" id="dsRefSelect">
-        <option value="">${ko ? '선택 안함' : 'None'}</option>`;
-    meetings.slice(0, 20).forEach(m => {
-      html += `<option value="${m.id}">${escapeHtml(m.title || m.id)}</option>`;
-    });
-    html += `</select></div>`;
-  }
-
-  // File attachments
-  html += `<div class="ds-form-section">
-    <label class="ds-form-label">${ko ? '파일 첨부' : 'Files'}</label>
-    <div class="ds-file-area">
-      <button class="btn btn-sm btn-outline" id="btnDsFileUpload">📁 ${ko ? '파일 선택' : 'Browse'}</button>
-      <input type="file" id="dsFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
-      <div class="ds-file-chips" id="dsFileChips"></div>
+      <div class="ds-attendee-register">
+        <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
+        <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
+        <input type="text" class="ds-input-sm" id="dsAttendeeCompany" placeholder="${ko ? '회사' : 'Company'}" autocomplete="off">
+        <button class="btn btn-sm btn-primary" id="btnDsAddAttendee">${ko ? '등록' : 'Add'}</button>
+      </div>
+      <div class="ds-autocomplete-dropdown" id="dsAutocomplete" hidden></div>
+      <div class="ds-selected-badges" id="dsSelectedBadges"></div>
+      <div class="ds-contact-pool" id="dsContactPool"></div>
     </div>
-  </div>`;
 
-  // Empty state message
-  if (!contacts.length && !meetings.length) {
-    html += `<p class="ds-form-empty">${ko ? '등록된 인물이나 세션이 없습니다. 파일만 첨부하거나 건너뛰세요.' : 'No contacts or sessions yet. Attach files or skip.'}</p>`;
-  }
+    <!-- ② 참고할 이전 미팅 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${ko ? '참고할 이전 미팅' : 'Reference Meetings'} <span class="ds-ref-count" id="dsRefCount"></span></label>
+      <div class="ds-ref-box">
+        <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+        <div class="ds-ref-list" id="dsRefList"></div>
+      </div>
+    </div>
 
-  formArea.innerHTML = html;
+    <!-- ③ 파일 첨부 -->
+    <div class="ds-form-section">
+      <label class="ds-form-label">${ko ? '파일 첨부' : 'Files'}</label>
+      <div class="ds-file-drops">
+        <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt .doc</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
+        <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx .json</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
+        <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .txt .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
+        <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js .html ...</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+      </div>
+      <div class="ds-file-attached" id="dsFileAttached"></div>
+    </div>
+  `;
 
-  // Bind contact chips
-  formArea.querySelectorAll('#dsContactChips .pb-chip').forEach(btn => {
+  renderContactPool();
+  renderSelectedBadges();
+  renderRefList('');
+  renderFileAttached();
+  bindStep2Events();
+}
+
+function renderSelectedBadges() {
+  const container = $('#dsSelectedBadges');
+  if (!container) return;
+  if (!selectedAttendees.length) { container.innerHTML = ''; return; }
+  container.innerHTML = selectedAttendees.map((a, i) =>
+    `<span class="ds-badge">${escapeHtml(a.name)}${a.title ? '/' + escapeHtml(a.title) : ''} <button class="ds-badge-remove" data-idx="${i}">&times;</button></span>`
+  ).join('');
+  container.querySelectorAll('.ds-badge-remove').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.dataset.contactId;
-      const contact = contacts.find(c => c.id === id);
-      if (!contact) return;
-      const idx = selectedAttendees.findIndex(a => a.id === id);
-      if (idx >= 0) {
-        selectedAttendees.splice(idx, 1);
-        btn.classList.remove('ds-chip-selected');
-      } else {
+      selectedAttendees.splice(parseInt(btn.dataset.idx), 1);
+      renderSelectedBadges();
+      renderContactPool();
+    });
+  });
+}
+
+function renderContactPool() {
+  const container = $('#dsContactPool');
+  if (!container) return;
+  const contacts = loadContacts();
+  const selectedIds = new Set(selectedAttendees.map(a => a.id));
+  const available = contacts.filter(c => !selectedIds.has(c.id));
+  if (!available.length) { container.innerHTML = ''; return; }
+  container.innerHTML = available.map(c =>
+    `<button class="ds-pool-chip" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}${c.company ? ' · ' + escapeHtml(c.company) : ''}</button>`
+  ).join('');
+  container.querySelectorAll('.ds-pool-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const contact = contacts.find(c => c.id === btn.dataset.contactId);
+      if (contact && !selectedAttendees.some(a => a.id === contact.id)) {
         selectedAttendees.push(contact);
-        btn.classList.add('ds-chip-selected');
+        renderSelectedBadges();
+        renderContactPool();
       }
     });
   });
-
-  // Bind reference select
-  const refSelect = $('#dsRefSelect');
-  if (refSelect) {
-    refSelect.addEventListener('change', () => {
-      selectedReference = refSelect.value ? getMeeting(refSelect.value) : null;
-    });
-  }
-
-  // Bind file upload
-  const fileBtn = $('#btnDsFileUpload');
-  const fileInput = $('#dsFileInput');
-  if (fileBtn && fileInput) {
-    fileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => {
-      handleFileAttach(fileInput.files);
-      fileInput.value = '';
-    });
-  }
 }
 
-async function handleFileAttach(files) {
+function showAutocomplete(query) {
+  const dropdown = $('#dsAutocomplete');
+  if (!dropdown || !query) { if (dropdown) dropdown.hidden = true; return; }
+  const contacts = loadContacts();
+  const selectedIds = new Set(selectedAttendees.map(a => a.id));
+  const matches = contacts.filter(c => !selectedIds.has(c.id) && matchContactByName(c, query)).slice(0, 8);
+  if (!matches.length) { dropdown.hidden = true; return; }
+  dropdown.innerHTML = matches.map(c =>
+    `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
+  ).join('');
+  dropdown.hidden = false;
+  dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const contact = contacts.find(c => c.id === item.dataset.contactId);
+      if (contact) {
+        selectedAttendees.push(contact);
+        renderSelectedBadges();
+        renderContactPool();
+        $('#dsAttendeeName').value = '';
+        $('#dsAttendeeTitle').value = '';
+        $('#dsAttendeeCompany').value = '';
+        dropdown.hidden = true;
+      }
+    });
+  });
+}
+
+function renderRefList(query) {
+  const container = $('#dsRefList');
+  const countEl = $('#dsRefCount');
+  if (!container) return;
+  const q = (query || '').replace(/\s/g, '').toLowerCase();
+  const filtered = allMeetings.filter(m => {
+    if (!q) return true;
+    const title = (m.title || m.id || '').replace(/\s/g, '').toLowerCase();
+    return title.includes(q);
+  });
+  container.innerHTML = filtered.slice(0, 50).map(m => {
+    const checked = selectedReferences.some(r => r.id === m.id);
+    const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '';
+    return `<label class="ds-ref-item${checked ? ' ds-ref-checked' : ''}">
+      <input type="checkbox" value="${m.id}" ${checked ? 'checked' : ''}>
+      <span class="ds-ref-title">${escapeHtml(m.title || m.id)}</span>
+      <span class="ds-ref-date">${date}</span>
+    </label>`;
+  }).join('');
+  if (!filtered.length) {
+    container.innerHTML = `<div class="ds-ref-empty">${isKorean() ? '검색 결과 없음' : 'No results'}</div>`;
+  }
+  if (countEl) {
+    countEl.textContent = selectedReferences.length ? (isKorean() ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
+  }
+  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const id = cb.value;
+      if (cb.checked) {
+        const m = allMeetings.find(x => x.id === id);
+        if (m && !selectedReferences.some(r => r.id === id)) selectedReferences.push(m);
+      } else {
+        selectedReferences = selectedReferences.filter(r => r.id !== id);
+      }
+      cb.closest('.ds-ref-item').classList.toggle('ds-ref-checked', cb.checked);
+      if (countEl) {
+        countEl.textContent = selectedReferences.length ? (isKorean() ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
+      }
+    });
+  });
+}
+
+async function handleFileAttach(files, category) {
   for (const file of files) {
     if (file.size > 500 * 1024) continue;
     try {
       const content = await file.text();
-      attachedFiles.push({ name: file.name, content: content.slice(0, 10000) });
-      renderFileChips();
-    } catch { /* skip unreadable */ }
+      attachedFiles.push({ name: file.name, content: content.slice(0, 10000), category });
+      renderFileAttached();
+    } catch { /* skip */ }
   }
 }
 
-function renderFileChips() {
-  const container = $('#dsFileChips');
+function renderFileAttached() {
+  const container = $('#dsFileAttached');
   if (!container) return;
-  container.innerHTML = attachedFiles.map((f, i) =>
-    `<span class="ds-file-chip">${escapeHtml(f.name)} <button class="ds-file-remove" data-idx="${i}">&times;</button></span>`
-  ).join('');
+  if (!attachedFiles.length) { container.innerHTML = ''; return; }
+  const ko = isKorean();
+  container.innerHTML = `<div class="ds-form-label" style="margin-bottom:4px">${ko ? '첨부됨' : 'Attached'}:</div>` +
+    attachedFiles.map((f, i) =>
+      `<span class="ds-file-chip">${escapeHtml(f.name)} <button class="ds-file-remove" data-idx="${i}">&times;</button></span>`
+    ).join('');
   container.querySelectorAll('.ds-file-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       attachedFiles.splice(parseInt(btn.dataset.idx), 1);
-      renderFileChips();
+      renderFileAttached();
     });
+  });
+  // Update drop zone indicators
+  document.querySelectorAll('.ds-drop-zone').forEach(zone => {
+    const cat = zone.dataset.category;
+    const count = attachedFiles.filter(f => f.category === cat).length;
+    zone.classList.toggle('ds-drop-has-file', count > 0);
+  });
+}
+
+function bindStep2Events() {
+  // Autocomplete on name input
+  const nameInput = $('#dsAttendeeName');
+  const titleInput = $('#dsAttendeeTitle');
+  const companyInput = $('#dsAttendeeCompany');
+
+  if (nameInput) {
+    nameInput.addEventListener('input', () => showAutocomplete(nameInput.value.trim()));
+    nameInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
+    // Title field: autocomplete only by title
+    titleInput.addEventListener('input', () => {
+      const q = titleInput.value.trim();
+      const dropdown = $('#dsAutocomplete');
+      if (!q) { if (dropdown) dropdown.hidden = true; return; }
+      const contacts = loadContacts();
+      const selectedIds = new Set(selectedAttendees.map(a => a.id));
+      const matches = contacts.filter(c => !selectedIds.has(c.id) && matchField(c.title || '', q)).slice(0, 8);
+      if (!matches.length) { if (dropdown) dropdown.hidden = true; return; }
+      dropdown.innerHTML = matches.map(c =>
+        `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
+      ).join('');
+      dropdown.hidden = false;
+      dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const contact = contacts.find(c => c.id === item.dataset.contactId);
+          if (contact) { selectedAttendees.push(contact); renderSelectedBadges(); renderContactPool(); nameInput.value = ''; titleInput.value = ''; companyInput.value = ''; dropdown.hidden = true; }
+        });
+      });
+    });
+    titleInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
+    // Company field: autocomplete only by company
+    companyInput.addEventListener('input', () => {
+      const q = companyInput.value.trim();
+      const dropdown = $('#dsAutocomplete');
+      if (!q) { if (dropdown) dropdown.hidden = true; return; }
+      const contacts = loadContacts();
+      const selectedIds = new Set(selectedAttendees.map(a => a.id));
+      const matches = contacts.filter(c => !selectedIds.has(c.id) && matchField(c.company || '', q)).slice(0, 8);
+      if (!matches.length) { if (dropdown) dropdown.hidden = true; return; }
+      dropdown.innerHTML = matches.map(c =>
+        `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
+      ).join('');
+      dropdown.hidden = false;
+      dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const contact = contacts.find(c => c.id === item.dataset.contactId);
+          if (contact) { selectedAttendees.push(contact); renderSelectedBadges(); renderContactPool(); nameInput.value = ''; titleInput.value = ''; companyInput.value = ''; dropdown.hidden = true; }
+        });
+      });
+    });
+    companyInput.addEventListener('blur', () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150));
+  }
+
+  // Register button
+  const addBtn = $('#btnDsAddAttendee');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      const name = $('#dsAttendeeName')?.value.trim();
+      if (!name) return;
+      const title = $('#dsAttendeeTitle')?.value.trim() || '';
+      const company = $('#dsAttendeeCompany')?.value.trim() || '';
+      // Save to storage (인물 DB)
+      const contact = addContact({ name, title, company });
+      selectedAttendees.push(contact);
+      renderSelectedBadges();
+      renderContactPool();
+      if ($('#dsAttendeeName')) $('#dsAttendeeName').value = '';
+      if ($('#dsAttendeeTitle')) $('#dsAttendeeTitle').value = '';
+      if ($('#dsAttendeeCompany')) $('#dsAttendeeCompany').value = '';
+      showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
+    });
+  }
+
+  // Reference search
+  const refSearch = $('#dsRefSearch');
+  if (refSearch) {
+    refSearch.addEventListener('input', () => renderRefList(refSearch.value));
+  }
+
+  // File drop zones
+  document.querySelectorAll('.ds-drop-zone').forEach(zone => {
+    const fileInput = zone.querySelector('input[type="file"]');
+    zone.addEventListener('click', () => fileInput?.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('ds-drop-hover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('ds-drop-hover'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('ds-drop-hover');
+      handleFileAttach(e.dataTransfer.files, zone.dataset.category);
+    });
+    if (fileInput) {
+      fileInput.addEventListener('change', () => {
+        handleFileAttach(fileInput.files, zone.dataset.category);
+        fileInput.value = '';
+      });
+    }
   });
 }
 
 function collectStep2Results() {
   stepResults[2] = {
     attendees: selectedAttendees.map(a => ({ name: a.name, title: a.title, company: a.company })),
-    reference: selectedReference ? { title: selectedReference.title, analysis: selectedReference.analysis } : null,
-    files: attachedFiles.map(f => ({ name: f.name })),
+    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: r.analysis })),
+    files: attachedFiles.map(f => ({ name: f.name, category: f.category })),
   };
 }
 
@@ -521,7 +727,7 @@ function handleStart() {
   const config = {
     ...(stepResults[3] || {}),
     attendees: selectedAttendees,
-    referenceAnalysis: selectedReference?.analysis || null,
+    referenceAnalysis: selectedReferences.map(r => r.analysis || '').filter(Boolean).join('\n\n---\n\n') || null,
     attachedFiles: attachedFiles,
   };
   emit('deepSetup:complete', config);
@@ -554,7 +760,7 @@ export function openDeepSetup() {
   stepHistories = { 1: [], 3: [] };
   stepResults = { 1: null, 2: null, 3: null };
   selectedAttendees = [];
-  selectedReference = null;
+  selectedReferences = [];
   attachedFiles = [];
 
   modal.hidden = false;
