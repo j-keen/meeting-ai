@@ -5,6 +5,7 @@
 import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
+import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings } from '../storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -355,6 +356,15 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
       card.querySelector('.history-card-meta').appendChild(pEl);
     }
 
+    // Linked meetings count
+    if (meeting.links && meeting.links.length > 0) {
+      const linkEl = document.createElement('span');
+      linkEl.className = 'history-card-links-count';
+      linkEl.textContent = `\u{1F517} ${meeting.links.length}`;
+      linkEl.title = t('link.title');
+      card.querySelector('.history-card-meta').appendChild(linkEl);
+    }
+
     // Categories
     if (meeting.categories && meeting.categories.length > 0) {
       const catContainer = document.createElement('div');
@@ -539,6 +549,9 @@ export function renderMeetingViewer(meeting) {
 
     metaContainer.appendChild(item);
   });
+
+  // Render linked meetings
+  renderViewerLinkedMeetings(meeting);
 
   // Clear re-analysis slot
   const reanalysisSlot = $('#viewerReanalysisSlot');
@@ -789,4 +802,139 @@ function renderViewerAnalysis(container, analysis) {
       container.appendChild(section);
     });
   }
+}
+
+// ===== Linked Meetings in Viewer =====
+function renderViewerLinkedMeetings(meeting) {
+  const container = $('#viewerLinkedMeetings');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const linked = getLinkedMeetings(meeting.id);
+
+  // Header row with title and add button
+  const header = document.createElement('div');
+  header.className = 'viewer-linked-header';
+
+  const title = document.createElement('span');
+  title.className = 'viewer-linked-title';
+  title.textContent = t('link.title');
+  header.appendChild(title);
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'btn btn-xs btn-outline viewer-linked-add';
+  addBtn.textContent = t('link.add');
+  addBtn.addEventListener('click', () => showLinkPopover(meeting.id, container));
+  header.appendChild(addBtn);
+
+  container.appendChild(header);
+
+  if (!linked.length) {
+    const empty = document.createElement('div');
+    empty.className = 'viewer-linked-empty';
+    empty.textContent = t('link.empty');
+    container.appendChild(empty);
+    return;
+  }
+
+  const list = document.createElement('div');
+  list.className = 'viewer-linked-list';
+  linked.forEach(m => {
+    const badge = document.createElement('span');
+    badge.className = 'viewer-linked-badge';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'viewer-linked-name';
+    nameSpan.textContent = m.title || m.id;
+    nameSpan.addEventListener('click', () => {
+      emit('meeting:view', { id: m.id });
+    });
+    badge.appendChild(nameSpan);
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'viewer-linked-date';
+    dateSpan.textContent = m.createdAt ? new Date(m.createdAt).toLocaleDateString(getDateLocale()) : '';
+    badge.appendChild(dateSpan);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'viewer-linked-remove';
+    removeBtn.textContent = '\u00D7';
+    removeBtn.title = t('link.unlink_confirm');
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      unlinkMeetings(meeting.id, m.id);
+      renderViewerLinkedMeetings(meeting);
+    });
+    badge.appendChild(removeBtn);
+
+    list.appendChild(badge);
+  });
+  container.appendChild(list);
+}
+
+function showLinkPopover(meetingId, parentContainer) {
+  // Remove existing popover
+  const existing = parentContainer.querySelector('.viewer-link-popover');
+  if (existing) { existing.remove(); return; }
+
+  const popover = document.createElement('div');
+  popover.className = 'viewer-link-popover';
+
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.className = 'ds-input-sm';
+  searchInput.placeholder = t('link.search_placeholder');
+  popover.appendChild(searchInput);
+
+  const resultList = document.createElement('div');
+  resultList.className = 'viewer-link-results';
+  popover.appendChild(resultList);
+
+  parentContainer.appendChild(popover);
+  searchInput.focus();
+
+  const linked = getLinkedMeetings(meetingId).map(m => m.id);
+
+  function renderResults(query) {
+    const all = storageListMeetings();
+    const q = (query || '').replace(/\s/g, '').toLowerCase();
+    const filtered = all.filter(m => {
+      if (m.id === meetingId) return false;
+      if (linked.includes(m.id)) return false;
+      if (!q) return true;
+      return (m.title || m.id || '').replace(/\s/g, '').toLowerCase().includes(q);
+    }).slice(0, 10);
+
+    resultList.innerHTML = '';
+    if (!filtered.length) {
+      resultList.innerHTML = `<div class="ds-ref-empty" style="padding:8px;font-size:12px;color:var(--text-tertiary)">${t('link.empty')}</div>`;
+      return;
+    }
+    filtered.forEach(m => {
+      const item = document.createElement('div');
+      item.className = 'viewer-link-result-item';
+      const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString(getDateLocale()) : '';
+      item.innerHTML = `<span>${m.title || m.id}</span><span class="ds-ref-date">${date}</span>`;
+      item.addEventListener('click', () => {
+        linkMeetings(meetingId, m.id);
+        popover.remove();
+        // Re-render with updated meeting data
+        const updatedMeeting = all.find(x => x.id === meetingId) || { id: meetingId };
+        renderViewerLinkedMeetings(updatedMeeting);
+      });
+      resultList.appendChild(item);
+    });
+  }
+
+  renderResults('');
+  searchInput.addEventListener('input', () => renderResults(searchInput.value));
+
+  // Close on outside click
+  const closeHandler = (e) => {
+    if (!popover.contains(e.target)) {
+      popover.remove();
+      document.removeEventListener('mousedown', closeHandler);
+    }
+  };
+  setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
 }

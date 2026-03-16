@@ -720,6 +720,7 @@
       <div class="modal-body viewer-body">
         <div class="viewer-main">
           <div class="viewer-meta" id="viewerMeta"></div>
+          <div class="viewer-linked-meetings" id="viewerLinkedMeetings"></div>
           <div id="viewerReanalysisSlot"></div>
           <div class="viewer-columns">
             <div class="viewer-transcript" id="viewerTranscript"></div>
@@ -1270,38 +1271,36 @@
 
       <!-- Step Indicator -->
       <div class="prep-wizard-steps" id="dsSteps">
-        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="ds.step1">Situation</span></button>
+        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="ds.step1">Basic Info</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="ds.step2">People & Context</span></button>
+        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="ds.step2">Context</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3">Focus Points</span></button>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3">AI Setup</span></button>
         <div class="prep-step-line"></div>
         <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="ds.step4">Ready</span></button>
       </div>
 
-      <!-- Step 1: Situation (AI chat) -->
+      <!-- Step 1: Basic Info (form) — datetime, location, attendees -->
       <div class="ds-step-panel" data-step="1">
-        <div class="ds-chat-area">
-          <div class="pb-messages" id="dsMessages1"></div>
-          <div class="pb-chips" id="dsChips1"></div>
-          <div class="pb-input-wrap">
-            <textarea class="pb-input" id="dsInput1" rows="1" placeholder="..."></textarea>
-            <button class="pb-send-btn" id="btnDsSend1">&#10148;</button>
+        <div class="ds-step-form-layout">
+          <p class="ds-step-desc" id="dsStep1Desc"></p>
+          <div class="ds-form-area ds-form-full" id="dsFormArea1">
+            <!-- dynamically rendered: datetime, location, attendees -->
           </div>
         </div>
       </div>
 
-      <!-- Step 2: People & Context (form-only) -->
+      <!-- Step 2: Context (form) — description, reference meetings, files -->
       <div class="ds-step-panel" data-step="2" hidden>
-        <div class="ds-step2-layout">
-          <p class="ds-step2-desc" id="dsStep2Desc"></p>
+        <div class="ds-step-form-layout">
+          <p class="ds-step-desc" id="dsStep2Desc"></p>
           <div class="ds-form-area ds-form-full" id="dsFormArea2">
-            <!-- dynamically rendered: contacts, reference, files -->
+            <!-- dynamically rendered: description, reference, files -->
           </div>
         </div>
       </div>
 
-      <!-- Step 3: Focus Points (AI chat) -->
+      <!-- Step 3: AI Setup (chat) -->
       <div class="ds-step-panel" data-step="3" hidden>
         <div class="ds-chat-area">
           <div class="pb-messages" id="dsMessages3"></div>
@@ -1332,6 +1331,7 @@
       <div class="ds-wizard-nav">
         <button class="btn btn-sm" id="btnDsBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
         <div style="flex:1"></div>
+        <button class="btn btn-sm btn-text" id="btnDsSkip" hidden data-i18n="ds.step2_skip">Skip</button>
         <button class="btn btn-sm btn-primary" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
       </div>
     </div>

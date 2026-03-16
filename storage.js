@@ -84,8 +84,49 @@ export function saveMeeting(meeting) {
 
 export function deleteMeeting(id) {
   const data = loadAll();
+  // Clean up bidirectional links from other meetings
+  const target = data.meetings.find(m => m.id === id);
+  if (target?.links?.length) {
+    target.links.forEach(linkedId => {
+      const other = data.meetings.find(m => m.id === linkedId);
+      if (other?.links) other.links = other.links.filter(l => l !== id);
+    });
+  }
   data.meetings = data.meetings.filter(m => m.id !== id);
   return saveAll(data);
+}
+
+// Meeting Links — bidirectional
+export function linkMeetings(idA, idB) {
+  if (idA === idB) return { success: false };
+  const data = loadAll();
+  const a = data.meetings.find(m => m.id === idA);
+  const b = data.meetings.find(m => m.id === idB);
+  if (!a || !b) return { success: false };
+  if (!a.links) a.links = [];
+  if (!b.links) b.links = [];
+  if (!a.links.includes(idB)) a.links.push(idB);
+  if (!b.links.includes(idA)) b.links.push(idA);
+  return saveAll(data);
+}
+
+export function unlinkMeetings(idA, idB) {
+  const data = loadAll();
+  const a = data.meetings.find(m => m.id === idA);
+  const b = data.meetings.find(m => m.id === idB);
+  if (a?.links) a.links = a.links.filter(l => l !== idB);
+  if (b?.links) b.links = b.links.filter(l => l !== idA);
+  return saveAll(data);
+}
+
+export function getLinkedMeetings(id) {
+  const data = loadAll();
+  const meeting = data.meetings.find(m => m.id === id);
+  if (!meeting?.links?.length) return [];
+  return meeting.links
+    .map(linkedId => data.meetings.find(m => m.id === linkedId))
+    .filter(Boolean)
+    .map(m => ({ id: m.id, title: m.title, createdAt: m.createdAt }));
 }
 
 export function updateMeetingTags(id, tags) {

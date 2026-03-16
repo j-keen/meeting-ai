@@ -896,9 +896,17 @@ function init() {
       const ph = $('#memoPlaceholder');
       if (ph) ph.textContent = config.memoHint;
     }
+    // Datetime, Location, Description
+    if (config.datetime) state.meetingDatetime = config.datetime;
+    if (config.location) state.meetingLocation = config.location;
+    if (config.description) state.meetingDescription = config.description;
     // Attendees
     if (config.attendees?.length) {
       state.participants = config.attendees;
+    }
+    // Store reference IDs for bidirectional linking after save
+    if (config.referenceIds?.length) {
+      state.referenceIds = config.referenceIds;
     }
     // Reference + files → analysisContext
     const parts = [];

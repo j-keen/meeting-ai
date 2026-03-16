@@ -7,7 +7,7 @@ import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, getMeeting, loadSettings, saveSettings,
   loadContacts, addContact, loadLocations, addLocation,
-  getLocationFrequency,
+  getLocationFrequency, linkMeetings,
   loadCorrectionDict, addCorrectionEntry,
   getProUsageCount, incrementProUsage,
 } from './storage.js';
@@ -712,6 +712,11 @@ export function autoSave() {
   const result = saveMeeting(meeting);
   if (result.warning === 'storage_high') {
     showToast(t('toast.storage_high'), 'warning');
+  }
+  // Create bidirectional links for reference meetings (from 경청준비)
+  if (state.referenceIds?.length) {
+    state.referenceIds.forEach(refId => linkMeetings(state.meetingId, refId));
+    state.referenceIds = null; // Only link once
   }
 }
 
