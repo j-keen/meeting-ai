@@ -25,6 +25,48 @@ export function showCenterToast(message, duration = 2500) {
   }, duration);
 }
 
+export function showUndoToast(message, undoCallback, duration = 5000) {
+  const container = $('#toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast undo-toast';
+
+  const msgSpan = document.createElement('span');
+  msgSpan.className = 'toast-message';
+  msgSpan.textContent = message;
+  el.appendChild(msgSpan);
+
+  const undoBtn = document.createElement('button');
+  undoBtn.className = 'toast-undo-btn';
+  undoBtn.textContent = undoCallback._undoLabel || 'Undo';
+  let undone = false;
+  undoBtn.addEventListener('click', () => {
+    if (undone) return;
+    undone = true;
+    undoCallback();
+    removeToast(el);
+  });
+  el.appendChild(undoBtn);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'toast-close';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.addEventListener('click', () => removeToast(el));
+  el.appendChild(closeBtn);
+
+  // Progress bar
+  const progress = document.createElement('div');
+  progress.className = 'toast-undo-progress';
+  progress.style.animationDuration = duration + 'ms';
+  el.appendChild(progress);
+
+  container.appendChild(el);
+  setTimeout(() => {
+    if (!undone) removeToast(el);
+  }, duration);
+
+  return { cancel: () => { undone = true; removeToast(el); } };
+}
+
 function removeToast(el) {
   if (el.classList.contains('toast-out')) return;
   el.classList.add('toast-out');

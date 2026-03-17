@@ -57,7 +57,12 @@ function autoCleanup() {
 // Meeting CRUD
 export function listMeetings() {
   const data = loadAll();
-  return data.meetings.sort((a, b) => b.createdAt - a.createdAt);
+  return data.meetings.filter(m => !m.deletedAt).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function listDeletedMeetings() {
+  const data = loadAll();
+  return data.meetings.filter(m => !!m.deletedAt).sort((a, b) => b.deletedAt - a.deletedAt);
 }
 
 export function getMeeting(id) {
@@ -80,6 +85,26 @@ export function saveMeeting(meeting) {
     data.meetings = data.meetings.slice(0, MAX_MEETINGS);
   }
   return saveAll(data);
+}
+
+export function softDeleteMeeting(id) {
+  const data = loadAll();
+  const target = data.meetings.find(m => m.id === id);
+  if (target) {
+    target.deletedAt = Date.now();
+    return saveAll(data);
+  }
+  return { success: false };
+}
+
+export function restoreMeeting(id) {
+  const data = loadAll();
+  const target = data.meetings.find(m => m.id === id);
+  if (target) {
+    delete target.deletedAt;
+    return saveAll(data);
+  }
+  return { success: false };
 }
 
 export function deleteMeeting(id) {

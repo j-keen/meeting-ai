@@ -659,7 +659,13 @@
     <div class="modal modal-large">
       <div class="modal-header">
         <h3 data-i18n="history.title">Meeting History</h3>
-        <button class="btn btn-icon modal-close" data-close="historyModal">&times;</button>
+        <div class="history-header-actions">
+          <button class="btn btn-icon btn-trash-toggle" id="btnTrashToggle" title="Trash">
+            <span class="trash-icon">&#128465;</span>
+            <span class="trash-badge" id="trashBadge" hidden>0</span>
+          </button>
+          <button class="btn btn-icon modal-close" data-close="historyModal">&times;</button>
+        </div>
       </div>
       <div class="modal-body">
         <div class="history-toolbar">

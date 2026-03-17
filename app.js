@@ -5,7 +5,8 @@ export { state, on, emit }; // re-export for backward compatibility
 
 import { checkProxyAvailable } from './gemini-api.js';
 import {
-  getMeeting, deleteMeeting, updateMeetingTags,
+  getMeeting, deleteMeeting, softDeleteMeeting, restoreMeeting,
+  updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   addContact,
   addCorrectionEntry,
@@ -17,8 +18,9 @@ import {
   addMemoLine, renderAnalysis, renderHighlights,
   renderMeetingViewer, renderInboxPreview,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
-  showToast, showCenterToast, updateTranscriptLineUI, removeTranscriptLineUI,
+  showToast, showCenterToast, showUndoToast, updateTranscriptLineUI, removeTranscriptLineUI,
   getAnalysisAsText,
+  toggleTrashMode, isTrashMode, updateTrashBadge, refreshTrashView,
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced, resetHistorySort } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
@@ -499,10 +501,20 @@ function init() {
 
   // Memo delete
   on('memo:delete', ({ id }) => {
+    const memo = state.memos.find(m => m.id === id);
+    if (!memo) return;
     state.memos = state.memos.filter(m => m.id !== id);
     const el = document.querySelector(`.transcript-line[data-id="${id}"]`);
     if (el) el.remove();
     updateInboxBadge();
+    const cb = () => {
+      state.memos.push(memo);
+      state.memos.sort((a, b) => a.timestamp - b.timestamp);
+      addMemoLine(memo);
+      updateInboxBadge();
+    };
+    cb._undoLabel = t('trash.undo');
+    showUndoToast(t('toast.memo_deleted'), cb);
   });
 
   // Analysis rerun from chat
@@ -580,7 +592,13 @@ function init() {
   $('#btnHistory').addEventListener('click', () => {
     resetHistorySort();
     refreshHistoryGrid();
+    updateTrashBadge();
     $('#historyModal').hidden = false;
+  });
+  $('#btnTrashToggle')?.addEventListener('click', () => {
+    const inTrash = toggleTrashMode();
+    if (!inTrash) refreshHistoryGrid();
+    updateTrashBadge();
   });
   $('#historySearch').addEventListener('input', () => refreshHistoryGridDebounced());
   $('#historyFilterType').addEventListener('change', () => refreshHistoryGrid());
@@ -601,8 +619,17 @@ function init() {
   });
 
   on('transcript:delete', ({ id }) => {
+    const line = state.transcript.find(l => l.id === id);
+    if (!line) return;
     state.transcript = state.transcript.filter(l => l.id !== id);
     removeTranscriptLineUI(id);
+    const cb = () => {
+      state.transcript.push(line);
+      state.transcript.sort((a, b) => a.timestamp - b.timestamp);
+      addTranscriptLine(line);
+    };
+    cb._undoLabel = t('trash.undo');
+    showUndoToast(t('toast.line_deleted'), cb);
   });
 
   on('transcript:edit', ({ id, text, original }) => {
@@ -631,10 +658,38 @@ function init() {
   });
 
   on('meeting:delete', ({ id }) => {
-    if (confirm(t('confirm.delete_meeting'))) {
-      deleteMeeting(id);
+    softDeleteMeeting(id);
+    refreshHistoryGrid();
+    updateTrashBadge();
+    const cb = () => {
+      restoreMeeting(id);
       refreshHistoryGrid();
-      showToast(t('toast.meeting_deleted'), 'success');
+      updateTrashBadge();
+    };
+    cb._undoLabel = t('trash.undo');
+    showUndoToast(t('toast.meeting_deleted'), cb);
+  });
+
+  on('meeting:restore', ({ id }) => {
+    restoreMeeting(id);
+    refreshTrashView();
+    updateTrashBadge();
+    showToast(t('trash.restored'), 'success');
+  });
+
+  on('meeting:restoreBatch', ({ ids }) => {
+    ids.forEach(id => restoreMeeting(id));
+    refreshTrashView();
+    updateTrashBadge();
+    showToast(t('trash.restore_selected', { n: ids.length }), 'success');
+  });
+
+  on('meeting:permanentDelete', ({ id }) => {
+    if (confirm(t('trash.confirm_permanent'))) {
+      deleteMeeting(id);
+      refreshTrashView();
+      updateTrashBadge();
+      showToast(t('trash.permanently_deleted'), 'success');
     }
   });
 

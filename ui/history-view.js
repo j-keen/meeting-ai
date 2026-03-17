@@ -5,7 +5,7 @@
 import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
-import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings } from '../storage.js';
+import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings } from '../storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -1032,4 +1032,277 @@ function showLinkPopover(meetingId, parentContainer) {
     }
   };
   setTimeout(() => document.addEventListener('mousedown', closeHandler), 0);
+}
+
+// ===== Trash View =====
+let trashMode = false;
+
+export function isTrashMode() { return trashMode; }
+
+export function toggleTrashMode() {
+  trashMode = !trashMode;
+  const toolbar = $('.history-toolbar');
+  const grid = $('#historyGrid');
+  const btn = $('#btnTrashToggle');
+
+  if (trashMode) {
+    btn?.classList.add('active');
+    if (toolbar) toolbar.style.display = 'none';
+    renderTrashGrid(grid);
+  } else {
+    btn?.classList.remove('active');
+    if (toolbar) toolbar.style.display = '';
+    // Will be refreshed by caller
+  }
+  return trashMode;
+}
+
+export function refreshTrashView() {
+  if (!trashMode) return;
+  const grid = $('#historyGrid');
+  if (grid) renderTrashGrid(grid);
+}
+
+export function updateTrashBadge() {
+  const deleted = listDeletedMeetings();
+  const badge = $('#trashBadge');
+  if (!badge) return;
+  if (deleted.length > 0) {
+    badge.textContent = deleted.length;
+    badge.hidden = false;
+  } else {
+    badge.hidden = true;
+  }
+}
+
+function formatRelativeTimeTrash(timestamp) {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return t('history.time_just_now');
+  if (minutes < 60) return t('history.time_minutes_ago', { n: minutes });
+  if (hours < 24) return t('history.time_hours_ago', { n: hours });
+  return t('history.time_days_ago', { n: days });
+}
+
+let trashSelected = new Set();
+
+function updateBatchBar() {
+  const bar = document.querySelector('.trash-batch-bar');
+  if (!bar) return;
+  const count = trashSelected.size;
+  const countEl = bar.querySelector('.trash-batch-count');
+  const restoreBtn = bar.querySelector('.trash-batch-restore');
+  if (count > 0) {
+    bar.classList.add('visible');
+    if (countEl) countEl.textContent = t('trash.selected_count', { n: count });
+    if (restoreBtn) restoreBtn.textContent = t('trash.restore_selected', { n: count });
+  } else {
+    bar.classList.remove('visible');
+  }
+}
+
+function getSummaryPreview(meeting) {
+  const lastAnalysis = meeting.analysisHistory?.[meeting.analysisHistory.length - 1];
+  if (lastAnalysis?.markdown) {
+    // Extract first non-heading, non-empty line
+    const lines = lastAnalysis.markdown.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const clean = trimmed.replace(/^[-*]\s*/, '');
+        return clean.length > 80 ? clean.slice(0, 80) + '...' : clean;
+      }
+    }
+  }
+  if (lastAnalysis?.summary) {
+    const s = lastAnalysis.summary;
+    return s.length > 80 ? s.slice(0, 80) + '...' : s;
+  }
+  return '';
+}
+
+function renderTrashGrid(grid) {
+  grid.innerHTML = '';
+  trashSelected.clear();
+  const deleted = listDeletedMeetings();
+
+  if (deleted.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'trash-empty';
+    empty.innerHTML = `<div class="trash-empty-icon">&#128465;</div><div class="trash-empty-text">${t('trash.empty')}</div>`;
+    grid.appendChild(empty);
+    return;
+  }
+
+  // Header with select-all checkbox
+  const header = document.createElement('div');
+  header.className = 'trash-header';
+
+  const selectAllLabel = document.createElement('label');
+  selectAllLabel.className = 'trash-select-all';
+  const selectAllCb = document.createElement('input');
+  selectAllCb.type = 'checkbox';
+  selectAllCb.className = 'trash-checkbox';
+  selectAllLabel.appendChild(selectAllCb);
+  const selectAllText = document.createElement('span');
+  selectAllText.textContent = t('trash.select_all');
+  selectAllLabel.appendChild(selectAllText);
+  header.appendChild(selectAllLabel);
+
+  const headerRight = document.createElement('div');
+  headerRight.className = 'trash-header-right';
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'trash-header-title';
+  titleSpan.textContent = t('trash.title');
+  headerRight.appendChild(titleSpan);
+  const countSpan = document.createElement('span');
+  countSpan.className = 'trash-header-count';
+  countSpan.textContent = deleted.length;
+  headerRight.appendChild(countSpan);
+  header.appendChild(headerRight);
+
+  grid.appendChild(header);
+
+  // Batch action bar (hidden until selection)
+  const batchBar = document.createElement('div');
+  batchBar.className = 'trash-batch-bar';
+  const batchCount = document.createElement('span');
+  batchCount.className = 'trash-batch-count';
+  batchBar.appendChild(batchCount);
+  const batchRestore = document.createElement('button');
+  batchRestore.className = 'btn btn-sm btn-primary trash-batch-restore';
+  batchRestore.addEventListener('click', () => {
+    if (trashSelected.size === 0) return;
+    emit('meeting:restoreBatch', { ids: [...trashSelected] });
+  });
+  batchBar.appendChild(batchRestore);
+  grid.appendChild(batchBar);
+
+  const allCheckboxes = [];
+
+  deleted.forEach(meeting => {
+    const card = document.createElement('div');
+    card.className = 'history-card trash-card';
+    card.dataset.meetingId = meeting.id;
+
+    const cardRow = document.createElement('div');
+    cardRow.className = 'trash-card-row';
+
+    // Checkbox
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'trash-checkbox';
+    cb.dataset.id = meeting.id;
+    cb.addEventListener('change', () => {
+      if (cb.checked) {
+        trashSelected.add(meeting.id);
+        card.classList.add('selected');
+      } else {
+        trashSelected.delete(meeting.id);
+        card.classList.remove('selected');
+      }
+      selectAllCb.checked = trashSelected.size === deleted.length;
+      selectAllCb.indeterminate = trashSelected.size > 0 && trashSelected.size < deleted.length;
+      updateBatchBar();
+    });
+    allCheckboxes.push(cb);
+    cardRow.appendChild(cb);
+
+    const cardContent = document.createElement('div');
+    cardContent.className = 'trash-card-content';
+
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'history-card-header';
+
+    const title = document.createElement('span');
+    title.className = 'history-card-title';
+    title.textContent = meeting.title || t('history.untitled');
+    cardHeader.appendChild(title);
+
+    const date = document.createElement('span');
+    date.className = 'history-card-date';
+    date.textContent = new Date(meeting.createdAt).toLocaleDateString(getDateLocale());
+    cardHeader.appendChild(date);
+
+    cardContent.appendChild(cardHeader);
+
+    // Summary preview
+    const preview = getSummaryPreview(meeting);
+    if (preview) {
+      const summaryEl = document.createElement('div');
+      summaryEl.className = 'trash-card-summary';
+      summaryEl.textContent = preview;
+      cardContent.appendChild(summaryEl);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'history-card-meta';
+
+    const type = document.createElement('span');
+    type.className = 'history-card-type';
+    type.textContent = meeting.preset || t('settings.preset_copilot');
+    meta.appendChild(type);
+
+    if (meeting.duration) {
+      const dur = document.createElement('span');
+      dur.className = 'history-card-duration';
+      dur.textContent = meeting.duration;
+      meta.appendChild(dur);
+    }
+
+    const deletedTime = document.createElement('span');
+    deletedTime.className = 'trash-deleted-time';
+    deletedTime.textContent = t('trash.deleted_at', { time: formatRelativeTimeTrash(meeting.deletedAt) });
+    meta.appendChild(deletedTime);
+
+    cardContent.appendChild(meta);
+    cardRow.appendChild(cardContent);
+    card.appendChild(cardRow);
+
+    const actions = document.createElement('div');
+    actions.className = 'history-card-actions';
+
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'btn btn-xs btn-primary';
+    restoreBtn.textContent = t('trash.restore');
+    restoreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      emit('meeting:restore', { id: meeting.id });
+    });
+    actions.appendChild(restoreBtn);
+
+    const permDeleteBtn = document.createElement('button');
+    permDeleteBtn.className = 'btn btn-xs btn-danger';
+    permDeleteBtn.textContent = t('trash.permanent_delete');
+    permDeleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      emit('meeting:permanentDelete', { id: meeting.id });
+    });
+    actions.appendChild(permDeleteBtn);
+
+    card.appendChild(actions);
+    grid.appendChild(card);
+  });
+
+  // Select-all handler
+  selectAllCb.addEventListener('change', () => {
+    allCheckboxes.forEach(cb => {
+      cb.checked = selectAllCb.checked;
+      const id = cb.dataset.id;
+      const card = cb.closest('.trash-card');
+      if (selectAllCb.checked) {
+        trashSelected.add(id);
+        card?.classList.add('selected');
+      } else {
+        trashSelected.delete(id);
+        card?.classList.remove('selected');
+      }
+    });
+    selectAllCb.indeterminate = false;
+    updateBatchBar();
+  });
 }

@@ -4,7 +4,7 @@ import { state, emit } from './event-bus.js';
 import { t } from './i18n.js';
 
 // ===== Re-exports from sub-modules =====
-export { showToast, showCenterToast, showWhisperToast } from './ui/toast.js';
+export { showToast, showCenterToast, showWhisperToast, showUndoToast } from './ui/toast.js';
 
 export {
   addTranscriptLine,
@@ -40,6 +40,10 @@ export {
   renderHighlights,
   renderInboxPreview,
   scrollToTranscriptLine,
+  toggleTrashMode,
+  isTrashMode,
+  updateTrashBadge,
+  refreshTrashView,
 } from './ui/history-view.js';
 
 // ===== Initialization functions (kept in facade) =====

@@ -2628,6 +2628,185 @@ body.loaded-mode #btnNewMeeting { display: none; }
   to { opacity: 0; transform: translateY(10px); }
 }
 
+/* Undo toast */
+.undo-toast {
+  position: relative;
+  overflow: hidden;
+  border-left: 3px solid var(--primary);
+}
+.toast-undo-btn {
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+.toast-undo-btn:hover { background: var(--bg-secondary); }
+.toast-undo-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--primary);
+  transform-origin: left;
+  animation: undo-progress-shrink linear forwards;
+}
+@keyframes undo-progress-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Trash toggle button */
+.history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-trash-toggle {
+  position: relative;
+  font-size: 16px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.btn-trash-toggle.active {
+  background: var(--primary);
+  color: #fff;
+}
+.trash-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+}
+.trash-icon { pointer-events: none; }
+
+/* Trash empty state */
+.trash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.trash-empty-icon { font-size: 48px; opacity: 0.4; margin-bottom: 12px; }
+.trash-empty-text { font-size: 14px; }
+
+/* Trash card styling */
+.trash-card { opacity: 0.75; transition: opacity 0.15s, background 0.15s; }
+.trash-card:hover { opacity: 1; }
+.trash-card.selected { opacity: 1; background: color-mix(in srgb, var(--primary) 8%, var(--bg-primary)); }
+.trash-deleted-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Trash card layout with checkbox */
+.trash-card-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.trash-card-content { flex: 1; min-width: 0; }
+.trash-checkbox {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  cursor: pointer;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+/* Trash summary preview */
+.trash-card-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Trash header with select-all */
+.trash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 12px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+.trash-header-title { font-weight: 600; font-size: 14px; }
+.trash-header-count {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+.trash-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+.trash-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Batch action bar */
+.trash-batch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-secondary));
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.2s, max-height 0.2s, padding 0.2s, margin 0.2s;
+  padding: 0 12px;
+  margin-bottom: 0;
+}
+.trash-batch-bar.visible {
+  opacity: 1;
+  max-height: 50px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+.trash-batch-count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.trash-batch-restore { white-space: nowrap; }
+
 /* Whisper toasts — transcript panel top */
 .whisper-container {
   display: flex;
