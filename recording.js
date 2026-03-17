@@ -315,6 +315,31 @@ export function getElapsedTimeStr() {
   return t('minutes', { n: mins });
 }
 
+export async function resumeFromLoaded() {
+  if (state.isRecording || !state.loadedMeetingId) return;
+
+  // Calculate pause gap: time between last transcript/memo and now
+  const timestamps = [
+    ...state.transcript.map(l => l.timestamp),
+    ...state.memos.map(m => m.timestamp),
+  ].filter(Boolean);
+  const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : state.meetingStartTime;
+  pausedDuration += Date.now() - lastActivity;
+  pauseStartTime = null;
+
+  // Exit loaded mode
+  state.loadedMeetingId = null;
+  state.loadedMeetingOriginal = null;
+  const banner = document.querySelector('#loadedMeetingBanner');
+  if (banner) banner.hidden = true;
+  document.body.classList.remove('loaded-mode');
+  const editInfoBtn = document.querySelector('#btnEditSaveInfo');
+  if (editInfoBtn) editInfoBtn.remove();
+
+  // Start recording (meetingId & meetingStartTime already set, so no new ID created)
+  await startRecording();
+}
+
 export async function startRecording() {
   if (state.isRecording) return;
   if (state.loadedMeetingId) return; // Cannot record while a past meeting is loaded
