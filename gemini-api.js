@@ -1,4 +1,4 @@
-// gemini-api.js - Client-side Gemini API via Vertex AI proxy
+// gemini-api.js - Client-side Gemini API via server proxy
 
 let _proxyAvailable = null;
 
