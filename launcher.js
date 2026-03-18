@@ -16,18 +16,11 @@ export function showLauncherModal() {
   const modal = $('#launcherModal');
   if (!modal) return;
 
-  // Show welcome section for first visit
-  const welcome = $('#launcherWelcome');
-  if (welcome) welcome.hidden = !!state.settings.welcomeDismissed;
 
   modal.hidden = false;
 
   const close = () => {
     modal.hidden = true;
-    if (!state.settings.welcomeDismissed) {
-      state.settings.welcomeDismissed = true;
-      saveSettings(state.settings);
-    }
     document.removeEventListener('keydown', keyHandler);
   };
 

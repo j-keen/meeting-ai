@@ -342,7 +342,7 @@ export async function generateMeetingTitle({ transcript, existingTitle }) {
     ? '한국어로 제목을 생성하세요.'
     : 'Generate title in English.';
 
-  const prompt = `Based on this meeting transcript, generate a concise meeting title. ${langInstruction2}
+  const prompt = `Based on this meeting transcript, generate a concise meeting title. ${langInstruction}
 
 ${existingTitle ? `Current title: "${existingTitle}" - suggest alternatives that might be better.\n` : ''}
 Transcript:

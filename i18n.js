@@ -417,11 +417,6 @@ const translations = {
     'settings.prompt_preset': 'Prompt Preset',
     'settings.prompt_preset_select': 'Select a preset...',
 
-    // Welcome modal
-    'welcome.title': 'Meeting AI',
-    'welcome.privacy_desc': 'Your data is safe.',
-    'welcome.privacy_detail': 'All meeting data is stored locally on your device.<br>AI analysis is powered by Google Vertex AI,<br>which does not use your data for training.',
-    'welcome.get_started': 'Get Started',
 
     // Meeting prep
     'prep.wizard_type': 'Type',
@@ -1301,11 +1296,6 @@ const translations = {
     'settings.prompt_preset': '프롬프트 프리셋',
     'settings.prompt_preset_select': '프리셋 선택...',
 
-    // Welcome modal
-    'welcome.title': 'Meeting AI',
-    'welcome.privacy_desc': '데이터가 안전합니다.',
-    'welcome.privacy_detail': '모든 회의 데이터는 이 기기에만 저장됩니다.<br>AI 분석은 Google Vertex AI를 사용하며,<br>데이터를 학습에 사용하지 않습니다.',
-    'welcome.get_started': '시작하기',
 
     // Meeting prep
     'prep.wizard_type': '유형',
