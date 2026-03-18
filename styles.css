@@ -5401,7 +5401,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 
 /* ===== Minutes Model Selection Modal ===== */
 #minutesModelModal {
-  z-index: 210;
+  z-index: 300;
 }
 .minutes-model-card {
   display: flex;
@@ -5662,6 +5662,42 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 13px;
   font-weight: 600;
   background: var(--bg-secondary);
+}
+.prompt-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.prompt-modified::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #3b82f6);
+  margin-left: 5px;
+  vertical-align: middle;
+}
+.btn-reset-prompt {
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.btn-reset-prompt:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.btn-delete-preset {
+  color: var(--danger, #e53e3e) !important;
+}
+.btn-delete-preset:hover {
+  background: var(--danger, #e53e3e) !important;
+  color: #fff !important;
 }
 .prompt-section-arrow {
   font-size: 10px;
@@ -6032,7 +6068,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .pb-advanced-toggle {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  overflow: hidden;
 }
 
 .pb-advanced-summary {

@@ -1823,6 +1823,24 @@ function initMinutesPreview() {
     overlay.querySelector('#promptBaseOverride').value = cfg.basePromptOverride || getDefaultMinutesPrompt();
     overlay.querySelector('#promptInstruction').value = cfg.userInstruction || '';
 
+    // Modified indicator for base prompt
+    const baseTextarea = overlay.querySelector('#promptBaseOverride');
+    const baseHeader = overlay.querySelector('[data-section="base"] > span:first-child');
+    const updateModifiedDot = () => {
+      const isModified = baseTextarea.value.trim() !== getDefaultMinutesPrompt().trim();
+      baseHeader.classList.toggle('prompt-modified', isModified);
+    };
+    updateModifiedDot();
+    baseTextarea.addEventListener('input', updateModifiedDot);
+
+    // Reset base prompt to default
+    const resetBtn = overlay.querySelector('#btnResetBasePrompt');
+    resetBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      baseTextarea.value = getDefaultMinutesPrompt();
+      updateModifiedDot();
+    });
+
     // Collapsible sections
     overlay.querySelectorAll('.prompt-section-header').forEach(header => {
       header.addEventListener('click', () => {
@@ -1845,8 +1863,9 @@ function initMinutesPreview() {
       const preset = presets.find(p => p.id === presetSelect.value);
       if (!preset) return;
       overlay.querySelector('#promptReference').value = preset.referenceDoc || '';
-      overlay.querySelector('#promptBaseOverride').value = preset.basePromptOverride || '';
+      baseTextarea.value = preset.basePromptOverride || '';
       overlay.querySelector('#promptInstruction').value = preset.userInstruction || '';
+      updateModifiedDot();
     });
 
     // Save preset
@@ -1868,6 +1887,21 @@ function initMinutesPreview() {
       opt.textContent = newPreset.name;
       presetSelect.appendChild(opt);
       showToast(t('minutes_preview.preset_saved'), 'success');
+    });
+
+    // Delete preset
+    overlay.querySelector('#btnDeletePreset').addEventListener('click', () => {
+      const selectedId = presetSelect.value;
+      if (!selectedId) return;
+      const idx = presets.findIndex(p => p.id === selectedId);
+      if (idx === -1) return;
+      if (!confirm(t('minutes_preview.preset_delete_confirm'))) return;
+      presets.splice(idx, 1);
+      saveSettings({ minutesPromptPresets: presets });
+      state.settings.minutesPromptPresets = presets;
+      presetSelect.querySelector(`option[value="${selectedId}"]`).remove();
+      presetSelect.value = '';
+      showToast(t('minutes_preview.preset_deleted'), 'success');
     });
 
     // Apply

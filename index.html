@@ -1501,7 +1501,10 @@
           <div class="prompt-section">
             <div class="prompt-section-header" data-section="base">
               <span data-i18n="minutes_preview.prompt_base">Base Prompt</span>
-              <span class="prompt-section-arrow">&#x25BC;</span>
+              <span class="prompt-header-actions">
+                <button class="btn-reset-prompt" id="btnResetBasePrompt" data-i18n="minutes_preview.reset_default">Reset</button>
+                <span class="prompt-section-arrow">&#x25BC;</span>
+              </span>
             </div>
             <div class="prompt-section-content">
               <textarea class="settings-textarea prompt-textarea" id="promptBaseOverride" rows="6"></textarea>
@@ -1522,6 +1525,7 @@
               <option value="" data-i18n="minutes_preview.preset_select">Select preset</option>
             </select>
             <button class="btn btn-xs" id="btnSavePreset" data-i18n="minutes_preview.save_preset">Save Preset</button>
+            <button class="btn btn-xs btn-delete-preset" id="btnDeletePreset" data-i18n="minutes_preview.delete_preset">Delete</button>
           </div>
           <div class="prompt-edit-actions">
             <button class="btn btn-sm btn-primary" id="btnApplyPrompt" data-i18n="minutes_preview.apply">Apply</button>
