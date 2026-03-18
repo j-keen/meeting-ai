@@ -891,7 +891,7 @@
         </div>
         <!-- 4. Participants + Tags (side by side) — unified input -->
         <div class="end-meeting-row">
-          <div class="end-meeting-section end-meeting-flex-1">
+          <div class="end-meeting-section end-meeting-flex-6">
             <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
             <div class="participant-tabs">
               <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
@@ -904,13 +904,14 @@
             <div class="participant-tab-content" id="participantTabRegister" hidden>
               <div class="participant-register-row">
                 <input type="text" class="unified-input-field participant-register-name" id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name" autocomplete="off">
+                <input type="text" class="unified-input-field participant-register-title" id="endMeetingNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title" autocomplete="off">
                 <input type="text" class="unified-input-field participant-register-company" id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company" autocomplete="off">
                 <button class="btn btn-sm" id="btnEndMeetingAddParticipant" data-i18n="end_meeting.tab_register">Register</button>
               </div>
             </div>
             <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
           </div>
-          <div class="end-meeting-section end-meeting-flex-1">
+          <div class="end-meeting-section end-meeting-flex-4">
             <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
             <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
             <div class="unified-dropdown" id="tagDropdown" hidden></div>

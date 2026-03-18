@@ -550,7 +550,7 @@ Already known tags: ${existingTags.join(', ') || 'none'}
 Transcript:
 ${transcriptText}
 
-Suggest NEW tags (up to 10 keywords not already listed) and categories from this list: ${JSON.stringify(loadCategories().map(c => c.name || c))}.
+Suggest NEW tags (up to 7 keywords not already listed), ordered by relevance (most relevant first), and categories from this list: ${JSON.stringify(loadCategories().map(c => c.name || c))}. Return at most 2 categories.
 
 Return ONLY valid JSON:
 {
@@ -559,15 +559,15 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGemini('gemini-2.5-flash', {
+    const data = await callGemini('gemini-2.5-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
     });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     return {
-      tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 10) : [],
-      categories: Array.isArray(parsed.categories) ? parsed.categories.map(c => String(c).trim()).filter(Boolean) : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 7) : [],
+      categories: Array.isArray(parsed.categories) ? parsed.categories.map(c => String(c).trim()).filter(Boolean).slice(0, 2) : [],
     };
   } catch {
     return null;

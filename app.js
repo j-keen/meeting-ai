@@ -382,6 +382,9 @@ function init() {
   $('#endMeetingNewParticipantName').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); $('#btnEndMeetingAddParticipant').click(); }
   });
+  $('#endMeetingNewParticipantTitle').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('#btnEndMeetingAddParticipant').click(); }
+  });
   $('#endMeetingNewParticipantCompany').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); $('#btnEndMeetingAddParticipant').click(); }
   });
@@ -389,13 +392,15 @@ function init() {
   // Participant register button
   $('#btnEndMeetingAddParticipant').addEventListener('click', () => {
     const nameInput = $('#endMeetingNewParticipantName');
+    const titleInput = $('#endMeetingNewParticipantTitle');
     const companyInput = $('#endMeetingNewParticipantCompany');
     const name = nameInput.value.trim();
     if (!name) return;
-    const contact = addContact({ name, company: companyInput.value.trim() || undefined });
-    state.participants.push({ id: contact.id, name: contact.name });
+    const contact = addContact({ name, title: titleInput.value.trim() || undefined, company: companyInput.value.trim() || undefined });
+    state.participants.push({ id: contact.id, name: contact.name, title: contact.title });
     renderEndMeetingParticipants();
     nameInput.value = '';
+    titleInput.value = '';
     companyInput.value = '';
     nameInput.focus();
   });

@@ -3275,6 +3275,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-muted);
   font-style: italic;
 }
+.ai-tag-loading[hidden] { display: none; }
 /* Chip/badge entrance animation */
 @keyframes ai-chip-enter {
   from { opacity: 0; transform: translateY(6px); }
@@ -3507,7 +3508,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   align-items: center;
 }
 .participant-register-row .participant-register-name { flex: 1; }
-.participant-register-row .participant-register-company { flex: 1; }
+.participant-register-row .participant-register-title { flex: 0.8; }
+.participant-register-row .participant-register-company { flex: 0.8; }
 .participant-register-row .btn { white-space: nowrap; }
 
 /* Meeting summary stats bar */
@@ -3579,6 +3581,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   gap: 12px;
 }
 .end-meeting-flex-1 { flex: 1; }
+.end-meeting-flex-4 { flex: 4; }
+.end-meeting-flex-6 { flex: 6; }
 
 /* Model selection */
 .end-meeting-model-select {

@@ -1028,16 +1028,30 @@ function fetchAndCacheMetadata() {
 
   if (tagLoading) tagLoading.hidden = false;
 
+  const spinnerTimeout = setTimeout(() => {
+    if (tagLoading && !tagLoading.hidden) {
+      tagLoading.innerHTML = `<span class="ai-suggestions-label ai-error">${t('end_meeting.tags_error')}</span>` +
+        `<button class="ai-retry-btn" id="btnRetryTags">${t('end_meeting.retry')}</button>`;
+      tagLoading.querySelector('#btnRetryTags').onclick = () => {
+        tagLoading.innerHTML = `<span class="ai-loading-spinner"></span><span>${t('end_meeting.tags_generating')}</span>`;
+        state.aiMetadataCached = null;
+        fetchAndCacheMetadata();
+      };
+    }
+  }, 10000);
+
   suggestMeetingMetadata({
     transcript: state.transcript,
     meetingContext: state.settings.meetingContext || '',
     existingTags: state.tags,
   }).then(result => {
+    clearTimeout(spinnerTimeout);
     if (tagLoading) tagLoading.hidden = true;
     if (!result) return;
     state.aiMetadataCached = result;
     applyAiMetadata(result);
   }).catch(() => {
+    clearTimeout(spinnerTimeout);
     if (tagLoading) {
       tagLoading.hidden = false;
       tagLoading.innerHTML = `<span class="ai-suggestions-label ai-error">${t('end_meeting.tags_error')}</span>` +
@@ -1173,7 +1187,8 @@ export function renderEndMeetingParticipants() {
   const container = $('#endMeetingParticipantsSelected');
   container.innerHTML = '';
   state.participants.forEach(p => {
-    const badge = createUnifiedBadge(p.name || p, () => {
+    const label = p.title ? `${p.name || p} · ${p.title}` : (p.name || p);
+    const badge = createUnifiedBadge(label, () => {
       state.participants = state.participants.filter(pp => pp !== p);
       renderEndMeetingParticipants();
     });
@@ -1216,6 +1231,12 @@ export function updateParticipantDropdown(query) {
     const nameSpan = document.createElement('span');
     nameSpan.textContent = contact.name;
     item.appendChild(nameSpan);
+    if (contact.title) {
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'unified-dropdown-item-sub';
+      titleSpan.textContent = contact.title;
+      item.appendChild(titleSpan);
+    }
     if (contact.company) {
       const sub = document.createElement('span');
       sub.className = 'unified-dropdown-item-sub';
@@ -1224,7 +1245,7 @@ export function updateParticipantDropdown(query) {
     }
     item.addEventListener('click', (e) => {
       e.stopPropagation();
-      state.participants.push({ id: contact.id, name: contact.name });
+      state.participants.push({ id: contact.id, name: contact.name, title: contact.title });
       renderEndMeetingParticipants();
       $('#endMeetingParticipantInput').value = '';
       updateParticipantDropdown('');
