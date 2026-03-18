@@ -79,7 +79,7 @@ function parseGeminiResponse(text) {
 // Extract first heading or first suggested line as a short flow/headline
 function extractHeadline(markdown) {
   // Try ## 🎯 section — extract first suggested line (strip tag emoji)
-  const suggestedMatch = markdown.match(/^##\s+🎯[^\n]*\n+(?:[-*]\s*(?:[🔍✋📌⚠️💬]\s*)?)?[""]?([^"""\n]+)/m);
+  const suggestedMatch = markdown.match(/^##\s+🎯[^\n]*\n+(?:[-*]\s*(?:[🔍✋📌⚠️💬🔄]\s*)?)?[""]?([^"""\n]+)/m);
   if (suggestedMatch) return suggestedMatch[1].replace(/[""]$/,'').trim().slice(0, 80);
   // Legacy: ## Headline / ## 한줄 요약 content
   const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
