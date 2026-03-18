@@ -3691,6 +3691,27 @@ h1, h2, h3 { font-weight: 600; }
 .restore-banner-text {
   font-weight: 500;
 }
+.btn-restore-action {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-secondary);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-restore-action:hover {
+  background: var(--bg-hover);
+}
+.btn-restore-continue {
+  background: var(--accent-bg, rgba(59, 130, 246, 0.1));
+  border-color: var(--accent, #3b82f6);
+  color: var(--accent, #3b82f6);
+}
+.btn-restore-continue:hover {
+  background: var(--accent, #3b82f6);
+  color: #fff;
+}
 
 /* Restore Confirm Dialog */
 .restore-options {

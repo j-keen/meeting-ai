@@ -68,9 +68,10 @@ function init() {
       return;
     }
 
-    // Q3: If restored meeting is loaded, ask what to do
+    // Q3: If restored meeting is loaded, continue recording into it
     if (restoredMeetingId && restoredMeetingId === state.meetingId && state.transcript.length > 0) {
-      showRestoreRecordDialog();
+      hideRestoreBanner();
+      await startRecording();
       return;
     }
 
@@ -533,12 +534,33 @@ function showRestoreBanner(title) {
     resetMeeting();
   };
   banner.hidden = false;
+
+  // Show restore action buttons in bottom bar
+  const btnSaveInfo = $('#btnRestoreSaveInfo');
+  const btnContinue = $('#btnRestoreContinueRecord');
+  if (btnSaveInfo) {
+    btnSaveInfo.hidden = false;
+    btnSaveInfo.onclick = () => endMeeting();
+  }
+  if (btnContinue) {
+    btnContinue.hidden = false;
+    btnContinue.onclick = async () => {
+      hideRestoreBanner();
+      await startRecording();
+    };
+  }
 }
 
 function hideRestoreBanner() {
   const banner = $('#restoreBanner');
   if (banner) banner.hidden = true;
   restoredMeetingId = null;
+
+  // Hide restore action buttons in bottom bar
+  const btnSaveInfo = $('#btnRestoreSaveInfo');
+  const btnContinue = $('#btnRestoreContinueRecord');
+  if (btnSaveInfo) btnSaveInfo.hidden = true;
+  if (btnContinue) btnContinue.hidden = true;
 }
 
 function showRestoreRecordDialog() {
