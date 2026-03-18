@@ -1,4 +1,4 @@
-// api/gemini.js - Vercel Serverless proxy for Vertex AI Gemini API (API key auth)
+// api/gemini.js - Vercel Serverless proxy for Google AI Studio Gemini API
 
 const ALLOWED_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
 const ALLOWED_ORIGINS = ['https://meeting-ai-seven.vercel.app', 'http://localhost:3000', 'http://localhost:5173'];
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
   try {
     const action = isStream ? 'streamGenerateContent' : 'generateContent';
-    const url = `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:${action}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
 
     const response = await fetch(url, {
       method: 'POST',
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     return res.status(200).json(data);
   } catch (err) {
-    console.error('Vertex AI proxy error:', err.message);
+    console.error('Gemini proxy error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }
