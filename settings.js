@@ -366,6 +366,7 @@ function saveAllSettings() {
     chatPresets: s.chatPresets,
     audioRecording: s.audioRecording,
     audioRetentionDays: s.audioRetentionDays,
+    audioAutoDownload: s.audioAutoDownload,
   });
   snapshotSettings();
 
@@ -485,6 +486,7 @@ function loadSavedSettings() {
   s.chatPresets = saved.chatPresets || null;
   s.audioRecording = saved.audioRecording !== undefined ? saved.audioRecording : true;
   s.audioRetentionDays = saved.audioRetentionDays || 30;
+  s.audioAutoDownload = !!saved.audioAutoDownload;
 
   applySettingsToForm();
 
@@ -498,18 +500,28 @@ function initAudioRecordingSettings() {
   const retentionRow = $('#audioRetentionRow');
   const retentionSelect = $('#selectAudioRetention');
   const storageInfo = $('#audioStorageInfo');
+  const autoDownloadRow = $('#audioAutoDownloadRow');
+  const autoDownloadCheck = $('#checkAudioAutoDownload');
 
   if (!toggle) return;
 
   // Load saved state
   toggle.checked = !!state.settings.audioRecording;
   if (retentionRow) retentionRow.hidden = !toggle.checked;
+  if (autoDownloadRow) autoDownloadRow.hidden = !toggle.checked;
   if (retentionSelect) retentionSelect.value = state.settings.audioRetentionDays || '30';
+  if (autoDownloadCheck) autoDownloadCheck.checked = !!state.settings.audioAutoDownload;
 
   toggle.addEventListener('change', () => {
     state.settings.audioRecording = toggle.checked;
     if (retentionRow) retentionRow.hidden = !toggle.checked;
+    if (autoDownloadRow) autoDownloadRow.hidden = !toggle.checked;
     updateAudioStorageInfo(storageInfo);
+    markDirty();
+  });
+
+  autoDownloadCheck?.addEventListener('change', () => {
+    state.settings.audioAutoDownload = autoDownloadCheck.checked;
     markDirty();
   });
 

@@ -365,10 +365,7 @@ export function renderAnalysis(analysis) {
   if (empty) empty.style.display = 'none';
   container.classList.remove('ai-updating');
 
-  // Always jump to latest on new analysis
-  analysisNavIndex = -1;
   renderAnalysisContent(container, analysis);
-  updateAnalysisNav();
 
   // Toggle copy & compare buttons
   const copyBtn = $('#btnCopyAnalysis');

@@ -4,7 +4,7 @@ import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
-import { loadCategories } from './storage.js';
+import { loadCategories, loadSettings, saveSettings } from './storage.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -611,5 +611,256 @@ export function loadChatHistory() {
   state.chatHistory.forEach(msg => {
     if (msg.text.startsWith('[add_context:') || msg.text.startsWith('[add_memo:') || msg.text === '[rerun_analysis]') return;
     renderChatMessage(msg.role, msg.text);
+  });
+}
+
+// ===== FAQ (Frequently Asked Questions) =====
+
+const FAQ_KEY = 'faqItems';
+let faqActiveIdx = -1;
+let faqFiltered = [];
+
+function loadFaqItems() {
+  const saved = loadSettings();
+  return saved[FAQ_KEY] || [];
+}
+
+function saveFaqItems(items) {
+  saveSettings({ [FAQ_KEY]: items });
+}
+
+function getSortedFaq(items) {
+  // Favorites first, then insertion order
+  const favs = items.filter(i => i.fav);
+  const rest = items.filter(i => !i.fav);
+  return [...favs, ...rest];
+}
+
+export function initFaq() {
+  const btn = $('#btnFaq');
+  const popover = $('#faqPopover');
+  const search = $('#faqSearch');
+  const addInput = $('#faqAddInput');
+  const addBtn = $('#btnFaqAdd');
+  if (!btn || !popover) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = !popover.hidden;
+    popover.hidden = !popover.hidden;
+    if (!popover.hidden) {
+      search.value = '';
+      faqActiveIdx = -1;
+      renderFaqList();
+      setTimeout(() => search.focus(), 0);
+    }
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!popover.hidden && !popover.contains(e.target) && e.target !== btn) {
+      popover.hidden = true;
+    }
+  });
+
+  // Search input
+  search.addEventListener('input', () => {
+    faqActiveIdx = -1;
+    renderFaqList(search.value.trim());
+  });
+
+  // Keyboard navigation in search
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (faqFiltered.length > 0) {
+        faqActiveIdx = Math.min(faqActiveIdx + 1, faqFiltered.length - 1);
+        updateFaqActive();
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (faqFiltered.length > 0) {
+        faqActiveIdx = Math.max(faqActiveIdx - 1, 0);
+        updateFaqActive();
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (faqActiveIdx >= 0 && faqActiveIdx < faqFiltered.length) {
+        useFaqItem(faqFiltered[faqActiveIdx]);
+      }
+    } else if (e.key === 'Escape') {
+      popover.hidden = true;
+    }
+  });
+
+  // Add new FAQ
+  function addNewFaq() {
+    const text = addInput.value.trim();
+    if (!text) return;
+    const items = loadFaqItems();
+    items.push({ id: Date.now().toString(), text, fav: false });
+    saveFaqItems(items);
+    addInput.value = '';
+    renderFaqList(search.value.trim());
+  }
+
+  addBtn.addEventListener('click', addNewFaq);
+  addInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addNewFaq();
+    } else if (e.key === 'Escape') {
+      popover.hidden = true;
+    }
+  });
+}
+
+function renderFaqList(query = '') {
+  const list = $('#faqList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const items = loadFaqItems();
+  const sorted = getSortedFaq(items);
+  const q = query.toLowerCase();
+  faqFiltered = q ? sorted.filter(i => i.text.toLowerCase().includes(q)) : sorted;
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="faq-empty">${t('chat.faq_empty')}</div>`;
+    return;
+  }
+  if (faqFiltered.length === 0) {
+    list.innerHTML = `<div class="faq-empty">${t('chat.faq_no_match')}</div>`;
+    return;
+  }
+
+  faqFiltered.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'faq-item' + (idx === faqActiveIdx ? ' faq-active' : '');
+    row.dataset.idx = idx;
+
+    const favBtn = document.createElement('button');
+    favBtn.className = 'faq-item-fav' + (item.fav ? ' favorited' : '');
+    favBtn.textContent = item.fav ? '★' : '☆';
+    favBtn.title = item.fav ? 'Unfavorite' : 'Favorite';
+    favBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFaqFav(item.id);
+    });
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'faq-item-text';
+    textSpan.textContent = item.text;
+
+    const actions = document.createElement('div');
+    actions.className = 'faq-item-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✎';
+    editBtn.title = 'Edit';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startEditFaq(row, item);
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✕';
+    delBtn.title = 'Delete';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteFaqItem(item.id);
+    });
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    row.appendChild(favBtn);
+    row.appendChild(textSpan);
+    row.appendChild(actions);
+
+    row.addEventListener('click', () => useFaqItem(item));
+
+    list.appendChild(row);
+  });
+}
+
+function updateFaqActive() {
+  const list = $('#faqList');
+  if (!list) return;
+  list.querySelectorAll('.faq-item').forEach((el, i) => {
+    el.classList.toggle('faq-active', i === faqActiveIdx);
+  });
+  // Scroll active into view
+  const active = list.querySelector('.faq-active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function useFaqItem(item) {
+  const popover = $('#faqPopover');
+  popover.hidden = true;
+
+  // Directly send the FAQ question
+  const input = $('#chatInput');
+  input.value = item.text;
+  // Trigger handleSend
+  input.dispatchEvent(new Event('input'));
+  const sendBtn = $('#btnChatSend');
+  sendBtn.click();
+}
+
+function toggleFaqFav(id) {
+  const items = loadFaqItems();
+  const item = items.find(i => i.id === id);
+  if (item) {
+    item.fav = !item.fav;
+    saveFaqItems(items);
+    const query = $('#faqSearch')?.value.trim() || '';
+    renderFaqList(query);
+  }
+}
+
+function deleteFaqItem(id) {
+  const items = loadFaqItems().filter(i => i.id !== id);
+  saveFaqItems(items);
+  const query = $('#faqSearch')?.value.trim() || '';
+  faqActiveIdx = -1;
+  renderFaqList(query);
+}
+
+function startEditFaq(row, item) {
+  const textSpan = row.querySelector('.faq-item-text');
+  const actionsDiv = row.querySelector('.faq-item-actions');
+  actionsDiv.style.display = 'none';
+
+  const editInput = document.createElement('input');
+  editInput.className = 'faq-item-edit';
+  editInput.value = item.text;
+  textSpan.replaceWith(editInput);
+  editInput.focus();
+  editInput.select();
+
+  function finishEdit() {
+    const newText = editInput.value.trim();
+    if (newText && newText !== item.text) {
+      const items = loadFaqItems();
+      const target = items.find(i => i.id === item.id);
+      if (target) {
+        target.text = newText;
+        saveFaqItems(items);
+      }
+    }
+    const query = $('#faqSearch')?.value.trim() || '';
+    renderFaqList(query);
+  }
+
+  editInput.addEventListener('blur', finishEdit);
+  editInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      editInput.blur();
+    } else if (e.key === 'Escape') {
+      editInput.value = item.text; // revert
+      editInput.blur();
+    }
   });
 }

@@ -23,7 +23,7 @@ import {
 } from './ui.js';
 import { refreshHistoryGrid, refreshHistoryGridDebounced, resetHistorySort } from './history.js';
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
-import { initChat, loadChatHistory, renderMarkdown } from './chat.js';
+import { initChat, loadChatHistory, renderMarkdown, initFaq } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
 import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
@@ -66,6 +66,7 @@ function init() {
   initContextPopup();
   initKeyboardShortcuts();
   initChat();
+  initFaq();
   initMeetingPrepForm();
   initPromptBuilder();
   initDocGenerator();

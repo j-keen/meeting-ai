@@ -239,7 +239,7 @@ function renderPreview() {
 
   html += `
     <details class="pb-advanced-toggle">
-      <summary class="pb-advanced-summary">${ko ? '고급 설정' : 'Advanced Settings'}</summary>
+      <summary class="pb-advanced-summary">${ko ? '프리셋 상세' : 'Preset Details'}</summary>
       <div class="pb-advanced-content">`;
 
   // Input fields

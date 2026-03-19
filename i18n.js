@@ -336,6 +336,11 @@ const translations = {
     'chat.regenerate': 'Regenerate',
     'chat.edit': 'Edit',
     'chat.file_unsupported': 'Unsupported file type. Please attach text files (.txt, .md, .json, etc.)',
+    'chat.faq_btn': 'FAQ',
+    'chat.faq_search_placeholder': 'Search questions...',
+    'chat.faq_add_placeholder': 'Add new question...',
+    'chat.faq_empty': 'No saved questions yet.',
+    'chat.faq_no_match': 'No matching questions.',
     'chat.suggestion_1': 'Summarize the discussion so far',
     'chat.suggestion_2': 'List action items',
     'chat.suggestion_3': 'What are the key decisions?',
@@ -938,6 +943,8 @@ const translations = {
     'end_meeting.audio_not_found': 'Recording not found',
     'end_meeting.audio_downloaded': 'Downloaded',
     'end_meeting.audio_download_error': 'Download failed',
+    'end_meeting.audio_auto_download_notice': 'Will auto-download when saved',
+    'settings.audio_auto_download': 'Auto-download on save',
 
     // Misc
     'minutes': '{n} minutes',
@@ -1279,6 +1286,11 @@ const translations = {
     'chat.regenerate': '다시 생성',
     'chat.edit': '수정',
     'chat.file_unsupported': '지원되지 않는 파일 형식입니다. 텍스트 파일(.txt, .md, .json 등)을 사용해주세요.',
+    'chat.faq_btn': '자주 쓰는 질문',
+    'chat.faq_search_placeholder': '질문 검색...',
+    'chat.faq_add_placeholder': '새 질문 추가...',
+    'chat.faq_empty': '저장된 질문이 없습니다.',
+    'chat.faq_no_match': '일치하는 질문이 없습니다.',
     'chat.suggestion_1': '지금까지 논의를 요약해줘',
     'chat.suggestion_2': '액션 아이템을 정리해줘',
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
@@ -1881,6 +1893,8 @@ const translations = {
     'end_meeting.audio_not_found': '녹음 파일을 찾을 수 없습니다',
     'end_meeting.audio_downloaded': '다운로드 완료',
     'end_meeting.audio_download_error': '다운로드 실패',
+    'end_meeting.audio_auto_download_notice': '저장 시 자동으로 다운로드됩니다',
+    'settings.audio_auto_download': '저장 시 자동 다운로드',
 
     // Misc
     'minutes': '{n}분',

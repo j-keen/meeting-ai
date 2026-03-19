@@ -10,6 +10,7 @@ let mediaRecorder = null;
 let currentSessionId = null;
 let chunkIndex = 0;
 let recordingStream = null;
+let currentSessionSize = 0;
 
 // ===== IndexedDB Setup =====
 export async function initAudioDB() {
@@ -54,6 +55,7 @@ export function startAudioRecording(sessionId, stream) {
 
   currentSessionId = sessionId;
   chunkIndex = 0;
+  currentSessionSize = 0;
   recordingStream = stream;
 
   const mimeType = getPreferredMimeType();
@@ -62,6 +64,7 @@ export function startAudioRecording(sessionId, stream) {
 
   mediaRecorder.ondataavailable = async (e) => {
     if (e.data.size > 0 && currentSessionId) {
+      currentSessionSize += e.data.size;
       try {
         const d = getDB();
         const tx = d.transaction(CHUNK_STORE, 'readwrite');
@@ -100,6 +103,7 @@ export async function stopAudioRecording() {
         recordingStream = null;
       }
       mediaRecorder = null;
+      currentSessionSize = 0;
 
       // Merge chunks into final recording
       try {
@@ -217,6 +221,11 @@ export async function deleteRecording(sessionId) {
   } catch (err) {
     console.error('[AudioRecorder] Delete failed:', err);
   }
+}
+
+// ===== Current Session Size =====
+export function getCurrentRecordingSize() {
+  return currentSessionSize;
 }
 
 // ===== Storage Info =====

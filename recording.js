@@ -2,7 +2,7 @@
 
 import { state, on, emit } from './event-bus.js';
 import { createSTT } from './stt.js';
-import { startAudioRecording, stopAudioRecording, hasRecording, recoverChunks } from './audio-recorder.js';
+import { startAudioRecording, stopAudioRecording, hasRecording, recoverChunks, getCurrentRecordingSize } from './audio-recorder.js';
 import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
@@ -60,6 +60,7 @@ let lastTranscriptTime = 0;
 let idleCheckInterval = null;
 let idleWarningShown = false;
 let maxDurationTimeout = null;
+let audioSizeInterval = null;
 
 
 // ===== Draft Recovery (sessionStorage + localStorage crash recovery) =====
@@ -187,15 +188,15 @@ function showDraftRecoveryBanner(draft, source) {
   document.body.prepend(banner);
 
   $('#btnDraftRecover').onclick = () => {
-    recoverDraft(draft, source);
     banner.remove();
+    recoverDraft(draft, source);
   };
   if (isCrashRecovery) {
     const saveEndBtn = $('#btnDraftSaveEnd');
     if (saveEndBtn) {
       saveEndBtn.onclick = () => {
-        recoverDraft(draft, source);
         banner.remove();
+        recoverDraft(draft, source);
         // Go directly to end meeting modal
         setTimeout(() => endMeeting(), 100);
       };
@@ -444,6 +445,15 @@ export async function startRecording() {
     $('#meetingStatus').textContent = t('record.status_recording');
     $('#btnEndMeeting').hidden = false;
 
+    // Show audio recording badge in pill
+    if (state._audioRecordingActive) {
+      const recBadge = $('#audioRecBadge');
+      if (recBadge) recBadge.hidden = false;
+      updateAudioRecBadge();
+      if (audioSizeInterval) clearInterval(audioSizeInterval);
+      audioSizeInterval = setInterval(updateAudioRecBadge, 10000);
+    }
+
     showAiWaiting(state.settings.analysisCharThreshold || 1000);
     showChatWaiting();
     showToast(t('toast.recording_started'), 'success');
@@ -491,6 +501,9 @@ export async function stopRecording() {
   $('#meetingStatus').textContent = t('record.status_paused');
   const badge = $('#sttEngineBadge');
   if (badge) badge.hidden = true;
+  const recBadge = $('#audioRecBadge');
+  if (recBadge) recBadge.hidden = true;
+  if (audioSizeInterval) { clearInterval(audioSizeInterval); audioSizeInterval = null; }
 
   autoSave();
 }
@@ -926,6 +939,38 @@ export function showEndMeetingModal(editMeeting) {
   }
 }
 
+async function downloadAudioFile(meetingId, title) {
+  try {
+    const { getRecording } = await import('./audio-recorder.js');
+    const blob = await getRecording(meetingId);
+    if (!blob) return false;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `${title || 'recording'}_${dateStr}.webm`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function updateAudioRecBadge() {
+  const badge = $('#audioRecBadge');
+  const sizeEl = $('#audioRecSize');
+  if (!badge || !sizeEl) return;
+  const size = getCurrentRecordingSize();
+  if (size < 1024) {
+    sizeEl.textContent = size + ' B';
+  } else if (size < 1024 * 1024) {
+    sizeEl.textContent = (size / 1024).toFixed(0) + ' KB';
+  } else {
+    sizeEl.textContent = (size / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+}
+
 async function renderEndMeetingAudio(isEditMode) {
   const section = $('#endMeetingAudioSection');
   if (!section) return;
@@ -953,31 +998,30 @@ async function renderEndMeetingAudio(isEditMode) {
       : t('end_meeting.audio_warn_manual');
   }
 
+  // Auto-download notice
+  const autoEl = $('#endMeetingAudioAuto');
+  if (autoEl) {
+    if (state.settings.audioAutoDownload) {
+      autoEl.textContent = t('end_meeting.audio_auto_download_notice');
+      autoEl.hidden = false;
+    } else {
+      autoEl.hidden = true;
+    }
+  }
+
   // Download button
   const dlBtn = $('#btnEndMeetingAudioDownload');
   if (dlBtn) {
     dlBtn.onclick = async () => {
-      try {
-        const { getRecording } = await import('./audio-recorder.js');
-        const blob = await getRecording(state.meetingId);
-        if (!blob) { showToast(t('end_meeting.audio_not_found'), 'warning'); return; }
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        const title = $('#endMeetingTitle')?.value?.trim() || state.meetingTitle || 'recording';
-        const dateStr = new Date().toISOString().slice(0, 10);
-        a.download = `${title}_${dateStr}.webm`;
-        a.click();
-        URL.revokeObjectURL(url);
-        dlBtn.textContent = '✓ ' + t('end_meeting.audio_downloaded');
-        dlBtn.disabled = true;
-        setTimeout(() => {
-          dlBtn.innerHTML = '⬇ <span>' + t('end_meeting.download_audio') + '</span>';
-          dlBtn.disabled = false;
-        }, 3000);
-      } catch {
-        showToast(t('end_meeting.audio_download_error'), 'error');
-      }
+      const title = $('#endMeetingTitle')?.value?.trim() || state.meetingTitle || 'recording';
+      const ok = await downloadAudioFile(state.meetingId, title);
+      if (!ok) { showToast(t('end_meeting.audio_not_found'), 'warning'); return; }
+      dlBtn.textContent = '✓ ' + t('end_meeting.audio_downloaded');
+      dlBtn.disabled = true;
+      setTimeout(() => {
+        dlBtn.innerHTML = '⬇ <span>' + t('end_meeting.download_audio') + '</span>';
+        dlBtn.disabled = false;
+      }, 3000);
     };
   }
 }
@@ -1051,7 +1095,17 @@ function resetFooterToDefault(isEditMode = false) {
     else finalizeEndMeeting();
   };
 
-  actions.append(cancelBtn, genBtn, saveBtn);
+  // AI Document Generator button
+  const docGenBtn = document.createElement('button');
+  docGenBtn.className = 'btn btn-accent';
+  docGenBtn.id = 'btnDocGenerator';
+  docGenBtn.textContent = t('dg.button_label');
+  docGenBtn.onclick = () => emit('docGenerator:open');
+  if (!isProxyAvailable() || transcript.length === 0) {
+    docGenBtn.hidden = true;
+  }
+
+  actions.append(cancelBtn, genBtn, docGenBtn, saveBtn);
 
   // Re-enable form inputs
   const body = $('#endMeetingModal .modal-body');
@@ -1370,33 +1424,38 @@ export function updateLocationDropdown(query) {
 
   // If there are matching locations, show them
   if (filtered.length > 0) {
-    // Separate frequent (used) and others
-    const frequent = filtered.filter(l => (locFreq[l.name] || 0) > 0);
-    const others = filtered.filter(l => (locFreq[l.name] || 0) === 0);
+    // Recent: locations that have been used at least once
+    const recent = filtered.filter(l => (locFreq[l.name] || 0) > 0);
+    // All: every location not already shown in recent
+    const recentNames = new Set(recent.map(l => l.name));
+    const allOthers = filtered.filter(l => !recentNames.has(l.name));
 
-    if (frequent.length > 0) {
+    if (recent.length > 0) {
       const section = document.createElement('div');
       section.className = 'unified-dropdown-section';
       const header = document.createElement('div');
       header.className = 'unified-dropdown-header';
       header.textContent = t('end_meeting.recent_locations') || 'Recent';
       section.appendChild(header);
-      frequent.slice(0, 5).forEach(loc => {
+      recent.slice(0, 5).forEach(loc => {
         section.appendChild(createLocationItem(loc, locFreq[loc.name] || 0));
       });
       dropdown.appendChild(section);
     }
 
-    if (others.length > 0) {
+    if (allOthers.length > 0) {
       const section = document.createElement('div');
       section.className = 'unified-dropdown-section';
       const header = document.createElement('div');
       header.className = 'unified-dropdown-header';
       header.textContent = t('end_meeting.all_locations') || 'All';
       section.appendChild(header);
-      others.slice(0, 5).forEach(loc => {
-        section.appendChild(createLocationItem(loc, 0));
+      const listWrap = document.createElement('div');
+      listWrap.className = 'location-all-list';
+      allOthers.forEach(loc => {
+        listWrap.appendChild(createLocationItem(loc, 0));
       });
+      section.appendChild(listWrap);
       dropdown.appendChild(section);
     }
   }
@@ -1489,6 +1548,12 @@ export async function finalizeEndMeeting() {
   autoSave();
   clearDraftRecovery();
 
+  // Auto-download audio if enabled
+  if (state.settings.audioAutoDownload && state._audioRecordingActive) {
+    const title = state.meetingTitle || 'recording';
+    await downloadAudioFile(state.meetingId, title);
+  }
+
   // Close modal and show toast
   footer.classList.remove('save-progress-state');
   if (body) body.classList.remove('disabled-form');
@@ -1522,6 +1587,12 @@ async function finalizeWithMinutes() {
   state.meetingEnded = true;
   autoSave();
   clearDraftRecovery();
+
+  // Auto-download audio if enabled
+  if (state.settings.audioAutoDownload && state._audioRecordingActive) {
+    const title = state.meetingTitle || 'recording';
+    await downloadAudioFile(state.meetingId, title);
+  }
 
   // Show progress in footer
   showSaveProgress();
@@ -1892,6 +1963,9 @@ export function resetMeeting(skipLauncher = false) {
   recBtn.querySelector('.record-label').textContent = t('record.label');
   const badge = $('#sttEngineBadge');
   if (badge) badge.hidden = true;
+  const resetRecBadge = $('#audioRecBadge');
+  if (resetRecBadge) resetRecBadge.hidden = true;
+  if (audioSizeInterval) { clearInterval(audioSizeInterval); audioSizeInterval = null; }
   $('#btnEndMeeting').hidden = true;
   state.meetingId = null;
   state.meetingLocation = '';
