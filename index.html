@@ -113,9 +113,9 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-actions">
-            <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-            <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" title="Analysis Style">🎯 <span data-i18n="panel.analysis_style">분석 스타일</span></button>
+            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
+            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
+            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Analysis Style">🎯 <span data-i18n="panel.analysis_style">Analysis Style</span></button>
           </div>
         </div>
         <!-- selectAnalysisStyle kept hidden for style-history.js label lookup -->
@@ -1264,27 +1264,27 @@
   <div class="modal-overlay" id="analysisStyleModal" hidden>
     <div class="modal" style="max-width:420px;">
       <div class="modal-header">
-        <h3 data-i18n="asm.title">분석 스타일</h3>
+        <h3 data-i18n="asm.title">Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="asmCloseBtn">&times;</button>
       </div>
       <div class="modal-body asm-body">
         <!-- 1. Presets -->
         <div class="asm-section">
-          <div class="asm-section-label">📋 <span data-i18n="asm.presets_label">분석 스타일</span></div>
+          <div class="asm-section-label">📋 <span data-i18n="asm.presets_label">Analysis Style</span></div>
           <div class="asm-presets" id="asmPresets"></div>
-          <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
+          <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">Save this style</span></button>
           <div id="asmSaveFormContainer" hidden></div>
         </div>
         <div class="asm-divider"></div>
         <!-- 2. AI Chat -->
         <div class="asm-section asm-section-clickable" id="asmOpenAiChat">
-          <div class="asm-section-label">💬 <span data-i18n="asm.ai_chat_label">AI와 분석 방향 바꾸기</span></div>
-          <div class="asm-section-desc" data-i18n="asm.ai_chat_desc">지금 분석이 마음에 안 드세요?</div>
+          <div class="asm-section-label">💬 <span data-i18n="asm.ai_chat_label">Change direction with AI</span></div>
+          <div class="asm-section-desc" data-i18n="asm.ai_chat_desc">Not happy with the current analysis?</div>
         </div>
         <div class="asm-divider"></div>
         <!-- 3. Analysis History -->
         <div class="asm-section">
-          <div class="asm-section-label">🕐 <span data-i18n="asm.history_label">분석 히스토리</span></div>
+          <div class="asm-section-label">🕐 <span data-i18n="asm.history_label">Analysis History</span></div>
           <div class="asm-history-list" id="asmHistoryList"></div>
         </div>
       </div>

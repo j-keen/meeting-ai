@@ -633,6 +633,10 @@ const translations = {
     'asm.ai_chat_label': 'Change analysis direction with AI',
     'asm.ai_chat_desc': 'Not happy with the current analysis?',
     'asm.history_label': 'Analysis History',
+    'asm.saved_styles': 'Saved Styles',
+    'asm.history_empty': 'No analysis results yet',
+    'panel.copy_md_title': 'Copy as Markdown',
+    'panel.analyze_title': 'Analyze now',
 
     // Prompt Adjuster
     'panel.prompt_adjust': 'Change Style',
@@ -1543,6 +1547,10 @@ const translations = {
     'asm.ai_chat_label': 'AI와 분석 방향 바꾸기',
     'asm.ai_chat_desc': '지금 분석이 마음에 안 드세요?',
     'asm.history_label': '분석 히스토리',
+    'asm.saved_styles': '저장한 스타일',
+    'asm.history_empty': '아직 분석 결과가 없습니다',
+    'panel.copy_md_title': '마크다운으로 복사',
+    'panel.analyze_title': '지금 분석',
 
     // Prompt Adjuster
     'panel.prompt_adjust': '분석 스타일 변경',

@@ -4,17 +4,13 @@
 import { state, emit, on } from './event-bus.js';
 import { saveSettings, loadCustomTypes } from './storage.js';
 import { getPromptForType } from './ai.js';
-import { t, getAiLanguage, getDateLocale } from './i18n.js';
+import { t, getDateLocale } from './i18n.js';
 import { openPromptAdjuster } from './prompt-adjuster.js';
 import { pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
 import { renderAnalysisInto } from './ui/analysis.js';
 
 const $ = (sel) => document.querySelector(sel);
-
-function isKorean() {
-  return getAiLanguage() === 'ko';
-}
 
 // ===== Modal Control =====
 function closeModal() {
@@ -64,7 +60,7 @@ function renderPresets() {
   if (customTypes.length > 0) {
     const customLabel = document.createElement('div');
     customLabel.className = 'asm-custom-label';
-    customLabel.textContent = isKorean() ? '저장한 스타일' : 'Saved Styles';
+    customLabel.textContent = t('asm.saved_styles');
     container.appendChild(customLabel);
 
     const customRow = document.createElement('div');
@@ -162,7 +158,7 @@ function renderAnalysisHistoryList() {
   if (!history || history.length === 0) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'asm-history-empty';
-    emptyMsg.textContent = isKorean() ? '아직 분석 결과가 없습니다' : 'No analysis results yet';
+    emptyMsg.textContent = t('asm.history_empty');
     container.appendChild(emptyMsg);
     return;
   }
