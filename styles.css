@@ -3507,7 +3507,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   gap: 4px;
   align-items: center;
 }
-.participant-register-row .participant-register-name { flex: 1; }
+.participant-register-row .participant-register-name { flex: 0.8; }
 .participant-register-row .participant-register-title { flex: 0.8; }
 .participant-register-row .participant-register-company { flex: 0.8; }
 .participant-register-row .btn { white-space: nowrap; }
