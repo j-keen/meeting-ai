@@ -896,6 +896,9 @@ export function showEndMeetingModal(editMeeting) {
   locationInput.value = state.meetingLocation || '';
   updateLocationDropdown('');
 
+  // Audio download section (P-5)
+  renderEndMeetingAudio(isEditMode);
+
   // AI title/tag generation (with caching) — skip in edit mode
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
@@ -920,6 +923,62 @@ export function showEndMeetingModal(editMeeting) {
     fetchAndCacheMetadata();
   } else {
     suggestionsEl.hidden = true;
+  }
+}
+
+async function renderEndMeetingAudio(isEditMode) {
+  const section = $('#endMeetingAudioSection');
+  if (!section) return;
+
+  // Only show for live recordings (not edit mode, not imported)
+  if (isEditMode || !state._audioRecordingActive) {
+    section.hidden = true;
+    return;
+  }
+
+  // Check if recording exists
+  try {
+    const exists = await hasRecording(state.meetingId);
+    if (!exists) { section.hidden = true; return; }
+  } catch { section.hidden = true; return; }
+
+  section.hidden = false;
+
+  // Dynamic retention days in warning
+  const retentionDays = state.settings.audioRetentionDays || 30;
+  const warnEl = $('#endMeetingAudioWarn');
+  if (warnEl) {
+    warnEl.textContent = retentionDays > 0
+      ? t('end_meeting.audio_warn_days', { days: retentionDays })
+      : t('end_meeting.audio_warn_manual');
+  }
+
+  // Download button
+  const dlBtn = $('#btnEndMeetingAudioDownload');
+  if (dlBtn) {
+    dlBtn.onclick = async () => {
+      try {
+        const { getRecording } = await import('./audio-recorder.js');
+        const blob = await getRecording(state.meetingId);
+        if (!blob) { showToast(t('end_meeting.audio_not_found'), 'warning'); return; }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const title = $('#endMeetingTitle')?.value?.trim() || state.meetingTitle || 'recording';
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `${title}_${dateStr}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        dlBtn.textContent = '✓ ' + t('end_meeting.audio_downloaded');
+        dlBtn.disabled = true;
+        setTimeout(() => {
+          dlBtn.innerHTML = '⬇ <span>' + t('end_meeting.download_audio') + '</span>';
+          dlBtn.disabled = false;
+        }, 3000);
+      } catch {
+        showToast(t('end_meeting.audio_download_error'), 'error');
+      }
+    };
   }
 }
 

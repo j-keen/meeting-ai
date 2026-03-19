@@ -248,7 +248,9 @@
               <option value="0" data-i18n="settings.audio_never">Never</option>
             </select>
           </label>
-          <div id="audioStorageInfo" class="settings-hint" hidden></div>
+          <small class="settings-hint" data-i18n="settings.audio_storage_hint">Saved in browser storage (IndexedDB). Cleared if browser data is deleted.</small>
+          <div id="audioStorageInfo" class="audio-storage-info" hidden></div>
+          <button class="btn btn-xs btn-danger" id="btnAudioDeleteAll" hidden data-i18n="settings.audio_delete_all">Delete All Recordings</button>
         </section>
       </div>
 
@@ -906,6 +908,16 @@
               <span data-i18n="end_meeting.tags_generating">Generating tag suggestions...</span>
             </div>
             <div class="unified-badges-area" id="endMeetingTags"></div>
+          </div>
+        </div>
+        <!-- 4.5 Audio Download (P-5) -->
+        <div class="end-meeting-audio-section" id="endMeetingAudioSection" hidden>
+          <div class="end-meeting-audio-row">
+            <span class="end-meeting-audio-icon">🎙</span>
+            <div class="end-meeting-audio-info">
+              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload">⬇ <span data-i18n="end_meeting.download_audio">Download Recording</span></button>
+              <small class="end-meeting-audio-warn" id="endMeetingAudioWarn" data-i18n="end_meeting.audio_warn">Download recommended — auto-deleted after 30 days</small>
+            </div>
           </div>
         </div>
       </div>

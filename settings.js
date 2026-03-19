@@ -483,7 +483,7 @@ function loadSavedSettings() {
   s.aiLanguage = saved.aiLanguage || 'auto';
   s.customPromptPresets = saved.customPromptPresets || {};
   s.chatPresets = saved.chatPresets || null;
-  s.audioRecording = saved.audioRecording || false;
+  s.audioRecording = saved.audioRecording !== undefined ? saved.audioRecording : true;
   s.audioRetentionDays = saved.audioRetentionDays || 30;
 
   applySettingsToForm();
@@ -509,6 +509,7 @@ function initAudioRecordingSettings() {
   toggle.addEventListener('change', () => {
     state.settings.audioRecording = toggle.checked;
     if (retentionRow) retentionRow.hidden = !toggle.checked;
+    updateAudioStorageInfo(storageInfo);
     markDirty();
   });
 
@@ -517,8 +518,28 @@ function initAudioRecordingSettings() {
     markDirty();
   });
 
-  // Show storage info when audio recording is enabled
-  if (toggle.checked) updateAudioStorageInfo(storageInfo);
+  // Manual delete button
+  $('#btnAudioDeleteAll')?.addEventListener('click', async () => {
+    if (!confirm(t('settings.audio_delete_confirm'))) return;
+    try {
+      const { getAudioStorageInfo, deleteRecording } = await import('./audio-recorder.js');
+      const info = await getAudioStorageInfo();
+      // Delete all by clearing the DB
+      const { initAudioDB } = await import('./audio-recorder.js');
+      const db = await initAudioDB();
+      const tx = db.transaction(['recordings', 'chunks'], 'readwrite');
+      tx.objectStore('recordings').clear();
+      tx.objectStore('chunks').clear();
+      await new Promise(r => { tx.oncomplete = r; });
+      updateAudioStorageInfo(storageInfo);
+      emit('toast', { message: t('settings.audio_deleted', { n: info.count }), type: 'success' });
+    } catch {
+      emit('toast', { message: t('settings.audio_delete_error'), type: 'error' });
+    }
+  });
+
+  // Always update storage info
+  updateAudioStorageInfo(storageInfo);
 }
 
 async function updateAudioStorageInfo(el) {
@@ -526,12 +547,21 @@ async function updateAudioStorageInfo(el) {
   try {
     const { getAudioStorageInfo } = await import('./audio-recorder.js');
     const info = await getAudioStorageInfo();
+    const deleteBtn = $('#btnAudioDeleteAll');
     if (info.count > 0) {
       const sizeMB = (info.totalSize / (1024 * 1024)).toFixed(1);
-      el.textContent = `${info.count} recordings · ${sizeMB} MB`;
+      el.innerHTML = `<span>${t('settings.audio_storage_info', { count: info.count, size: sizeMB })}</span>`;
       el.hidden = false;
+      if (deleteBtn) deleteBtn.hidden = false;
+    } else {
+      el.textContent = t('settings.audio_no_recordings');
+      el.hidden = false;
+      if (deleteBtn) deleteBtn.hidden = true;
     }
-  } catch { /* IndexedDB not available */ }
+  } catch {
+    el.textContent = t('settings.audio_storage_unavailable');
+    el.hidden = false;
+  }
 }
 
 // ===== Chat Presets =====

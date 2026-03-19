@@ -7541,3 +7541,27 @@ body.imported-mode .recording-controls { display: none; }
 .settings-toggle-label { display: flex; align-items: center; justify-content: space-between; }
 .settings-toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
 
+/* Audio storage info in settings */
+.audio-storage-info {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; background: var(--bg-hover); border-radius: 6px;
+  font-size: 12px; color: var(--text-secondary); margin-top: 6px;
+}
+
+/* ===== End Meeting Audio Download Section (P-5) ===== */
+.end-meeting-audio-section {
+  margin-top: 12px; padding: 12px 14px;
+  background: var(--bg-hover); border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+.end-meeting-audio-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.end-meeting-audio-icon { font-size: 20px; }
+.end-meeting-audio-info {
+  display: flex; flex-direction: column; gap: 4px; flex: 1;
+}
+.end-meeting-audio-warn {
+  color: var(--text-muted); font-size: 11px; font-style: italic;
+}
+
