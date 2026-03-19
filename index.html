@@ -113,19 +113,17 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-actions">
-            <select class="btn btn-sm" id="selectAnalysisStyle" title="Analysis Style" style="max-width:120px;font-size:11px;">
-              <option value="copilot" data-i18n="settings.preset_copilot">Copilot</option>
-              <option value="minutes" data-i18n="settings.preset_minutes">Minutes</option>
-              <option value="learning" data-i18n="settings.preset_learning">Learning</option>
-            </select>
             <button class="btn btn-sm" id="btnCopyAnalysis" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
             <button class="btn btn-sm" id="btnAnalyzeNow" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" title="Adjust Prompt">🎯 <span data-i18n="panel.prompt_adjust">Adjust</span></button>
-            <button class="btn btn-sm" id="btnStyleHistory" title="Style History">↩</button>
-            <button class="btn btn-sm" id="btnSaveAsPreset" data-i18n-title="preset_save.btn_tooltip" style="display:none">💾</button>
+            <button class="btn btn-sm" id="btnPromptSettings" title="Analysis Style">🎯 <span data-i18n="panel.analysis_style">분석 스타일</span></button>
           </div>
         </div>
-        <div id="presetSaveFormContainer" hidden></div>
+        <!-- selectAnalysisStyle kept hidden for style-history.js label lookup -->
+        <select id="selectAnalysisStyle" style="display:none;" aria-hidden="true">
+          <option value="copilot" data-i18n="settings.preset_copilot">Conversation Coach</option>
+          <option value="minutes" data-i18n="settings.preset_minutes">Meeting Minutes</option>
+          <option value="learning" data-i18n="settings.preset_learning">Lecture Notes</option>
+        </select>
         <div class="panel-hint-toggle-bar" data-target="analysisHintContainer">
           <span class="panel-hint-toggle">▼</span>
         </div>
@@ -135,10 +133,11 @@
           <button class="panel-hint-dismiss" title="Hide hints">&times;</button>
         </div>
       </div>
-      <div class="analysis-nav" id="analysisNav" style="display:none">
-        <button class="analysis-nav-btn" id="analysisNavPrev" title="Previous analysis (←)">&#8592;</button>
+      <!-- analysisNav removed — navigation now in Analysis Style Modal -->
+      <div class="analysis-nav" id="analysisNav" style="display:none" aria-hidden="true">
+        <button class="analysis-nav-btn" id="analysisNavPrev">&#8592;</button>
         <span class="analysis-nav-label" id="analysisNavLabel"></span>
-        <button class="analysis-nav-btn" id="analysisNavNext" title="Next analysis (→)">&#8594;</button>
+        <button class="analysis-nav-btn" id="analysisNavNext">&#8594;</button>
       </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
@@ -283,24 +282,27 @@
               <span class="preset-card-radio"></span>
               <div class="preset-card-body">
                 <span class="preset-card-icon">🎯</span>
-                <span class="preset-card-name" data-i18n="settings.preset_copilot">Copilot</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_copilot_desc">Real-time analysis for business conversations</span>
+                <span class="preset-card-name" data-i18n="settings.preset_copilot">Conversation Coach</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_copilot_desc">Tells you what to say right now</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_copilot_fit">Client meetings, sales calls, consulting</span>
               </div>
             </label>
             <label class="preset-card" data-preset="minutes">
               <span class="preset-card-radio"></span>
               <div class="preset-card-body">
                 <span class="preset-card-icon">📋</span>
-                <span class="preset-card-name" data-i18n="settings.preset_minutes">Minutes</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Traditional meeting minutes format</span>
+                <span class="preset-card-name" data-i18n="settings.preset_minutes">Meeting Minutes</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Organizes decisions & action items</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_minutes_fit">Team meetings, weekly syncs, kickoffs</span>
               </div>
             </label>
             <label class="preset-card" data-preset="learning">
               <span class="preset-card-radio"></span>
               <div class="preset-card-body">
                 <span class="preset-card-icon">📚</span>
-                <span class="preset-card-name" data-i18n="settings.preset_learning">Learning</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Key concepts & comprehension check</span>
+                <span class="preset-card-name" data-i18n="settings.preset_learning">Lecture Notes</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Captures key concepts & review points</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_learning_fit">Lectures, seminars, mentoring sessions</span>
               </div>
             </label>
           </div>
@@ -557,14 +559,26 @@
         <button class="btn btn-icon modal-close" data-close="exportModal">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="export-format-grid">
-          <button class="btn export-fmt-btn" data-format="txt" title="Text">
-            <span class="export-fmt-icon">TXT</span>
-            <span data-i18n="export.txt">Transcript</span>
+        <div class="export-format-grid export-card-grid">
+          <button class="btn export-fmt-btn export-card-btn" data-format="txt" title="Text">
+            <div class="export-card-icon txt-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div class="export-card-text">
+              <span class="export-card-title" data-i18n="export.txt_title">일반 텍스트 (.txt)</span>
+              <span class="export-card-desc" data-i18n="export.txt_desc">대화 내용만 깔끔하게 보관합니다.<br>문서 요약이나 텍스트 작업에 적합합니다.</span>
+            </div>
+            <div class="export-card-check"></div>
           </button>
-          <button class="btn export-fmt-btn" data-format="srt" title="Subtitle">
-            <span class="export-fmt-icon">SRT</span>
-            <span data-i18n="export.srt">Subtitle</span>
+          <button class="btn export-fmt-btn export-card-btn" data-format="srt" title="Subtitle">
+            <div class="export-card-icon srt-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </div>
+            <div class="export-card-text">
+              <span class="export-card-title" data-i18n="export.srt_title">시간 자막 (.srt)</span>
+              <span class="export-card-desc" data-i18n="export.srt_desc">타임코드가 포함되어 저장됩니다.<br>영상 편집이나 자막 프로그램에 사용하세요.</span>
+            </div>
+            <div class="export-card-check"></div>
           </button>
         </div>
       </div>
@@ -655,9 +669,9 @@
             <div class="history-filter-row">
               <select class="history-filter-control" id="historyFilterType">
                 <option value="" data-i18n="history.filter_all">All Types</option>
-                <option value="copilot" data-i18n="settings.preset_copilot">Copilot</option>
-                <option value="minutes" data-i18n="settings.preset_minutes">Minutes</option>
-                <option value="learning" data-i18n="settings.preset_learning">Learning</option>
+                <option value="copilot" data-i18n="settings.preset_copilot">Conversation Coach</option>
+                <option value="minutes" data-i18n="settings.preset_minutes">Meeting Minutes</option>
+                <option value="learning" data-i18n="settings.preset_learning">Lecture Notes</option>
               </select>
               <select class="history-filter-control" id="historyFilterRating">
                 <option value="" data-i18n="history.filter_all_ratings">All Ratings</option>
@@ -852,9 +866,8 @@
           </div>
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
-            <input type="text" class="settings-input" id="endMeetingLocation" list="locationDatalist" placeholder="Location...">
-            <datalist id="locationDatalist"></datalist>
-            <div class="recent-location-chips" id="recentLocationChips"></div>
+            <input type="text" class="unified-input-field" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
+            <div class="unified-dropdown" id="locationDropdown" hidden></div>
           </div>
         </div>
         <!-- 3. Title + AI suggestions -->
@@ -1098,9 +1111,9 @@
                 <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title, tag, attendee..." style="flex:1">
                 <select class="settings-select" id="refFilterType">
                   <option value="">All</option>
-                  <option value="copilot" data-i18n="settings.preset_copilot">Copilot</option>
-                  <option value="minutes" data-i18n="settings.preset_minutes">Minutes</option>
-                  <option value="learning" data-i18n="settings.preset_learning">Learning</option>
+                  <option value="copilot" data-i18n="settings.preset_copilot">Conversation Coach</option>
+                  <option value="minutes" data-i18n="settings.preset_minutes">Meeting Minutes</option>
+                  <option value="learning" data-i18n="settings.preset_learning">Lecture Notes</option>
                 </select>
               </div>
               <div class="prep-ref-meeting-list" id="refMeetingList"></div>
@@ -1243,6 +1256,37 @@
         <div id="shCurrentPrompt" class="sh-current-section"></div>
         <div id="shList" class="sh-list-section"></div>
         <div id="shDetail" class="sh-detail-section" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Style Modal -->
+  <div class="modal-overlay" id="analysisStyleModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="asm.title">분석 스타일</h3>
+        <button class="btn btn-icon modal-close" id="asmCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body asm-body">
+        <!-- 1. Presets -->
+        <div class="asm-section">
+          <div class="asm-section-label">📋 <span data-i18n="asm.presets_label">분석 스타일</span></div>
+          <div class="asm-presets" id="asmPresets"></div>
+          <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
+          <div id="asmSaveFormContainer" hidden></div>
+        </div>
+        <div class="asm-divider"></div>
+        <!-- 2. AI Chat -->
+        <div class="asm-section asm-section-clickable" id="asmOpenAiChat">
+          <div class="asm-section-label">💬 <span data-i18n="asm.ai_chat_label">AI와 분석 방향 바꾸기</span></div>
+          <div class="asm-section-desc" data-i18n="asm.ai_chat_desc">지금 분석이 마음에 안 드세요?</div>
+        </div>
+        <div class="asm-divider"></div>
+        <!-- 3. Analysis History -->
+        <div class="asm-section">
+          <div class="asm-section-label">🕐 <span data-i18n="asm.history_label">분석 히스토리</span></div>
+          <div class="asm-history-list" id="asmHistoryList"></div>
+        </div>
       </div>
     </div>
   </div>

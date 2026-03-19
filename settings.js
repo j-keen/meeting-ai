@@ -13,7 +13,7 @@ import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
-import { openPromptAdjuster } from './prompt-adjuster.js';
+
 
 
 const $ = (sel) => document.querySelector(sel);
@@ -138,6 +138,9 @@ export function initSettings() {
   // Custom presets list
   initCustomPresets();
 
+  // Refresh custom preset list when changed externally (e.g. prompt builder, deep setup)
+  on('customTypes:change', refreshCustomPresetList);
+
   // Chat System Prompt
   $('#textChatPrompt').addEventListener('change', (e) => {
     state.settings.chatSystemPrompt = e.target.value;
@@ -152,10 +155,7 @@ export function initSettings() {
 
 
 
-  // Prompt adjuster shortcut (from AI panel header)
-  $('#btnPromptSettings')?.addEventListener('click', () => {
-    openPromptAdjuster();
-  });
+  // btnPromptSettings now handled by analysis-style-modal.js
 
   // Chat model select
   const chatModelSelect = $('#chatModelSelect');
@@ -235,12 +235,32 @@ function refreshCustomPresetList() {
         <span class="custom-preset-item-name">${ct.name}</span>
         <span class="custom-preset-item-desc">${ct.context || ct.guidance || ''}</span>
       </div>
-      <button class="custom-preset-item-select btn btn-sm">${t('settings.preset_custom')}</button>
+      <div class="custom-preset-item-actions">
+        <button class="custom-preset-item-select btn btn-sm">${t('settings.preset_custom')}</button>
+        <button class="custom-preset-item-delete btn btn-sm btn-icon" title="${t('settings.custom_type_delete') || 'Delete'}">&times;</button>
+      </div>
     `;
 
     // Click item → open detail modal
     item.querySelector('.custom-preset-item-info').addEventListener('click', () => {
       openPresetDetailModal(ct);
+    });
+
+    // Delete button
+    item.querySelector('.custom-preset-item-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm(t('settings.custom_preset_delete_confirm'))) return;
+      deleteCustomType(ct.id);
+      if (state.settings.meetingPreset === ct.id) {
+        state.settings.meetingPreset = 'copilot';
+        state.settings.customPrompt = getPromptForType('copilot');
+        document.querySelectorAll('.preset-card').forEach(c => {
+          c.classList.toggle('selected', c.dataset.preset === 'copilot');
+        });
+      }
+      emit('toast', { message: t('settings.custom_preset_deleted'), type: 'success' });
+      emit('customTypes:change');
+      refreshCustomPresetList();
     });
 
     // Select button → activate this preset

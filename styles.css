@@ -1622,6 +1622,13 @@ body.loaded-mode #btnNewMeeting { display: none; }
   line-height: 1;
   white-space: nowrap;
 }
+.preset-card-fit {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.7;
+  line-height: 1;
+  white-space: nowrap;
+}
 
 /* Custom preset list */
 .custom-preset-list {
@@ -1668,8 +1675,32 @@ body.loaded-mode #btnNewMeeting { display: none; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.custom-preset-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .custom-preset-item-select {
   flex-shrink: 0;
+}
+.custom-preset-item-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+.custom-preset-item-delete:hover {
+  color: var(--danger, #e53e3e);
+  background: rgba(229, 62, 62, 0.1);
 }
 
 @media (max-width: 600px) {
@@ -2902,19 +2933,82 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .export-format-grid {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
 }
+.export-card-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
 .export-fmt-btn {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 16px 8px; border-radius: 10px; font-size: 12px;
   border: 1.5px solid var(--border); cursor: pointer;
   transition: border-color 0.15s, background 0.15s, transform 0.1s;
 }
+.export-fmt-btn.export-card-btn {
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+  padding: 16px 20px;
+  background-color: var(--bg-primary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
 .export-fmt-btn:hover { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, transparent); transform: translateY(-1px); }
+.export-fmt-btn.export-card-btn:hover {
+  background-color: color-mix(in srgb, var(--primary) 3%, transparent);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
 .export-fmt-btn:active { transform: translateY(0); }
 .export-fmt-btn:disabled { opacity: 0.5; pointer-events: none; }
 .export-fmt-icon {
   font-size: 20px; font-weight: 700; color: var(--primary);
   width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
   border-radius: 8px; background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.export-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  flex-shrink: 0;
+}
+.export-card-text {
+  flex: 1;
+  margin-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.export-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.export-card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+.export-card-check {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  margin-left: 16px;
+  position: relative;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.export-fmt-btn.export-card-btn:hover .export-card-check {
+  border-color: var(--primary);
 }
 
 /* ===== Accessibility ===== */
@@ -3310,6 +3404,11 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-bg);
+}
+.ai-title-chip.selected {
+  background: var(--accent);
+  color: var(--text-inverse);
+  border-color: var(--accent);
 }
 
 /* (Tags chips — merged into unified-badge) */
@@ -4039,33 +4138,9 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--accent);
 }
 
-/* Recent location chips (end-meeting modal) */
-.recent-location-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-.recent-location-chip {
-  font-size: 11px;
-  padding: 2px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-.recent-location-chip:hover {
-  background: var(--bg-tertiary, var(--bg-secondary));
-  border-color: var(--accent);
-  color: var(--text-primary);
-}
-.recent-location-chip.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+/* Location "Add new" item accent */
+.location-add-new {
+  color: var(--accent);
 }
 
 /* ===== Data Modal Buttons & Badges ===== */
@@ -5710,7 +5785,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 
 /* Regen modal — reuses minutes-model-card styles, sits above minutes preview */
 #regenModal {
-  z-index: 210;
+  z-index: 300;
 }
 #regenModal .minutes-model-card.active {
   border-color: var(--accent);
@@ -6362,6 +6437,136 @@ body.loaded-mode #btnNewMeeting { display: none; }
     width: 100%;
     justify-content: flex-end;
   }
+}
+
+/* ===== Analysis Style Modal ===== */
+.asm-body {
+  padding: 0 !important;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.asm-section {
+  padding: 14px 20px;
+}
+.asm-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+.asm-section-clickable {
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+.asm-section-clickable:hover {
+  background: var(--bg-hover);
+}
+.asm-section-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.asm-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 0 20px;
+}
+.asm-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.asm-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.asm-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.asm-preset-chip:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.asm-preset-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-light, rgba(59, 130, 246, 0.1));
+  color: var(--accent);
+  font-weight: 600;
+}
+.asm-preset-check {
+  font-size: 11px;
+  min-width: 14px;
+  color: var(--accent);
+}
+.asm-custom-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  margin-bottom: -2px;
+}
+.asm-preset-custom {
+  border-style: dashed;
+}
+.asm-save-btn {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.asm-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.asm-history-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+.asm-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 12px;
+}
+.asm-history-item:hover {
+  background: var(--bg-hover);
+}
+.asm-history-num {
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 28px;
+}
+.asm-history-time {
+  color: var(--text-secondary);
+  min-width: 48px;
+  white-space: nowrap;
+}
+.asm-history-preview {
+  flex: 1;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ===== Prompt Adjuster Modal ===== */

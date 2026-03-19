@@ -150,12 +150,15 @@ const translations = {
     'settings.strategy_full': 'Full Transcript',
     'settings.recent_minutes': 'Recent Minutes:',
     'settings.meeting_type': 'Meeting Type',
-    'settings.preset_copilot': 'Copilot',
-    'settings.preset_minutes': 'Minutes',
-    'settings.preset_learning': 'Learning',
-    'settings.preset_copilot_desc': 'Real-time analysis for business conversations',
-    'settings.preset_minutes_desc': 'Traditional meeting minutes format',
-    'settings.preset_learning_desc': 'Key concepts & comprehension check',
+    'settings.preset_copilot': 'Conversation Coach',
+    'settings.preset_minutes': 'Meeting Minutes',
+    'settings.preset_learning': 'Lecture Notes',
+    'settings.preset_copilot_desc': 'Tells you what to say right now',
+    'settings.preset_minutes_desc': 'Organizes decisions & action items',
+    'settings.preset_learning_desc': 'Captures key concepts & review points',
+    'settings.preset_copilot_fit': 'Client meetings, sales calls, consulting',
+    'settings.preset_minutes_fit': 'Team meetings, weekly syncs, kickoffs',
+    'settings.preset_learning_fit': 'Lectures, seminars, mentoring sessions',
     'settings.preset_custom': 'Custom',
     'settings.meeting_context': 'Meeting Context',
     'settings.context_placeholder': 'Describe the meeting context, goals, participants...',
@@ -225,6 +228,10 @@ const translations = {
 
     // Export modal
     'export.title': 'Transcript Export',
+    'export.txt_title': 'Plain Text (.txt)',
+    'export.txt_desc': 'Clean transcript only.\nGood for summaries or documents.',
+    'export.srt_title': 'Subtitle (.srt)',
+    'export.srt_desc': 'Includes timecodes.\nGood for video editing or captions.',
     'export.txt': 'Transcript',
     'export.srt': 'Subtitle',
     'export.clipboard': 'Copy',
@@ -434,9 +441,9 @@ const translations = {
     'prep.step_attendees': 'Who\'s attending?',
     'prep.step_prompt': 'Any special instructions for AI analysis?',
     'prep.step_standby': 'Session setup complete!',
-    'prep.type_copilot': 'Copilot',
-    'prep.type_minutes': 'Minutes',
-    'prep.type_learning': 'Learning',
+    'prep.type_copilot': 'Conversation Coach',
+    'prep.type_minutes': 'Meeting Minutes',
+    'prep.type_learning': 'Lecture Notes',
     'prep.skip': 'Skip',
     'prep.use_default': 'Use Default',
     'prep.edit_prompt': 'Edit',
@@ -476,12 +483,12 @@ const translations = {
     'prep.camera_permission': 'Camera permission required',
     'prep.select_preset': 'Select a preset...',
     'prep.delete_preset': 'Delete Preset',
-    'prep.type_copilot_desc': 'Real-time business conversation analysis',
-    'prep.type_minutes_desc': 'Summary, decisions, action items',
-    'prep.type_learning_desc': 'Key concepts & comprehension check',
-    'prep.type_copilot_tooltip': 'Catches what you miss in real-time — topics, contradictions, whispers',
-    'prep.type_minutes_tooltip': 'Traditional minutes — summary, decisions, action items',
-    'prep.type_learning_tooltip': 'Key concepts, comprehension check, generated questions',
+    'prep.type_copilot_desc': 'Tells you what to say right now',
+    'prep.type_minutes_desc': 'Decisions & action items',
+    'prep.type_learning_desc': 'Key concepts & review points',
+    'prep.type_copilot_tooltip': '6-lens analysis, recommended remarks, tone mirroring, discussion tracker',
+    'prep.type_minutes_tooltip': 'Summary, key discussions, decisions, action items',
+    'prep.type_learning_tooltip': 'Key concepts, comprehension check, questions to explore',
     'prep.agenda_goal': 'What is the goal?',
     'prep.agenda_goal_hint': 'Goals to achieve...',
     'prep.agenda_context': 'Background/context?',
@@ -618,6 +625,15 @@ const translations = {
     'link.empty': 'No linked meetings',
     'link.unlink_confirm': 'Unlink this meeting?',
 
+    // Analysis Style Modal
+    'panel.analysis_style': 'Analysis Style',
+    'asm.title': 'Analysis Style',
+    'asm.presets_label': 'Analysis Style',
+    'asm.save_style': 'Save this analysis style',
+    'asm.ai_chat_label': 'Change analysis direction with AI',
+    'asm.ai_chat_desc': 'Not happy with the current analysis?',
+    'asm.history_label': 'Analysis History',
+
     // Prompt Adjuster
     'panel.prompt_adjust': 'Change Style',
     'pa.title': 'Change Analysis Style',
@@ -659,6 +675,10 @@ const translations = {
     'end_meeting.importance': 'Importance',
     'end_meeting.participants': 'Participants',
     'end_meeting.location': 'Location',
+    'end_meeting.location_placeholder': 'Search or add location...',
+    'end_meeting.recent_locations': 'Recent',
+    'end_meeting.all_locations': 'All Locations',
+    'end_meeting.add_location': 'Add',
     'end_meeting.datetime': 'Date / Time',
     'end_meeting.export_minutes': 'Export Minutes',
     'end_meeting.view_minutes': 'View Minutes',
@@ -1040,12 +1060,15 @@ const translations = {
     'settings.strategy_full': '전체 회의록',
     'settings.recent_minutes': '최근 시간(분):',
     'settings.meeting_type': '회의 유형',
-    'settings.preset_copilot': '코파일럿',
-    'settings.preset_minutes': '회의록',
-    'settings.preset_learning': '학습/메모',
-    'settings.preset_copilot_desc': '비즈니스 대화를 위한 실시간 분석',
-    'settings.preset_minutes_desc': '전통적 회의록 스타일 정리',
-    'settings.preset_learning_desc': '핵심 개념 추출 & 이해도 체크',
+    'settings.preset_copilot': '대화 코치',
+    'settings.preset_minutes': '회의록 정리',
+    'settings.preset_learning': '강의 노트',
+    'settings.preset_copilot_desc': '지금 뭘 말할지 알려드려요',
+    'settings.preset_minutes_desc': '결정사항과 액션 아이템을 정리해요',
+    'settings.preset_learning_desc': '핵심 개념과 복습 포인트를 잡아줘요',
+    'settings.preset_copilot_fit': '클라이언트 미팅, 세일즈콜, 상담/컨설팅',
+    'settings.preset_minutes_fit': '팀 회의, 주간 회의, 킥오프',
+    'settings.preset_learning_fit': '강의, 세미나, 자문, 멘토링',
     'settings.preset_custom': '사용자 정의',
     'settings.meeting_context': '회의 배경',
     'settings.context_placeholder': '회의 배경, 목표, 참석자를 설명하세요...',
@@ -1115,6 +1138,10 @@ const translations = {
 
     // Export modal
     'export.title': '녹취록 내보내기',
+    'export.txt_title': '일반 텍스트 (.txt)',
+    'export.txt_desc': '대화 내용만 깔끔하게 저장합니다.\n문서 요약이나 텍스트 작업에 적합해요.',
+    'export.srt_title': '시간 자막 (.srt)',
+    'export.srt_desc': '타임코드(시간 정보)가 포함됩니다.\n영상 편집 및 자막 프로그램용입니다.',
     'export.txt': '녹취록',
     'export.srt': '자막 파일',
     'export.clipboard': '복사',
@@ -1324,9 +1351,9 @@ const translations = {
     'prep.step_attendees': '참석자를 선택해주세요',
     'prep.step_prompt': 'AI 분석에 특별 지시사항이 있나요?',
     'prep.step_standby': '세션 준비가 완료되었습니다!',
-    'prep.type_copilot': '코파일럿',
-    'prep.type_minutes': '회의록',
-    'prep.type_learning': '학습/메모',
+    'prep.type_copilot': '대화 코치',
+    'prep.type_minutes': '회의록 정리',
+    'prep.type_learning': '강의 노트',
     'prep.skip': '건너뛰기',
     'prep.use_default': '기본 사용',
     'prep.edit_prompt': '수정',
@@ -1366,12 +1393,12 @@ const translations = {
     'prep.camera_permission': '카메라 권한이 필요합니다',
     'prep.select_preset': '프리셋 선택...',
     'prep.delete_preset': '프리셋 삭제',
-    'prep.type_copilot_desc': '비즈니스 대화 실시간 분석',
-    'prep.type_minutes_desc': '요약, 결정 사항, 액션 아이템',
-    'prep.type_learning_desc': '핵심 개념 추출 & 이해도 체크',
-    'prep.type_copilot_tooltip': '놓치는 것을 잡아줍니다 — 논의 주제, 모순, 귓속말',
-    'prep.type_minutes_tooltip': '전통적 회의록 — 요약, 결정 사항, 액션 아이템',
-    'prep.type_learning_tooltip': '핵심 개념, 이해도 체크, 질문 생성',
+    'prep.type_copilot_desc': '지금 뭘 말할지 알려드려요',
+    'prep.type_minutes_desc': '결정사항과 액션 아이템',
+    'prep.type_learning_desc': '핵심 개념과 복습 포인트',
+    'prep.type_copilot_tooltip': '6렌즈 분석, 추천 멘트, 톤 미러링, 논의 트래커',
+    'prep.type_minutes_tooltip': '요약, 주요 논의, 결정 사항, 액션 아이템',
+    'prep.type_learning_tooltip': '핵심 개념, 이해도 체크, 탐구 질문',
     'prep.agenda_goal': '목표는 무엇인가요?',
     'prep.agenda_goal_hint': '달성해야 할 목표...',
     'prep.agenda_context': '배경/맥락은?',
@@ -1508,6 +1535,15 @@ const translations = {
     'link.empty': '연결된 미팅 없음',
     'link.unlink_confirm': '이 미팅 연결을 해제할까요?',
 
+    // Analysis Style Modal
+    'panel.analysis_style': '분석 스타일',
+    'asm.title': '분석 스타일',
+    'asm.presets_label': '분석 스타일',
+    'asm.save_style': '이 분석 스타일 저장',
+    'asm.ai_chat_label': 'AI와 분석 방향 바꾸기',
+    'asm.ai_chat_desc': '지금 분석이 마음에 안 드세요?',
+    'asm.history_label': '분석 히스토리',
+
     // Prompt Adjuster
     'panel.prompt_adjust': '분석 스타일 변경',
     'pa.title': '분석 스타일 변경',
@@ -1549,6 +1585,10 @@ const translations = {
     'end_meeting.importance': '중요도',
     'end_meeting.participants': '참석자',
     'end_meeting.location': '장소',
+    'end_meeting.location_placeholder': '장소 검색 또는 추가...',
+    'end_meeting.recent_locations': '최근 사용',
+    'end_meeting.all_locations': '전체 장소',
+    'end_meeting.add_location': '추가',
     'end_meeting.datetime': '회의 일시',
     'end_meeting.export_minutes': '회의록 내보내기',
     'end_meeting.view_minutes': '회의록 보기',
@@ -1978,8 +2018,8 @@ General rules:
 // Prompt presets for quick selection
 const AI_PROMPT_PRESETS = {
   en: {
-    default: { name: 'Copilot', prompt: null },
-    minutes: { name: 'Minutes', prompt: `You are a meeting minutes assistant. Respond in English using Markdown.
+    default: { name: 'Conversation Coach', prompt: null },
+    minutes: { name: 'Meeting Minutes', prompt: `You are a meeting minutes assistant. Respond in English using Markdown.
 
 ## Summary
 2-3 sentence overview of the meeting so far.
@@ -2006,7 +2046,7 @@ Rules:
 - Record specific numbers, dates, names, and technical terms exactly as stated
 - Focus on capturing decisions and action items accurately
 - CRITICAL: All output MUST be in English.` },
-    learning: { name: 'Learning', prompt: `You are a learning assistant helping capture key insights. Respond in English using Markdown.
+    learning: { name: 'Lecture Notes', prompt: `You are a learning assistant helping capture key insights. Respond in English using Markdown.
 
 ## Topic
 What is being taught/discussed — one line.
@@ -2038,8 +2078,8 @@ Rules:
 - CRITICAL: All output MUST be in English.` },
   },
   ko: {
-    default: { name: '코파일럿', prompt: null },
-    minutes: { name: '회의록', prompt: `당신은 회의록 작성 도우미입니다. 한국어 마크다운으로 응답하세요.
+    default: { name: '대화 코치', prompt: null },
+    minutes: { name: '회의록 정리', prompt: `당신은 회의록 작성 도우미입니다. 한국어 마크다운으로 응답하세요.
 
 ## 요약
 2-3문장으로 회의 개요.
@@ -2066,7 +2106,7 @@ Rules:
 - 구체적 수치, 날짜, 이름, 기술 용어는 그대로 기록
 - 결정 사항과 액션 아이템을 정확히 포착하는 데 집중
 - 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.` },
-    learning: { name: '학습/메모', prompt: `당신은 핵심 인사이트를 포착하는 학습 도우미입니다. 한국어 마크다운으로 응답하세요.
+    learning: { name: '강의 노트', prompt: `당신은 핵심 인사이트를 포착하는 학습 도우미입니다. 한국어 마크다운으로 응답하세요.
 
 ## 주제
 무엇을 배우고/논의하고 있는지 — 한 줄.

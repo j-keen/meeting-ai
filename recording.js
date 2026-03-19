@@ -871,42 +871,12 @@ export function showEndMeetingModal(editMeeting) {
   updateStarRating(state.starRating);
   renderEndMeetingParticipants();
 
+  // Show participant dropdown immediately so users see available contacts on open
+  updateParticipantDropdown('');
+
   const locationInput = $('#endMeetingLocation');
   locationInput.value = state.meetingLocation || '';
-  const datalist = $('#locationDatalist');
-  datalist.innerHTML = '';
-  const locations = loadLocations();
-  const locFreq = getLocationFrequency();
-  const sortedLocs = [...locations].sort((a, b) => {
-    const fa = locFreq[a.name] || 0, fb = locFreq[b.name] || 0;
-    if (fb !== fa) return fb - fa;
-    return a.name.localeCompare(b.name);
-  });
-  sortedLocs.forEach(loc => {
-    const opt = document.createElement('option');
-    opt.value = loc.name;
-    datalist.appendChild(opt);
-  });
-
-  // Recent location chips (top 3 by frequency)
-  const chipsContainer = $('#recentLocationChips');
-  if (chipsContainer) {
-    chipsContainer.innerHTML = '';
-    const recentLocs = sortedLocs.filter(l => (locFreq[l.name] || 0) > 0).slice(0, 3);
-    for (const loc of recentLocs) {
-      const chip = document.createElement('button');
-      chip.className = 'recent-location-chip';
-      chip.textContent = loc.name;
-      if (loc.memo) chip.title = loc.memo;
-      chip.addEventListener('click', () => {
-        locationInput.value = loc.name;
-        state.meetingLocation = loc.name;
-        chipsContainer.querySelectorAll('.recent-location-chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-      });
-      chipsContainer.appendChild(chip);
-    }
-  }
+  updateLocationDropdown('');
 
   // AI title/tag generation (with caching) — skip in edit mode
   const suggestionsEl = $('#aiTitleSuggestions');
@@ -1109,9 +1079,14 @@ function renderTitleChips(titles, container, titleInput) {
   titles.forEach((title, i) => {
     const chip = document.createElement('button');
     chip.className = 'ai-title-chip';
+    if (titleInput.value === title) chip.classList.add('selected');
     chip.style.animationDelay = `${i * 0.08}s`;
     chip.textContent = title;
-    chip.addEventListener('click', () => { titleInput.value = title; });
+    chip.addEventListener('click', () => {
+      titleInput.value = title;
+      container.querySelectorAll('.ai-title-chip').forEach(c => c.classList.remove('selected'));
+      chip.classList.add('selected');
+    });
     container.appendChild(chip);
   });
 }
@@ -1153,18 +1128,12 @@ function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
 export function renderEndMeetingTags() {
   const container = $('#endMeetingTags');
   container.innerHTML = '';
-  let aiIdx = 0;
   state.tags.forEach(tag => {
-    const isAi = state._aiTags && state._aiTags.includes(tag);
     const badge = createUnifiedBadge(tag, () => {
       state.tags = state.tags.filter(t2 => t2 !== tag);
       if (state._aiTags) state._aiTags = state._aiTags.filter(t2 => t2 !== tag);
       renderEndMeetingTags();
-    }, isAi);
-    if (isAi) {
-      badge.style.animationDelay = `${aiIdx * 0.08}s`;
-      aiIdx++;
-    }
+    });
     container.appendChild(badge);
   });
 }
@@ -1301,6 +1270,108 @@ export function updateTagDropdown(query) {
   dropdown.hidden = false;
 }
 
+// Dropdown for location input — shows saved locations filtered by query
+export function updateLocationDropdown(query) {
+  const dropdown = $('#locationDropdown');
+  const locations = loadLocations();
+  const locFreq = getLocationFrequency();
+  const q = query.toLowerCase().trim();
+
+  // Sort by frequency (most used first), then alphabetically
+  const sorted = [...locations].sort((a, b) => {
+    const fa = locFreq[a.name] || 0, fb = locFreq[b.name] || 0;
+    if (fb !== fa) return fb - fa;
+    return a.name.localeCompare(b.name);
+  });
+
+  // Filter by query
+  const filtered = q
+    ? sorted.filter(loc => loc.name.toLowerCase().includes(q))
+    : sorted;
+
+  dropdown.innerHTML = '';
+
+  // If there are matching locations, show them
+  if (filtered.length > 0) {
+    // Separate frequent (used) and others
+    const frequent = filtered.filter(l => (locFreq[l.name] || 0) > 0);
+    const others = filtered.filter(l => (locFreq[l.name] || 0) === 0);
+
+    if (frequent.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'unified-dropdown-section';
+      const header = document.createElement('div');
+      header.className = 'unified-dropdown-header';
+      header.textContent = t('end_meeting.recent_locations') || 'Recent';
+      section.appendChild(header);
+      frequent.slice(0, 5).forEach(loc => {
+        section.appendChild(createLocationItem(loc, locFreq[loc.name] || 0));
+      });
+      dropdown.appendChild(section);
+    }
+
+    if (others.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'unified-dropdown-section';
+      const header = document.createElement('div');
+      header.className = 'unified-dropdown-header';
+      header.textContent = t('end_meeting.all_locations') || 'All';
+      section.appendChild(header);
+      others.slice(0, 5).forEach(loc => {
+        section.appendChild(createLocationItem(loc, 0));
+      });
+      dropdown.appendChild(section);
+    }
+  }
+
+  // If user typed something that doesn't exactly match, show "Add new" option
+  if (q && !locations.some(l => l.name.toLowerCase() === q)) {
+    const section = document.createElement('div');
+    section.className = 'unified-dropdown-section';
+    const item = document.createElement('div');
+    item.className = 'unified-dropdown-item location-add-new';
+    item.innerHTML = `<span style="color:var(--accent)">+ </span><span>${t('end_meeting.add_location') || 'Add'} "<strong>${query.trim()}</strong>"</span>`;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const name = query.trim();
+      $('#endMeetingLocation').value = name;
+      state.meetingLocation = name;
+      dropdown.hidden = true;
+    });
+    section.appendChild(item);
+    dropdown.appendChild(section);
+  }
+
+  dropdown.hidden = dropdown.children.length === 0;
+}
+
+function createLocationItem(loc, freq) {
+  const item = document.createElement('div');
+  item.className = 'unified-dropdown-item';
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = loc.name;
+  item.appendChild(nameSpan);
+  if (loc.memo) {
+    const memoSpan = document.createElement('span');
+    memoSpan.className = 'unified-dropdown-item-sub';
+    memoSpan.textContent = loc.memo;
+    item.appendChild(memoSpan);
+  }
+  if (freq > 0) {
+    const freqSpan = document.createElement('span');
+    freqSpan.className = 'unified-dropdown-item-sub';
+    freqSpan.textContent = `${freq}×`;
+    item.appendChild(freqSpan);
+  }
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('#endMeetingLocation').value = loc.name;
+    state.meetingLocation = loc.name;
+    $('#locationDropdown').hidden = true;
+  });
+  return item;
+}
+
 // Save metadata only (no minutes generation)
 export async function finalizeEndMeeting() {
   state.meetingTitle = $('#endMeetingTitle').value.trim();
@@ -1341,10 +1412,11 @@ export async function finalizeEndMeeting() {
   autoSave();
   clearDraftRecovery();
 
-  // Show post-save screen instead of closing
+  // Close modal and show toast
   footer.classList.remove('save-progress-state');
   if (body) body.classList.remove('disabled-form');
-  showPostSaveScreen();
+  closeAndFinalizeMeeting();
+  showCenterToast(t('end_meeting.save_complete'));
 }
 
 // Save + generate minutes with selected model
@@ -1389,137 +1461,6 @@ async function finalizeWithMinutes() {
   });
 }
 
-function showPostSaveScreen() {
-  const modal = $('#endMeetingModal .modal');
-  if (!modal) return;
-
-  // Build summary text
-  const lines = state.transcript.length;
-  const memos = state.memos.length;
-  const analyses = state.analysisHistory.length;
-  const summaryParts = [];
-  if (lines > 0) summaryParts.push(`${lines} ${t('end_meeting.stat_transcript')}`);
-  if (memos > 0) summaryParts.push(`${memos} ${t('end_meeting.stat_memos')}`);
-  if (analyses > 0) summaryParts.push(`${analyses} ${t('end_meeting.stat_analyses')}`);
-  const summaryText = summaryParts.join(' · ');
-
-  // Create overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'post-save-overlay';
-  overlay.innerHTML = `
-    <div class="post-save-success">
-      <span class="post-save-check">✓</span>
-      <span class="post-save-title">${t('end_meeting.save_complete')}</span>
-      ${summaryText ? `<span class="post-save-summary">${summaryText}</span>` : ''}
-    </div>
-    <div class="post-save-actions">
-      ${analyses > 0 ? `<button class="post-save-action-btn" data-action="view-minutes">
-        <span class="action-icon">📋</span>
-        <span class="action-label">${t('end_meeting.post_view_minutes')}</span>
-      </button>` : ''}
-      <button class="post-save-action-btn" data-action="export">
-        <span class="action-icon">📤</span>
-        <span class="action-label">${t('end_meeting.post_export')}</span>
-      </button>
-      <button class="post-save-action-btn" data-action="edit">
-        <span class="action-icon">✏️</span>
-        <span class="action-label">${t('end_meeting.post_edit')}</span>
-      </button>
-    </div>
-    <div class="post-save-bottom">
-      <button class="btn" data-action="resume">${t('end_meeting.post_resume')}</button>
-      <button class="btn btn-primary" data-action="new">${t('end_meeting.post_new')}</button>
-      <button class="btn" data-action="close">${t('end_meeting.post_close')}</button>
-    </div>
-  `;
-
-  modal.style.position = 'relative';
-  modal.appendChild(overlay);
-
-  // Event delegation
-  overlay.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action]');
-    if (!btn) return;
-    const action = btn.dataset.action;
-
-    const removeOverlay = () => {
-      overlay.remove();
-      modal.style.position = '';
-    };
-
-    switch (action) {
-      case 'view-minutes':
-        removeOverlay();
-        closeAndFinalizeMeeting();
-        const aiPanel = document.querySelector('#aiSections');
-        if (aiPanel) aiPanel.scrollIntoView({ behavior: 'smooth' });
-        break;
-      case 'export':
-        removeOverlay();
-        closeAndFinalizeMeeting();
-        $('#exportModal').hidden = false;
-        break;
-      case 'edit':
-        removeOverlay();
-        // Re-enable the form — user stays in save modal to edit
-        state.meetingEnded = false;
-        const footer = $('#endMeetingFooter');
-        footer.classList.remove('save-progress-state', 'save-complete-state', 'save-error-state');
-        const footerActions = $('#endMeetingFooterActions');
-        footerActions.innerHTML = '';
-        const cancelBtn = document.createElement('button');
-        cancelBtn.className = 'btn';
-        cancelBtn.textContent = t('end_meeting.cancel');
-        cancelBtn.onclick = () => cancelEndMeeting();
-        const genBtn = document.createElement('button');
-        genBtn.className = 'btn btn-accent';
-        genBtn.textContent = t('end_meeting.generate_minutes');
-        genBtn.id = 'btnGenerateMinutes';
-        genBtn.onclick = () => {
-          const modelModal = $('#minutesModelModal');
-          modelModal.hidden = false;
-          const proCount = getProUsageCount();
-          const proUsageEl = $('#modelModalProUsage');
-          if (proUsageEl && proCount > 0) {
-            proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
-            proUsageEl.hidden = false;
-          }
-        };
-        if (!isProxyAvailable() || state.transcript.length === 0) genBtn.hidden = true;
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'btn btn-primary';
-        saveBtn.textContent = t('end_meeting.save');
-        saveBtn.onclick = () => finalizeEndMeeting();
-        footerActions.append(cancelBtn, genBtn, saveBtn);
-        break;
-      case 'resume':
-        removeOverlay();
-        $('#endMeetingModal').hidden = true;
-        resumeMeeting();
-        break;
-      case 'new':
-        removeOverlay();
-        $('#endMeetingModal').hidden = true;
-        resetMeeting();
-        restoreEndButton(false);
-        break;
-      case 'close':
-        removeOverlay();
-        closeAndFinalizeMeeting();
-        break;
-    }
-  });
-
-  // X button closes to post-end state
-  const closeBtn = $('#endMeetingModal .modal-close');
-  const origClose = closeBtn.onclick;
-  closeBtn.onclick = (e) => {
-    e.stopPropagation();
-    overlay.remove();
-    modal.style.position = '';
-    closeAndFinalizeMeeting();
-  };
-}
 
 function updatePostEndUI() {
   const recBtn = $('#btnRecord');
@@ -1548,7 +1489,6 @@ function closeAndFinalizeMeeting() {
   pill2.classList.add('paused');
   const titleInput = $('#meetingTitleInput');
   if (titleInput) titleInput.hidden = true;
-  showToast(t('toast.meeting_saved'), 'success');
 }
 
 export function showSaveFooterWithMinutesReady(onViewMinutes) {
@@ -1632,8 +1572,9 @@ function showSaveComplete() {
   const body = $('#endMeetingModal .modal-body');
   if (body) body.classList.remove('disabled-form');
 
-  // Show the rich post-save screen
-  showPostSaveScreen();
+  // Close modal and show toast
+  closeAndFinalizeMeeting();
+  showCenterToast(t('end_meeting.save_complete'));
 }
 
 function showSaveError(errorMsg) {

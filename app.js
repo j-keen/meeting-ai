@@ -38,12 +38,12 @@ import { initPromptBuilder } from './prompt-builder.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
 import { initStyleHistory, pushStyleHistory } from './style-history.js';
-import { createPresetSaveForm } from './preset-save.js';
+import { initAnalysisStyleModal } from './analysis-style-modal.js';
 import {
   generateId, startRecording, stopRecording, endMeeting, resumeFromLoaded,
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting, showEndMeetingModal,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
-  updateParticipantDropdown, updateTagDropdown,
+  updateParticipantDropdown, updateTagDropdown, updateLocationDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
   clearDraftRecovery, saveActiveSession,
@@ -70,6 +70,7 @@ function init() {
   initDeepSetup();
   initPromptAdjuster();
   initStyleHistory();
+  initAnalysisStyleModal();
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -127,120 +128,34 @@ function init() {
     runAnalysis();
   });
 
-  // Analysis style dropdown
+  // Keep hidden selectAnalysisStyle in sync for style-history label lookup
   const analysisStyleSelect = $('#selectAnalysisStyle');
   if (analysisStyleSelect) {
-    // Set initial value from settings
-    const initialPreset = state.settings.meetingPreset || 'copilot';
-    // If it's a built-in preset, select it directly; custom presets get added dynamically
-    if (['copilot', 'minutes', 'learning'].includes(initialPreset)) {
-      analysisStyleSelect.value = initialPreset;
-    }
-
-    // Populate custom types
-    function refreshAnalysisStyleOptions() {
-      // Remove old custom options
+    const refreshHiddenOptions = () => {
       analysisStyleSelect.querySelectorAll('option[data-custom]').forEach(o => o.remove());
       analysisStyleSelect.querySelectorAll('optgroup[data-custom]').forEach(o => o.remove());
-
       const customTypes = loadCustomTypes();
       if (customTypes.length > 0) {
         const group = document.createElement('optgroup');
-        group.label = '\u2605 Custom';
+        group.label = 'Custom';
         group.dataset.custom = '1';
         customTypes.forEach(ct => {
           const opt = document.createElement('option');
           opt.value = ct.id;
-          opt.textContent = '\u2605 ' + ct.name;
+          opt.textContent = ct.name;
           opt.dataset.custom = '1';
           group.appendChild(opt);
         });
         analysisStyleSelect.appendChild(group);
       }
+    };
+    refreshHiddenOptions();
+    on('customTypes:change', refreshHiddenOptions);
 
-      // Set value after custom options are added
-      if (initialPreset.startsWith('custom_')) {
-        analysisStyleSelect.value = initialPreset;
-      }
-    }
-    refreshAnalysisStyleOptions();
-
-    // Save-as-preset button visibility
-    const btnSaveAsPreset = $('#btnSaveAsPreset');
-    const presetSaveFormContainer = $('#presetSaveFormContainer');
-
-    function updateSavePresetBtnVisibility() {
-      const defaultPrompt = getPromptForType(state.settings.meetingPreset);
-      const isCustom = state.settings.customPrompt && state.settings.customPrompt !== defaultPrompt;
-      btnSaveAsPreset.style.display = isCustom ? '' : 'none';
-      if (!isCustom && presetSaveFormContainer) presetSaveFormContainer.hidden = true;
-    }
-
-    btnSaveAsPreset.addEventListener('click', () => {
-      if (!presetSaveFormContainer.hidden) {
-        presetSaveFormContainer.hidden = true;
-        return;
-      }
-      presetSaveFormContainer.hidden = false;
-      createPresetSaveForm(presetSaveFormContainer, state.settings.customPrompt, {
-        onSaved(newPreset) {
-          state.settings.meetingPreset = newPreset.id;
-          saveSettings(state.settings);
-          analysisStyleSelect.value = newPreset.id;
-          updateSavePresetBtnVisibility();
-          presetSaveFormContainer.hidden = true;
-        },
-        onCancel() {
-          presetSaveFormContainer.hidden = true;
-        },
-      });
-    });
-
-    analysisStyleSelect.addEventListener('change', (e) => {
-      // Save current style to history before changing
-      pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'dropdown');
-      const type = e.target.value;
-      state.settings.meetingPreset = type;
-      state.settings.customPrompt = getPromptForType(type);
-      emit('customPrompt:change');
-      // Apply extended custom type fields (from AI prompt builder)
-      if (type.startsWith('custom_')) {
-        const customTypes = loadCustomTypes();
-        const ct = customTypes.find(c => c.id === type);
-        if (ct) {
-          if (ct.chatSystemPrompt) state.settings.chatSystemPrompt = ct.chatSystemPrompt;
-          if (ct.chatPresets?.length) state.settings.chatPresets = ct.chatPresets;
-          if (ct.memoHint) {
-            const ph = $('#memoPlaceholder');
-            if (ph) ph.textContent = ct.memoHint;
-          }
-          if (ct.context) state.settings.meetingContext = ct.context;
-        }
-      }
-      // If recording and has transcript, run analysis immediately
-      if (state.transcript.length > 0) {
-        runAnalysis();
-      }
-    });
-
-    // Sync when meeting prep completes
+    // Sync preset from meeting prep
     on('meetingPrep:complete', (config) => {
-      if (config.meetingType) {
-        analysisStyleSelect.value = config.meetingType;
-      }
+      if (config.meetingType) analysisStyleSelect.value = config.meetingType;
     });
-
-    // Refresh when custom types change
-    on('customTypes:change', () => {
-      refreshAnalysisStyleOptions();
-      updateSavePresetBtnVisibility();
-    });
-
-    on('customPrompt:change', () => {
-      updateSavePresetBtnVisibility();
-    });
-
-    updateSavePresetBtnVisibility();
   }
 
   // Open meeting prep from settings "Add Custom Preset" button
@@ -351,6 +266,22 @@ function init() {
   tagInput.addEventListener('input', () => updateTagDropdown(tagInput.value));
   tagInput.addEventListener('focus', () => updateTagDropdown(tagInput.value));
 
+  // Location input (with keyboard navigation + add new)
+  const locationInput = $('#endMeetingLocation');
+  locationInput.addEventListener('keydown', (e) => {
+    if (handleDropdownKeyboard(e, '#locationDropdown', null)) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const name = e.target.value.trim();
+      if (name) {
+        state.meetingLocation = name;
+        $('#locationDropdown').hidden = true;
+      }
+    }
+  });
+  locationInput.addEventListener('input', () => updateLocationDropdown(locationInput.value));
+  locationInput.addEventListener('focus', () => updateLocationDropdown(locationInput.value));
+
   // Participant search input (with keyboard navigation)
   const participantInput = $('#endMeetingParticipantInput');
   participantInput.addEventListener('keydown', (e) => {
@@ -412,6 +343,9 @@ function init() {
     }
     if (!e.target.closest('#endMeetingTagInput') && !e.target.closest('#tagDropdown')) {
       $('#tagDropdown').hidden = true;
+    }
+    if (!e.target.closest('#endMeetingLocation') && !e.target.closest('#locationDropdown')) {
+      $('#locationDropdown').hidden = true;
     }
   });
 

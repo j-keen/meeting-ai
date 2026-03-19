@@ -366,12 +366,12 @@ function renderAnalysisContent(container, analysis) {
 
 export function updateAnalysisNav() {
   const nav = $('#analysisNav');
+  // Navigation moved to Analysis Style Modal — keep nav hidden
+  if (nav) nav.style.display = 'none';
   const history = state.analysisHistory;
   if (!nav || history.length < 2) {
-    if (nav) nav.style.display = 'none';
     return;
   }
-  nav.style.display = '';
 
   const total = history.length;
   const viewIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
