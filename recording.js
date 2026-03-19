@@ -2,6 +2,7 @@
 
 import { state, on, emit } from './event-bus.js';
 import { createSTT } from './stt.js';
+import { startAudioRecording, stopAudioRecording, hasRecording, recoverChunks } from './audio-recorder.js';
 import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
@@ -345,6 +346,14 @@ export async function startRecording() {
   try {
     await stt.start({
       language: state.settings.language || 'ko',
+      onRecordingStream: (stream) => {
+        if (state.settings.audioRecording) {
+          startAudioRecording(state.meetingId, stream);
+          state._audioRecordingActive = true;
+        } else {
+          stream.getTracks().forEach(tr => tr.stop());
+        }
+      },
       onInterim: (text) => {
         showInterim(text);
       },
@@ -447,13 +456,19 @@ export async function startRecording() {
   }
 }
 
-export function stopRecording() {
+export async function stopRecording() {
   if (!state.isRecording) return;
 
   stt?.stop();
   stt = null;
   state.isRecording = false;
   emit('recording:stopped');
+
+  // Stop audio recording if active
+  if (state._audioRecordingActive) {
+    await stopAudioRecording().catch(() => {});
+    state._audioRecordingActive = false;
+  }
   pauseStartTime = Date.now();
   clearInterim();
 
@@ -727,6 +742,8 @@ export function autoSave() {
     participants: state.participants,
     whisperHistory: state.whisperHistory || [],
     interrupted: !state.meetingEnded,
+    type: state.importType || 'live',
+    hasAudio: !!state._audioRecordingActive,
   };
   const result = saveMeeting(meeting);
   if (result.warning === 'storage_high') {
@@ -1781,6 +1798,10 @@ export function resetMeeting(skipLauncher = false) {
   clearDraftRecovery();
   state.meetingEnded = false;
   state.meetingStartTime = null;
+  state.isImported = false;
+  state.importType = null;
+  state._audioRecordingActive = false;
+  document.body.classList.remove('imported-mode');
   pausedDuration = 0;
   pauseStartTime = null;
   // Clear loaded meeting state

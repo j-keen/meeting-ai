@@ -47,6 +47,8 @@ import {
   clearDraftRecovery, saveActiveSession,
 } from './recording.js';
 import { prefetchDeepgramToken } from './stt.js';
+import { initImportTranscript } from './import-transcript.js';
+import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -69,6 +71,13 @@ function init() {
   initPromptAdjuster();
   initStyleHistory();
   initAnalysisStyleModal();
+  initImportTranscript();
+
+  // Initialize audio recording DB and cleanup old recordings
+  initAudioDB().then(() => {
+    const retention = loadSettings().audioRetentionDays;
+    if (retention && retention > 0) cleanupOldAudio(retention);
+  }).catch(() => { /* IndexedDB not available */ });
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
@@ -595,6 +604,7 @@ function init() {
   on('meeting:permanentDelete', ({ id }) => {
     if (confirm(t('trash.confirm_permanent'))) {
       deleteMeeting(id);
+      deleteRecording(id).catch(() => {});
       refreshTrashView();
       updateTrashBadge();
       showToast(t('trash.permanently_deleted'), 'success');
@@ -816,6 +826,30 @@ function init() {
 
     // Start recording
     await startRecording();
+  });
+
+  // Import complete (P-4 text paste / P-6 audio upload)
+  on('import:complete', ({ transcript, type }) => {
+    resetMeeting(true);
+    state.meetingId = generateId();
+    state.meetingStartTime = transcript[0]?.timestamp || Date.now();
+    state.isImported = true;
+    state.importType = type;
+    state.transcript = transcript;
+    transcript.forEach(line => addTranscriptLine(line));
+    document.body.classList.add('imported-mode');
+    // Show meeting pill
+    const pill = $('#meetingPill');
+    pill.hidden = false;
+    pill.classList.remove('recording');
+    pill.classList.add('paused');
+    $('#meetingStatus').textContent = type === 'uploaded' ? t('import.status_uploaded') : t('import.status_imported');
+    // Show title input
+    const titleInput = $('#meetingTitleInput');
+    if (titleInput) { titleInput.hidden = false; titleInput.value = ''; }
+    // Show end meeting button
+    $('#btnEndMeeting').hidden = false;
+    autoSave();
   });
 
   // Prompt Builder complete — apply 3-channel settings and start recording

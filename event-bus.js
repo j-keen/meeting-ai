@@ -32,6 +32,8 @@ export const state = {
   participants: [],
   analysisContext: '',
   analysisCorrections: [], // [{before, after}] — user edits to include in next analysis only
+  isImported: false,
+  importType: null, // 'imported' | 'uploaded' | null
   loadedMeetingId: null,
   loadedMeetingOriginal: null,
   minutesVersions: [],

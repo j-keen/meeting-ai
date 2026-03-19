@@ -427,6 +427,28 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
 
+    // Import type badge
+    if (meeting.type === 'imported') {
+      const badge = document.createElement('span');
+      badge.className = 'history-card-import-badge';
+      badge.textContent = '\u{1F4CB} ' + t('history.imported');
+      card.querySelector('.history-card-meta').appendChild(badge);
+    } else if (meeting.type === 'uploaded') {
+      const badge = document.createElement('span');
+      badge.className = 'history-card-import-badge';
+      badge.textContent = '\u{1F3B5} ' + t('history.audio_import');
+      card.querySelector('.history-card-meta').appendChild(badge);
+    }
+
+    // Audio recording badge
+    if (meeting.hasAudio) {
+      const badge = document.createElement('span');
+      badge.className = 'history-card-audio-badge';
+      badge.textContent = '\u{1F399}';
+      badge.title = t('history.has_audio');
+      card.querySelector('.history-card-meta').appendChild(badge);
+    }
+
     // Interrupted badge
     if (meeting.interrupted) {
       const badge = document.createElement('span');
@@ -568,6 +590,19 @@ export function renderMeetingViewer(meeting) {
     typeBadge.className = 'viewer-badge viewer-badge-type';
     typeBadge.textContent = meeting.preset || t('settings.preset_copilot');
     badgesEl.appendChild(typeBadge);
+
+    // Import type badge
+    if (meeting.type === 'imported') {
+      const importBadge = document.createElement('span');
+      importBadge.className = 'viewer-badge viewer-badge-import';
+      importBadge.textContent = '\u{1F4CB} ' + t('history.imported');
+      badgesEl.appendChild(importBadge);
+    } else if (meeting.type === 'uploaded') {
+      const importBadge = document.createElement('span');
+      importBadge.className = 'viewer-badge viewer-badge-import';
+      importBadge.textContent = '\u{1F3B5} ' + t('history.audio_import');
+      badgesEl.appendChild(importBadge);
+    }
   }
 
   // Navigation (prev/next)
@@ -823,6 +858,13 @@ export function renderMeetingViewer(meeting) {
       div.appendChild(content);
       chatContainer.appendChild(div);
     });
+  }
+
+  // Audio player (P-5)
+  const existingPlayer = $('#viewerAudioPlayer');
+  if (existingPlayer) existingPlayer.remove();
+  if (meeting.hasAudio) {
+    renderViewerAudioPlayer(meeting, transcriptContainer);
   }
 
   // Viewer Load button with confirmation
@@ -1305,4 +1347,109 @@ function renderTrashGrid(grid) {
     selectAllCb.indeterminate = false;
     updateBatchBar();
   });
+}
+
+// ===== Audio Player for Viewer (P-5) =====
+async function renderViewerAudioPlayer(meeting, transcriptContainer) {
+  try {
+    const { getRecording } = await import('../audio-recorder.js');
+    const blob = await getRecording(meeting.id);
+    if (!blob) return;
+
+    const url = URL.createObjectURL(blob);
+    const player = document.createElement('div');
+    player.id = 'viewerAudioPlayer';
+    player.className = 'viewer-audio-player';
+
+    const audio = document.createElement('audio');
+    audio.src = url;
+    audio.preload = 'metadata';
+
+    // Controls
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn btn-sm viewer-audio-play';
+    playBtn.textContent = '\u25B6';
+    playBtn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play();
+        playBtn.textContent = '\u23F8';
+      } else {
+        audio.pause();
+        playBtn.textContent = '\u25B6';
+      }
+    });
+
+    audio.addEventListener('ended', () => { playBtn.textContent = '\u25B6'; });
+
+    const timeDisplay = document.createElement('span');
+    timeDisplay.className = 'viewer-audio-time';
+    timeDisplay.textContent = '00:00 / 00:00';
+
+    const seekBar = document.createElement('input');
+    seekBar.type = 'range';
+    seekBar.className = 'viewer-audio-seek';
+    seekBar.min = '0';
+    seekBar.max = '100';
+    seekBar.value = '0';
+
+    audio.addEventListener('loadedmetadata', () => {
+      const dur = audio.duration;
+      const m = Math.floor(dur / 60);
+      const s = Math.floor(dur % 60);
+      timeDisplay.textContent = `00:00 / ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    });
+
+    audio.addEventListener('timeupdate', () => {
+      const cur = audio.currentTime;
+      const dur = audio.duration || 1;
+      seekBar.value = String((cur / dur) * 100);
+      const cm = Math.floor(cur / 60);
+      const cs = Math.floor(cur % 60);
+      const dm = Math.floor(dur / 60);
+      const ds = Math.floor(dur % 60);
+      timeDisplay.textContent = `${String(cm).padStart(2, '0')}:${String(cs).padStart(2, '0')} / ${String(dm).padStart(2, '0')}:${String(ds).padStart(2, '0')}`;
+    });
+
+    seekBar.addEventListener('input', () => {
+      const dur = audio.duration || 1;
+      audio.currentTime = (parseFloat(seekBar.value) / 100) * dur;
+    });
+
+    // Download button
+    const dlBtn = document.createElement('a');
+    dlBtn.className = 'btn btn-sm viewer-audio-download';
+    dlBtn.href = url;
+    dlBtn.download = `${meeting.title || 'recording'}.webm`;
+    dlBtn.textContent = '\u2B07';
+    dlBtn.title = t('viewer.download_audio');
+
+    player.append(playBtn, seekBar, timeDisplay, dlBtn);
+
+    // Insert before transcript container (sticky at bottom)
+    const viewerBody = transcriptContainer.closest('.viewer-body') || transcriptContainer.parentElement;
+    if (viewerBody) viewerBody.appendChild(player);
+
+    // Click on transcript timestamps to seek audio
+    transcriptContainer.addEventListener('click', (e) => {
+      const timeSel = e.target.closest('.transcript-time');
+      if (!timeSel) return;
+      const line = timeSel.closest('.transcript-line');
+      if (!line) return;
+      const idx = parseInt(line.dataset.index);
+      if (isNaN(idx)) return;
+      const transcript = meeting.transcript || [];
+      const item = transcript[idx];
+      if (!item) return;
+      const offsetMs = item.timestamp - (meeting.startTime || 0);
+      if (offsetMs >= 0) {
+        audio.currentTime = offsetMs / 1000;
+        if (audio.paused) {
+          audio.play();
+          playBtn.textContent = '\u23F8';
+        }
+      }
+    }, { signal: viewerAbortController.signal });
+  } catch {
+    // Audio recording module not available or no recording found
+  }
 }

@@ -107,6 +107,7 @@
           <div class="panel-actions">
             <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
             <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
+            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
             <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
           </div>
         </div>
@@ -231,6 +232,23 @@
               <option value="zh" data-i18n="settings.lang_zh">Chinese</option>
             </select>
           </label>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.audio_recording">Audio Recording</h3>
+          <label class="settings-label settings-toggle-label">
+            <span data-i18n="settings.audio_toggle">Save original audio</span>
+            <input type="checkbox" id="checkAudioRecording">
+          </label>
+          <label class="settings-label" id="audioRetentionRow" hidden>
+            <span data-i18n="settings.audio_retention">Auto-cleanup</span>
+            <select class="settings-select" id="selectAudioRetention">
+              <option value="7" data-i18n="settings.audio_7days">7 days</option>
+              <option value="30" selected data-i18n="settings.audio_30days">30 days</option>
+              <option value="90" data-i18n="settings.audio_90days">90 days</option>
+              <option value="0" data-i18n="settings.audio_never">Never</option>
+            </select>
+          </label>
+          <div id="audioStorageInfo" class="settings-hint" hidden></div>
         </section>
       </div>
 
@@ -1186,8 +1204,62 @@
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
           <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
         </button>
+        <button class="launcher-card" id="btnLauncherImport">
+          <span class="launcher-card-badge">4</span>
+          <span class="launcher-card-icon">&#128229;</span>
+          <span class="launcher-card-label" data-i18n="import.launcher_label">Import</span>
+          <span class="launcher-card-desc" data-i18n="import.launcher_desc">Paste text or upload audio</span>
+        </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
+    </div>
+  </div>
+
+  <!-- Import Modal (P-4 + P-6) -->
+  <div class="modal-overlay" id="importModal" hidden>
+    <div class="modal import-modal">
+      <button class="modal-close" id="importCloseBtn">&times;</button>
+      <h2 data-i18n="import.title">Import</h2>
+      <div class="import-tabs">
+        <button class="import-tab active" data-tab="text" data-i18n="import.tab_text">Paste Text</button>
+        <button class="import-tab" data-tab="audio" data-i18n="import.tab_audio">Upload Audio</button>
+      </div>
+      <!-- Tab 1: Text (P-4) -->
+      <div class="import-tab-content" id="importTabText">
+        <textarea id="importTextarea" rows="12" data-i18n-placeholder="import.text_placeholder" placeholder="Paste transcript here..."></textarea>
+        <div class="import-stats" id="importStats"></div>
+        <div class="import-actions">
+          <button class="btn" id="btnImportCancel" data-i18n="import.cancel">Cancel</button>
+          <button class="btn btn-primary" id="btnImportConfirm" data-i18n="import.confirm">Import &amp; Analyze</button>
+        </div>
+      </div>
+      <!-- Tab 2: Audio (P-6) -->
+      <div class="import-tab-content" id="importTabAudio" hidden>
+        <div class="import-dropzone" id="importDropzone">
+          <span class="import-dropzone-icon">🎵</span>
+          <p data-i18n="import.drop_hint">Drop audio file here or click to browse</p>
+          <small>MP3, MP4, M4A, WAV, WebM, OGG &middot; Max 4.5 MB</small>
+          <input type="file" id="importFileInput" accept=".mp3,.mp4,.m4a,.wav,.webm,.ogg" hidden>
+        </div>
+        <div id="importFileInfo" class="import-file-info" hidden></div>
+        <label class="import-lang-label">
+          <span data-i18n="import.language">Language</span>
+          <select id="importAudioLang" class="settings-select">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+          </select>
+        </label>
+        <div class="import-progress" id="importProgress" hidden>
+          <div class="progress-bar"><div class="progress-bar-inner indeterminate"></div></div>
+          <span data-i18n="import.transcribing">Transcribing...</span>
+        </div>
+        <div class="import-actions">
+          <button class="btn" id="btnAudioCancel" data-i18n="import.cancel">Cancel</button>
+          <button class="btn btn-primary" id="btnAudioTranscribe" disabled data-i18n="import.transcribe">Transcribe</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1283,8 +1355,19 @@
       </div>
       <div class="modal-body asm-presets-body">
         <div class="asm-presets" id="asmPresets"></div>
-        <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">Save this style</span></button>
-        <div id="asmSaveFormContainer" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Style: Save Modal -->
+  <div class="modal-overlay" id="asmSaveModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="asm.save_title">이 분석 스타일 저장</h3>
+        <button class="btn btn-icon modal-close" id="asmSaveCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="asmSaveFormContainer"></div>
       </div>
     </div>
   </div>

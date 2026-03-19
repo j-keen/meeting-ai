@@ -863,6 +863,45 @@ const translations = {
     'guard.strategy_fallback': 'Transcript is long — switched to smart strategy for this analysis.',
     'guard.chat_large_confirm': 'Transcript is very large ({lines} lines). Send to AI?',
 
+    // Import (P-4 + P-6)
+    'import.launcher_label': 'Import',
+    'import.launcher_desc': 'Paste text or upload audio',
+    'import.title': 'Import Transcript',
+    'import.tab_text': 'Paste Text',
+    'import.tab_audio': 'Upload Audio',
+    'import.text_placeholder': 'Paste transcript here...\n\nSupported formats:\n- Plain text (one line per sentence)\n- Timestamped: [00:00] Text here\n- With speakers: Speaker A: Text here',
+    'import.drop_hint': 'Drop audio file here or click to browse',
+    'import.language': 'Language',
+    'import.transcribing': 'Transcribing...',
+    'import.transcribe': 'Transcribe',
+    'import.cancel': 'Cancel',
+    'import.confirm': 'Import & Analyze',
+    'import.stats': '{lines} lines, {chars} characters',
+    'import.empty_text': 'Please paste some text to import.',
+    'import.text_success': 'Imported {lines} lines',
+    'import.upload_success': 'Transcribed {lines} lines',
+    'import.file_too_large': 'File too large (max 4.5MB)',
+    'import.no_speech': 'No speech detected in the audio.',
+    'import.transcribe_error': 'Transcription failed',
+    'import.status_imported': 'Imported transcript',
+    'import.status_uploaded': 'Audio transcript',
+
+    // History badges (P-4/P-6)
+    'history.imported': 'Imported',
+    'history.audio_import': 'Audio Import',
+    'history.has_audio': 'Has audio recording',
+
+    // Audio recording (P-5)
+    'settings.audio_recording': 'Audio Recording',
+    'settings.audio_toggle': 'Save original audio with transcript',
+    'settings.audio_retention': 'Auto-cleanup',
+    'settings.audio_7days': '7 days',
+    'settings.audio_30days': '30 days',
+    'settings.audio_90days': '90 days',
+    'settings.audio_never': 'Never',
+    'viewer.download_audio': 'Download audio',
+    'viewer.click_to_seek': 'Click timestamp to seek',
+
     // Misc
     'minutes': '{n} minutes',
     'meeting_title': 'Meeting {date} {time}',
@@ -1729,6 +1768,45 @@ const translations = {
     'guard.max_duration': '6시간 경과로 녹음이 자동 중지되었습니다.',
     'guard.strategy_fallback': '회의록이 길어 이번 분석은 스마트 전략으로 전환했습니다.',
     'guard.chat_large_confirm': '회의록이 매우 깁니다 ({lines}줄). AI에 전송하시겠습니까?',
+
+    // Import (P-4 + P-6)
+    'import.launcher_label': '가져오기',
+    'import.launcher_desc': '텍스트 붙여넣기 또는 음성 업로드',
+    'import.title': '녹취록 가져오기',
+    'import.tab_text': '텍스트 붙여넣기',
+    'import.tab_audio': '음성 업로드',
+    'import.text_placeholder': '녹취록을 여기에 붙여넣으세요...\n\n지원 형식:\n- 일반 텍스트 (줄 단위)\n- 타임스탬프: [00:00] 텍스트\n- 화자 포함: 화자 A: 텍스트',
+    'import.drop_hint': '음성 파일을 여기에 놓거나 클릭하여 선택',
+    'import.language': '언어',
+    'import.transcribing': '음성 인식 중...',
+    'import.transcribe': '음성 인식',
+    'import.cancel': '취소',
+    'import.confirm': '가져오기 & 분석',
+    'import.stats': '{lines}줄, {chars}자',
+    'import.empty_text': '가져올 텍스트를 입력해주세요.',
+    'import.text_success': '{lines}줄 가져옴',
+    'import.upload_success': '{lines}줄 인식 완료',
+    'import.file_too_large': '파일이 너무 큽니다 (최대 4.5MB)',
+    'import.no_speech': '음성이 감지되지 않았습니다.',
+    'import.transcribe_error': '음성 인식 실패',
+    'import.status_imported': '가져온 녹취록',
+    'import.status_uploaded': '음성 녹취록',
+
+    // History badges (P-4/P-6)
+    'history.imported': '가져옴',
+    'history.audio_import': '음성 가져옴',
+    'history.has_audio': '녹음 파일 있음',
+
+    // Audio recording (P-5)
+    'settings.audio_recording': '오디오 녹음',
+    'settings.audio_toggle': '원본 오디오 함께 저장',
+    'settings.audio_retention': '자동 정리',
+    'settings.audio_7days': '7일',
+    'settings.audio_30days': '30일',
+    'settings.audio_90days': '90일',
+    'settings.audio_never': '안 함',
+    'viewer.download_audio': '오디오 다운로드',
+    'viewer.click_to_seek': '타임스탬프 클릭으로 이동',
 
     // Misc
     'minutes': '{n}분',

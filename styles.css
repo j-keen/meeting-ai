@@ -6476,53 +6476,118 @@ body.loaded-mode #btnNewMeeting { display: none; }
   flex-direction: column;
   gap: 8px;
 }
-.asm-preset-row {
+.asm-presets-layout {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 16px;
+}
+.asm-preset-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.asm-preset-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.asm-preset-cards {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
-.asm-preset-chip {
-  display: inline-flex;
+.asm-preset-card {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
+  gap: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 20px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  text-align: left;
   cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
+  transition: all var(--transition-fast);
+  position: relative;
 }
-.asm-preset-chip:hover {
+.asm-preset-card:hover {
   border-color: var(--accent);
   background: var(--bg-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
-.asm-preset-chip.active {
+.asm-preset-card.active {
   border-color: var(--accent);
-  background: var(--accent-light, rgba(59, 130, 246, 0.1));
-  color: var(--accent);
-  font-weight: 600;
+  background: var(--accent-light, rgba(59, 130, 246, 0.08));
 }
-.asm-preset-check {
-  font-size: 11px;
-  min-width: 14px;
-  color: var(--accent);
-}
-.asm-custom-label {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
-  margin-bottom: -2px;
-}
-.asm-preset-custom {
+.asm-preset-card.custom {
   border-style: dashed;
 }
-.asm-save-btn {
-  margin-top: 10px;
-  font-size: 12px;
+.asm-preset-card.custom.active {
+  border-style: solid;
+}
+.asm-preset-card-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+}
+.asm-preset-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.asm-preset-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.asm-preset-card-desc {
+  font-size: 11px;
   color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.asm-preset-card-check {
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 700;
+  min-width: 16px;
+  text-align: center;
+}
+.asm-preset-del {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  font-size: 16px;
+  color: var(--text-muted);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 50%;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  z-index: 2;
+}
+.asm-preset-card:hover .asm-preset-del {
+  display: flex;
+}
+.asm-preset-del:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-light, rgba(239, 68, 68, 0.1));
 }
 .asm-history-list {
   display: flex;
@@ -7342,4 +7407,107 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--accent);
   white-space: nowrap;
 }
+
+/* ===== Import Modal (P-4 + P-6) ===== */
+body.imported-mode #btnRecord,
+body.imported-mode #btnEndMeeting + .bottom-divider,
+body.imported-mode .recording-controls { display: none; }
+
+.import-modal { max-width: 600px; }
+.import-tabs { display: flex; border-bottom: 1px solid var(--border-light); margin-bottom: 16px; }
+.import-tab {
+  padding: 8px 16px; background: none; border: none; cursor: pointer;
+  font-size: 13px; color: var(--text-secondary); border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.import-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.import-tab:hover { color: var(--text-primary); }
+
+.import-tab-content { padding: 0 4px; }
+
+#importTextarea {
+  width: 100%; min-height: 200px; resize: vertical;
+  border: 1px solid var(--border-light); border-radius: 8px;
+  padding: 12px; font-size: 13px; font-family: var(--font-mono);
+  background: var(--bg-secondary); color: var(--text-primary);
+}
+#importTextarea:focus { border-color: var(--primary); outline: none; }
+
+.import-stats { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+.import-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+.import-dropzone {
+  border: 2px dashed var(--border-light); border-radius: 12px;
+  padding: 40px 20px; text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.import-dropzone:hover { border-color: var(--primary); background: var(--bg-hover); }
+.import-dropzone.dragover { border-color: var(--primary); background: var(--bg-hover); }
+.import-dropzone-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+.import-dropzone p { margin: 4px 0; font-size: 13px; }
+.import-dropzone small { color: var(--text-muted); font-size: 11px; }
+
+.import-file-info {
+  margin-top: 8px; padding: 8px 12px; background: var(--bg-hover);
+  border-radius: 6px; font-size: 12px; color: var(--text-secondary);
+}
+
+.import-lang-label {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; font-size: 13px;
+}
+.import-lang-label select { flex: 1; }
+
+.import-progress { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.progress-bar { flex: 1; height: 4px; background: var(--border-light); border-radius: 2px; overflow: hidden; }
+.progress-bar-inner { height: 100%; background: var(--primary); border-radius: 2px; }
+.progress-bar-inner.indeterminate {
+  width: 40%; animation: indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ===== History Card Import/Audio Badges ===== */
+.history-card-import-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  background: var(--bg-hover); color: var(--accent); white-space: nowrap;
+}
+.history-card-audio-badge {
+  font-size: 12px; color: var(--accent); cursor: default;
+}
+
+/* Viewer import badge */
+.viewer-badge-import {
+  background: var(--bg-hover); color: var(--accent);
+}
+
+/* ===== Audio Player in Viewer (P-5) ===== */
+.viewer-audio-player {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: var(--bg-secondary);
+  border-top: 1px solid var(--border-light); border-radius: 0 0 8px 8px;
+  position: sticky; bottom: 0;
+}
+.viewer-audio-play {
+  min-width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; padding: 0;
+}
+.viewer-audio-seek {
+  flex: 1; height: 4px; accent-color: var(--primary);
+  cursor: pointer;
+}
+.viewer-audio-time {
+  font-size: 11px; font-family: var(--font-mono); color: var(--text-muted);
+  white-space: nowrap; min-width: 90px; text-align: center;
+}
+.viewer-audio-download {
+  text-decoration: none; font-size: 14px;
+}
+
+/* ===== Audio Recording Settings Toggle ===== */
+.settings-toggle-label { display: flex; align-items: center; justify-content: space-between; }
+.settings-toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
 

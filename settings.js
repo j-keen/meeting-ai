@@ -167,6 +167,9 @@ export function initSettings() {
     });
   }
 
+  // ===== Audio Recording =====
+  initAudioRecordingSettings();
+
   // ===== Chat Presets =====
   initChatPresets();
 
@@ -361,6 +364,8 @@ function saveAllSettings() {
     welcomeDismissed: s.welcomeDismissed,
     customPromptPresets: s.customPromptPresets,
     chatPresets: s.chatPresets,
+    audioRecording: s.audioRecording,
+    audioRetentionDays: s.audioRetentionDays,
   });
   snapshotSettings();
 
@@ -478,11 +483,55 @@ function loadSavedSettings() {
   s.aiLanguage = saved.aiLanguage || 'auto';
   s.customPromptPresets = saved.customPromptPresets || {};
   s.chatPresets = saved.chatPresets || null;
+  s.audioRecording = saved.audioRecording || false;
+  s.audioRetentionDays = saved.audioRetentionDays || 30;
 
   applySettingsToForm();
 
   // Apply theme
   document.documentElement.setAttribute('data-theme', s.theme);
+}
+
+// ===== Audio Recording Settings =====
+function initAudioRecordingSettings() {
+  const toggle = $('#checkAudioRecording');
+  const retentionRow = $('#audioRetentionRow');
+  const retentionSelect = $('#selectAudioRetention');
+  const storageInfo = $('#audioStorageInfo');
+
+  if (!toggle) return;
+
+  // Load saved state
+  toggle.checked = !!state.settings.audioRecording;
+  if (retentionRow) retentionRow.hidden = !toggle.checked;
+  if (retentionSelect) retentionSelect.value = state.settings.audioRetentionDays || '30';
+
+  toggle.addEventListener('change', () => {
+    state.settings.audioRecording = toggle.checked;
+    if (retentionRow) retentionRow.hidden = !toggle.checked;
+    markDirty();
+  });
+
+  retentionSelect?.addEventListener('change', () => {
+    state.settings.audioRetentionDays = parseInt(retentionSelect.value);
+    markDirty();
+  });
+
+  // Show storage info when audio recording is enabled
+  if (toggle.checked) updateAudioStorageInfo(storageInfo);
+}
+
+async function updateAudioStorageInfo(el) {
+  if (!el) return;
+  try {
+    const { getAudioStorageInfo } = await import('./audio-recorder.js');
+    const info = await getAudioStorageInfo();
+    if (info.count > 0) {
+      const sizeMB = (info.totalSize / (1024 * 1024)).toFixed(1);
+      el.textContent = `${info.count} recordings · ${sizeMB} MB`;
+      el.hidden = false;
+    }
+  } catch { /* IndexedDB not available */ }
 }
 
 // ===== Chat Presets =====

@@ -341,7 +341,7 @@ export function createSTT() {
     get isRunning() { return isRunning; },
     get engineName() { return currentEngine?.name || null; },
 
-    async start({ language, onInterim, onFinal, onError, onReplace, onConnecting, onConnected }) {
+    async start({ language, onInterim, onFinal, onError, onReplace, onConnecting, onConnected, onRecordingStream }) {
       if (isRunning) return;
       isRunning = true;
 
@@ -368,6 +368,15 @@ export function createSTT() {
       }
 
       if (isMobile) {
+        // Provide a cloned stream for audio recording
+        if (onRecordingStream) {
+          try {
+            const cloned = micStream.clone();
+            onRecordingStream(cloned);
+          } catch (e) {
+            sttDebug(`[STT] Failed to clone stream for recording: ${e.message}`);
+          }
+        }
         currentEngine = createDeepgramEngine(language, micStream);
         try {
           await currentEngine.start(onInterim, safeFinal, (err) => {
@@ -395,8 +404,13 @@ export function createSTT() {
           currentEngine.start(onInterim, safeFinal, onError, onReplace);
         }
       } else {
-        // Desktop: release pre-check stream, Web Speech manages its own mic
-        micStream.getTracks().forEach(tr => tr.stop());
+        // Desktop: Web Speech manages its own mic, but we need a separate stream for recording
+        if (onRecordingStream) {
+          // Provide the pre-check stream for recording instead of stopping it
+          onRecordingStream(micStream);
+        } else {
+          micStream.getTracks().forEach(tr => tr.stop());
+        }
         currentEngine = createWebSpeechEngine(language);
         onConnected?.('webspeech');
         currentEngine.start(onInterim, safeFinal, onError, onReplace);

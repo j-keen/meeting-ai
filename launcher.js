@@ -7,6 +7,7 @@ import { showToast, showTranscriptIdle, showAiIdle, showChatIdle } from './ui.js
 import { openMeetingPrepForm } from './meeting-prep.js';
 import { openPromptBuilder } from './prompt-builder.js';
 import { openDeepSetup } from './deep-setup.js';
+import { openImportModal } from './import-transcript.js';
 import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -60,15 +61,22 @@ export function showLauncherModal() {
     showPresetDropdown(presets, prepared, close);
   };
 
+  // Card 4: Import
+  $('#btnLauncherImport').onclick = () => {
+    close();
+    openImportModal();
+  };
+
   $('#launcherCloseBtn').onclick = () => close(true);
 
-  // Keyboard shortcuts: 1, 2, 3, ESC
+  // Keyboard shortcuts: 1, 2, 3, 4, ESC
   const keyHandler = (e) => {
     if (modal.hidden) return;
     if (e.target.matches('input, textarea, [contenteditable]')) return;
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherDeepSetup').click(); }
     else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
+    else if (e.key === '4') { e.preventDefault(); $('#btnLauncherImport').click(); }
     else if (e.key === 'Escape') { close(true); }
   };
   document.addEventListener('keydown', keyHandler);
