@@ -40,4 +40,5 @@ export const state = {
   minutesPromptConfig: { referenceDoc: '', basePromptOverride: '', userInstruction: '' },
   aiTitleCached: null, // { titles: string[], tags: string[] } | null
   aiMetadataCached: null, // { participants: string[], tags: string[], categories: string[] } | null
+  documents: [], // [{ id, title, content, createdAt, updatedAt }]
 };

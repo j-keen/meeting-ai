@@ -883,6 +883,14 @@ export function renderMeetingViewer(meeting) {
   // Load hint i18n
   const loadHint = $('#viewerModal .viewer-load-hint');
   if (loadHint) loadHint.textContent = t('viewer.load_hint');
+
+  // Document generator button
+  const btnViewerDocGen = $('#btnViewerDocGen');
+  if (btnViewerDocGen) {
+    btnViewerDocGen.onclick = () => {
+      emit('docGenerator:open', meeting);
+    };
+  }
 }
 
 function renderViewerAnalysis(container, analysis) {

@@ -7507,6 +7507,36 @@ body.imported-mode .recording-controls { display: none; }
   text-decoration: none; font-size: 14px;
 }
 
+/* ===== Document Generator ===== */
+.dg-modal { max-width: 680px; }
+.dg-toolbar {
+  display: flex; gap: 6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+}
+.dg-toolbar .btn { font-size: 12px; padding: 4px 10px; }
+.dg-preview-content {
+  flex: 1; overflow-y: auto; padding: 16px 20px;
+  font-size: 14px; line-height: 1.7; color: var(--text-primary);
+}
+.dg-preview-content h1 { font-size: 20px; margin: 0 0 12px; }
+.dg-preview-content h2 { font-size: 17px; margin: 16px 0 8px; }
+.dg-preview-content h3 { font-size: 15px; margin: 12px 0 6px; }
+.dg-preview-content p { margin: 0 0 10px; }
+.dg-preview-content ul, .dg-preview-content ol { margin: 0 0 10px; padding-left: 20px; }
+.dg-preview-content li { margin-bottom: 4px; }
+.dg-preview-content blockquote {
+  border-left: 3px solid var(--accent); margin: 8px 0; padding: 4px 12px;
+  color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-sm);
+}
+.dg-preview-content table {
+  width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px;
+}
+.dg-preview-content th, .dg-preview-content td {
+  border: 1px solid var(--border-color); padding: 6px 10px; text-align: left;
+}
+.dg-preview-content th { background: var(--bg-secondary); font-weight: 600; }
+
 /* ===== Audio Recording Settings Toggle ===== */
 .settings-toggle-label { display: flex; align-items: center; justify-content: space-between; }
 .settings-toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }

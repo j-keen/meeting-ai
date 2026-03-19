@@ -708,6 +708,7 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
+          <button class="btn btn-sm" id="btnViewerDocGen" data-i18n="dg.button_label">📄 AI Document</button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -913,7 +914,42 @@
         <div class="end-meeting-footer-actions" id="endMeetingFooterActions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
           <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
+          <button class="btn btn-accent" id="btnDocGenerator" data-i18n="dg.button_label">📄 AI Document</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Generator Modal -->
+  <div class="modal-overlay" id="docGeneratorModal" hidden>
+    <div class="modal prompt-builder-modal dg-modal">
+      <button class="modal-close" id="dgCloseBtn">&times;</button>
+      <h2 class="pb-title" data-i18n="dg.title">AI Document Generator</h2>
+
+      <!-- Chat View -->
+      <div class="pb-view" id="dgChatView">
+        <div class="pb-messages" id="dgMessages"></div>
+        <div class="pb-chips" id="dgChips"></div>
+        <div class="pb-input-wrap">
+          <textarea class="pb-input" id="dgInput" rows="1" data-i18n-placeholder="dg.input_placeholder" placeholder="What document would you like?"></textarea>
+          <button class="pb-send-btn" id="btnDgSend">&#10148;</button>
+        </div>
+      </div>
+
+      <!-- Preview View -->
+      <div class="pb-view" id="dgPreviewView" hidden>
+        <div class="dg-toolbar">
+          <button class="btn btn-sm" id="btnDgCopy" data-i18n="dg.copy">Copy</button>
+          <button class="btn btn-sm" id="btnDgDownloadMd" data-i18n="dg.download_md">MD</button>
+          <button class="btn btn-sm" id="btnDgDownloadDocx" data-i18n="dg.download_docx">Word</button>
+          <button class="btn btn-sm" id="btnDgDownloadPdf" data-i18n="dg.download_pdf">PDF</button>
+          <button class="btn btn-sm btn-primary" id="btnDgSave" data-i18n="dg.save">Save</button>
+        </div>
+        <div class="dg-preview-content" id="dgPreviewContent"></div>
+        <div class="pb-preview-actions">
+          <button class="btn btn-text" id="btnDgBack" data-i18n="dg.back_to_chat">← Back to Chat</button>
+          <button class="btn btn-outline" id="btnDgNewDoc" data-i18n="dg.new_doc">+ New Document</button>
         </div>
       </div>
     </div>

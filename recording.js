@@ -741,6 +741,7 @@ export function autoSave() {
     categories: state.categories,
     participants: state.participants,
     whisperHistory: state.whisperHistory || [],
+    documents: state.documents || [],
     interrupted: !state.meetingEnded,
     type: state.importType || 'live',
     hasAudio: !!state._audioRecordingActive,
@@ -1744,9 +1745,11 @@ function showPostEndButtons() {
   const existingResume = $('#btnResumeMeeting');
   const existingExport = $('#btnPostExport');
   const existingNew = $('#btnNewMeeting');
+  const existingDocGen = $('#btnPostDocGen');
   if (existingResume) existingResume.remove();
   if (existingExport) existingExport.remove();
   if (existingNew) existingNew.remove();
+  if (existingDocGen) existingDocGen.remove();
 
   const endBtn = $('#btnEndMeeting');
   const btnResume = document.createElement('button');
@@ -1761,10 +1764,17 @@ function showPostEndButtons() {
   btnNew.id = 'btnNewMeeting';
   btnNew.textContent = t('meeting.new');
 
+  const btnDocGen = document.createElement('button');
+  btnDocGen.className = 'btn btn-sm';
+  btnDocGen.id = 'btnPostDocGen';
+  btnDocGen.textContent = '📄 ' + t('dg.button_label');
+
   endBtn.hidden = true;
   endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
-  endBtn.parentNode.insertBefore(btnNew, btnResume.nextSibling);
+  endBtn.parentNode.insertBefore(btnDocGen, btnResume.nextSibling);
+  endBtn.parentNode.insertBefore(btnNew, btnDocGen.nextSibling);
 
+  btnDocGen.addEventListener('click', () => emit('docGenerator:open'));
   btnResume.addEventListener('click', () => resumeMeeting());
   btnNew.addEventListener('click', () => {
     resetMeeting();
@@ -1786,10 +1796,12 @@ function restoreEndButton(showEnd = true) {
   const exportBtn = $('#btnPostExport');
   const newBtn = $('#btnNewMeeting');
   const editInfoBtn = $('#btnEditSaveInfo');
+  const docGenBtn = $('#btnPostDocGen');
   if (resume) resume.remove();
   if (exportBtn) exportBtn.remove();
   if (newBtn) newBtn.remove();
   if (editInfoBtn) editInfoBtn.remove();
+  if (docGenBtn) docGenBtn.remove();
   const bottomResume = $('#btnBottomResume');
   if (bottomResume) bottomResume.remove();
 }
@@ -1839,6 +1851,7 @@ export function resetMeeting(skipLauncher = false) {
   state.analysisCorrections = [];
   state.aiTitleCached = null;
   state.aiMetadataCached = null;
+  state.documents = [];
   state._aiTags = null;
   $('#transcriptList').innerHTML = '';
   resetTranscriptEmpty();

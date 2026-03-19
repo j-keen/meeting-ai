@@ -33,6 +33,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initPromptBuilder } from './prompt-builder.js';
+import { initDocGenerator, openDocGenerator } from './doc-generator.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
 import { initStyleHistory, pushStyleHistory } from './style-history.js';
@@ -67,6 +68,7 @@ function init() {
   initChat();
   initMeetingPrepForm();
   initPromptBuilder();
+  initDocGenerator();
   initDeepSetup();
   initPromptAdjuster();
   initStyleHistory();
@@ -108,6 +110,10 @@ function init() {
 
   // End meeting (with confirmation)
   $('#btnEndMeeting').addEventListener('click', () => endMeeting());
+
+  // Document generator
+  $('#btnDocGenerator')?.addEventListener('click', () => openDocGenerator());
+  on('docGenerator:open', (meeting) => openDocGenerator(meeting));
 
   // Analyze now (with 10s cooldown)
   let lastManualAnalysisTime = 0;
