@@ -181,7 +181,6 @@ function showDraftRecoveryBanner(draft, source) {
     <div class="draft-recovery-actions">
       <button class="btn btn-sm btn-primary" id="btnDraftRecover">${t('draft.recover')}</button>
       ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd" style="border:1px solid var(--accent)">${t('draft.save_and_end')}</button>` : ''}
-      <button class="btn btn-sm" id="btnDraftDiscard">${t('draft.discard')}</button>
     </div>
   `;
   document.body.prepend(banner);
@@ -201,11 +200,6 @@ function showDraftRecoveryBanner(draft, source) {
       };
     }
   }
-  $('#btnDraftDiscard').onclick = () => {
-    sessionStorage.removeItem(DRAFT_KEY);
-    clearActiveSession();
-    banner.remove();
-  };
 }
 
 function recoverDraft(draft, source) {
