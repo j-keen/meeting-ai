@@ -1,7 +1,7 @@
 // style-history.js - Analysis style history & restore module
 
 import { state, emit } from './event-bus.js';
-import { saveSettings } from './storage.js';
+import { saveSettings, loadCustomTypes } from './storage.js';
 import { getPromptForType } from './ai.js';
 import { showToast } from './ui.js';
 import { t, getAiLanguage } from './i18n.js';
@@ -39,9 +39,14 @@ export function pushStyleHistory(presetId, customPrompt, source = 'manual') {
 
 function getPresetLabel(presetId) {
   if (!presetId) return 'Custom';
-  const opt = $(`#selectAnalysisStyle option[value="${presetId}"]`);
-  if (opt) return opt.textContent;
-  if (presetId.startsWith('custom_')) return presetId.replace('custom_', '');
+  // Built-in presets use i18n
+  const builtInMap = { copilot: t('settings.preset_copilot'), minutes: t('settings.preset_minutes'), learning: t('settings.preset_learning') };
+  if (builtInMap[presetId]) return builtInMap[presetId];
+  // Custom presets — look up from storage
+  if (presetId.startsWith('custom_')) {
+    const ct = loadCustomTypes().find(c => c.id === presetId);
+    return ct ? ct.name : presetId.replace('custom_', '');
+  }
   return presetId.charAt(0).toUpperCase() + presetId.slice(1);
 }
 
@@ -240,8 +245,6 @@ function restoreEntry(idx, reanalyze) {
   state.settings.customPrompt = entry.prompt;
   if (entry.presetId) {
     state.settings.meetingPreset = entry.presetId;
-    const select = $('#selectAnalysisStyle');
-    if (select) select.value = entry.presetId;
   }
   emit('customPrompt:change');
   saveSettings(state.settings);

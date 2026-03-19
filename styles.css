@@ -794,47 +794,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .ai-sections.ai-updating {
   opacity: 0.6;
 }
-/* Analysis Navigator */
-.analysis-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 6px 12px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-light);
-  margin: 0;
-  user-select: none;
-}
-.analysis-nav-btn {
-  background: none;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px 8px;
-  font-size: 14px;
-  line-height: 1;
-  transition: all var(--transition-fast);
-}
-.analysis-nav-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent);
-}
-.analysis-nav-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-.analysis-nav-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-.analysis-nav-label .nav-time {
-  color: var(--text-muted);
-  margin-right: 2px;
-}
 .ai-section { margin-bottom: 16px; }
 .ai-section-title {
   display: flex;

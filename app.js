@@ -11,7 +11,6 @@ import {
   addContact,
   addCorrectionEntry,
   getProUsageCount, incrementProUsage, addLocation,
-  loadCustomTypes,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, addTranscriptLine,
@@ -127,36 +126,6 @@ function init() {
     }, 1000);
     runAnalysis();
   });
-
-  // Keep hidden selectAnalysisStyle in sync for style-history label lookup
-  const analysisStyleSelect = $('#selectAnalysisStyle');
-  if (analysisStyleSelect) {
-    const refreshHiddenOptions = () => {
-      analysisStyleSelect.querySelectorAll('option[data-custom]').forEach(o => o.remove());
-      analysisStyleSelect.querySelectorAll('optgroup[data-custom]').forEach(o => o.remove());
-      const customTypes = loadCustomTypes();
-      if (customTypes.length > 0) {
-        const group = document.createElement('optgroup');
-        group.label = 'Custom';
-        group.dataset.custom = '1';
-        customTypes.forEach(ct => {
-          const opt = document.createElement('option');
-          opt.value = ct.id;
-          opt.textContent = ct.name;
-          opt.dataset.custom = '1';
-          group.appendChild(opt);
-        });
-        analysisStyleSelect.appendChild(group);
-      }
-    };
-    refreshHiddenOptions();
-    on('customTypes:change', refreshHiddenOptions);
-
-    // Sync preset from meeting prep
-    on('meetingPrep:complete', (config) => {
-      if (config.meetingType) analysisStyleSelect.value = config.meetingType;
-    });
-  }
 
   // Open meeting prep from settings "Add Custom Preset" button
   on('openMeetingPrep', () => {

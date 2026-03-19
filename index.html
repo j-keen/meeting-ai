@@ -118,12 +118,7 @@
             <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
           </div>
         </div>
-        <!-- selectAnalysisStyle kept hidden for style-history.js label lookup -->
-        <select id="selectAnalysisStyle" style="display:none;" aria-hidden="true">
-          <option value="copilot" data-i18n="settings.preset_copilot">Conversation Coach</option>
-          <option value="minutes" data-i18n="settings.preset_minutes">Meeting Minutes</option>
-          <option value="learning" data-i18n="settings.preset_learning">Lecture Notes</option>
-        </select>
+        <!-- selectAnalysisStyle removed — label lookup now in style-history.js via i18n + loadCustomTypes -->
         <div class="panel-hint-toggle-bar" data-target="analysisHintContainer">
           <span class="panel-hint-toggle">▼</span>
         </div>
@@ -134,11 +129,6 @@
         </div>
       </div>
       <!-- analysisNav removed — navigation now in Analysis Style Modal -->
-      <div class="analysis-nav" id="analysisNav" style="display:none" aria-hidden="true">
-        <button class="analysis-nav-btn" id="analysisNavPrev">&#8592;</button>
-        <span class="analysis-nav-label" id="analysisNavLabel"></span>
-        <button class="analysis-nav-btn" id="analysisNavNext">&#8594;</button>
-      </div>
       <div class="ai-sections" id="aiSections">
         <div class="ai-empty" id="aiEmpty">
           <p data-i18n="ai.empty">AI analysis results will appear here.</p>

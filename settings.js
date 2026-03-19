@@ -260,7 +260,6 @@ function refreshCustomPresetList() {
       }
       emit('toast', { message: t('settings.custom_preset_deleted'), type: 'success' });
       emit('customTypes:change');
-      refreshCustomPresetList();
     });
 
     // Select button → activate this preset
@@ -276,7 +275,6 @@ function refreshCustomPresetList() {
 
       // Deselect built-in preset cards
       document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('selected'));
-      refreshCustomPresetList();
       markDirty();
       emit('customTypes:change');
     });
@@ -328,7 +326,6 @@ function openPresetDetailModal(ct) {
     addCustomType({ ...ct });
     emit('toast', { message: t('settings.preset_changes_saved'), type: 'success' });
     emit('customTypes:change');
-    refreshCustomPresetList();
     modal.remove();
   });
 
@@ -345,7 +342,6 @@ function openPresetDetailModal(ct) {
     }
     emit('toast', { message: t('settings.custom_preset_deleted'), type: 'success' });
     emit('customTypes:change');
-    refreshCustomPresetList();
     modal.remove();
   });
 }

@@ -8,7 +8,7 @@ import { t, getDateLocale } from './i18n.js';
 import { openPromptAdjuster } from './prompt-adjuster.js';
 import { pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
-import { renderAnalysisInto } from './ui/analysis.js';
+import { renderAnalysis } from './ui/analysis.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -231,17 +231,7 @@ function renderAnalysisHistoryList() {
 function navigateToAnalysis(idx) {
   const history = state.analysisHistory;
   if (!history || idx < 0 || idx >= history.length) return;
-
-  const container = $('#aiSections');
-  const empty = $('#aiEmpty');
-  if (empty) empty.style.display = 'none';
-
-  const analysis = history[idx];
-  renderAnalysisInto(container, analysis);
-  state.currentAnalysis = analysis;
-
-  const copyBtn = $('#btnCopyAnalysis');
-  if (copyBtn) copyBtn.style.display = '';
+  renderAnalysis(history[idx]);
 }
 
 // ===== Init =====

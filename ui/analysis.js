@@ -352,10 +352,6 @@ export function showAnalysisSkeletons() {
   }
 }
 
-// ===== Analysis Navigator =====
-let analysisNavIndex = -1; // -1 = latest (live)
-let analysisNavInitialized = false;
-
 function renderAnalysisContent(container, analysis) {
   if (isMarkdownAnalysis(analysis)) {
     renderMarkdownAnalysis(container, analysis);
@@ -364,70 +360,8 @@ function renderAnalysisContent(container, analysis) {
   }
 }
 
-export function updateAnalysisNav() {
-  const nav = $('#analysisNav');
-  // Navigation moved to Analysis Style Modal — keep nav hidden
-  if (nav) nav.style.display = 'none';
-  const history = state.analysisHistory;
-  if (!nav || history.length < 2) {
-    return;
-  }
-
-  const total = history.length;
-  const viewIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
-  const isLatest = viewIdx === total - 1;
-
-  const prevBtn = $('#analysisNavPrev');
-  const nextBtn = $('#analysisNavNext');
-  const label = $('#analysisNavLabel');
-
-  prevBtn.disabled = viewIdx <= 0;
-  nextBtn.disabled = isLatest;
-
-  if (label) {
-    const analysis = history[viewIdx];
-    const time = analysis?.timestamp
-      ? new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
-      : '';
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'nav-time';
-    timeSpan.textContent = time;
-    label.textContent = `${t('panel.ai')} ${viewIdx + 1} `;
-    label.appendChild(timeSpan);
-  }
-
-  if (!analysisNavInitialized) {
-    analysisNavInitialized = true;
-    prevBtn.addEventListener('click', () => navigateAnalysis(-1));
-    nextBtn.addEventListener('click', () => navigateAnalysis(1));
-
-    const panel = $('#panelCenter');
-    panel.setAttribute('tabindex', '-1');
-    panel.style.outline = 'none';
-    panel.addEventListener('keydown', (e) => {
-      if (e.target.matches('input, textarea, [contenteditable]')) return;
-      if (state.analysisHistory.length < 2) return;
-      if (e.key === 'ArrowLeft') { e.preventDefault(); navigateAnalysis(-1); }
-      if (e.key === 'ArrowRight') { e.preventDefault(); navigateAnalysis(1); }
-    });
-  }
-}
-
-function navigateAnalysis(direction) {
-  const history = state.analysisHistory;
-  if (history.length < 2) return;
-
-  const total = history.length;
-  const currentIdx = analysisNavIndex < 0 ? total - 1 : analysisNavIndex;
-  const newIdx = Math.max(0, Math.min(total - 1, currentIdx + direction));
-  if (newIdx === currentIdx) return;
-
-  analysisNavIndex = newIdx;
-  const container = $('#aiSections');
-  container.classList.remove('ai-updating');
-  renderAnalysisContent(container, history[newIdx]);
-  updateAnalysisNav();
-}
+// Navigation moved to Analysis Style Modal — this is a no-op kept for API compat
+export function updateAnalysisNav() {}
 
 export function renderAnalysis(analysis) {
   const container = $('#aiSections');
