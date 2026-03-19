@@ -636,7 +636,7 @@ export async function runAnalysis() {
     let combinedContext = state.settings.meetingContext || '';
     if (state.analysisContext) {
       combinedContext = combinedContext
-        ? combinedContext + '\n\n[User Analysis Context]\n' + state.analysisContext
+        ? combinedContext + '\n\n[과거 미팅 참고 자료 — Historical Context]\n' + state.analysisContext
         : state.analysisContext;
     }
 

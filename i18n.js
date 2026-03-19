@@ -591,6 +591,10 @@ const translations = {
     'ds.description_placeholder': 'What is this meeting about?',
     'ds.ref_meetings': 'Reference Meetings',
     'ds.files': 'Files',
+    'ds.ai_recommended': '🤖 AI Recommended',
+    'ds.ai_rec_loading': 'Finding relevant meetings...',
+    'ds.ai_rec_none': 'No recommendations',
+    'ds.ref_view': 'Preview',
     // Meeting Links
     'link.title': 'Linked Meetings',
     'link.add': '+ Link',
@@ -1541,6 +1545,10 @@ const translations = {
     'ds.description_placeholder': '이 미팅의 목적이나 주제는?',
     'ds.ref_meetings': '참고 미팅',
     'ds.files': '파일 첨부',
+    'ds.ai_recommended': '🤖 AI 추천',
+    'ds.ai_rec_loading': '관련 미팅을 찾고 있어요...',
+    'ds.ai_rec_none': '추천할 미팅이 없습니다',
+    'ds.ref_view': '미리보기',
     // Meeting Links
     'link.title': '연결된 미팅',
     'link.add': '+ 연결',

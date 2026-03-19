@@ -642,13 +642,28 @@ export function initFaq() {
   const search = $('#faqSearch');
   const addInput = $('#faqAddInput');
   const addBtn = $('#btnFaqAdd');
+  const addNewBtn = $('#btnFaqAddNew');
+  const addRow = $('#faqAddRow');
   if (!btn || !popover) return;
 
+  function closeFaqDropdown() {
+    popover.hidden = true;
+    btn.classList.remove('active');
+  }
+
+  function closeAddRow() {
+    addRow.hidden = true;
+    addNewBtn.classList.remove('active');
+  }
+
+  // FAQ dropdown toggle
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isOpen = !popover.hidden;
+    const willOpen = popover.hidden;
     popover.hidden = !popover.hidden;
-    if (!popover.hidden) {
+    btn.classList.toggle('active', willOpen);
+    if (willOpen) {
+      closeAddRow();
       search.value = '';
       faqActiveIdx = -1;
       renderFaqList();
@@ -656,10 +671,25 @@ export function initFaq() {
     }
   });
 
+  // + button toggle for add row
+  addNewBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = addRow.hidden;
+    addRow.hidden = !addRow.hidden;
+    addNewBtn.classList.toggle('active', willOpen);
+    if (willOpen) {
+      closeFaqDropdown();
+      addInput.value = '';
+      setTimeout(() => addInput.focus(), 0);
+    }
+  });
+
   // Close on outside click
   document.addEventListener('click', (e) => {
-    if (!popover.hidden && !popover.contains(e.target) && e.target !== btn) {
-      popover.hidden = true;
+    const faqBar = btn.closest('.faq-bar');
+    if (!faqBar.contains(e.target)) {
+      closeFaqDropdown();
+      closeAddRow();
     }
   });
 
@@ -689,7 +719,7 @@ export function initFaq() {
         useFaqItem(faqFiltered[faqActiveIdx]);
       }
     } else if (e.key === 'Escape') {
-      popover.hidden = true;
+      closeFaqDropdown();
     }
   });
 
@@ -701,7 +731,13 @@ export function initFaq() {
     items.push({ id: Date.now().toString(), text, fav: false });
     saveFaqItems(items);
     addInput.value = '';
-    renderFaqList(search.value.trim());
+    // Switch to dropdown to show the new item
+    closeAddRow();
+    popover.hidden = false;
+    btn.classList.add('active');
+    search.value = '';
+    faqActiveIdx = -1;
+    renderFaqList();
   }
 
   addBtn.addEventListener('click', addNewFaq);
@@ -710,7 +746,7 @@ export function initFaq() {
       e.preventDefault();
       addNewFaq();
     } else if (e.key === 'Escape') {
-      popover.hidden = true;
+      closeAddRow();
     }
   });
 }
@@ -798,6 +834,7 @@ function updateFaqActive() {
 function useFaqItem(item) {
   const popover = $('#faqPopover');
   popover.hidden = true;
+  $('#btnFaq')?.classList.remove('active');
 
   // Directly send the FAQ question
   const input = $('#chatInput');

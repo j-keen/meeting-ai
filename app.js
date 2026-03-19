@@ -822,7 +822,9 @@ function init() {
     // Reference + files + notes → state.analysisContext
     const parts = [];
     if (config.referenceAnalysis) {
-      parts.push('[Reference: Previous Meeting]\n' + config.referenceAnalysis);
+      const histLabel = '[과거 미팅 기록 — Historical Context]\n'
+        + '아래는 이전에 진행된 미팅의 분석 기록입니다. 오늘 미팅을 더 잘 이해하고 돕기 위한 배경 정보로 활용하세요.\n\n';
+      parts.push(histLabel + config.referenceAnalysis);
     }
     if (config.attachedFiles?.length) {
       config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));
@@ -940,7 +942,9 @@ function init() {
     // Reference + files → analysisContext
     const parts = [];
     if (config.referenceAnalysis) {
-      parts.push('[Reference: Previous Session]\n' + config.referenceAnalysis);
+      const histLabel = '[과거 미팅 기록 — Historical Context]\n'
+        + '아래는 이전에 진행된 미팅의 분석 기록입니다. 오늘 미팅을 더 잘 이해하고 돕기 위한 배경 정보로 활용하세요.\n\n';
+      parts.push(histLabel + config.referenceAnalysis);
     }
     if (config.attachedFiles?.length) {
       config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));

@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meeting AI Assistant</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
   <!-- Header -->
   <header class="header">
@@ -17,19 +21,23 @@
       <div class="meeting-pill" id="meetingPill" hidden>
         <span class="meeting-pill-dot"></span>
         <span class="meeting-timer" id="meetingTimer">00:00:00</span>
-        <span class="audio-rec-badge" id="audioRecBadge" hidden>🎙 <span id="audioRecSize"></span></span>
         <span class="meeting-pill-sep">&middot;</span>
         <span class="meeting-status" id="meetingStatus"></span>
       </div>
-      <input type="text" class="meeting-title-input" id="meetingTitleInput" data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title..." hidden>
+      <input type="text" class="meeting-title-input" id="meetingTitleInput"
+        data-i18n-placeholder="meeting.title_placeholder" placeholder="Meeting title..." hidden>
     </div>
     <div class="header-right">
-      <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
+      <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip"
+        data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
         <span class="icon-theme-light" data-i18n="header.theme_dark">Dark</span>
         <span class="icon-theme-dark" data-i18n="header.theme_light">Light</span>
       </button>
-      <button class="btn btn-text" id="btnHistory" data-i18n="header.history" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">History</button>
-      <button class="btn btn-text" id="btnSettings" data-i18n="header.settings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">Settings</button>
+      <button class="btn btn-text" id="btnHistory" data-i18n="header.history" data-i18n-title="header.history_tooltip"
+        data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">History</button>
+      <button class="btn btn-text" id="btnSettings" data-i18n="header.settings"
+        data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings"
+        aria-label="Settings">Settings</button>
     </div>
   </header>
 
@@ -38,7 +46,8 @@
     <span class="loaded-banner-icon">📂</span>
     <span id="loadedBannerTitle"></span>
     <span id="loadedBannerDate" class="loaded-banner-date"></span>
-    <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서 녹음</button>
+    <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서
+      녹음</button>
     <button class="loaded-banner-close" id="loadedBannerClose">&times;</button>
   </div>
 
@@ -58,16 +67,18 @@
           <h2 data-i18n="panel.transcript">Transcript</h2>
           <div class="panel-actions">
             <div class="inbox-btn-wrap">
-              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
+              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span
+                  data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
               <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
                 <div class="inbox-preview-items" id="inboxPreviewItems"></div>
                 <div class="inbox-preview-footer">
                   <button class="btn btn-sm inbox-preview-viewall" id="inboxPreviewViewAll"
-                          data-i18n="highlights.view_all">View all</button>
+                    data-i18n="highlights.view_all">View all</button>
                 </div>
               </div>
             </div>
-            <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
+            <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript
+                Export</span></button>
           </div>
         </div>
       </div>
@@ -82,8 +93,10 @@
             <div class="waiting-indicator" id="transcriptWaitingIndicator"></div>
             <div class="waiting-content">
               <span class="waiting-dot-label" id="transcriptWaitingLabel">REC</span>
-              <p class="waiting-text" id="transcriptWaitingText" data-i18n="transcript.waiting">Listening for speech...</p>
-              <p class="waiting-hint text-muted" id="transcriptWaitingHint" data-i18n="transcript.waiting_hint">Speak and it will be transcribed automatically.</p>
+              <p class="waiting-text" id="transcriptWaitingText" data-i18n="transcript.waiting">Listening for speech...
+              </p>
+              <p class="waiting-hint text-muted" id="transcriptWaitingHint" data-i18n="transcript.waiting_hint">Speak
+                and it will be transcribed automatically.</p>
             </div>
           </div>
         </div>
@@ -98,7 +111,8 @@
     </section>
 
     <!-- Drag Resizer 1 -->
-    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator"
+      aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
@@ -106,10 +120,13 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-actions">
-            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
+            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title"
+              title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
+            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title"
+              title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
+            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style"
+              title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis
+                Style</span></button>
           </div>
         </div>
         <!-- selectAnalysisStyle removed — label lookup now in style-history.js via i18n + loadCustomTypes -->
@@ -132,29 +149,13 @@
     </section>
 
     <!-- Drag Resizer 2 -->
-    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator"
+      aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Right Panel: AI Chat -->
     <section class="panel panel-right" id="panelRight">
       <div class="panel-header">
-        <div class="panel-header-row">
-          <h2 data-i18n="panel.chat">AI Chat</h2>
-          <div class="panel-actions">
-            <div class="faq-wrap" style="position:relative">
-              <button class="btn btn-xs" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
-              <div class="faq-popover" id="faqPopover" hidden>
-                <div class="faq-search-wrap">
-                  <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search..." autocomplete="off">
-                </div>
-                <div class="faq-list" id="faqList"></div>
-                <div class="faq-add-wrap">
-                  <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new question..." autocomplete="off">
-                  <button class="btn btn-xs btn-primary faq-add-btn" id="btnFaqAdd">+</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 data-i18n="panel.chat">AI Chat</h2>
       </div>
       <div class="chat-messages" id="chatMessages">
         <div class="chat-empty" id="chatEmpty">
@@ -164,21 +165,45 @@
             <div class="waiting-content">
               <span class="waiting-dot-label">CHAT</span>
               <p class="waiting-text" data-i18n="chat.waiting_hint">Ask questions about the meeting in progress.</p>
-              <p class="waiting-hint text-muted" data-i18n="chat.empty">Ask AI about the meeting, add insights, or request analysis.</p>
+              <p class="waiting-hint text-muted" data-i18n="chat.empty">Ask AI about the meeting, add insights, or
+                request analysis.</p>
               <div class="chat-suggestions" id="chatSuggestions"></div>
             </div>
           </div>
         </div>
       </div>
+      <!-- FAQ Bar -->
+      <div class="faq-bar">
+        <div class="faq-bar-inner">
+          <button class="btn btn-xs faq-toggle-btn" id="btnFaq">
+            <span data-i18n="chat.faq_btn">FAQ</span>
+            <span class="faq-chevron">▾</span>
+          </button>
+          <button class="btn btn-xs faq-add-btn" id="btnFaqAddNew" title="Add new question">+</button>
+        </div>
+        <!-- FAQ Dropdown -->
+        <div class="faq-dropdown" id="faqPopover" hidden>
+          <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search questions...">
+          <div class="faq-list" id="faqList"></div>
+        </div>
+        <!-- Inline Add (shown when + clicked) -->
+        <div class="faq-add-row" id="faqAddRow" hidden>
+          <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new question...">
+          <button class="btn btn-xs btn-primary" id="btnFaqAdd">Add</button>
+        </div>
+      </div>
       <div class="chat-input-wrap">
         <div class="chat-input-row">
-          <textarea id="chatInput" rows="1" data-i18n-placeholder="chat.placeholder" placeholder="Ask AI about this meeting..."></textarea>
+          <textarea id="chatInput" rows="1" data-i18n-placeholder="chat.placeholder"
+            placeholder="Ask AI about this meeting..."></textarea>
           <button class="btn btn-primary" id="btnChatSend" data-i18n="chat.send">Send</button>
         </div>
         <div class="chat-input-actions">
           <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
             &#128206;
-            <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
+            <input type="file" id="chatFileInput"
+              accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat"
+              hidden>
           </label>
           <select class="chat-model-select" id="chatModelSelect">
             <option value="gemini-2.5-flash">Flash 2.5</option>
@@ -198,10 +223,13 @@
         <span class="record-label">REC</span>
         <span class="stt-engine-badge" id="sttEngineBadge" hidden></span>
       </button>
-      <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
+      <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span
+          class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
-      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
-      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
+      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654;
+        Demo1</button>
+      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)"
+        style="color:var(--accent);">&#9654; Demo2</button>
     </div>
   </footer>
 
@@ -211,7 +239,8 @@
       <h2 data-i18n="settings.title">Settings</h2>
       <div class="settings-header-actions">
         <span class="settings-unsaved-dot" id="settingsUnsavedDot"></span>
-        <button class="btn btn-sm btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
+        <button class="btn btn-sm btn-primary settings-header-save" id="btnSettingsSave"
+          data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
         <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
       </div>
     </div>
@@ -229,17 +258,19 @@
         <section class="settings-section">
           <h3 data-i18n="settings.language">Language</h3>
           <label class="settings-label">
-              <span data-i18n="settings.ui_language">UI Language</span>
-              <small class="settings-hint" data-i18n="settings.ui_language_hint">Language shown in menus and buttons</small>
-              <select class="settings-select" id="selectUiLanguage">
-                <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
-                <option value="en" data-i18n="settings.ui_lang_en">English</option>
-                <option value="ko" data-i18n="settings.ui_lang_ko">Korean</option>
-              </select>
-            </label>
+            <span data-i18n="settings.ui_language">UI Language</span>
+            <small class="settings-hint" data-i18n="settings.ui_language_hint">Language shown in menus and
+              buttons</small>
+            <select class="settings-select" id="selectUiLanguage">
+              <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
+              <option value="en" data-i18n="settings.ui_lang_en">English</option>
+              <option value="ko" data-i18n="settings.ui_lang_ko">Korean</option>
+            </select>
+          </label>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.stt">STT Settings <span class="settings-hint" data-i18n="settings.stt_hint">Converts your speech to text</span></h3>
+          <h3 data-i18n="settings.stt">STT Settings <span class="settings-hint" data-i18n="settings.stt_hint">Converts
+              your speech to text</span></h3>
           <label class="settings-label">
             <span data-i18n="settings.language">Language</span>
             <small class="settings-hint" data-i18n="settings.stt_language_hint">Language spoken in the meeting</small>
@@ -251,29 +282,6 @@
             </select>
           </label>
         </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.audio_recording">Audio Recording</h3>
-          <label class="settings-label settings-toggle-label">
-            <span data-i18n="settings.audio_toggle">Save original audio</span>
-            <input type="checkbox" id="checkAudioRecording">
-          </label>
-          <label class="settings-label settings-toggle-label" id="audioAutoDownloadRow" hidden>
-            <span data-i18n="settings.audio_auto_download">Auto-download on save</span>
-            <input type="checkbox" id="checkAudioAutoDownload">
-          </label>
-          <label class="settings-label" id="audioRetentionRow" hidden>
-            <span data-i18n="settings.audio_retention">Auto-cleanup</span>
-            <select class="settings-select" id="selectAudioRetention">
-              <option value="7" data-i18n="settings.audio_7days">7 days</option>
-              <option value="30" selected data-i18n="settings.audio_30days">30 days</option>
-              <option value="90" data-i18n="settings.audio_90days">90 days</option>
-              <option value="0" data-i18n="settings.audio_never">Never</option>
-            </select>
-          </label>
-          <small class="settings-hint" data-i18n="settings.audio_storage_hint">Saved in browser storage (IndexedDB). Cleared if browser data is deleted.</small>
-          <div id="audioStorageInfo" class="audio-storage-info" hidden></div>
-          <button class="btn btn-xs btn-danger" id="btnAudioDeleteAll" hidden data-i18n="settings.audio_delete_all">Delete All Recordings</button>
-        </section>
       </div>
 
       <!-- Analysis Tab -->
@@ -281,26 +289,30 @@
         <section class="settings-section">
           <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
           <label class="settings-label">
-              <span data-i18n="settings.ai_language">AI Analysis Language</span>
-              <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results in</small>
-              <select class="settings-select" id="selectAiLanguage">
-                <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
-                <option value="en" data-i18n="settings.ai_lang_en">English</option>
-                <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
-              </select>
-            </label>
+            <span data-i18n="settings.ai_language">AI Analysis Language</span>
+            <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results
+              in</small>
+            <select class="settings-select" id="selectAiLanguage">
+              <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
+              <option value="en" data-i18n="settings.ai_lang_en">English</option>
+              <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
+            </select>
+          </label>
         </section>
 
         <section class="settings-section">
-          <h3 data-i18n="settings.preset_section">Analysis Presets <span class="settings-hint" data-i18n="settings.preset_section_hint">Choose how AI analyzes your conversations</span></h3>
+          <h3 data-i18n="settings.preset_section">Analysis Presets <span class="settings-hint"
+              data-i18n="settings.preset_section_hint">Choose how AI analyzes your conversations</span></h3>
           <div class="preset-cards" id="presetCards">
             <label class="preset-card selected" data-preset="copilot">
               <span class="preset-card-radio"></span>
               <div class="preset-card-body">
                 <span class="preset-card-icon">🎯</span>
                 <span class="preset-card-name" data-i18n="settings.preset_copilot">Conversation Coach</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_copilot_desc">Tells you what to say right now</span>
-                <span class="preset-card-fit" data-i18n="settings.preset_copilot_fit">Client meetings, sales calls, consulting</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_copilot_desc">Tells you what to say right
+                  now</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_copilot_fit">Client meetings, sales calls,
+                  consulting</span>
               </div>
             </label>
             <label class="preset-card" data-preset="minutes">
@@ -308,8 +320,10 @@
               <div class="preset-card-body">
                 <span class="preset-card-icon">📋</span>
                 <span class="preset-card-name" data-i18n="settings.preset_minutes">Meeting Minutes</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Organizes decisions & action items</span>
-                <span class="preset-card-fit" data-i18n="settings.preset_minutes_fit">Team meetings, weekly syncs, kickoffs</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Organizes decisions & action
+                  items</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_minutes_fit">Team meetings, weekly syncs,
+                  kickoffs</span>
               </div>
             </label>
             <label class="preset-card" data-preset="learning">
@@ -317,8 +331,10 @@
               <div class="preset-card-body">
                 <span class="preset-card-icon">📚</span>
                 <span class="preset-card-name" data-i18n="settings.preset_learning">Lecture Notes</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Captures key concepts & review points</span>
-                <span class="preset-card-fit" data-i18n="settings.preset_learning_fit">Lectures, seminars, mentoring sessions</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Captures key concepts & review
+                  points</span>
+                <span class="preset-card-fit" data-i18n="settings.preset_learning_fit">Lectures, seminars, mentoring
+                  sessions</span>
               </div>
             </label>
           </div>
@@ -326,48 +342,60 @@
         <section class="settings-section">
           <h3 data-i18n="settings.custom_presets">Custom Presets</h3>
           <div class="custom-preset-list" id="customPresetList">
-            <p class="text-muted" style="font-size:12px;" data-i18n="settings.custom_presets_empty">No custom presets yet. Create one with AI!</p>
+            <p class="text-muted" style="font-size:12px;" data-i18n="settings.custom_presets_empty">No custom presets
+              yet. Create one with AI!</p>
           </div>
-          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset" style="margin-top:8px;">+ Create with AI</button>
+          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset"
+            style="margin-top:8px;">+ Create with AI</button>
         </section>
       </div>
 
       <!-- Chat Tab -->
       <div class="settings-tab-content" data-tab="chat">
         <section class="settings-section">
-          <h3 data-i18n="settings.chat_prompt">Chat System Prompt <span class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</span></h3>
-          <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
-          <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
+          <h3 data-i18n="settings.chat_prompt">Chat System Prompt <span class="settings-hint"
+              data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</span></h3>
+          <textarea class="settings-textarea" id="textChatPrompt" rows="5"
+            data-i18n-placeholder="settings.chat_prompt_placeholder"
+            placeholder="Custom chat system prompt..."></textarea>
+          <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to
+            Default</button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.chat_presets">Chat Preset Questions <span class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</span></h3>
+          <h3 data-i18n="settings.chat_presets">Chat Preset Questions <span class="settings-hint"
+              data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</span></h3>
           <div class="chat-presets-list" id="chatPresetsList"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
+            <input type="text" class="settings-input" id="inputNewChatPreset"
+              data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
             <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
           </div>
-          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
+          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px"
+            data-i18n="settings.reset_defaults">Reset Defaults</button>
         </section>
       </div>
 
       <!-- Data Tab -->
       <div class="settings-tab-content" data-tab="data">
         <section class="settings-section">
-          <h3 data-i18n="settings.contacts_title">People <span class="settings-hint" data-i18n="settings.contacts_hint">People you can select as meeting participants</span></h3>
+          <h3 data-i18n="settings.contacts_title">People <span class="settings-hint"
+              data-i18n="settings.contacts_hint">People you can select as meeting participants</span></h3>
           <button class="btn btn-sm btn-data-modal-open" id="btnOpenContacts">
             <span data-i18n="settings.open_contacts">Manage People</span>
             <span class="data-modal-badge" id="contactsBadge"></span>
           </button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.locations">Locations <span class="settings-hint" data-i18n="settings.locations_hint">Places available for meeting location</span></h3>
+          <h3 data-i18n="settings.locations">Locations <span class="settings-hint"
+              data-i18n="settings.locations_hint">Places available for meeting location</span></h3>
           <button class="btn btn-sm btn-data-modal-open" id="btnOpenLocations">
             <span data-i18n="settings.open_locations">Manage Locations</span>
             <span class="data-modal-badge" id="locationsBadge"></span>
           </button>
         </section>
         <section class="settings-section">
-          <h3 data-i18n="settings.correction_dict">Correction Dictionary <span class="settings-hint" data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</span></h3>
+          <h3 data-i18n="settings.correction_dict">Correction Dictionary <span class="settings-hint"
+              data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</span></h3>
           <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
             <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
@@ -381,18 +409,24 @@
           <div class="modal-header">
             <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
             <div style="display:flex;gap:6px;align-items:center;">
-              <button class="btn btn-sm" id="btnCorrectionDictImport" data-i18n="settings.correction_dict_import">Import</button>
-              <button class="btn btn-sm" id="btnCorrectionDictExport" data-i18n="settings.correction_dict_export">Export</button>
+              <button class="btn btn-sm" id="btnCorrectionDictImport"
+                data-i18n="settings.correction_dict_import">Import</button>
+              <button class="btn btn-sm" id="btnCorrectionDictExport"
+                data-i18n="settings.correction_dict_export">Export</button>
               <button class="btn btn-icon" id="btnCloseCorrectionDict" aria-label="Close">&times;</button>
             </div>
           </div>
           <div class="modal-body">
-            <input type="text" class="settings-input correction-dict-search" id="inputCorrectionSearch" data-i18n-placeholder="settings.correction_dict_search" placeholder="Search corrections...">
-            <p class="text-muted" style="font-size:12px;margin:8px 0;" data-i18n="settings.correction_dict_hint">Corrections from your transcript edits are saved here and used by AI auto-correction.</p>
+            <input type="text" class="settings-input correction-dict-search" id="inputCorrectionSearch"
+              data-i18n-placeholder="settings.correction_dict_search" placeholder="Search corrections...">
+            <p class="text-muted" style="font-size:12px;margin:8px 0;" data-i18n="settings.correction_dict_hint">
+              Corrections from your transcript edits are saved here and used by AI auto-correction.</p>
             <div class="data-list" id="dataCorrectionDictList" style="max-height:300px;overflow-y:auto;"></div>
             <div class="data-add-row" style="margin-top:8px;">
-              <input type="text" class="settings-input" id="inputCorrectionOriginal" data-i18n-placeholder="settings.correction_original" placeholder="Original (STT)">
-              <input type="text" class="settings-input" id="inputCorrectionCorrected" data-i18n-placeholder="settings.correction_corrected" placeholder="Corrected">
+              <input type="text" class="settings-input" id="inputCorrectionOriginal"
+                data-i18n-placeholder="settings.correction_original" placeholder="Original (STT)">
+              <input type="text" class="settings-input" id="inputCorrectionCorrected"
+                data-i18n-placeholder="settings.correction_corrected" placeholder="Corrected">
               <button class="btn btn-sm" id="btnAddCorrection" data-i18n="settings.add">Add</button>
             </div>
           </div>
@@ -408,16 +442,21 @@
             <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
           </div>
           <div class="contacts-modal-tabs">
-            <button class="contacts-modal-tab active" data-contacts-tab="add" data-i18n="settings.contacts_tab_add">Add</button>
-            <button class="contacts-modal-tab" data-contacts-tab="search" data-i18n="settings.contacts_tab_search">Search</button>
+            <button class="contacts-modal-tab active" data-contacts-tab="add"
+              data-i18n="settings.contacts_tab_add">Add</button>
+            <button class="contacts-modal-tab" data-contacts-tab="search"
+              data-i18n="settings.contacts_tab_search">Search</button>
           </div>
           <div class="modal-body">
             <!-- Add Tab -->
             <div class="contacts-tab-content" id="contactsTabAdd">
               <div class="data-add-row">
-                <input type="text" class="settings-input" id="inputNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
-                <input type="text" class="settings-input" id="inputNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
-                <input type="text" class="settings-input" id="inputNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
+                <input type="text" class="settings-input" id="inputNewParticipantName"
+                  data-i18n-placeholder="settings.placeholder_name" placeholder="Name">
+                <input type="text" class="settings-input" id="inputNewParticipantTitle"
+                  data-i18n-placeholder="settings.placeholder_title" placeholder="Title/Position">
+                <input type="text" class="settings-input" id="inputNewParticipantCompany"
+                  data-i18n-placeholder="settings.placeholder_company" placeholder="Company">
                 <button class="btn btn-sm" id="btnAddParticipant" data-i18n="settings.add">Add</button>
               </div>
               <input type="file" id="settingsImageFileInput" accept="image/*" multiple hidden>
@@ -426,15 +465,20 @@
             <div class="contacts-tab-content" id="contactsTabSearch" hidden>
               <div class="contacts-search-row">
                 <div class="contacts-search-input-wrap">
-                  <input type="text" class="settings-input data-modal-search" id="inputContactSearch" data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
+                  <input type="text" class="settings-input data-modal-search" id="inputContactSearch"
+                    data-i18n-placeholder="settings.search_contacts" placeholder="Search contacts...">
                   <button class="btn-search-filter" id="btnSearchFilter" title="Filter field">
                     <span id="searchFilterLabel" data-i18n="settings.search_filter_all">All</span> &#9662;
                   </button>
                   <div class="search-filter-dropdown" id="searchFilterDropdown" hidden>
-                    <button class="search-filter-option active" data-filter="all" data-i18n="settings.search_filter_all">All</button>
-                    <button class="search-filter-option" data-filter="name" data-i18n="settings.placeholder_name">Name</button>
-                    <button class="search-filter-option" data-filter="title" data-i18n="settings.placeholder_title">Title</button>
-                    <button class="search-filter-option" data-filter="company" data-i18n="settings.placeholder_company">Company</button>
+                    <button class="search-filter-option active" data-filter="all"
+                      data-i18n="settings.search_filter_all">All</button>
+                    <button class="search-filter-option" data-filter="name"
+                      data-i18n="settings.placeholder_name">Name</button>
+                    <button class="search-filter-option" data-filter="title"
+                      data-i18n="settings.placeholder_title">Title</button>
+                    <button class="search-filter-option" data-filter="company"
+                      data-i18n="settings.placeholder_company">Company</button>
                   </div>
                 </div>
                 <button class="btn btn-sm btn-star-filter" id="btnStarFilter" title="Show starred only">&#9734;</button>
@@ -443,9 +487,12 @@
             <!-- Contact List (always visible) -->
             <div class="data-list" id="dataParticipantsList"></div>
             <div class="contacts-io-row">
-              <button class="btn btn-xs" id="btnSettingsScanCard" title="Scan business card">&#128247; <span data-i18n="settings.scan_card_btn">Scan Card</span></button>
-              <button class="btn btn-xs" id="btnImportContacts" title="Import contacts">&#128229; <span data-i18n="settings.contacts_import">Import Contacts</span></button>
-              <button class="btn btn-xs" id="btnExportCsv" title="Export contacts">&#128228; <span data-i18n="settings.export_csv">Export Contacts</span></button>
+              <button class="btn btn-xs" id="btnSettingsScanCard" title="Scan business card">&#128247; <span
+                  data-i18n="settings.scan_card_btn">Scan Card</span></button>
+              <button class="btn btn-xs" id="btnImportContacts" title="Import contacts">&#128229; <span
+                  data-i18n="settings.contacts_import">Import Contacts</span></button>
+              <button class="btn btn-xs" id="btnExportCsv" title="Export contacts">&#128228; <span
+                  data-i18n="settings.export_csv">Export Contacts</span></button>
               <input type="file" id="contactsImportFile" accept=".csv,.vcf" hidden>
             </div>
           </div>
@@ -463,18 +510,22 @@
             <div class="card-scan-drop-zone" id="cardScanDropZone">
               <div class="card-scan-drop-icon">&#128247;</div>
               <p data-i18n="settings.drop_card_image">Drop business card image here</p>
-              <p class="text-muted" style="font-size:11px;" data-i18n="settings.drop_card_hint">or click below to upload</p>
+              <p class="text-muted" style="font-size:11px;" data-i18n="settings.drop_card_hint">or click below to upload
+              </p>
             </div>
             <div class="card-scan-actions">
-              <button class="btn btn-sm" id="btnCardScanUpload">&#128206; <span data-i18n="prep.photo_upload">Upload image file</span></button>
-              <button class="btn btn-sm" id="btnCardScanCamera">&#128247; <span data-i18n="prep.photo_camera">Take photo</span></button>
+              <button class="btn btn-sm" id="btnCardScanUpload">&#128206; <span data-i18n="prep.photo_upload">Upload
+                  image file</span></button>
+              <button class="btn btn-sm" id="btnCardScanCamera">&#128247; <span data-i18n="prep.photo_camera">Take
+                  photo</span></button>
             </div>
             <input type="file" id="cardScanFileInput" accept="image/*" multiple hidden>
             <!-- Queue: multiple card processing -->
             <div class="card-scan-queue" id="cardScanQueue" hidden></div>
             <!-- Review panel: editable cards before saving -->
             <div class="card-scan-review-panel" id="cardScanReviewPanel" hidden></div>
-            <button class="btn btn-sm btn-primary card-scan-save-all" id="cardScanSaveAll" hidden data-i18n="settings.card_save_all">Save All</button>
+            <button class="btn btn-sm btn-primary card-scan-save-all" id="cardScanSaveAll" hidden
+              data-i18n="settings.card_save_all">Save All</button>
             <!-- Single OCR Result (fallback) -->
             <div class="prep-card-result" id="settingsCardResult" hidden>
               <div class="prep-card-fields">
@@ -484,7 +535,8 @@
                 <input type="text" class="settings-input" id="settingsCardEmail" placeholder="Email">
                 <input type="text" class="settings-input" id="settingsCardPhone" placeholder="Phone">
               </div>
-              <button class="btn btn-sm btn-primary" id="btnSettingsSaveCard" data-i18n="prep.save_to_contacts">Save to Contacts</button>
+              <button class="btn btn-sm btn-primary" id="btnSettingsSaveCard" data-i18n="prep.save_to_contacts">Save to
+                Contacts</button>
             </div>
           </div>
         </div>
@@ -498,23 +550,29 @@
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
           </div>
           <div class="contacts-modal-tabs">
-            <button class="contacts-modal-tab active" data-locations-tab="add" data-i18n="settings.contacts_tab_add">Add</button>
-            <button class="contacts-modal-tab" data-locations-tab="search" data-i18n="settings.contacts_tab_search">Search</button>
+            <button class="contacts-modal-tab active" data-locations-tab="add"
+              data-i18n="settings.contacts_tab_add">Add</button>
+            <button class="contacts-modal-tab" data-locations-tab="search"
+              data-i18n="settings.contacts_tab_search">Search</button>
           </div>
           <div class="modal-body">
             <!-- Add Tab -->
             <div class="locations-tab-content" id="locationsTabAdd">
               <div class="data-add-row">
-                <input type="text" class="settings-input" id="inputNewLocation" data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
+                <input type="text" class="settings-input" id="inputNewLocation"
+                  data-i18n-placeholder="settings.placeholder_location" placeholder="Location name">
                 <button class="btn btn-sm" id="btnAddLocation" data-i18n="settings.add">Add</button>
               </div>
               <div class="data-add-row" style="margin-top:4px;">
-                <input type="text" class="settings-input" id="inputNewLocationMemo" data-i18n-placeholder="settings.placeholder_location_memo" placeholder="Memo (optional)" style="font-size:12px;">
+                <input type="text" class="settings-input" id="inputNewLocationMemo"
+                  data-i18n-placeholder="settings.placeholder_location_memo" placeholder="Memo (optional)"
+                  style="font-size:12px;">
               </div>
             </div>
             <!-- Search Tab -->
             <div class="locations-tab-content" id="locationsTabSearch" hidden>
-              <input type="text" class="settings-input data-modal-search" id="inputLocationSearch" data-i18n-placeholder="settings.search_locations" placeholder="Search locations...">
+              <input type="text" class="settings-input data-modal-search" id="inputLocationSearch"
+                data-i18n-placeholder="settings.search_locations" placeholder="Search locations...">
             </div>
             <!-- Location List (always visible) -->
             <div class="data-list" id="dataLocationsList" style="max-height:300px;overflow-y:auto;"></div>
@@ -524,7 +582,8 @@
 
     </div>
     <div class="settings-footer" id="settingsFooter">
-      <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
+      <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset
+        All</button>
     </div>
   </aside>
 
@@ -535,7 +594,8 @@
   <div class="modal-overlay" id="settingsUnsavedModal" hidden>
     <div class="modal settings-unsaved-modal">
       <div class="modal-body" style="padding:24px;">
-        <p class="settings-unsaved-modal-text" data-i18n="settings.unsaved_modal_text">You have unsaved changes. What would you like to do?</p>
+        <p class="settings-unsaved-modal-text" data-i18n="settings.unsaved_modal_text">You have unsaved changes. What
+          would you like to do?</p>
         <div class="settings-unsaved-modal-actions">
           <button class="btn btn-sm" id="btnUnsavedDiscard" data-i18n="settings.discard">Don't Save</button>
           <div style="display:flex;gap:8px;">
@@ -558,7 +618,8 @@
   <div class="modal-overlay" id="loadedSaveModal" hidden>
     <div class="modal loaded-save-modal">
       <h2 class="modal-title" id="loadedSaveTitle" data-i18n="loaded.save_title">Save Changes?</h2>
-      <p class="loaded-save-desc" id="loadedSaveDesc" data-i18n="loaded.save_desc">This meeting has been modified. How would you like to proceed?</p>
+      <p class="loaded-save-desc" id="loadedSaveDesc" data-i18n="loaded.save_desc">This meeting has been modified. How
+        would you like to proceed?</p>
       <div class="loaded-save-actions">
         <button class="btn btn-primary" id="btnLoadedOverwrite" data-i18n="loaded.overwrite">Overwrite Original</button>
         <button class="btn" id="btnLoadedSaveCopy" data-i18n="loaded.save_copy">Save as Copy</button>
@@ -578,21 +639,35 @@
         <div class="export-format-grid export-card-grid">
           <button class="btn export-fmt-btn export-card-btn" data-format="txt" title="Text">
             <div class="export-card-icon txt-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
             </div>
             <div class="export-card-text">
               <span class="export-card-title" data-i18n="export.txt_title">일반 텍스트 (.txt)</span>
-              <span class="export-card-desc" data-i18n="export.txt_desc">대화 내용만 깔끔하게 보관합니다.<br>문서 요약이나 텍스트 작업에 적합합니다.</span>
+              <span class="export-card-desc" data-i18n="export.txt_desc">대화 내용만 깔끔하게 보관합니다.<br>문서 요약이나 텍스트 작업에
+                적합합니다.</span>
             </div>
             <div class="export-card-check"></div>
           </button>
           <button class="btn export-fmt-btn export-card-btn" data-format="srt" title="Subtitle">
             <div class="export-card-icon srt-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
             </div>
             <div class="export-card-text">
               <span class="export-card-title" data-i18n="export.srt_title">시간 자막 (.srt)</span>
-              <span class="export-card-desc" data-i18n="export.srt_desc">타임코드가 포함되어 저장됩니다.<br>영상 편집이나 자막 프로그램에 사용하세요.</span>
+              <span class="export-card-desc" data-i18n="export.srt_desc">타임코드가 포함되어 저장됩니다.<br>영상 편집이나 자막 프로그램에
+                사용하세요.</span>
             </div>
             <div class="export-card-check"></div>
           </button>
@@ -679,7 +754,8 @@
         <div class="history-toolbar">
           <div class="history-search-wrapper">
             <span class="history-search-icon">&#128269;</span>
-            <input type="search" class="history-search-input" id="historySearch" data-i18n-placeholder="history.search" placeholder="Title, location, transcript, summary, chat, tags...">
+            <input type="search" class="history-search-input" id="historySearch" data-i18n-placeholder="history.search"
+              placeholder="Title, location, transcript, summary, chat, tags...">
           </div>
           <div class="history-filters">
             <div class="history-filter-row">
@@ -704,11 +780,14 @@
               </select>
             </div>
             <div class="history-filter-row">
-              <input type="text" class="history-filter-control" id="historyFilterTag" data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
+              <input type="text" class="history-filter-control" id="historyFilterTag"
+                data-i18n-placeholder="history.filter_tag" placeholder="Filter by tag...">
               <div class="history-date-range">
-                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateFrom" data-i18n-title="history.filter_date_from" title="From date">
+                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateFrom"
+                  data-i18n-title="history.filter_date_from" title="From date">
                 <span class="history-filter-sep">~</span>
-                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateTo" data-i18n-title="history.filter_date_to" title="To date">
+                <input type="date" class="history-filter-control history-filter-date" id="historyFilterDateTo"
+                  data-i18n-title="history.filter_date_to" title="To date">
               </div>
             </div>
           </div>
@@ -723,7 +802,8 @@
     <div class="modal modal-fullscreen">
       <div class="modal-header viewer-header">
         <div class="viewer-header-left">
-          <button class="btn btn-sm btn-ghost" id="btnViewerBack" data-i18n="viewer.back_to_list">← Back to list</button>
+          <button class="btn btn-sm btn-ghost" id="btnViewerBack" data-i18n="viewer.back_to_list">← Back to
+            list</button>
         </div>
         <div class="viewer-header-center">
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerPrev" title="Previous meeting">‹</button>
@@ -732,7 +812,6 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
-          <button class="btn btn-sm" id="btnViewerDocGen" data-i18n="dg.button_label">📄 AI Document</button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -802,7 +881,8 @@
             <div class="compare-result-panel">
               <div class="compare-label" data-i18n="compare.prompt_a">Prompt A</div>
               <div class="ai-sections" id="compareResultA"></div>
-              <button class="btn btn-sm compare-set-default" id="btnSetDefaultA" style="display:none" data-i18n="compare.set_default">Set as Default Prompt</button>
+              <button class="btn btn-sm compare-set-default" id="btnSetDefaultA" style="display:none"
+                data-i18n="compare.set_default">Set as Default Prompt</button>
             </div>
           </div>
           <!-- Column 3: Result B -->
@@ -810,7 +890,8 @@
             <div class="compare-result-panel">
               <div class="compare-label" data-i18n="compare.prompt_b">Prompt B</div>
               <div class="ai-sections" id="compareResultB"></div>
-              <button class="btn btn-sm compare-set-default" id="btnSetDefaultB" style="display:none" data-i18n="compare.set_default">Set as Default Prompt</button>
+              <button class="btn btn-sm compare-set-default" id="btnSetDefaultB" style="display:none"
+                data-i18n="compare.set_default">Set as Default Prompt</button>
             </div>
           </div>
           <!-- Column 4: Prompt B -->
@@ -839,7 +920,7 @@
       <div class="modal-body">
         <div class="inbox-search-wrap">
           <input type="text" class="inbox-search-input" id="inboxSearchInput"
-                 data-i18n-placeholder="highlights.search_placeholder" placeholder="Search inbox...">
+            data-i18n-placeholder="highlights.search_placeholder" placeholder="Search inbox...">
           <span class="inbox-search-count" id="inboxSearchCount"></span>
         </div>
         <div class="highlights-tabs">
@@ -884,7 +965,9 @@
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
             <div class="location-select-wrapper">
-              <input type="text" class="settings-input" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
+              <input type="text" class="settings-input" id="endMeetingLocation"
+                data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..."
+                autocomplete="off">
               <div class="unified-dropdown location-dropdown" id="locationDropdown" hidden></div>
             </div>
           </div>
@@ -892,9 +975,11 @@
         <!-- 3. Title + AI suggestions -->
         <div class="end-meeting-section">
           <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
-          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title">
+          <input type="text" class="settings-input" id="endMeetingTitle"
+            data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title">
           <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
-            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
+            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your
+              own</span>
             <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
             <div class="ai-title-chips" id="aiTitleChips"></div>
           </div>
@@ -904,26 +989,37 @@
           <div class="end-meeting-section end-meeting-flex-6">
             <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
             <div class="participant-tabs">
-              <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
-              <button class="participant-tab" data-participant-tab="register" data-i18n="end_meeting.tab_register">Register</button>
+              <button class="participant-tab active" data-participant-tab="search"
+                data-i18n="end_meeting.tab_search">Search</button>
+              <button class="participant-tab" data-participant-tab="register"
+                data-i18n="end_meeting.tab_register">Register</button>
             </div>
             <div class="participant-tab-content" id="participantTabSearch">
-              <input type="text" class="unified-input-field" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.search_participant" placeholder="Search name..." autocomplete="off">
+              <input type="text" class="unified-input-field" id="endMeetingParticipantInput"
+                data-i18n-placeholder="end_meeting.search_participant" placeholder="Search name..." autocomplete="off">
               <div class="unified-dropdown" id="participantDropdown" hidden></div>
             </div>
             <div class="participant-tab-content" id="participantTabRegister" hidden>
               <div class="participant-register-row">
-                <input type="text" class="unified-input-field participant-register-name" id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name" autocomplete="off">
-                <input type="text" class="unified-input-field participant-register-title" id="endMeetingNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title" autocomplete="off">
-                <input type="text" class="unified-input-field participant-register-company" id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company" autocomplete="off">
-                <button class="btn btn-sm" id="btnEndMeetingAddParticipant" data-i18n="end_meeting.tab_register">Register</button>
+                <input type="text" class="unified-input-field participant-register-name"
+                  id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name"
+                  autocomplete="off">
+                <input type="text" class="unified-input-field participant-register-title"
+                  id="endMeetingNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title"
+                  placeholder="Title" autocomplete="off">
+                <input type="text" class="unified-input-field participant-register-company"
+                  id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company"
+                  placeholder="Company" autocomplete="off">
+                <button class="btn btn-sm" id="btnEndMeetingAddParticipant"
+                  data-i18n="end_meeting.tab_register">Register</button>
               </div>
             </div>
             <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
           </div>
           <div class="end-meeting-section end-meeting-flex-4">
             <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
-            <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
+            <input type="text" class="unified-input-field" id="endMeetingTagInput"
+              data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
             <div class="unified-dropdown" id="tagDropdown" hidden></div>
             <div class="ai-tag-loading" id="aiTagLoading" hidden>
               <span class="ai-loading-spinner"></span>
@@ -932,59 +1028,14 @@
             <div class="unified-badges-area" id="endMeetingTags"></div>
           </div>
         </div>
-        <!-- 4.5 Audio Download (P-5) -->
-        <div class="end-meeting-audio-section" id="endMeetingAudioSection" hidden>
-          <div class="end-meeting-audio-row">
-            <span class="end-meeting-audio-icon">🎙</span>
-            <div class="end-meeting-audio-info">
-              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload">⬇ <span data-i18n="end_meeting.download_audio">Download Recording</span></button>
-              <small class="end-meeting-audio-warn" id="endMeetingAudioWarn" data-i18n="end_meeting.audio_warn">Download recommended — auto-deleted after 30 days</small>
-              <small class="end-meeting-audio-auto" id="endMeetingAudioAuto" hidden></small>
-            </div>
-          </div>
-        </div>
       </div>
       <!-- 5. Footer: Cancel + Generate Minutes + Save -->
       <div class="end-meeting-footer" id="endMeetingFooter">
         <div class="end-meeting-footer-actions" id="endMeetingFooterActions">
           <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
-          <button class="btn btn-accent" id="btnDocGenerator" data-i18n="dg.button_label">📄 AI Document</button>
+          <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate
+            Minutes</button>
           <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Document Generator Modal -->
-  <div class="modal-overlay" id="docGeneratorModal" hidden>
-    <div class="modal prompt-builder-modal dg-modal">
-      <button class="modal-close" id="dgCloseBtn">&times;</button>
-      <h2 class="pb-title" data-i18n="dg.title">AI Document Generator</h2>
-
-      <!-- Chat View -->
-      <div class="pb-view" id="dgChatView">
-        <div class="pb-messages" id="dgMessages"></div>
-        <div class="pb-chips" id="dgChips"></div>
-        <div class="pb-input-wrap">
-          <textarea class="pb-input" id="dgInput" rows="1" data-i18n-placeholder="dg.input_placeholder" placeholder="What document would you like?"></textarea>
-          <button class="pb-send-btn" id="btnDgSend">&#10148;</button>
-        </div>
-      </div>
-
-      <!-- Preview View -->
-      <div class="pb-view" id="dgPreviewView" hidden>
-        <div class="dg-toolbar">
-          <button class="btn btn-sm" id="btnDgCopy" data-i18n="dg.copy">Copy</button>
-          <button class="btn btn-sm" id="btnDgDownloadMd" data-i18n="dg.download_md">MD</button>
-          <button class="btn btn-sm" id="btnDgDownloadDocx" data-i18n="dg.download_docx">Word</button>
-          <button class="btn btn-sm" id="btnDgDownloadPdf" data-i18n="dg.download_pdf">PDF</button>
-          <button class="btn btn-sm btn-primary" id="btnDgSave" data-i18n="dg.save">Save</button>
-        </div>
-        <div class="dg-preview-content" id="dgPreviewContent"></div>
-        <div class="pb-preview-actions">
-          <button class="btn btn-text" id="btnDgBack" data-i18n="dg.back_to_chat">← Back to Chat</button>
-          <button class="btn btn-outline" id="btnDgNewDoc" data-i18n="dg.new_doc">+ New Document</button>
         </div>
       </div>
     </div>
@@ -1000,15 +1051,20 @@
 
       <!-- Step Indicator -->
       <div class="prep-wizard-steps" id="prepWizardSteps">
-        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="prep.wizard_type">Type</span></button>
+        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span
+            class="prep-step-label" data-i18n="prep.wizard_type">Type</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="prep.wizard_agenda">Agenda</span></button>
+        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span
+            class="prep-step-label" data-i18n="prep.wizard_agenda">Agenda</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="prep.wizard_attendees">Attendees</span></button>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span
+            class="prep-step-label" data-i18n="prep.wizard_attendees">Attendees</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="prep.wizard_reference">Reference</span></button>
+        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span
+            class="prep-step-label" data-i18n="prep.wizard_reference">Reference</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="5" disabled><span class="prep-step-num">5</span><span class="prep-step-label" data-i18n="prep.wizard_files">Files</span></button>
+        <button class="prep-step-dot" data-step="5" disabled><span class="prep-step-num">5</span><span
+            class="prep-step-label" data-i18n="prep.wizard_files">Files</span></button>
       </div>
 
       <div class="modal-body meeting-prep-form-body" id="prepFormBody">
@@ -1020,17 +1076,20 @@
               <label class="prep-type-radio selected" data-type="copilot">
                 <span class="prep-type-radio-indicator"></span>
                 <span class="prep-type-radio-label" data-i18n="prep.type_copilot">Copilot</span>
-                <span class="prep-type-radio-desc" data-i18n="prep.type_copilot_desc">Real-time business conversation analysis</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_copilot_desc">Real-time business conversation
+                  analysis</span>
               </label>
               <label class="prep-type-radio" data-type="minutes">
                 <span class="prep-type-radio-indicator"></span>
                 <span class="prep-type-radio-label" data-i18n="prep.type_minutes">Minutes</span>
-                <span class="prep-type-radio-desc" data-i18n="prep.type_minutes_desc">Summary, decisions, action items</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_minutes_desc">Summary, decisions, action
+                  items</span>
               </label>
               <label class="prep-type-radio" data-type="learning">
                 <span class="prep-type-radio-indicator"></span>
                 <span class="prep-type-radio-label" data-i18n="prep.type_learning">Learning</span>
-                <span class="prep-type-radio-desc" data-i18n="prep.type_learning_desc">Key concepts & comprehension check</span>
+                <span class="prep-type-radio-desc" data-i18n="prep.type_learning_desc">Key concepts & comprehension
+                  check</span>
               </label>
             </div>
           </div>
@@ -1043,19 +1102,23 @@
             <div class="prep-agenda-fields">
               <div class="prep-agenda-field">
                 <label data-i18n="prep.agenda_goal">What is the goal?</label>
-                <input class="settings-input" id="prepAgendaGoal" data-i18n-placeholder="prep.agenda_goal_hint" placeholder="Goals to achieve...">
+                <input class="settings-input" id="prepAgendaGoal" data-i18n-placeholder="prep.agenda_goal_hint"
+                  placeholder="Goals to achieve...">
               </div>
               <div class="prep-agenda-field">
                 <label data-i18n="prep.agenda_context">Background/context?</label>
-                <input class="settings-input" id="prepAgendaContext" data-i18n-placeholder="prep.agenda_context_hint" placeholder="Relevant background info...">
+                <input class="settings-input" id="prepAgendaContext" data-i18n-placeholder="prep.agenda_context_hint"
+                  placeholder="Relevant background info...">
               </div>
               <div class="prep-agenda-field">
                 <label data-i18n="prep.agenda_topics">Key topics?</label>
-                <textarea class="settings-textarea" id="prepAgendaTopics" rows="2" data-i18n-placeholder="prep.agenda_topics_hint" placeholder="List main agenda items..."></textarea>
+                <textarea class="settings-textarea" id="prepAgendaTopics" rows="2"
+                  data-i18n-placeholder="prep.agenda_topics_hint" placeholder="List main agenda items..."></textarea>
               </div>
               <div class="prep-agenda-field">
                 <label data-i18n="prep.agenda_outcomes">Expected outcomes?</label>
-                <input class="settings-input" id="prepAgendaOutcomes" data-i18n-placeholder="prep.agenda_outcomes_hint" placeholder="Expected decisions or conclusions...">
+                <input class="settings-input" id="prepAgendaOutcomes" data-i18n-placeholder="prep.agenda_outcomes_hint"
+                  placeholder="Expected decisions or conclusions...">
               </div>
             </div>
             <div class="prep-agenda-suggestions" id="prepAgendaSuggestions" hidden></div>
@@ -1085,8 +1148,10 @@
 
             <!-- Search filter -->
             <div class="prep-contact-search-wrap">
-              <input type="search" class="settings-input prep-contact-search" id="prepContactSearch" data-i18n-placeholder="prep.contact_search" placeholder="Search contacts...">
-              <button class="prep-group-select-all-btn" id="btnGroupSelectAll" data-i18n="prep.group_select_all" title="Select all in group">Select All</button>
+              <input type="search" class="settings-input prep-contact-search" id="prepContactSearch"
+                data-i18n-placeholder="prep.contact_search" placeholder="Search contacts...">
+              <button class="prep-group-select-all-btn" id="btnGroupSelectAll" data-i18n="prep.group_select_all"
+                title="Select all in group">Select All</button>
             </div>
 
             <!-- Contact list with checkboxes -->
@@ -1097,7 +1162,8 @@
             <!-- Add button -->
             <div class="prep-add-actions">
               <button class="btn btn-sm btn-outline" id="btnAddAttendee" data-i18n="prep.add_attendee">+ Add</button>
-              <button class="btn btn-sm btn-outline" id="btnOcrAttendee" data-i18n="prep.ocr_attendee">📷 Photo OCR</button>
+              <button class="btn btn-sm btn-outline" id="btnOcrAttendee" data-i18n="prep.ocr_attendee">📷 Photo
+                OCR</button>
             </div>
 
             <!-- Inline add panel (hidden by default) -->
@@ -1106,7 +1172,8 @@
                 <span class="prep-subsection-label" data-i18n="prep.add_new_contact">Add new contact</span>
                 <button class="prep-add-panel-close" id="btnCloseAddPanel">&times;</button>
               </div>
-              <input type="text" class="settings-input" id="prepNewContactInput" data-i18n-placeholder="prep.new_contact_hint" placeholder="이름/직함 입력 후 엔터 (예: 홍길동/부장)">
+              <input type="text" class="settings-input" id="prepNewContactInput"
+                data-i18n-placeholder="prep.new_contact_hint" placeholder="이름/직함 입력 후 엔터 (예: 홍길동/부장)">
               <div class="prep-add-group-assign">
                 <select class="settings-select" id="prepNewContactGroup">
                   <option value="" data-i18n="prep.no_group">No group</option>
@@ -1121,8 +1188,10 @@
                 <button class="prep-ocr-panel-close" id="btnCloseOcrPanel">&times;</button>
               </div>
               <div class="prep-ocr-buttons">
-                <button class="btn btn-sm btn-outline" id="btnOcrUpload">📁 <span data-i18n="prep.photo_upload">Upload</span></button>
-                <button class="btn btn-sm btn-outline" id="btnOcrCamera">📷 <span data-i18n="prep.photo_camera">Camera</span></button>
+                <button class="btn btn-sm btn-outline" id="btnOcrUpload">📁 <span
+                    data-i18n="prep.photo_upload">Upload</span></button>
+                <button class="btn btn-sm btn-outline" id="btnOcrCamera">📷 <span
+                    data-i18n="prep.photo_camera">Camera</span></button>
                 <input type="file" id="prepOcrFileInput" accept="image/*" hidden>
               </div>
               <!-- Camera preview -->
@@ -1136,7 +1205,8 @@
                 <div class="prep-ocr-result-title" data-i18n="prep.ocr_result">OCR Result — Edit before adding</div>
                 <div class="prep-ocr-result-fields" id="prepOcrResultFields"></div>
                 <div class="prep-ocr-result-actions">
-                  <button class="btn btn-sm btn-primary" id="btnOcrConfirm" data-i18n="prep.ocr_confirm">Add contact</button>
+                  <button class="btn btn-sm btn-primary" id="btnOcrConfirm" data-i18n="prep.ocr_confirm">Add
+                    contact</button>
                   <button class="btn btn-sm btn-outline" id="btnOcrRetry" data-i18n="prep.ocr_retry">Retry</button>
                 </div>
               </div>
@@ -1151,12 +1221,15 @@
                 <span class="prep-subsection-label" data-i18n="prep.manage_group">Manage group</span>
                 <button class="prep-group-manage-close" id="btnCloseGroupManage">&times;</button>
               </div>
-              <input type="text" class="settings-input" id="prepGroupNameInput" data-i18n-placeholder="prep.group_name_hint" placeholder="Group name...">
+              <input type="text" class="settings-input" id="prepGroupNameInput"
+                data-i18n-placeholder="prep.group_name_hint" placeholder="Group name...">
               <div class="prep-group-member-list" id="prepGroupMemberList"></div>
-              <button class="btn btn-sm btn-link" id="btnAddContactFromGroup" style="margin-top:4px;font-size:12px;" data-i18n="settings.add_contacts_from_group">Add Contacts</button>
+              <button class="btn btn-sm btn-link" id="btnAddContactFromGroup" style="margin-top:4px;font-size:12px;"
+                data-i18n="settings.add_contacts_from_group">Add Contacts</button>
               <div class="prep-group-manage-actions">
                 <button class="btn btn-sm btn-primary" id="btnSaveGroup" data-i18n="prep.save_group">Save</button>
-                <button class="btn btn-sm btn-danger" id="btnDeleteGroup" hidden data-i18n="prep.delete_group">Delete</button>
+                <button class="btn btn-sm btn-danger" id="btnDeleteGroup" hidden
+                  data-i18n="prep.delete_group">Delete</button>
               </div>
             </div>
           </div>
@@ -1173,7 +1246,9 @@
             <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
             <div class="prep-ref-inline">
               <div class="prep-ref-filters">
-                <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title, tag, attendee..." style="flex:1">
+                <input type="search" class="settings-input" id="refSearchInput"
+                  data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title, tag, attendee..."
+                  style="flex:1">
                 <select class="settings-select" id="refFilterType">
                   <option value="">All</option>
                   <option value="copilot" data-i18n="settings.preset_copilot">Conversation Coach</option>
@@ -1184,7 +1259,8 @@
               <div class="prep-ref-meeting-list" id="refMeetingList"></div>
               <div class="prep-ref-preview" id="refMeetingPreview" hidden></div>
               <div class="prep-ref-actions">
-                <button class="btn btn-sm btn-primary" id="btnConfirmReference" disabled data-i18n="prep.ref_confirm">Select</button>
+                <button class="btn btn-sm btn-primary" id="btnConfirmReference" disabled
+                  data-i18n="prep.ref_confirm">Select</button>
               </div>
             </div>
           </div>
@@ -1194,18 +1270,23 @@
         <div class="prep-step-panel" data-step="5" id="prepStep5">
           <div class="prep-section">
             <label class="prep-section-label" data-i18n="prep.files_label">Files</label>
-            <p class="prep-file-guide" data-i18n="prep.file_guide">Attach reference docs, materials, or previous session notes.</p>
+            <p class="prep-file-guide" data-i18n="prep.file_guide">Attach reference docs, materials, or previous session
+              notes.</p>
             <div class="prep-file-drop" id="prepFileDrop">
               <span data-i18n="prep.file_drop_hint">Drop files here or click to browse</span>
-              <input type="file" id="prepFileInput" multiple accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
+              <input type="file" id="prepFileInput" multiple
+                accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml" hidden>
             </div>
             <div class="prep-file-chips" id="prepFileChips"></div>
           </div>
           <div class="prep-form-footer">
-            <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as Preset</span></button>
+            <button class="btn btn-sm" id="btnPrepSavePreset">&#128190; <span data-i18n="prep.save_preset">Save as
+                Preset</span></button>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for Later</button>
-              <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start Session</button>
+              <button class="btn btn-sm" id="btnPrepSaveForLater" data-i18n="prep.save_for_later">&#128204; Save for
+                Later</button>
+              <button class="btn btn-sm btn-primary" id="btnPrepStart" data-i18n="prep.start_meeting">&#9654; Start
+                Session</button>
             </div>
           </div>
         </div>
@@ -1228,8 +1309,10 @@
         <button class="modal-close" id="btnCloseRefQuickViewer">&times;</button>
       </div>
       <div class="ref-quick-viewer-tabs">
-        <button class="ref-quick-viewer-tab active" data-tab="transcript" data-i18n="prep.ref_viewer_transcript">Transcript</button>
-        <button class="ref-quick-viewer-tab" data-tab="analysis" data-i18n="prep.ref_viewer_analysis">AI Analysis</button>
+        <button class="ref-quick-viewer-tab active" data-tab="transcript"
+          data-i18n="prep.ref_viewer_transcript">Transcript</button>
+        <button class="ref-quick-viewer-tab" data-tab="analysis" data-i18n="prep.ref_viewer_analysis">AI
+          Analysis</button>
       </div>
       <div class="ref-quick-viewer-body">
         <div class="ref-quick-viewer-content" id="refQuickViewerTranscript"></div>
@@ -1241,7 +1324,8 @@
   <!-- Camera Modal (for business card scan) -->
   <div class="modal-overlay" id="cameraModal" hidden>
     <div class="modal" style="max-width:400px;padding:16px;">
-      <video id="cameraPreview" autoplay playsinline style="width:100%;border-radius:var(--radius-md);background:#000;"></video>
+      <video id="cameraPreview" autoplay playsinline
+        style="width:100%;border-radius:var(--radius-md);background:#000;"></video>
       <canvas id="cameraCanvas" hidden></canvas>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
         <button class="btn btn-sm btn-primary" id="btnCameraCapture">&#128248; Capture</button>
@@ -1275,89 +1359,8 @@
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
           <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
         </button>
-        <button class="launcher-card" id="btnLauncherImport">
-          <span class="launcher-card-badge">4</span>
-          <span class="launcher-card-icon">&#128229;</span>
-          <span class="launcher-card-label" data-i18n="import.launcher_label">Import</span>
-          <span class="launcher-card-desc" data-i18n="import.launcher_desc">Paste text or upload audio</span>
-        </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
-    </div>
-  </div>
-
-  <!-- Import Modal (P-4 + P-6) -->
-  <div class="modal-overlay" id="importModal" hidden>
-    <div class="modal import-modal">
-      <div class="modal-header">
-        <div>
-          <h2 data-i18n="import.title">Import Session</h2>
-          <p class="import-subtitle" data-i18n="import.subtitle">Bring your past recordings or transcripts into meeting-ai.</p>
-        </div>
-        <button class="btn btn-icon modal-close" id="importCloseBtn">&times;</button>
-      </div>
-      
-      <div class="modal-body import-body">
-        <div class="import-tabs">
-          <button class="import-tab active" data-tab="text" data-i18n="import.tab_text">
-            <span class="import-tab-icon">📝</span>
-            Paste Text
-          </button>
-          <button class="import-tab" data-tab="audio" data-i18n="import.tab_audio">
-            <span class="import-tab-icon">🎧</span>
-            Upload Audio
-          </button>
-        </div>
-
-        <!-- Tab 1: Text (P-4) -->
-        <div class="import-tab-content" id="importTabText">
-          <textarea id="importTextarea" rows="12" data-i18n-placeholder="import.text_placeholder" placeholder="Paste transcript here..."></textarea>
-          <div class="import-stats" id="importStats"></div>
-          <div class="import-actions">
-            <button class="btn" id="btnImportCancel" data-i18n="import.cancel">Cancel</button>
-            <button class="btn btn-primary" id="btnImportConfirm" data-i18n="import.confirm">Import &amp; Analyze</button>
-          </div>
-        </div>
-
-        <!-- Tab 2: Audio (P-6) -->
-        <div class="import-tab-content" id="importTabAudio" hidden>
-          <div class="import-dropzone" id="importDropzone">
-            <span class="import-dropzone-icon">🎵</span>
-            <p class="import-dropzone-title" data-i18n="import.drop_hint">Drop audio file here or click to browse</p>
-            <div class="import-format-chips">
-              <span class="format-chip">MP3</span><span class="format-chip">MP4</span><span class="format-chip">M4A</span><span class="format-chip">WAV</span><span class="format-chip">WebM</span><span class="format-chip">OGG</span>
-            </div>
-            <small class="import-size-limit">Max 4.5 MB</small>
-            <input type="file" id="importFileInput" accept=".mp3,.mp4,.m4a,.wav,.webm,.ogg" hidden>
-          </div>
-
-          <div id="importFileInfo" class="import-file-info" hidden></div>
-
-          <div class="import-options">
-            <label class="import-lang-label">
-              <span data-i18n="import.language">Language</span>
-              <select id="importAudioLang" class="settings-select">
-                <option value="ko">한국어</option>
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
-                <option value="zh">中文</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="import-progress" id="importProgress" hidden>
-            <div class="progress-bar-wrap">
-              <div class="progress-bar"><div class="progress-bar-inner indeterminate"></div></div>
-            </div>
-            <span class="progress-text" data-i18n="import.transcribing">Transcribing...</span>
-          </div>
-
-          <div class="import-actions">
-            <button class="btn" id="btnAudioCancel" data-i18n="import.cancel">Cancel</button>
-            <button class="btn btn-primary" id="btnAudioTranscribe" disabled data-i18n="import.transcribe">Transcribe</button>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -1372,7 +1375,8 @@
         <div class="pb-messages" id="pbMessages"></div>
         <div class="pb-chips" id="pbScenarioChips"></div>
         <div class="pb-input-wrap">
-          <textarea class="pb-input" id="pbInput" rows="1" data-i18n-placeholder="pb.input_placeholder" placeholder="Describe your situation..."></textarea>
+          <textarea class="pb-input" id="pbInput" rows="1" data-i18n-placeholder="pb.input_placeholder"
+            placeholder="Describe your situation..."></textarea>
           <button class="pb-send-btn" id="btnPbSend">&#10148;</button>
         </div>
       </div>
@@ -1453,19 +1457,9 @@
       </div>
       <div class="modal-body asm-presets-body">
         <div class="asm-presets" id="asmPresets"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Analysis Style: Save Modal -->
-  <div class="modal-overlay" id="asmSaveModal" hidden>
-    <div class="modal" style="max-width:420px;">
-      <div class="modal-header">
-        <h3 data-i18n="asm.save_title">이 분석 스타일 저장</h3>
-        <button class="btn btn-icon modal-close" id="asmSaveCloseBtn">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="asmSaveFormContainer"></div>
+        <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span
+            data-i18n="asm.save_style">Save this style</span></button>
+        <div id="asmSaveFormContainer" hidden></div>
       </div>
     </div>
   </div>
@@ -1494,7 +1488,8 @@
         <div class="pb-messages" id="paMessages"></div>
         <div class="pb-chips" id="paChips"></div>
         <div class="pb-input-wrap">
-          <textarea class="pb-input" id="paInput" rows="1" data-i18n-placeholder="pa.input_placeholder" placeholder="e.g., More concise, focus on action items..."></textarea>
+          <textarea class="pb-input" id="paInput" rows="1" data-i18n-placeholder="pa.input_placeholder"
+            placeholder="e.g., More concise, focus on action items..."></textarea>
           <button class="pb-send-btn" id="paSendBtn">&#10148;</button>
         </div>
       </div>
@@ -1509,13 +1504,17 @@
 
       <!-- Step Indicator -->
       <div class="prep-wizard-steps" id="dsSteps">
-        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span class="prep-step-label" data-i18n="ds.step1">Basic Info</span></button>
+        <button class="prep-step-dot active" data-step="1"><span class="prep-step-num">1</span><span
+            class="prep-step-label" data-i18n="ds.step1">Basic Info</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="ds.step2">Context</span></button>
+        <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span
+            class="prep-step-label" data-i18n="ds.step2">Context</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3">AI Setup</span></button>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span
+            class="prep-step-label" data-i18n="ds.step3">AI Setup</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="ds.step4">Ready</span></button>
+        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span
+            class="prep-step-label" data-i18n="ds.step4">Ready</span></button>
       </div>
 
       <!-- Step 1: Basic Info (form) — datetime, location, attendees -->
@@ -1559,7 +1558,8 @@
           <div class="ds-step4-actions">
             <button class="btn btn-text" id="btnDsEdit" data-i18n="ds.btn_edit">&larr; Edit</button>
             <div class="ds-step4-actions-right">
-              <button class="btn btn-outline" id="btnDsSavePreset" data-i18n="ds.btn_save_preset">💾 Save as Preset</button>
+              <button class="btn btn-outline" id="btnDsSavePreset" data-i18n="ds.btn_save_preset">💾 Save as
+                Preset</button>
               <button class="btn btn-primary" id="btnDsStart" data-i18n="ds.btn_start">▶ Start</button>
             </div>
           </div>
@@ -1664,8 +1664,10 @@
 
   <template id="sectionActionPopover">
     <div class="section-action-popover">
-      <button class="btn btn-xs" data-section-action="detail" data-i18n="minutes_preview.more_detail">More Detail</button>
-      <button class="btn btn-xs" data-section-action="summarize" data-i18n="minutes_preview.summarize">Summarize</button>
+      <button class="btn btn-xs" data-section-action="detail" data-i18n="minutes_preview.more_detail">More
+        Detail</button>
+      <button class="btn btn-xs" data-section-action="summarize"
+        data-i18n="minutes_preview.summarize">Summarize</button>
       <div class="section-custom-input">
         <input type="text" class="settings-input" data-i18n-placeholder="minutes_preview.custom_placeholder">
         <button class="btn btn-xs btn-primary" data-section-action="custom">Go</button>
@@ -1699,7 +1701,8 @@
           <span class="minutes-model-card-icon">&#x26A1;</span>
           <div class="minutes-model-card-info">
             <span class="minutes-model-card-name">Flash</span>
-            <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_flash_desc">Fast and lightweight</span>
+            <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_flash_desc">Fast and
+              lightweight</span>
           </div>
         </button>
         <button class="minutes-model-card regen-model-card" data-regen-model="gemini-2.5-pro">
@@ -1728,14 +1731,16 @@
             </div>
             <div class="prompt-section-content">
               <textarea class="settings-textarea prompt-textarea" id="promptReference" rows="4"
-                data-i18n-placeholder="minutes_preview.prompt_reference_hint" placeholder="Paste reference minutes here. We'll generate in a similar format."></textarea>
+                data-i18n-placeholder="minutes_preview.prompt_reference_hint"
+                placeholder="Paste reference minutes here. We'll generate in a similar format."></textarea>
             </div>
           </div>
           <div class="prompt-section">
             <div class="prompt-section-header" data-section="base">
               <span data-i18n="minutes_preview.prompt_base">Base Prompt</span>
               <span class="prompt-header-actions">
-                <button class="btn-reset-prompt" id="btnResetBasePrompt" data-i18n="minutes_preview.reset_default">Reset</button>
+                <button class="btn-reset-prompt" id="btnResetBasePrompt"
+                  data-i18n="minutes_preview.reset_default">Reset</button>
                 <span class="prompt-section-arrow">&#x25BC;</span>
               </span>
             </div>
@@ -1750,7 +1755,8 @@
             </div>
             <div class="prompt-section-content">
               <textarea class="settings-textarea prompt-textarea" id="promptInstruction" rows="3"
-                data-i18n-placeholder="minutes_preview.prompt_instruction_hint" placeholder="e.g., &quot;Summarize key decisions&quot;, &quot;Create action items table by attendee&quot;"></textarea>
+                data-i18n-placeholder="minutes_preview.prompt_instruction_hint"
+                placeholder="e.g., &quot;Summarize key decisions&quot;, &quot;Create action items table by attendee&quot;"></textarea>
             </div>
           </div>
           <div class="prompt-preset-bar">
@@ -1758,7 +1764,8 @@
               <option value="" data-i18n="minutes_preview.preset_select">Select preset</option>
             </select>
             <button class="btn btn-xs" id="btnSavePreset" data-i18n="minutes_preview.save_preset">Save Preset</button>
-            <button class="btn btn-xs btn-delete-preset" id="btnDeletePreset" data-i18n="minutes_preview.delete_preset">Delete</button>
+            <button class="btn btn-xs btn-delete-preset" id="btnDeletePreset"
+              data-i18n="minutes_preview.delete_preset">Delete</button>
           </div>
           <div class="prompt-edit-actions">
             <button class="btn btn-sm btn-primary" id="btnApplyPrompt" data-i18n="minutes_preview.apply">Apply</button>
@@ -1776,4 +1783,121 @@
 
   <script type="module" src="app.js"></script>
 </body>
+
+</html>
+<div class="section-custom-input">
+  <input type="text" class="settings-input" data-i18n-placeholder="minutes_preview.custom_placeholder">
+  <button class="btn btn-xs btn-primary" data-section-action="custom">Go</button>
+</div>
+</div>
+</template>
+
+<template id="tmplExportPopover">
+  <div class="export-popover">
+    <button class="btn btn-sm export-pop-btn" data-preview-format="pdf">
+      <span class="export-fmt-icon">PDF</span> PDF
+    </button>
+    <button class="btn btn-sm export-pop-btn" data-preview-format="docx">
+      <span class="export-fmt-icon">W</span> Word
+    </button>
+    <button class="btn btn-sm export-pop-btn" data-preview-format="clipboard">
+      <span class="export-fmt-icon">&#128203;</span> <span data-i18n="export.clipboard">Copy</span>
+    </button>
+  </div>
+</template>
+
+<!-- Regenerate Modal -->
+<div class="modal-overlay" id="regenModal" hidden>
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-header">
+      <h3 data-i18n="minutes_preview.regen_title">Regenerate Minutes</h3>
+      <button class="btn btn-icon modal-close" data-close="regenModal">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:12px 16px;">
+      <button class="minutes-model-card regen-model-card" data-regen-model="gemini-2.5-flash">
+        <span class="minutes-model-card-icon">&#x26A1;</span>
+        <div class="minutes-model-card-info">
+          <span class="minutes-model-card-name">Flash</span>
+          <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_flash_desc">Fast and lightweight</span>
+        </div>
+      </button>
+      <button class="minutes-model-card regen-model-card" data-regen-model="gemini-2.5-pro">
+        <span class="minutes-model-card-icon">&#x2726;</span>
+        <div class="minutes-model-card-info">
+          <span class="minutes-model-card-name">Pro</span>
+          <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_pro_desc">Detailed and precise</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<template id="tmplPromptEditModal">
+  <div class="prompt-edit-overlay">
+    <div class="prompt-edit-modal">
+      <div class="modal-header">
+        <h3 data-i18n="minutes_preview.prompt_edit">Change Minutes Style</h3>
+        <button class="btn btn-icon prompt-edit-close">&times;</button>
+      </div>
+      <div class="prompt-edit-body">
+        <div class="prompt-section">
+          <div class="prompt-section-header" data-section="reference">
+            <span data-i18n="minutes_preview.prompt_reference">Reference Style</span>
+            <span class="prompt-section-arrow">&#x25BC;</span>
+          </div>
+          <div class="prompt-section-content">
+            <textarea class="settings-textarea prompt-textarea" id="promptReference" rows="4"
+              data-i18n-placeholder="minutes_preview.prompt_reference_hint"
+              placeholder="Paste reference minutes here. We'll generate in a similar format."></textarea>
+          </div>
+        </div>
+        <div class="prompt-section">
+          <div class="prompt-section-header" data-section="base">
+            <span data-i18n="minutes_preview.prompt_base">Base Prompt</span>
+            <span class="prompt-header-actions">
+              <button class="btn-reset-prompt" id="btnResetBasePrompt"
+                data-i18n="minutes_preview.reset_default">Reset</button>
+              <span class="prompt-section-arrow">&#x25BC;</span>
+            </span>
+          </div>
+          <div class="prompt-section-content">
+            <textarea class="settings-textarea prompt-textarea" id="promptBaseOverride" rows="6"></textarea>
+          </div>
+        </div>
+        <div class="prompt-section">
+          <div class="prompt-section-header" data-section="instruction">
+            <span data-i18n="minutes_preview.prompt_instruction">User Instruction</span>
+            <span class="prompt-section-arrow">&#x25BC;</span>
+          </div>
+          <div class="prompt-section-content">
+            <textarea class="settings-textarea prompt-textarea" id="promptInstruction" rows="3"
+              data-i18n-placeholder="minutes_preview.prompt_instruction_hint"
+              placeholder="e.g., &quot;Summarize key decisions&quot;, &quot;Create action items table by attendee&quot;"></textarea>
+          </div>
+        </div>
+        <div class="prompt-preset-bar">
+          <select class="settings-input" id="promptPresetSelect">
+            <option value="" data-i18n="minutes_preview.preset_select">Select preset</option>
+          </select>
+          <button class="btn btn-xs" id="btnSavePreset" data-i18n="minutes_preview.save_preset">Save Preset</button>
+          <button class="btn btn-xs btn-delete-preset" id="btnDeletePreset"
+            data-i18n="minutes_preview.delete_preset">Delete</button>
+        </div>
+        <div class="prompt-edit-actions">
+          <button class="btn btn-sm btn-primary" id="btnApplyPrompt" data-i18n="minutes_preview.apply">Apply</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<template id="tmplVersionListPopover">
+  <div class="version-list-popover">
+    <div class="version-list" id="versionListItems"></div>
+  </div>
+</template>
+
+<script type="module" src="app.js"></script>
+</body>
+
 </html>

@@ -980,7 +980,7 @@ function hideHoverPreview(card) {
 }
 
 // ===== Quick Viewer Modal =====
-function openRefQuickViewer(meetingId) {
+export function openRefQuickViewer(meetingId) {
   const meeting = getMeeting(meetingId);
   if (!meeting) return;
 
