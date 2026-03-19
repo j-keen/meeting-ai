@@ -34,10 +34,11 @@ function _sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 지터(jitter) 포함 대기 시간 계산: baseMs * 2^attempt + 랜덤 0~200ms
-function _backoffDelay(attempt) {
-  const base = 1000 * Math.pow(2, attempt);
-  const jitter = Math.random() * 200;
+// 지터(jitter) 포함 대기 시간 계산: baseMs * 2^attempt + 랜덤 0~1000ms
+function _backoffDelay(attempt, retryAfterSec) {
+  if (retryAfterSec > 0) return retryAfterSec * 1000;
+  const base = 5000 * Math.pow(2, attempt); // 5s, 10s, 20s
+  const jitter = Math.random() * 1000;
   return base + jitter;
 }
 
@@ -93,18 +94,24 @@ export async function callGemini(model, body) {
 
       // 429: Too Many Requests — 지수 백오프 후 재시도
       if (res.status === 429 && attempt < MAX_RETRIES) {
-        await _sleep(_backoffDelay(attempt));
+        const retryAfter = parseFloat(res.headers.get('Retry-After')) || 0;
+        console.warn(`[gemini-api] 429 rate limit, retry ${attempt + 1}/${MAX_RETRIES} after ${retryAfter || 'backoff'}s`);
+        await _sleep(_backoffDelay(attempt, retryAfter));
         continue;
       }
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`Proxy API error (${res.status}): ${errText.slice(0, 200)}`);
+        const err = new Error(`Proxy API error (${res.status}): ${errText.slice(0, 200)}`);
+        err.status = res.status;
+        throw err;
       }
       return res.json();
     }
 
-    throw new Error('Proxy API error (429): Rate limit exceeded after retries');
+    const err = new Error('Proxy API error (429): Rate limit exceeded after retries');
+    err.status = 429;
+    throw err;
   } finally {
     _releaseSemaphore();
   }
@@ -136,13 +143,17 @@ export async function callGeminiStream(model, body, onChunk, options = {}) {
 
       // 429: Too Many Requests — 지수 백오프 후 재시도
       if (res.status === 429 && attempt < MAX_RETRIES) {
-        await _sleep(_backoffDelay(attempt));
+        const retryAfter = parseFloat(res.headers.get('Retry-After')) || 0;
+        console.warn(`[gemini-api] 429 rate limit (stream), retry ${attempt + 1}/${MAX_RETRIES} after ${retryAfter || 'backoff'}s`);
+        await _sleep(_backoffDelay(attempt, retryAfter));
         continue;
       }
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`Proxy API error (${res.status}): ${errText.slice(0, 200)}`);
+        const err = new Error(`Proxy API error (${res.status}): ${errText.slice(0, 200)}`);
+        err.status = res.status;
+        throw err;
       }
 
       const reader = res.body.getReader();
@@ -183,7 +194,9 @@ export async function callGeminiStream(model, body, onChunk, options = {}) {
       return { text: fullText, parts: allParts };
     }
 
-    throw new Error('Proxy API error (429): Rate limit exceeded after retries');
+    const err = new Error('Proxy API error (429): Rate limit exceeded after retries');
+    err.status = 429;
+    throw err;
   } finally {
     _releaseSemaphore();
   }

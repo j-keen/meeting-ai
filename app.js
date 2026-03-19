@@ -29,7 +29,7 @@ import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from '.
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
 import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
 import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
-import { handleExport, handleExportMeeting, getExportContent, downloadFile } from './export-md.js';
+import { handleExport, handleExportMeeting } from './export-md.js';
 import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
@@ -779,10 +779,26 @@ function init() {
     document.body.classList.add('loaded-mode');
     $('#meetingStatus').textContent = t('history.load');
 
-    // Show [저장정보] button in bottom bar (where End Meeting button is)
+    // Show [이어서 녹음] + [저장정보] buttons in bottom bar
     const endBtn = $('#btnEndMeeting');
+    const existingResume = $('#btnBottomResume');
+    if (existingResume) existingResume.remove();
     const existing = $('#btnEditSaveInfo');
     if (existing) existing.remove();
+
+    // 이어서 녹음 button
+    const btnResume = document.createElement('button');
+    btnResume.className = 'btn btn-end-meeting';
+    btnResume.id = 'btnBottomResume';
+    btnResume.innerHTML = `<span>▶</span> <span>${t('loaded.resume_recording')}</span>`;
+    btnResume.onclick = async () => {
+      if (!confirm(t('loaded.resume_confirm'))) return;
+      showToast(t('loaded.resumed'), 'info');
+      await resumeFromLoaded();
+    };
+    endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
+
+    // 저장정보 button
     const btnEditInfo = document.createElement('button');
     btnEditInfo.className = 'btn btn-end-meeting';
     btnEditInfo.id = 'btnEditSaveInfo';
@@ -791,7 +807,7 @@ function init() {
       const m = getMeeting(state.loadedMeetingId);
       if (m) showEndMeetingModal(m);
     };
-    endBtn.parentNode.insertBefore(btnEditInfo, endBtn.nextSibling);
+    btnResume.parentNode.insertBefore(btnEditInfo, btnResume.nextSibling);
 
     // Close history & viewer modals
     $('#historyModal').hidden = true;

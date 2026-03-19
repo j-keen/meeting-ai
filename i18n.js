@@ -225,9 +225,8 @@ const translations = {
 
     // Export modal
     'export.title': 'Transcript Export',
-    'export.content_full': 'Full Report',
-    'export.content_summary': 'Summary',
-    'export.content_highlights': 'Inbox',
+    'export.txt': 'Transcript',
+    'export.srt': 'Subtitle',
     'export.clipboard': 'Copy',
     'export.copied': 'Copied to clipboard!',
     'export.copy_fail': 'Failed to copy',
@@ -331,6 +330,7 @@ const translations = {
     'toast.storage_usage': 'Storage usage: {pct}%. Consider cleaning up.',
     'toast.record_fail': 'Failed to start recording: ',
     'toast.analysis_fail': 'Analysis failed: ',
+    'toast.rate_limit': 'API request limit exceeded. Please wait a moment and try again.',
     'toast.slack_sent': 'Sent to Slack!',
     'toast.slack_fail': 'Failed to send to Slack: ',
     'toast.slack_no_url': 'Slack webhook URL not set.',
@@ -1109,9 +1109,8 @@ const translations = {
 
     // Export modal
     'export.title': '녹취록 내보내기',
-    'export.content_full': '전체 보고서',
-    'export.content_summary': '요약',
-    'export.content_highlights': '인박스',
+    'export.txt': '녹취록',
+    'export.srt': '자막 파일',
     'export.clipboard': '복사',
     'export.copied': '클립보드에 복사되었습니다!',
     'export.copy_fail': '복사에 실패했습니다',
@@ -1215,6 +1214,7 @@ const translations = {
     'toast.storage_usage': '저장 공간 사용량: {pct}%. 정리를 권장합니다.',
     'toast.record_fail': '녹음 시작 실패: ',
     'toast.analysis_fail': '분석 실패: ',
+    'toast.rate_limit': 'API 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요.',
     'toast.slack_sent': 'Slack으로 전송 완료!',
     'toast.slack_fail': 'Slack 전송 실패: ',
     'toast.slack_no_url': 'Slack webhook URL이 설정되지 않았습니다.',

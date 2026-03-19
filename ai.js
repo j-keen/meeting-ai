@@ -292,6 +292,8 @@ export async function analyzeTranscript({
       };
     } catch (err) {
       lastError = err;
+      // 429 errors are already retried in gemini-api.js — don't retry again here
+      if (err.status === 429) break;
       if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
     }
   }

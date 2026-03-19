@@ -335,6 +335,8 @@ export async function resumeFromLoaded() {
   document.body.classList.remove('loaded-mode');
   const editInfoBtn = document.querySelector('#btnEditSaveInfo');
   if (editInfoBtn) editInfoBtn.remove();
+  const bottomResume = document.querySelector('#btnBottomResume');
+  if (bottomResume) bottomResume.remove();
 
   // Start recording (meetingId & meetingStartTime already set, so no new ID created)
   await startRecording();
@@ -695,7 +697,10 @@ export async function runAnalysis() {
 
     emit('analysis:complete', result);
   } catch (err) {
-    showToast(t('toast.analysis_fail') + err.message, 'error');
+    const msg = err.status === 429
+      ? t('toast.rate_limit')
+      : t('toast.analysis_fail') + err.message;
+    showToast(msg, 'error');
     const container = document.querySelector('#aiSections');
     if (container) container.classList.remove('ai-updating');
     if (!state.currentAnalysis) {
@@ -1838,6 +1843,8 @@ function restoreEndButton(showEnd = true) {
   if (exportBtn) exportBtn.remove();
   if (newBtn) newBtn.remove();
   if (editInfoBtn) editInfoBtn.remove();
+  const bottomResume = $('#btnBottomResume');
+  if (bottomResume) bottomResume.remove();
 }
 
 export function resetMeeting(skipLauncher = false) {
@@ -1852,9 +1859,11 @@ export function resetMeeting(skipLauncher = false) {
   const banner = document.querySelector('#loadedMeetingBanner');
   if (banner) banner.hidden = true;
   document.body.classList.remove('loaded-mode');
-  // Remove edit save info button if present
+  // Remove bottom bar buttons if present
   const editInfoBtn = document.querySelector('#btnEditSaveInfo');
   if (editInfoBtn) editInfoBtn.remove();
+  const bottomResume = document.querySelector('#btnBottomResume');
+  if (bottomResume) bottomResume.remove();
   // Reset record button and hide end meeting button
   const recBtn = $('#btnRecord');
   recBtn.classList.remove('recording', 'paused');

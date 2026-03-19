@@ -75,6 +75,7 @@ export function saveMeeting(meeting) {
   const idx = data.meetings.findIndex(m => m.id === meeting.id);
   meeting.updatedAt = Date.now();
   if (idx >= 0) {
+    meeting.createdAt = data.meetings[idx].createdAt;
     data.meetings[idx] = meeting;
   } else {
     meeting.createdAt = meeting.createdAt || Date.now();

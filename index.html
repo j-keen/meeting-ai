@@ -557,36 +557,14 @@
         <button class="btn btn-icon modal-close" data-close="exportModal">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="export-content-select">
-          <label class="export-radio">
-            <input type="radio" name="exportContent" value="full" checked>
-            <span data-i18n="export.content_full">Full Report</span>
-          </label>
-          <label class="export-radio">
-            <input type="radio" name="exportContent" value="summary">
-            <span data-i18n="export.content_summary">Summary</span>
-          </label>
-          <label class="export-radio">
-            <input type="radio" name="exportContent" value="highlights">
-            <span data-i18n="export.content_highlights">Highlights & Memos</span>
-          </label>
-        </div>
         <div class="export-format-grid">
-          <button class="btn export-fmt-btn" data-format="md" title="Markdown">
-            <span class="export-fmt-icon">MD</span>
-            <span>Markdown</span>
+          <button class="btn export-fmt-btn" data-format="txt" title="Text">
+            <span class="export-fmt-icon">TXT</span>
+            <span data-i18n="export.txt">Transcript</span>
           </button>
-          <button class="btn export-fmt-btn" data-format="pdf" title="PDF">
-            <span class="export-fmt-icon">PDF</span>
-            <span>PDF</span>
-          </button>
-          <button class="btn export-fmt-btn" data-format="docx" title="Word">
-            <span class="export-fmt-icon">W</span>
-            <span>Word</span>
-          </button>
-          <button class="btn export-fmt-btn" data-format="clipboard" title="Clipboard">
-            <span class="export-fmt-icon">&#128203;</span>
-            <span data-i18n="export.clipboard">Copy</span>
+          <button class="btn export-fmt-btn" data-format="srt" title="Subtitle">
+            <span class="export-fmt-icon">SRT</span>
+            <span data-i18n="export.srt">Subtitle</span>
           </button>
         </div>
       </div>
