@@ -1,5 +1,5 @@
-// analysis-style-modal.js - Unified analysis style modal
-// Combines preset selection, AI prompt adjustment, and analysis history navigation
+// analysis-style-modal.js - Analysis style change modal (3-card menu)
+// Links to: preset selection, AI prompt adjustment, analysis history
 
 import { state, emit, on } from './event-bus.js';
 import { saveSettings, loadCustomTypes } from './storage.js';
@@ -12,22 +12,33 @@ import { renderAnalysisInto } from './ui/analysis.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-// ===== Modal Control =====
-function closeModal() {
+// ===== Main Modal =====
+function closeMain() {
   const modal = $('#analysisStyleModal');
   if (modal) modal.hidden = true;
 }
 
-export function openAnalysisStyleModal() {
+function openMain() {
   const modal = $('#analysisStyleModal');
   if (!modal) return;
   modal.hidden = false;
+}
+
+// ===== 1. Presets Sub-modal =====
+function openPresetsModal() {
+  closeMain();
+  const modal = $('#asmPresetsModal');
+  if (!modal) return;
+  modal.hidden = false;
   renderPresets();
-  renderAnalysisHistoryList();
   updateSaveButtonVisibility();
 }
 
-// ===== 1. Presets Section =====
+function closePresetsModal() {
+  const modal = $('#asmPresetsModal');
+  if (modal) modal.hidden = true;
+}
+
 function renderPresets() {
   const container = $('#asmPresets');
   if (!container) return;
@@ -42,7 +53,6 @@ function renderPresets() {
     { id: 'learning', label: t('settings.preset_learning'), desc: t('settings.preset_learning_desc') },
   ];
 
-  // Built-in preset chips
   const builtInRow = document.createElement('div');
   builtInRow.className = 'asm-preset-row';
   builtIn.forEach(p => {
@@ -78,14 +88,12 @@ function renderPresets() {
 }
 
 function selectPreset(presetId) {
-  // Save current style to history before changing
   pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'dropdown');
 
   state.settings.meetingPreset = presetId;
   state.settings.customPrompt = getPromptForType(presetId);
   emit('customPrompt:change');
 
-  // Apply extended custom type fields
   if (presetId.startsWith('custom_')) {
     const customTypes = loadCustomTypes();
     const ct = customTypes.find(c => c.id === presetId);
@@ -102,15 +110,13 @@ function selectPreset(presetId) {
 
   saveSettings(state.settings);
 
-  // If has transcript, run analysis immediately
   if (state.transcript.length > 0) {
     emit('analysis:rerun');
   }
 
-  closeModal();
+  closePresetsModal();
 }
 
-// ===== Save Style Button =====
 function updateSaveButtonVisibility() {
   const btn = $('#asmSaveStyle');
   if (!btn) return;
@@ -123,7 +129,6 @@ function handleSaveStyle() {
   const promptText = state.settings.customPrompt;
   if (!promptText) return;
 
-  // Show name input inline
   const container = $('#asmSaveFormContainer');
   if (!container) return;
   container.hidden = false;
@@ -134,7 +139,7 @@ function handleSaveStyle() {
       saveSettings(state.settings);
       emit('customTypes:change');
       container.hidden = true;
-      closeModal();
+      closePresetsModal();
     },
     onCancel() {
       container.hidden = true;
@@ -142,13 +147,26 @@ function handleSaveStyle() {
   });
 }
 
-// ===== 2. AI Chat Section =====
+// ===== 2. AI Chat =====
 function handleOpenAiChat() {
-  closeModal();
+  closeMain();
   openPromptAdjuster();
 }
 
-// ===== 3. Analysis History Section =====
+// ===== 3. History Sub-modal =====
+function openHistoryModal() {
+  closeMain();
+  const modal = $('#asmHistoryModal');
+  if (!modal) return;
+  modal.hidden = false;
+  renderAnalysisHistoryList();
+}
+
+function closeHistoryModal() {
+  const modal = $('#asmHistoryModal');
+  if (modal) modal.hidden = true;
+}
+
 function renderAnalysisHistoryList() {
   const container = $('#asmHistoryList');
   if (!container) return;
@@ -163,7 +181,6 @@ function renderAnalysisHistoryList() {
     return;
   }
 
-  // Show most recent first, limit to 20
   const items = [...history].map((a, idx) => ({ analysis: a, originalIdx: idx }));
   items.reverse();
   const limited = items.slice(0, 20);
@@ -176,7 +193,6 @@ function renderAnalysisHistoryList() {
       ? new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })
       : '';
 
-    // Extract preview text
     let preview = '';
     if (analysis.flow) {
       preview = analysis.flow;
@@ -205,7 +221,7 @@ function renderAnalysisHistoryList() {
 
     item.addEventListener('click', () => {
       navigateToAnalysis(originalIdx);
-      closeModal();
+      closeHistoryModal();
     });
 
     container.appendChild(item);
@@ -224,49 +240,51 @@ function navigateToAnalysis(idx) {
   renderAnalysisInto(container, analysis);
   state.currentAnalysis = analysis;
 
-  // Show copy button
   const copyBtn = $('#btnCopyAnalysis');
   if (copyBtn) copyBtn.style.display = '';
 }
 
 // ===== Init =====
 export function initAnalysisStyleModal() {
-  // Close button
-  $('#asmCloseBtn')?.addEventListener('click', closeModal);
-
-  // Overlay click to close
+  // Main modal
+  $('#asmCloseBtn')?.addEventListener('click', closeMain);
   $('#analysisStyleModal')?.addEventListener('click', (e) => {
-    if (e.target.id === 'analysisStyleModal') closeModal();
+    if (e.target.id === 'analysisStyleModal') closeMain();
   });
 
-  // ESC key
-  document.addEventListener('keydown', (e) => {
-    const modal = $('#analysisStyleModal');
-    if (e.key === 'Escape' && modal && !modal.hidden) {
-      closeModal();
-    }
-  });
+  // Open main modal
+  $('#btnPromptSettings')?.addEventListener('click', openMain);
 
-  // Button to open modal
-  $('#btnPromptSettings')?.addEventListener('click', () => {
-    openAnalysisStyleModal();
-  });
-
-  // AI chat section click
+  // 3 card buttons
+  $('#asmOpenPresets')?.addEventListener('click', openPresetsModal);
   $('#asmOpenAiChat')?.addEventListener('click', handleOpenAiChat);
+  $('#asmOpenHistory')?.addEventListener('click', openHistoryModal);
 
-  // Save style button
+  // Presets sub-modal
+  $('#asmPresetsCloseBtn')?.addEventListener('click', closePresetsModal);
+  $('#asmPresetsModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'asmPresetsModal') closePresetsModal();
+  });
   $('#asmSaveStyle')?.addEventListener('click', handleSaveStyle);
 
-  // Refresh presets when custom types change
-  on('customTypes:change', () => {
-    const modal = $('#analysisStyleModal');
-    if (modal && !modal.hidden) {
-      renderPresets();
-    }
+  // History sub-modal
+  $('#asmHistoryCloseBtn')?.addEventListener('click', closeHistoryModal);
+  $('#asmHistoryModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'asmHistoryModal') closeHistoryModal();
   });
 
-  on('customPrompt:change', () => {
-    updateSaveButtonVisibility();
+  // ESC key — close any open modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('#asmHistoryModal')?.hidden) { closeHistoryModal(); return; }
+    if (!$('#asmPresetsModal')?.hidden) { closePresetsModal(); return; }
+    if (!$('#analysisStyleModal')?.hidden) { closeMain(); }
   });
+
+  // Refresh presets on change
+  on('customTypes:change', () => {
+    if ($('#asmPresetsModal') && !$('#asmPresetsModal').hidden) renderPresets();
+  });
+
+  on('customPrompt:change', updateSaveButtonVisibility);
 }

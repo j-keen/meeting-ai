@@ -115,7 +115,7 @@
           <div class="panel-actions">
             <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
             <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Analysis Style">🎯 <span data-i18n="panel.analysis_style">Analysis Style</span></button>
+            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
           </div>
         </div>
         <!-- selectAnalysisStyle kept hidden for style-history.js label lookup -->
@@ -866,8 +866,10 @@
           </div>
           <div class="end-meeting-section end-meeting-flex-1">
             <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
-            <input type="text" class="unified-input-field" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
-            <div class="unified-dropdown" id="locationDropdown" hidden></div>
+            <div class="location-select-wrapper">
+              <input type="text" class="settings-input" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
+              <div class="unified-dropdown location-dropdown" id="locationDropdown" hidden></div>
+            </div>
           </div>
         </div>
         <!-- 3. Title + AI suggestions -->
@@ -1264,29 +1266,64 @@
   <div class="modal-overlay" id="analysisStyleModal" hidden>
     <div class="modal" style="max-width:420px;">
       <div class="modal-header">
-        <h3 data-i18n="asm.title">Analysis Style</h3>
+        <h3 data-i18n="asm.title">Change Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="asmCloseBtn">&times;</button>
       </div>
-      <div class="modal-body asm-body">
-        <!-- 1. Presets -->
-        <div class="asm-section">
-          <div class="asm-section-label">📋 <span data-i18n="asm.presets_label">Analysis Style</span></div>
-          <div class="asm-presets" id="asmPresets"></div>
-          <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">Save this style</span></button>
-          <div id="asmSaveFormContainer" hidden></div>
+      <div class="modal-body">
+        <div class="asm-card-grid">
+          <button class="btn asm-card-btn" id="asmOpenPresets">
+            <div class="asm-card-icon">📋</div>
+            <div class="asm-card-text">
+              <span class="asm-card-title" data-i18n="asm.presets_title">Saved Analysis Styles</span>
+              <span class="asm-card-desc" data-i18n="asm.presets_desc">Switch between built-in and custom styles</span>
+            </div>
+            <div class="asm-card-arrow">&#8250;</div>
+          </button>
+          <button class="btn asm-card-btn" id="asmOpenAiChat">
+            <div class="asm-card-icon">💬</div>
+            <div class="asm-card-text">
+              <span class="asm-card-title" data-i18n="asm.ai_chat_label">Change direction with AI</span>
+              <span class="asm-card-desc" data-i18n="asm.ai_chat_desc">Not happy with the current analysis?</span>
+            </div>
+            <div class="asm-card-arrow">&#8250;</div>
+          </button>
+          <button class="btn asm-card-btn" id="asmOpenHistory">
+            <div class="asm-card-icon">🕐</div>
+            <div class="asm-card-text">
+              <span class="asm-card-title" data-i18n="asm.history_label">Analysis History</span>
+              <span class="asm-card-desc" data-i18n="asm.history_desc">Browse previous analysis results</span>
+            </div>
+            <div class="asm-card-arrow">&#8250;</div>
+          </button>
         </div>
-        <div class="asm-divider"></div>
-        <!-- 2. AI Chat -->
-        <div class="asm-section asm-section-clickable" id="asmOpenAiChat">
-          <div class="asm-section-label">💬 <span data-i18n="asm.ai_chat_label">Change direction with AI</span></div>
-          <div class="asm-section-desc" data-i18n="asm.ai_chat_desc">Not happy with the current analysis?</div>
-        </div>
-        <div class="asm-divider"></div>
-        <!-- 3. Analysis History -->
-        <div class="asm-section">
-          <div class="asm-section-label">🕐 <span data-i18n="asm.history_label">Analysis History</span></div>
-          <div class="asm-history-list" id="asmHistoryList"></div>
-        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Style: Presets Sub-modal -->
+  <div class="modal-overlay" id="asmPresetsModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="asm.presets_title">Saved Analysis Styles</h3>
+        <button class="btn btn-icon modal-close" id="asmPresetsCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body asm-presets-body">
+        <div class="asm-presets" id="asmPresets"></div>
+        <button class="btn btn-sm asm-save-btn" id="asmSaveStyle" style="display:none">💾 <span data-i18n="asm.save_style">Save this style</span></button>
+        <div id="asmSaveFormContainer" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Style: History Sub-modal -->
+  <div class="modal-overlay" id="asmHistoryModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="asm.history_label">Analysis History</h3>
+        <button class="btn btn-icon modal-close" id="asmHistoryCloseBtn">&times;</button>
+      </div>
+      <div class="modal-body asm-history-body">
+        <div class="asm-history-list" id="asmHistoryList"></div>
       </div>
     </div>
   </div>

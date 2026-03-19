@@ -4138,7 +4138,14 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--accent);
 }
 
-/* Location "Add new" item accent */
+/* Location selector (end-meeting modal) */
+.location-select-wrapper {
+  position: relative;
+}
+.location-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+}
 .location-add-new {
   color: var(--accent);
 }
@@ -6440,37 +6447,59 @@ body.loaded-mode #btnNewMeeting { display: none; }
 }
 
 /* ===== Analysis Style Modal ===== */
-.asm-body {
-  padding: 0 !important;
-  max-height: 70vh;
-  overflow-y: auto;
+.asm-card-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.asm-section {
-  padding: 14px 20px;
+.asm-card-btn {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+  gap: 14px;
 }
-.asm-section-label {
-  font-size: 13px;
+.asm-card-btn:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+.asm-card-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+.asm-card-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.asm-card-title {
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 10px;
 }
-.asm-section-clickable {
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-}
-.asm-section-clickable:hover {
-  background: var(--bg-hover);
-}
-.asm-section-desc {
+.asm-card-desc {
   font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
-.asm-divider {
-  height: 1px;
-  background: var(--border-light);
-  margin: 0 20px;
+.asm-card-arrow {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.asm-presets-body,
+.asm-history-body {
+  padding-top: 4px;
 }
 .asm-presets {
   display: flex;
