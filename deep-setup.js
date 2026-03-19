@@ -68,23 +68,34 @@ function matchContactByName(c, query) {
 }
 
 // ===== Step 3: AI Prompt =====
-function getStep3Prompt(prevResults) {
+function getStep3Prompt(prevResults, isAutoFire) {
   const ko = isKorean();
   const ctx = JSON.stringify(prevResults, null, 2);
+  const autoFireInstruction = isAutoFire
+    ? (ko
+      ? `\n\n중요: 사용자가 아무 말 하지 않아도, 위 정보만으로 바로 분석을 시작하세요.
+1. 먼저 입력된 정보를 빠르게 읽고 상황을 한 줄로 요약
+2. 이 미팅에 맞는 집중 포인트 3~5개를 구체적으로 제안 (참석자 관계, 장소 맥락, 설명 등을 반영)
+3. "빼고 싶은 거 있으면 말씀해주세요. 없으면 이대로 바로 세팅할게요!"
+4. 바로 설정 JSON을 생성`
+      : `\n\nIMPORTANT: Without waiting for user input, immediately analyze the info above.
+1. Quickly summarize the situation in one line
+2. Suggest 3-5 specific focus points tailored to this meeting (reflect attendee dynamics, location context, description, etc.)
+3. Ask "Let me know if you'd like to remove any — otherwise I'll set it up as is!"
+4. Generate the setup JSON right away`)
+    : '';
+
   return ko
     ? `당신은 사용자의 "믿을 수 있는 동료"입니다. 실시간 음성-AI 분석 앱에서 옆자리에 앉아 대화를 함께 듣고 도와주는 역할입니다.
 
 이전 단계에서 사용자가 입력한 미팅 정보:
 ${ctx}
-
-사용자의 상황에 맞는 집중 포인트 3~5개를 제안하고, "빼고 싶은 거 있으면 말씀해주세요. 없으면 이대로 바로 세팅할게요!" 라고 물어보세요. 답변을 듣고 최적의 설정을 만들어주세요.
+${autoFireInstruction}
 
 ## 앱이 하는 일
 1. **실시간 코파일럿 분석**: 대화를 듣고 AI가 주기적으로 인사이트를 정리
 2. **AI 채팅**: 대화 중 궁금한 걸 AI에게 바로 질문
 3. **메모**: 실시간 메모를 남기면 다음 분석에 반영
-
-1턴이면 끝. 바로 설정 JSON을 만들어주세요.
 
 ## 생성할 JSON
 \`\`\`json
@@ -106,15 +117,12 @@ ${ctx}
 
 Meeting info from previous steps:
 ${ctx}
-
-Suggest 3-5 focus points tailored to the user's situation, then ask "Let me know if you'd like to remove any — otherwise I'll set it up as is!" Then create the optimal setup.
+${autoFireInstruction}
 
 ## What the app does
 1. **Real-time Copilot Analysis**: Listens and surfaces insights periodically
 2. **AI Chat**: Ask AI questions on the spot
 3. **Memo**: Real-time notes reflected in next analysis
-
-One turn max. Generate the setup JSON right away.
 
 ## JSON to generate
 \`\`\`json
@@ -222,23 +230,19 @@ function goToStep(n) {
     nextBtn.disabled = (n === 1 || n === 2) ? false : !stepResults[3];
   }
 
-  // Step 3: show greeting if first visit
+  // Step 3: auto-fire AI on first visit
   if (n === 3 && stepHistories[3].length === 0) {
+    // Collect step data before AI call
+    collectStep1Results();
+    collectStep2Results();
+
+    // Render context card (summary of what AI knows)
+    renderContextCard();
+
     const msgs3 = $('#dsMessages3');
     if (msgs3 && msgs3.children.length === 0) {
-      const el = document.createElement('div');
-      el.className = 'pb-message pb-message-model';
-      el.innerHTML = `<div class="pb-message-content">${renderMarkdown(t('ds.step3_greeting'))}</div>`;
-      msgs3.appendChild(el);
-
-      const chips3 = $('#dsChips3');
-      if (chips3) {
-        renderChips(chips3, [
-          { ko: '모순되는 말 잡아줘', en: 'Catch contradictions' },
-          { ko: '핵심 용어 정리해줘', en: 'Organize key terms' },
-          { ko: '발표 구조 분석해줘', en: 'Analyze structure' },
-        ], (text) => sendMessage(text));
-      }
+      // Auto-fire: AI immediately analyzes input and suggests focus points
+      sendMessage('', true);
     }
   }
 
@@ -248,13 +252,61 @@ function goToStep(n) {
   }
 }
 
+// ===== Context Card (Step 3 summary of inputs) =====
+function renderContextCard() {
+  const card = $('#dsContextCard');
+  if (!card) return;
+
+  const ko = isKorean();
+  const s1 = stepResults[1] || {};
+  const s2 = stepResults[2] || {};
+
+  const items = [];
+
+  if (s1.datetime) {
+    items.push(`<span class="ds-ctx-chip">${new Date(s1.datetime).toLocaleString(ko ? 'ko-KR' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>`);
+  }
+  if (s1.location) {
+    items.push(`<span class="ds-ctx-chip">${escapeHtml(s1.location)}</span>`);
+  }
+  if (s1.attendees?.length) {
+    const names = s1.attendees.map(a => a.name + (a.title ? '/' + a.title : '')).join(', ');
+    items.push(`<span class="ds-ctx-chip">${escapeHtml(names)}</span>`);
+  }
+  if (s2.description) {
+    items.push(`<span class="ds-ctx-chip">${escapeHtml(s2.description)}</span>`);
+  }
+  if (s2.references?.length) {
+    items.push(`<span class="ds-ctx-chip">${ko ? '참고 미팅' : 'Ref'} ${s2.references.length}${ko ? '개' : ''}</span>`);
+  }
+  if (s2.files?.length) {
+    items.push(`<span class="ds-ctx-chip">${ko ? '첨부' : 'Files'} ${s2.files.length}${ko ? '개' : ''}</span>`);
+  }
+
+  if (!items.length) {
+    card.hidden = true;
+    return;
+  }
+
+  card.innerHTML = `<span class="ds-ctx-label">${t('ds.step3_context_card')}</span>${items.join('')}`;
+  card.hidden = false;
+}
+
 // ===== AI Communication =====
-function buildContents(userText) {
+function buildContents(userText, isAutoFire = false) {
   const allResults = {
     step1: stepResults[1],
     step2: stepResults[2],
   };
-  const systemPrompt = getStep3Prompt(allResults);
+  const systemPrompt = getStep3Prompt(allResults, isAutoFire);
+
+  if (isAutoFire) {
+    // Auto-fire: system prompt only, AI responds immediately
+    return [
+      { role: 'user', parts: [{ text: systemPrompt }] },
+    ];
+  }
+
   const greeting = t('ds.step3_greeting');
   const contents = [
     { role: 'user', parts: [{ text: systemPrompt }] },
@@ -275,11 +327,14 @@ function buildContents(userText) {
   return contents;
 }
 
-async function sendMessage(text) {
-  if (!text.trim() || isStreaming) return;
+async function sendMessage(text, isAutoFire = false) {
+  if (isStreaming) return;
+  if (!isAutoFire && !text.trim()) return;
 
-  addUserMessage(text);
-  stepHistories[3].push({ role: 'user', text });
+  if (!isAutoFire) {
+    addUserMessage(text);
+    stepHistories[3].push({ role: 'user', text });
+  }
 
   const input = $('#dsInput3');
   if (input) input.value = '';
@@ -301,7 +356,7 @@ async function sendMessage(text) {
   const typingEl = showTypingIndicator();
 
   try {
-    const contents = buildContents(text);
+    const contents = isAutoFire ? buildContents(null, true) : buildContents(text);
     const body = { contents, generationConfig: { temperature: 0.7 } };
 
     const container = getChatContainer();

@@ -1095,7 +1095,7 @@
             <div class="prep-reference-preview" id="prepReferencePreview" hidden></div>
             <div class="prep-ref-inline">
               <div class="prep-ref-filters">
-                <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title..." style="flex:1">
+                <input type="search" class="settings-input" id="refSearchInput" data-i18n-placeholder="prep.ref_search_placeholder" placeholder="Search by title, tag, attendee..." style="flex:1">
                 <select class="settings-select" id="refFilterType">
                   <option value="">All</option>
                   <option value="copilot" data-i18n="settings.preset_copilot">Copilot</option>
@@ -1138,6 +1138,24 @@
         <button class="btn btn-sm" id="btnPrepBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
         <div style="flex:1"></div>
         <button class="btn btn-sm btn-primary" id="btnPrepNext" data-i18n="prep.btn_next">Next &#8594;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reference Quick Viewer Modal -->
+  <div class="modal-overlay" id="refQuickViewerModal" hidden>
+    <div class="modal modal-large">
+      <div class="modal-header">
+        <h3 id="refQuickViewerTitle"></h3>
+        <button class="modal-close" id="btnCloseRefQuickViewer">&times;</button>
+      </div>
+      <div class="ref-quick-viewer-tabs">
+        <button class="ref-quick-viewer-tab active" data-tab="transcript" data-i18n="prep.ref_viewer_transcript">Transcript</button>
+        <button class="ref-quick-viewer-tab" data-tab="analysis" data-i18n="prep.ref_viewer_analysis">AI Analysis</button>
+      </div>
+      <div class="ref-quick-viewer-body">
+        <div class="ref-quick-viewer-content" id="refQuickViewerTranscript"></div>
+        <div class="ref-quick-viewer-content" id="refQuickViewerAnalysis" hidden></div>
       </div>
     </div>
   </div>
@@ -1286,6 +1304,7 @@
 
       <!-- Step 3: AI Setup (chat) -->
       <div class="ds-step-panel" data-step="3" hidden>
+        <div class="ds-context-card" id="dsContextCard" hidden></div>
         <div class="ds-chat-area">
           <div class="pb-messages" id="dsMessages3"></div>
           <div class="pb-chips" id="dsChips3"></div>

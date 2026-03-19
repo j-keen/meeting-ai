@@ -2,7 +2,7 @@
 
 import { state, on, emit } from './event-bus.js';
 import { createSTT } from './stt.js';
-import { analyzeTranscript, generateTags, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
+import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
   saveMeeting, getMeeting, loadSettings, saveSettings,
@@ -681,17 +681,6 @@ export async function runAnalysis() {
       result.whispers.forEach((w, i) => {
         state.whisperHistory.push({ text: w, timestamp: Date.now(), analysisIndex: state.analysisHistory.length - 1 });
         setTimeout(() => showWhisperToast(w), i * 400);
-      });
-    }
-
-    // Auto-generate tags
-    if (result.summary && state.tags.length === 0) {
-      generateTags({
-        summary: result.summary,
-        transcript: state.transcript,
-        model: 'gemini-2.5-flash-lite',
-      }).then(tags => {
-        if (tags.length > 0) state.tags = tags;
       });
     }
 

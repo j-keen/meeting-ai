@@ -849,10 +849,12 @@ function fillFormFromConfig(config) {
 // ===== Reference Meeting (Step 4) =====
 let refMeetings = [];
 let selectedRefId = null;
+const hoverPreviewCache = new Map();
 
 function loadReferenceStep() {
   refMeetings = listMeetings();
   selectedRefId = null;
+  hoverPreviewCache.clear();
   $('#refSearchInput').value = '';
   $('#refFilterType').value = '';
   $('#refMeetingPreview').hidden = true;
@@ -860,12 +862,41 @@ function loadReferenceStep() {
   renderRefMeetingList();
 }
 
+function renderStars(rating) {
+  if (!rating || rating < 1) return '';
+  const full = Math.round(rating);
+  return '★'.repeat(full) + '☆'.repeat(5 - full);
+}
+
+function formatDuration(ms) {
+  if (!ms) return '';
+  const mins = Math.round(ms / 60000);
+  return mins > 0 ? t('prep.minutes').replace('{n}', mins) : '';
+}
+
+function formatParticipants(participants) {
+  if (!participants || !participants.length) return '';
+  const names = participants.map(p => p.name || p).filter(Boolean);
+  if (names.length === 0) return '';
+  const MAX_SHOW = 3;
+  if (names.length <= MAX_SHOW) return names.join(', ');
+  return names.slice(0, MAX_SHOW).join(', ') + ' ' + t('prep.ref_participants_more').replace('{n}', names.length - MAX_SHOW);
+}
+
 function renderRefMeetingList() {
   const query = $('#refSearchInput').value.trim().toLowerCase();
   const typeFilter = $('#refFilterType').value;
 
   let filtered = refMeetings;
-  if (query) filtered = filtered.filter(m => (m.title || '').toLowerCase().includes(query));
+  if (query) {
+    filtered = filtered.filter(m => {
+      if ((m.title || '').toLowerCase().includes(query)) return true;
+      if (m.tags && m.tags.some(tag => tag.toLowerCase().includes(query))) return true;
+      const participants = m.prepConfig?.attendees || m.participants || [];
+      if (participants.some(p => ((p.name || p) + '').toLowerCase().includes(query))) return true;
+      return false;
+    });
+  }
   if (typeFilter) filtered = filtered.filter(m => m.preset === typeFilter);
 
   const listEl = $('#refMeetingList');
@@ -874,17 +905,139 @@ function renderRefMeetingList() {
     const card = document.createElement('div');
     card.className = 'prep-ref-meeting-card' + (m.id === selectedRefId ? ' selected' : '');
     const date = new Date(m.createdAt).toLocaleDateString();
-    card.innerHTML = `
-      <div class="prep-ref-meeting-card-title">${escapeHtml(m.title || 'Untitled')}</div>
-      <div class="prep-ref-meeting-card-meta">${date} · ${m.preset || 'copilot'}</div>
-    `;
-    card.addEventListener('click', () => selectRefMeeting(m.id));
+    const preset = m.preset || 'copilot';
+    const duration = formatDuration(m.duration);
+    const metaParts = [date, preset, duration].filter(Boolean).join(' · ');
+    const stars = renderStars(m.starRating);
+    const participants = m.prepConfig?.attendees || m.participants || [];
+    const participantsStr = formatParticipants(participants);
+    const tags = m.tags || [];
+
+    let html = `<div class="prep-ref-meeting-card-header">
+        <div class="prep-ref-meeting-card-title">${escapeHtml(m.title || 'Untitled')}</div>
+        ${stars ? `<div class="prep-ref-meeting-card-stars">${stars}</div>` : ''}
+      </div>
+      <div class="prep-ref-meeting-card-meta">${metaParts}</div>`;
+
+    if (participantsStr) {
+      html += `<div class="prep-ref-meeting-card-participants">\u{1F464} ${escapeHtml(participantsStr)}</div>`;
+    }
+
+    if (tags.length) {
+      html += `<div class="prep-ref-meeting-card-tags">${tags.slice(0, 5).map(tag => `<span class="prep-ref-tag-chip">#${escapeHtml(tag)}</span>`).join('')}</div>`;
+    }
+
+    html += `<div class="prep-ref-meeting-card-actions"><button class="prep-ref-view-btn" title="Quick view" data-id="${m.id}">\u{1F441}</button></div>`;
+
+    card.innerHTML = html;
+
+    // Click card to select (but not when clicking view button)
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.prep-ref-view-btn')) return;
+      selectRefMeeting(m.id);
+    });
+
+    // Quick view button
+    card.querySelector('.prep-ref-view-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRefQuickViewer(m.id);
+    });
+
+    // Hover preview
+    card.addEventListener('mouseenter', () => showHoverPreview(card, m.id));
+    card.addEventListener('mouseleave', () => hideHoverPreview(card));
+
     listEl.appendChild(card);
   });
   if (filtered.length === 0) {
     listEl.innerHTML = '<p class="text-muted" style="padding:16px;text-align:center;">No meetings found</p>';
   }
 }
+
+// ===== Hover Preview =====
+function showHoverPreview(card, meetingId) {
+  hideHoverPreview(card);
+  let text = hoverPreviewCache.get(meetingId);
+  if (text === undefined) {
+    const meeting = getMeeting(meetingId);
+    if (meeting?.analysisHistory?.length) {
+      const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+      const raw = last.markdown || last.raw || '';
+      text = raw.slice(0, 200) + (raw.length > 200 ? '...' : '');
+    } else {
+      text = t('prep.ref_no_analysis');
+    }
+    hoverPreviewCache.set(meetingId, text);
+  }
+  const preview = document.createElement('div');
+  preview.className = 'prep-ref-hover-preview';
+  preview.textContent = text;
+  card.appendChild(preview);
+}
+
+function hideHoverPreview(card) {
+  card.querySelector('.prep-ref-hover-preview')?.remove();
+}
+
+// ===== Quick Viewer Modal =====
+function openRefQuickViewer(meetingId) {
+  const meeting = getMeeting(meetingId);
+  if (!meeting) return;
+
+  const modal = $('#refQuickViewerModal');
+  $('#refQuickViewerTitle').textContent = meeting.title || 'Untitled';
+
+  // Transcript tab
+  const transcriptEl = $('#refQuickViewerTranscript');
+  if (meeting.transcript?.length) {
+    transcriptEl.innerHTML = meeting.transcript.map(line => {
+      const time = line.timestamp ? `<span class="transcript-time">${new Date(line.timestamp).toLocaleTimeString()}</span>` : '';
+      return `<div class="transcript-line">${time}${escapeHtml(line.text || '')}</div>`;
+    }).join('');
+  } else {
+    transcriptEl.innerHTML = `<p class="text-muted">${t('prep.ref_no_transcript')}</p>`;
+  }
+
+  // Analysis tab
+  const analysisEl = $('#refQuickViewerAnalysis');
+  if (meeting.analysisHistory?.length) {
+    const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+    const md = last.markdown || last.raw || '';
+    analysisEl.textContent = md;
+  } else {
+    analysisEl.innerHTML = `<p class="text-muted">${t('prep.ref_no_analysis')}</p>`;
+  }
+
+  // Reset tabs
+  modal.querySelectorAll('.ref-quick-viewer-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === 'transcript');
+  });
+  transcriptEl.hidden = false;
+  analysisEl.hidden = true;
+
+  // Tab switching
+  modal.querySelectorAll('.ref-quick-viewer-tab').forEach(tab => {
+    tab.onclick = () => {
+      modal.querySelectorAll('.ref-quick-viewer-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      transcriptEl.hidden = tab.dataset.tab !== 'transcript';
+      analysisEl.hidden = tab.dataset.tab !== 'analysis';
+    };
+  });
+
+  // Close handlers
+  $('#btnCloseRefQuickViewer').onclick = () => { modal.hidden = true; };
+  modal.onclick = (e) => { if (e.target === modal) modal.hidden = true; };
+
+  modal.hidden = false;
+}
+
+// TODO: AI-powered reference meeting suggestions
+// function suggestReferenceMeetings(meetingTitle, agenda) {
+//   // Will use Gemini API to suggest relevant past meetings
+//   // based on title similarity, agenda overlap, participant match, etc.
+//   // Returns: Promise<Array<{ id, title, relevanceScore, reason }>>
+// }
 
 function selectRefMeeting(id) {
   selectedRefId = id;
