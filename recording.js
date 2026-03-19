@@ -617,6 +617,11 @@ export async function runAnalysis() {
       ? [...state.analysisCorrections]
       : [];
 
+    // Collect block memos from current analysis
+    const blockMemos = (state.currentAnalysis && state.currentAnalysis.blockMemos)
+      ? state.currentAnalysis.blockMemos.filter(m => m.memo)
+      : [];
+
     // Streaming preview: show markdown as it arrives
     const aiContainer = document.querySelector('#aiSections');
     let streamPreviewEl = null;
@@ -637,6 +642,7 @@ export async function runAnalysis() {
       userProfile: buildFullProfile(),
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,
+      blockMemos,
       onStream: (textSoFar) => {
         if (!aiContainer) return;
         if (!streamPreviewEl) {

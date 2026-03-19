@@ -97,11 +97,13 @@ export function blocksToMarkdown(blocks) {
   return blocks.map(b => b.raw).join('\n\n');
 }
 
-// Render markdown analysis with block-level editing support
+// Render markdown analysis with block-level memo support (double-click)
 function renderMarkdownAnalysis(container, analysis) {
   container.innerHTML = '';
   const div = document.createElement('div');
   div.className = 'ai-markdown-content';
+
+  if (!analysis.blockMemos) analysis.blockMemos = [];
 
   const blocks = parseMarkdownBlocks(analysis.markdown);
 
@@ -111,17 +113,19 @@ function renderMarkdownAnalysis(container, analysis) {
     blockEl.dataset.blockIndex = index;
     blockEl.innerHTML = renderMarkdown(block.raw);
 
-    // Edit icon (shown on hover via CSS)
-    const editBtn = document.createElement('button');
-    editBtn.className = 'ai-block-edit-btn';
-    editBtn.innerHTML = '&#x270E;';
-    editBtn.title = t('block_edit.edit');
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (div.querySelector('.ai-block.editing')) return;
-      startBlockEdit(blockEl, block, index, blocks, analysis, div);
+    // Show existing memo if any
+    const existingMemo = analysis.blockMemos.find(m => m.blockIndex === index);
+    if (existingMemo) {
+      blockEl.appendChild(createMemoDisplay(existingMemo, block, index, analysis, div));
+      blockEl.classList.add('has-memo');
+    }
+
+    // Double-click to add/edit memo
+    blockEl.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.ai-block-memo') || e.target.closest('.ai-block-memo-input')) return;
+      if (blockEl.querySelector('.ai-block-memo-input')) return;
+      startBlockMemo(blockEl, block, index, analysis, div);
     });
-    blockEl.appendChild(editBtn);
 
     div.appendChild(blockEl);
   });
@@ -129,53 +133,93 @@ function renderMarkdownAnalysis(container, analysis) {
   container.appendChild(div);
 }
 
-// Enter edit mode for a single block
-function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
-  const originalRaw = block.raw;
-  let done = false; // prevent double-fire from outside click + blur race
-  blockEl.classList.add('editing');
-  containerDiv.classList.add('has-editing-block');
+// Create memo display element
+function createMemoDisplay(memoObj, block, index, analysis, containerDiv) {
+  const memoEl = document.createElement('div');
+  memoEl.className = 'ai-block-memo';
 
-  // Create textarea for editing
+  const icon = document.createElement('span');
+  icon.className = 'ai-block-memo-icon';
+  icon.textContent = '\uD83D\uDCDD';
+
+  const text = document.createElement('span');
+  text.className = 'ai-block-memo-text';
+  text.textContent = memoObj.memo;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'ai-block-memo-remove';
+  removeBtn.textContent = '\u2715';
+  removeBtn.title = t('block_memo.remove');
+  removeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    analysis.blockMemos = analysis.blockMemos.filter(m => m.blockIndex !== index);
+    memoEl.remove();
+    const blockEl = memoEl.closest('.ai-block');
+    if (blockEl) blockEl.classList.remove('has-memo');
+    emit('analysis:memoChanged', analysis);
+  });
+
+  memoEl.appendChild(icon);
+  memoEl.appendChild(text);
+  memoEl.appendChild(removeBtn);
+
+  // Click memo text to edit
+  text.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const blockEl = memoEl.closest('.ai-block');
+    if (blockEl) startBlockMemo(blockEl, block, index, analysis, containerDiv, memoObj.memo);
+  });
+
+  return memoEl;
+}
+
+// Enter memo mode for a block (double-click)
+function startBlockMemo(blockEl, block, index, analysis, containerDiv, existingText) {
+  // Remove existing memo display if present
+  const existingMemoEl = blockEl.querySelector('.ai-block-memo');
+  if (existingMemoEl) existingMemoEl.remove();
+
+  // Remove existing input if already open
+  const existingInput = blockEl.querySelector('.ai-block-memo-input');
+  if (existingInput) existingInput.remove();
+
+  if (!analysis.blockMemos) analysis.blockMemos = [];
+
+  const inputWrap = document.createElement('div');
+  inputWrap.className = 'ai-block-memo-input';
+
+  const icon = document.createElement('span');
+  icon.className = 'ai-block-memo-icon';
+  icon.textContent = '\uD83D\uDCDD';
+
   const textarea = document.createElement('textarea');
-  textarea.className = 'ai-block-textarea';
-  textarea.value = originalRaw;
-
-  // Mini toolbar
-  const toolbar = document.createElement('div');
-  toolbar.className = 'ai-block-toolbar';
-
-  const hintSpan = document.createElement('span');
-  hintSpan.className = 'ai-block-hint';
-  hintSpan.textContent = t('block_edit.hint');
+  textarea.className = 'ai-block-memo-textarea';
+  textarea.placeholder = t('block_memo.placeholder');
+  textarea.value = existingText || '';
+  textarea.rows = 1;
 
   const actionsDiv = document.createElement('div');
-  actionsDiv.className = 'ai-block-actions';
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'btn btn-xs';
-  cancelBtn.dataset.action = 'cancel';
-  cancelBtn.title = t('block_edit.cancel');
-  cancelBtn.textContent = '\u2715';
+  actionsDiv.className = 'ai-block-memo-actions';
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn btn-xs btn-primary';
-  saveBtn.dataset.action = 'save';
-  saveBtn.title = t('block_edit.done');
   saveBtn.textContent = '\u2713';
+  saveBtn.title = t('block_memo.save');
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-xs';
+  cancelBtn.textContent = '\u2715';
+  cancelBtn.title = t('block_memo.cancel');
 
   actionsDiv.appendChild(cancelBtn);
   actionsDiv.appendChild(saveBtn);
-  toolbar.appendChild(hintSpan);
-  toolbar.appendChild(actionsDiv);
-
-  // Replace block content with editor
-  blockEl.innerHTML = '';
-  blockEl.appendChild(textarea);
-  blockEl.appendChild(toolbar);
+  inputWrap.appendChild(icon);
+  inputWrap.appendChild(textarea);
+  inputWrap.appendChild(actionsDiv);
+  blockEl.appendChild(inputWrap);
   textarea.focus();
 
-  // Auto-resize textarea
+  // Auto-resize
   const autoResize = () => {
     textarea.style.height = 'auto';
     textarea.style.height = textarea.scrollHeight + 'px';
@@ -183,119 +227,71 @@ function startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv) {
   textarea.addEventListener('input', autoResize);
   requestAnimationFrame(autoResize);
 
-  // Helper: re-add edit button after cancel/save
-  const reattachEditBtn = () => {
-    const editBtn = document.createElement('button');
-    editBtn.className = 'ai-block-edit-btn';
-    editBtn.innerHTML = '&#x270E;';
-    editBtn.title = t('block_edit.edit');
-    editBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (containerDiv.querySelector('.ai-block.editing')) return;
-      startBlockEdit(blockEl, block, index, blocks, analysis, containerDiv);
-    });
-    blockEl.appendChild(editBtn);
-  };
-
-  // Cleanup outside-click listener
-  const removeOutsideListener = () => {
-    document.removeEventListener('mousedown', onOutsideClick, true);
-  };
+  let done = false;
 
   const cancel = () => {
     if (done) return;
     done = true;
+    inputWrap.remove();
+    // Restore existing memo display if there was one
+    const existing = analysis.blockMemos.find(m => m.blockIndex === index);
+    if (existing) {
+      blockEl.appendChild(createMemoDisplay(existing, block, index, analysis, containerDiv));
+      blockEl.classList.add('has-memo');
+    }
     removeOutsideListener();
-    blockEl.classList.remove('editing');
-    containerDiv.classList.remove('has-editing-block');
-    blockEl.innerHTML = renderMarkdown(originalRaw);
-    reattachEditBtn();
   };
 
   const save = () => {
     if (done) return;
-    const newRaw = textarea.value.trim();
-    if (!newRaw || newRaw === originalRaw) {
-      cancel();
+    const text = textarea.value.trim();
+    if (!text) {
+      // Remove memo if empty
+      analysis.blockMemos = analysis.blockMemos.filter(m => m.blockIndex !== index);
+      blockEl.classList.remove('has-memo');
+      done = true;
+      inputWrap.remove();
+      removeOutsideListener();
+      emit('analysis:memoChanged', analysis);
       return;
     }
 
     done = true;
-    removeOutsideListener();
+    inputWrap.remove();
 
-    // Track correction
-    const oldContent = originalRaw.replace(/^#+\s*/, '').replace(/^[-*]\s*/gm, '').trim();
-    const newContent = newRaw.replace(/^#+\s*/, '').replace(/^[-*]\s*/gm, '').trim();
-    if (oldContent !== newContent) {
-      emit('analysis:userCorrections', [{ before: originalRaw.slice(0, 120), after: newRaw.slice(0, 120) }]);
+    // Update or add memo
+    const existingIdx = analysis.blockMemos.findIndex(m => m.blockIndex === index);
+    const blockSnippet = block.raw.replace(/^#+\s*/, '').slice(0, 100);
+    const memoObj = { blockIndex: index, memo: text, blockSnippet };
+    if (existingIdx >= 0) {
+      analysis.blockMemos[existingIdx] = memoObj;
+    } else {
+      analysis.blockMemos.push(memoObj);
     }
 
-    // Update block
-    block.raw = newRaw;
-    blocks[index] = block;
-
-    // Rebuild full markdown
-    const newMarkdown = blocksToMarkdown(blocks);
-    analysis.markdown = newMarkdown;
-    analysis.summary = newMarkdown;
-    analysis.flow = extractHeadlineFromMarkdown(newMarkdown);
-    analysis.userEdited = true;
-
-    // Re-render just this block
-    blockEl.classList.remove('editing');
-    containerDiv.classList.remove('has-editing-block');
-    blockEl.innerHTML = renderMarkdown(newRaw);
-    reattachEditBtn();
-
-    emit('analysis:edited', analysis);
+    blockEl.classList.add('has-memo');
+    blockEl.appendChild(createMemoDisplay(memoObj, block, index, analysis, containerDiv));
+    removeOutsideListener();
+    emit('analysis:memoChanged', analysis);
   };
 
-  toolbar.addEventListener('click', (e) => {
-    const action = e.target.closest('[data-action]')?.dataset.action;
-    if (action === 'cancel') cancel();
-    if (action === 'save') save();
-  });
+  saveBtn.addEventListener('click', (e) => { e.stopPropagation(); save(); });
+  cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cancel(); });
 
   textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
     if (e.key === 'Escape') cancel();
-    if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      save();
-    }
   });
 
-  // Auto-save on outside click (like transcript editing)
   const onOutsideClick = (e) => {
-    if (!blockEl.contains(e.target)) {
-      save();
-    }
+    if (!inputWrap.contains(e.target)) save();
+  };
+  const removeOutsideListener = () => {
+    document.removeEventListener('mousedown', onOutsideClick, true);
   };
   requestAnimationFrame(() => {
     document.addEventListener('mousedown', onOutsideClick, true);
   });
-}
-
-// Extract meaningful corrections by comparing old and new markdown line by line
-function extractCorrections(oldMd, newMd) {
-  const oldLines = oldMd.split('\n');
-  const newLines = newMd.split('\n');
-  const corrections = [];
-  const maxLen = Math.max(oldLines.length, newLines.length);
-
-  for (let i = 0; i < maxLen; i++) {
-    const oldLine = (oldLines[i] || '').trim();
-    const newLine = (newLines[i] || '').trim();
-    if (oldLine !== newLine && oldLine && newLine) {
-      // Skip pure heading/formatting changes
-      const oldContent = oldLine.replace(/^#+\s*/, '').replace(/^\*+\s*/, '').replace(/^-\s*/, '');
-      const newContent = newLine.replace(/^#+\s*/, '').replace(/^\*+\s*/, '').replace(/^-\s*/, '');
-      if (oldContent !== newContent) {
-        corrections.push({ before: oldLine.slice(0, 120), after: newLine.slice(0, 120) });
-      }
-    }
-  }
-  // Limit to 5 most meaningful corrections
-  return corrections.slice(0, 5);
 }
 
 // Extract headline from markdown (mirror of ai.js logic)
@@ -534,6 +530,36 @@ function openAnalysisDetail(analysis, idx) {
   title.textContent = `#${idx + 1} \u2014 ${time}`;
   renderAnalysisContent(container, analysis);
   modal.hidden = false;
+}
+
+export function showAiIdle() {
+  const aiEmpty = $('#aiEmpty');
+  if (!aiEmpty) return;
+  const texts = aiEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = 'none');
+  const waiting = $('#aiWaiting');
+  if (waiting) {
+    waiting.style.display = '';
+    const hint = $('#aiWaitingHint');
+    if (hint) hint.textContent = t('ai.idle');
+    const sub = waiting.querySelector('.waiting-hint');
+    if (sub) sub.textContent = t('ai.idle_hint');
+  }
+}
+
+export function showChatIdle() {
+  const chatEmpty = $('#chatEmpty');
+  if (!chatEmpty) return;
+  const texts = chatEmpty.querySelectorAll(':scope > p');
+  texts.forEach(p => p.style.display = 'none');
+  const waiting = $('#chatWaiting');
+  if (waiting) {
+    waiting.style.display = '';
+    const text = waiting.querySelector('.waiting-text');
+    const hint = waiting.querySelector('.waiting-hint');
+    if (text) text.textContent = t('chat.idle');
+    if (hint) hint.textContent = t('chat.idle_hint');
+  }
 }
 
 export function showAiWaiting(charThreshold) {

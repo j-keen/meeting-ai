@@ -3,7 +3,7 @@
 import { state, emit } from './event-bus.js';
 import { t } from './i18n.js';
 import { saveSettings, loadMeetingPrepPresets, loadPreparedMeeting, deletePreparedMeeting } from './storage.js';
-import { showToast } from './ui.js';
+import { showToast, showTranscriptIdle, showAiIdle, showChatIdle } from './ui.js';
 import { openMeetingPrepForm } from './meeting-prep.js';
 import { openPromptBuilder } from './prompt-builder.js';
 import { openDeepSetup } from './deep-setup.js';
@@ -19,9 +19,14 @@ export function showLauncherModal() {
 
   modal.hidden = false;
 
-  const close = () => {
+  const close = (showIdle) => {
     modal.hidden = true;
     document.removeEventListener('keydown', keyHandler);
+    if (showIdle && !state.isRecording) {
+      showTranscriptIdle();
+      showAiIdle();
+      showChatIdle();
+    }
   };
 
   // Card 1: Quick Start (opens prompt builder)
@@ -55,7 +60,7 @@ export function showLauncherModal() {
     showPresetDropdown(presets, prepared, close);
   };
 
-  $('#launcherCloseBtn').onclick = close;
+  $('#launcherCloseBtn').onclick = () => close(true);
 
   // Keyboard shortcuts: 1, 2, 3, ESC
   const keyHandler = (e) => {
@@ -64,7 +69,7 @@ export function showLauncherModal() {
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherDeepSetup').click(); }
     else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
-    else if (e.key === 'Escape') { close(); }
+    else if (e.key === 'Escape') { close(true); }
   };
   document.addEventListener('keydown', keyHandler);
 }

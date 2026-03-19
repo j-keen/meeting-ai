@@ -33,7 +33,6 @@ export const state = {
   analysisContext: '',
   analysisCorrections: [], // [{before, after}] — user edits to include in next analysis only
   loadedMeetingId: null,
-  sessionEditCount: 0,
   loadedMeetingOriginal: null,
   minutesVersions: [],
   minutesPromptConfig: { referenceDoc: '', basePromptOverride: '', userInstruction: '' },

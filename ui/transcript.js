@@ -248,6 +248,22 @@ export function showTranscriptConnecting() {
   }
 }
 
+export function showTranscriptIdle() {
+  const placeholder = $('#transcriptEmptyPlaceholder');
+  const waiting = $('#transcriptWaiting');
+  if (placeholder) placeholder.style.display = 'none';
+  if (waiting) {
+    waiting.style.display = '';
+    waiting.classList.remove('connecting');
+    const label = $('#transcriptWaitingLabel');
+    const text = $('#transcriptWaitingText');
+    const hint = $('#transcriptWaitingHint');
+    if (label) label.textContent = 'REC';
+    if (text) text.textContent = t('transcript.idle');
+    if (hint) hint.textContent = t('transcript.idle_hint');
+  }
+}
+
 export function showTranscriptWaiting() {
   const placeholder = $('#transcriptEmptyPlaceholder');
   const waiting = $('#transcriptWaiting');

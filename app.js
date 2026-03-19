@@ -32,7 +32,6 @@ import { handleExport, handleExportMeeting } from './export-md.js';
 import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
-import { initHintSystem } from './hint-system.js';
 import { initPromptBuilder } from './prompt-builder.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
@@ -394,10 +393,6 @@ function init() {
     updatePh();
   })();
 
-  // Panel hint rotation
-  // Smart hint system
-  initHintSystem();
-
   // Memo from chat
   on('memo:fromChat', ({ text }) => {
     const memo = { id: generateId(), text, timestamp: Date.now() };
@@ -491,9 +486,14 @@ function init() {
   })();
 
 
-  // Analysis user corrections (one-shot for next analysis)
+  // Analysis user corrections (one-shot for next analysis) — legacy, kept for minutes editing
   on('analysis:userCorrections', (corrections) => {
     state.analysisCorrections.push(...corrections);
+  });
+
+  // Block memo changed — trigger auto-save
+  on('analysis:memoChanged', () => {
+    // saved via periodic autoSave
   });
 
   // Meeting History

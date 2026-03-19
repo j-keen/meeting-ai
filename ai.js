@@ -134,6 +134,7 @@ export async function analyzeTranscript({
   userProfile = '',
   model = 'gemini-2.5-flash',
   userCorrections = [],
+  blockMemos = [],
   onStream = null,
   categories = [],
   categoryHints = {},
@@ -224,6 +225,14 @@ export async function analyzeTranscript({
     messageParts.push('[User Corrections - The user manually edited parts of the previous analysis. Please take these corrections into account and adjust your analysis accordingly. These are one-time hints, so incorporate the intent naturally rather than repeating them verbatim.]');
     userCorrections.forEach(c => {
       messageParts.push(`- Changed: "${c.before}" → "${c.after}"`);
+    });
+  }
+
+  if (blockMemos && blockMemos.length > 0) {
+    messageParts.push('');
+    messageParts.push('[User Notes on Previous Analysis - The user left memos on specific parts of the previous analysis. These reflect their feedback, preferences, or corrections. Incorporate this feedback naturally into your new analysis.]');
+    blockMemos.forEach(m => {
+      messageParts.push(`- On "${m.blockSnippet}": ${m.memo}`);
     });
   }
 

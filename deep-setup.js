@@ -242,7 +242,8 @@ function goToStep(n) {
     const msgs3 = $('#dsMessages3');
     if (msgs3 && msgs3.children.length === 0) {
       // Auto-fire: AI immediately analyzes input and suggests focus points
-      sendMessage('', true);
+      // Added a slight delay so UI transitions smoothly before locking
+      setTimeout(() => sendMessage('', true), 300);
     }
   }
 
@@ -352,6 +353,18 @@ async function sendMessage(text, isAutoFire = false) {
   isStreaming = true;
   const sendBtn = $('#btnDsSend3');
   if (sendBtn) sendBtn.disabled = true;
+
+  if (isAutoFire) {
+    const initko = "✨ 입력하신 정보를 바탕으로 회의 맥락을 분석하고 있습니다... 잠시만 기다려주세요.";
+    const initen = "✨ Analyzing meeting context and preparing the session... Please wait a moment.";
+    const initMsg = isKorean() ? initko : initen;
+    const el = addAiMessage(`<p style="color:var(--text-secondary); font-size:13px; margin:0; padding:4px 0;">${initMsg}</p>`);
+    if (el && el.parentElement) {
+      el.parentElement.style.background = 'transparent';
+      el.parentElement.style.border = 'none';
+      el.parentElement.style.boxShadow = 'none';
+    }
+  }
 
   const typingEl = showTypingIndicator();
 
