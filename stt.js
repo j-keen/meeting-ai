@@ -55,11 +55,11 @@ function createWebSpeechEngine(language) {
       recognition.interimResults = true;
       recognition.lang = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : language === 'zh' ? 'zh-CN' : 'en-US';
 
+      let emptyFinalCount = 0;
+
       recognition.onresult = (e) => {
         noSpeechCount = 0;
         abortCount = 0;
-        hasResultInSession = true;
-        clearWatchdog();
         lastResultTime = Date.now();
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
@@ -72,10 +72,20 @@ function createWebSpeechEngine(language) {
             }
             // Skip completely empty finals (no interim fallback available)
             if (!text) {
-              sttDebug(`FINAL(skip) empty, no interim fallback`);
+              emptyFinalCount++;
+              sttDebug(`FINAL(skip) empty #${emptyFinalCount}`);
+              // Android: too many empty finals with no real text → abort for faster restart
+              if (emptyFinalCount >= 8 && !hasResultInSession && shouldRestart && recognition) {
+                sttDebug(`⚠️ Too many empty finals (${emptyFinalCount}) — aborting session`);
+                try { recognition.abort(); } catch (e) { /* ignore */ }
+              }
               hadFinalSinceLastInterim = true;
               continue;
             }
+            // Got real text — reset counters
+            emptyFinalCount = 0;
+            hasResultInSession = true;
+            clearWatchdog();
             const now = Date.now();
             const gap = lastFinalTime ? now - lastFinalTime : 0;
             const growWindow = 2000;
@@ -194,6 +204,7 @@ function createWebSpeechEngine(language) {
           lastFinalText = '';
           lastFinalTime = 0;
           sttDebug(`🔄 RESTART #${restartCount} sid=${sessionId} (session was ${sessionDur}s)`);
+          emptyFinalCount = 0;
           setTimeout(() => {
             if (!shouldRestart) return;
             try {
@@ -209,7 +220,7 @@ function createWebSpeechEngine(language) {
                 onError(t('stt.restart_failed'));
               }
             }
-          }, 300);
+          }, 100);
         } else {
           sttDebug(`⏹️ Stopped (session ${sessionDur}s)`);
         }
