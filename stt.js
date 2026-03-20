@@ -248,7 +248,7 @@ export function createSTT() {
 
       if (isMobile) {
         // Mobile: Start SpeechRecognition FIRST, then get recording stream
-        // getUserMedia before SpeechRecognition causes mic contention on Android
+        // getUserMedia before/during SpeechRecognition causes mic contention on Android
         currentEngine = createWebSpeechEngine(language);
 
         const onFatalError = () => {
@@ -257,18 +257,24 @@ export function createSTT() {
           currentEngine = null;
         };
 
+        let recordingStreamAcquired = false;
+
         currentEngine.start(
           onInterim, safeFinal, onError, onReplace, onFatalError,
           () => {
             onConnected?.('webspeech');
-            // After SpeechRecognition has mic, get separate stream for audio recording
-            if (onRecordingStream) {
-              navigator.mediaDevices.getUserMedia({ audio: true }).then(recStream => {
-                sttDebug(`[STT] Recording stream acquired after audio start`);
-                onRecordingStream(recStream);
-              }).catch(err => {
-                sttDebug(`[STT] Recording stream failed (non-fatal): ${err.message}`);
-              });
+            // Get recording stream ONCE, with delay to let SpeechRecognition stabilize
+            if (onRecordingStream && !recordingStreamAcquired) {
+              recordingStreamAcquired = true;
+              setTimeout(() => {
+                if (!isRunning) return;
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(recStream => {
+                  sttDebug(`[STT] Recording stream acquired (delayed)`);
+                  onRecordingStream(recStream);
+                }).catch(err => {
+                  sttDebug(`[STT] Recording stream failed (non-fatal): ${err.message}`);
+                });
+              }, 3000);
             }
           }
         );
