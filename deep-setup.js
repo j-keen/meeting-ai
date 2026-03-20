@@ -7,7 +7,7 @@
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
-import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, linkMeetings, getMeeting } from './storage.js';
+import { addCustomType, addContact, loadContacts, loadLocations, addLocation, getLocationFrequency, listMeetings, linkMeetings, getMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
@@ -406,152 +406,300 @@ function renderStep1Form() {
       <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
     </div>
 
-    <!-- location: input + browsable list -->
+    <!-- location: input + dropdown -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.location')}</label>
-      <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
-      <div class="ds-loc-list" id="dsLocationList"></div>
+      <div class="ds-location-select-wrapper">
+        <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
+        <div class="unified-dropdown ds-location-dropdown" id="dsLocationDropdown" hidden></div>
+      </div>
     </div>
 
-    <!-- attendees: badges, search, pool, then register -->
+    <!-- attendees: tabs (search / register) + badges -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.attendees')}</label>
+      <div class="ds-participant-tabs">
+        <button class="ds-participant-tab active" data-tab="search">${ko ? '검색' : 'Search'}</button>
+        <button class="ds-participant-tab" data-tab="register">${ko ? '등록' : 'Register'}</button>
+      </div>
+      <div id="dsParticipantTabSearch">
+        <div class="ds-participant-search-wrapper">
+          <input type="text" class="ds-input-sm" id="dsParticipantSearchInput" placeholder="${ko ? '참석자 검색...' : 'Search contacts...'}" autocomplete="off">
+          <div class="unified-dropdown ds-participant-dropdown" id="dsParticipantDropdown" hidden></div>
+        </div>
+      </div>
+      <div id="dsParticipantTabRegister" hidden>
+        <div class="ds-attendee-register">
+          <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
+          <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
+          <input type="text" class="ds-input-sm" id="dsAttendeeCompany" placeholder="${ko ? '회사' : 'Company'}" autocomplete="off">
+          <button class="btn btn-sm btn-primary" id="btnDsAddAttendee">${ko ? '등록' : 'Add'}</button>
+        </div>
+      </div>
       <div class="ds-selected-badges" id="dsSelectedBadges"></div>
-      <div class="ds-pool-search-wrap">
-        <input type="text" class="ds-input-sm" id="dsPoolSearch" placeholder="${ko ? '참석자 검색...' : 'Search contacts...'}" autocomplete="off">
-      </div>
-      <div class="ds-contact-pool" id="dsContactPool"></div>
-      <div class="ds-attendee-register" style="margin-top:8px">
-        <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
-        <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
-        <input type="text" class="ds-input-sm" id="dsAttendeeCompany" placeholder="${ko ? '회사' : 'Company'}" autocomplete="off">
-        <button class="btn btn-sm btn-primary" id="btnDsAddAttendee">${ko ? '등록' : 'Add'}</button>
-      </div>
-      <div class="ds-autocomplete-dropdown" id="dsAutocomplete" hidden></div>
     </div>
   `;
 
   renderSelectedBadges();
-  renderLocationList('');
-  renderContactPool('');
+  updateDsLocationDropdown('');
   bindStep1Events();
 }
 
 function bindStep1Events() {
-  // Location: filter browsable list on input
+  // === Location dropdown ===
   const locInput = $('#dsLocation');
-  if (locInput) {
+  const locDropdown = $('#dsLocationDropdown');
+  if (locInput && locDropdown) {
     locInput.addEventListener('input', () => {
-      renderLocationList(locInput.value.trim());
+      updateDsLocationDropdown(locInput.value.trim());
+      locDropdown.hidden = false;
+    });
+    locInput.addEventListener('focus', () => {
+      updateDsLocationDropdown(locInput.value.trim());
+      locDropdown.hidden = false;
+    });
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.ds-location-select-wrapper')) {
+        locDropdown.hidden = true;
+      }
     });
   }
 
-  // Attendee pool search
-  const poolSearch = $('#dsPoolSearch');
-  if (poolSearch) {
-    poolSearch.addEventListener('input', () => {
-      renderContactPool(poolSearch.value.trim());
-    });
-  }
-
-  // Attendee autocomplete & registration
-  bindAttendeeEvents();
-}
-
-function renderLocationList(query) {
-  const container = $('#dsLocationList');
-  if (!container) return;
-  const locations = loadLocations();
-  const filtered = locations.filter(l => matchField(l.name, query)).slice(0, 50);
-  const currentVal = $('#dsLocation')?.value.trim() || '';
-  if (!filtered.length) {
-    container.innerHTML = `<div class="ds-loc-empty">${isKorean() ? '저장된 장소 없음' : 'No saved locations'}</div>`;
-    return;
-  }
-  // Note: all values passed through escapeHtml for XSS safety
-  container.innerHTML = filtered.map(l => {
-    const selected = currentVal && l.name === currentVal;
-    return `<div class="ds-loc-item${selected ? ' ds-loc-selected' : ''}" data-loc-name="${escapeHtml(l.name)}">`
-      + `<span>${escapeHtml(l.name)}</span>`
-      + (l.memo ? `<span class="ds-loc-memo">${escapeHtml(l.memo)}</span>` : '')
-      + `</div>`;
-  }).join('');
-  container.querySelectorAll('.ds-loc-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const locInput = $('#dsLocation');
-      if (locInput) locInput.value = item.dataset.locName;
-      // Re-render to update selection highlight
-      renderLocationList($('#dsLocation')?.value.trim() || '');
+  // === Participant tab switching ===
+  document.querySelectorAll('.ds-participant-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ds-participant-tab').forEach(t2 => t2.classList.remove('active'));
+      tab.classList.add('active');
+      const isSearch = tab.dataset.tab === 'search';
+      const searchPanel = $('#dsParticipantTabSearch');
+      const registerPanel = $('#dsParticipantTabRegister');
+      if (searchPanel) searchPanel.hidden = !isSearch;
+      if (registerPanel) registerPanel.hidden = isSearch;
+      // Auto-focus the relevant input
+      if (isSearch) {
+        $('#dsParticipantSearchInput')?.focus();
+      } else {
+        $('#dsAttendeeName')?.focus();
+      }
     });
   });
+
+  // === Participant search dropdown ===
+  const searchInput = $('#dsParticipantSearchInput');
+  const pDropdown = $('#dsParticipantDropdown');
+  if (searchInput && pDropdown) {
+    searchInput.addEventListener('input', () => {
+      updateDsParticipantDropdown(searchInput.value.trim());
+    });
+    searchInput.addEventListener('focus', () => {
+      updateDsParticipantDropdown(searchInput.value.trim());
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.ds-participant-search-wrapper')) {
+        pDropdown.hidden = true;
+      }
+    });
+  }
+
+  // === Register button + Enter key ===
+  bindAttendeeRegisterEvents();
 }
 
-function bindAttendeeEvents() {
+function updateDsLocationDropdown(query) {
+  const dropdown = $('#dsLocationDropdown');
+  if (!dropdown) return;
+  const locations = loadLocations();
+  const locFreq = getLocationFrequency();
+  const q = (query || '').toLowerCase().trim();
+
+  // Sort by frequency descending, then alphabetical
+  const sorted = [...locations].sort((a, b) => {
+    const fa = locFreq[a.name] || 0, fb = locFreq[b.name] || 0;
+    if (fb !== fa) return fb - fa;
+    return a.name.localeCompare(b.name);
+  });
+
+  // Filter by query (supports chosung search)
+  const filtered = q ? sorted.filter(l => matchField(l.name, q)) : sorted;
+
+  dropdown.innerHTML = '';
+
+  if (filtered.length > 0) {
+    // "최근" section — locations used at least once
+    const recent = filtered.filter(l => (locFreq[l.name] || 0) > 0);
+    const recentNames = new Set(recent.map(l => l.name));
+    const allOthers = filtered.filter(l => !recentNames.has(l.name));
+
+    if (recent.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'unified-dropdown-section';
+      const header = document.createElement('div');
+      header.className = 'unified-dropdown-header';
+      header.textContent = isKorean() ? '최근' : 'Recent';
+      section.appendChild(header);
+      recent.slice(0, 5).forEach(loc => {
+        section.appendChild(createDsLocationItem(loc, locFreq[loc.name] || 0));
+      });
+      dropdown.appendChild(section);
+    }
+
+    if (allOthers.length > 0) {
+      const section = document.createElement('div');
+      section.className = 'unified-dropdown-section';
+      const header = document.createElement('div');
+      header.className = 'unified-dropdown-header';
+      header.textContent = isKorean() ? '전체' : 'All';
+      section.appendChild(header);
+      const listWrap = document.createElement('div');
+      listWrap.className = 'location-all-list';
+      allOthers.forEach(loc => {
+        listWrap.appendChild(createDsLocationItem(loc, 0));
+      });
+      section.appendChild(listWrap);
+      dropdown.appendChild(section);
+    }
+  }
+
+  // "새로 추가" option when typed text doesn't match any location exactly
+  if (q && !locations.some(l => l.name.toLowerCase() === q)) {
+    const addSection = document.createElement('div');
+    addSection.className = 'unified-dropdown-section';
+    const addItem = document.createElement('div');
+    addItem.className = 'unified-dropdown-item location-add-new';
+    const plusSpan = document.createElement('span');
+    plusSpan.style.color = 'var(--accent)';
+    plusSpan.textContent = '+ ';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = (isKorean() ? '추가 "' : 'Add "') + query.trim() + '"';
+    addItem.appendChild(plusSpan);
+    addItem.appendChild(labelSpan);
+    addItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const locInput = $('#dsLocation');
+      if (locInput) locInput.value = query.trim();
+      dropdown.hidden = true;
+    });
+    addSection.appendChild(addItem);
+    dropdown.appendChild(addSection);
+  }
+
+  dropdown.hidden = dropdown.children.length === 0;
+}
+
+function createDsLocationItem(loc, freq) {
+  const item = document.createElement('div');
+  item.className = 'unified-dropdown-item';
+  const nameSpan = document.createElement('span');
+  nameSpan.textContent = loc.name;
+  item.appendChild(nameSpan);
+  if (loc.memo) {
+    const memoSpan = document.createElement('span');
+    memoSpan.className = 'unified-dropdown-item-sub';
+    memoSpan.textContent = loc.memo;
+    item.appendChild(memoSpan);
+  }
+  if (freq > 0) {
+    const freqSpan = document.createElement('span');
+    freqSpan.className = 'unified-dropdown-item-sub';
+    freqSpan.textContent = `${freq}×`;
+    item.appendChild(freqSpan);
+  }
+  item.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const locInput = $('#dsLocation');
+    if (locInput) locInput.value = loc.name;
+    $('#dsLocationDropdown').hidden = true;
+  });
+  return item;
+}
+
+function updateDsParticipantDropdown(query) {
+  const dropdown = $('#dsParticipantDropdown');
+  if (!dropdown) return;
+  const contacts = loadContacts();
+  const selectedIds = new Set(selectedAttendees.map(a => a.id));
+  const available = contacts.filter(c => !selectedIds.has(c.id));
+  const q = (query || '').trim();
+  const filtered = q ? available.filter(c => matchContactByName(c, q)) : available;
+
+  if (filtered.length === 0) {
+    dropdown.hidden = true;
+    return;
+  }
+
+  dropdown.innerHTML = '';
+  const section = document.createElement('div');
+  section.className = 'unified-dropdown-section';
+  const header = document.createElement('div');
+  header.className = 'unified-dropdown-header';
+  header.textContent = isKorean() ? '연락처' : 'Contacts';
+  section.appendChild(header);
+
+  filtered.slice(0, 8).forEach(contact => {
+    const item = document.createElement('div');
+    item.className = 'unified-dropdown-item';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = contact.name;
+    item.appendChild(nameSpan);
+    if (contact.title) {
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'unified-dropdown-item-sub';
+      titleSpan.textContent = contact.title;
+      item.appendChild(titleSpan);
+    }
+    if (contact.company) {
+      const compSpan = document.createElement('span');
+      compSpan.className = 'unified-dropdown-item-sub';
+      compSpan.textContent = contact.company;
+      item.appendChild(compSpan);
+    }
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedAttendees.push(contact);
+      renderSelectedBadges();
+      const searchInput = $('#dsParticipantSearchInput');
+      if (searchInput) searchInput.value = '';
+      updateDsParticipantDropdown('');
+      searchInput?.focus();
+    });
+    section.appendChild(item);
+  });
+
+  dropdown.appendChild(section);
+  dropdown.hidden = false;
+}
+
+function bindAttendeeRegisterEvents() {
   const nameInput = $('#dsAttendeeName');
   const titleInput = $('#dsAttendeeTitle');
   const companyInput = $('#dsAttendeeCompany');
-
-  function showAcDropdown(matchFn) {
-    const dropdown = $('#dsAutocomplete');
-    if (!dropdown) return;
-    const contacts = loadContacts();
-    const selectedIds = new Set(selectedAttendees.map(a => a.id));
-    const matches = contacts.filter(c => !selectedIds.has(c.id) && matchFn(c)).slice(0, 8);
-    if (!matches.length) { dropdown.hidden = true; return; }
-    dropdown.innerHTML = matches.map(c =>
-      `<div class="ds-ac-item" data-contact-id="${c.id}"><strong>${escapeHtml(c.name)}</strong>${c.title ? ' <span class="text-muted">' + escapeHtml(c.title) + '</span>' : ''}${c.company ? ' <span class="text-muted">· ' + escapeHtml(c.company) + '</span>' : ''}</div>`
-    ).join('');
-    dropdown.hidden = false;
-    dropdown.querySelectorAll('.ds-ac-item').forEach(item => {
-      item.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        const contact = contacts.find(c => c.id === item.dataset.contactId);
-        if (contact) {
-          selectedAttendees.push(contact);
-          renderSelectedBadges();
-          renderContactPool($('#dsPoolSearch')?.value.trim() || '');
-          if (nameInput) nameInput.value = '';
-          if (titleInput) titleInput.value = '';
-          if (companyInput) companyInput.value = '';
-          dropdown.hidden = true;
-        }
-      });
-    });
-  }
-
-  const hideAc = () => setTimeout(() => { const d = $('#dsAutocomplete'); if (d) d.hidden = true; }, 150);
-
-  if (nameInput) {
-    nameInput.addEventListener('input', () => showAcDropdown(c => matchContactByName(c, nameInput.value.trim())));
-    nameInput.addEventListener('blur', hideAc);
-  }
-  if (titleInput) {
-    titleInput.addEventListener('input', () => showAcDropdown(c => matchField(c.title || '', titleInput.value.trim())));
-    titleInput.addEventListener('blur', hideAc);
-  }
-  if (companyInput) {
-    companyInput.addEventListener('input', () => showAcDropdown(c => matchField(c.company || '', companyInput.value.trim())));
-    companyInput.addEventListener('blur', hideAc);
-  }
-
-  // Register button
   const addBtn = $('#btnDsAddAttendee');
-  if (addBtn) {
-    addBtn.addEventListener('click', () => {
-      const name = nameInput?.value.trim();
-      if (!name) return;
-      const title = titleInput?.value.trim() || '';
-      const company = companyInput?.value.trim() || '';
-      const contact = addContact({ name, title, company });
-      selectedAttendees.push(contact);
-      renderSelectedBadges();
-      renderContactPool($('#dsPoolSearch')?.value.trim() || '');
-      if (nameInput) nameInput.value = '';
-      if (titleInput) titleInput.value = '';
-      if (companyInput) companyInput.value = '';
-      showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
-    });
+
+  function doRegister() {
+    const name = nameInput?.value.trim();
+    if (!name) return;
+    const title = titleInput?.value.trim() || '';
+    const company = companyInput?.value.trim() || '';
+    const contact = addContact({ name, title, company });
+    selectedAttendees.push(contact);
+    renderSelectedBadges();
+    if (nameInput) nameInput.value = '';
+    if (titleInput) titleInput.value = '';
+    if (companyInput) companyInput.value = '';
+    showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
   }
+
+  if (addBtn) addBtn.addEventListener('click', doRegister);
+
+  // Enter key in register fields triggers registration
+  [nameInput, titleInput, companyInput].forEach(input => {
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doRegister(); }
+      });
+    }
+  });
 }
 
 function renderSelectedBadges() {
@@ -565,35 +713,7 @@ function renderSelectedBadges() {
     btn.addEventListener('click', () => {
       selectedAttendees.splice(parseInt(btn.dataset.idx), 1);
       renderSelectedBadges();
-      renderContactPool($('#dsPoolSearch')?.value.trim() || '');
-    });
-  });
-}
-
-function renderContactPool(query) {
-  const container = $('#dsContactPool');
-  if (!container) return;
-  const contacts = loadContacts();
-  const selectedIds = new Set(selectedAttendees.map(a => a.id));
-  const available = contacts.filter(c => !selectedIds.has(c.id) && matchContactByName(c, query || ''));
-  if (!available.length) {
-    container.innerHTML = query
-      ? `<div class="ds-loc-empty">${isKorean() ? '검색 결과 없음' : 'No matches'}</div>`
-      : '';
-    return;
-  }
-  // Note: all values passed through escapeHtml for XSS safety
-  container.innerHTML = available.map(c =>
-    `<button class="ds-pool-chip" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}${c.company ? ' · ' + escapeHtml(c.company) : ''}</button>`
-  ).join('');
-  container.querySelectorAll('.ds-pool-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const contact = contacts.find(c => c.id === btn.dataset.contactId);
-      if (contact && !selectedAttendees.some(a => a.id === contact.id)) {
-        selectedAttendees.push(contact);
-        renderSelectedBadges();
-        renderContactPool($('#dsPoolSearch')?.value.trim() || '');
-      }
+      updateDsParticipantDropdown($('#dsParticipantSearchInput')?.value.trim() || '');
     });
   });
 }
@@ -783,14 +903,24 @@ function openRefViewer(meetingId) {
     transcriptEl.innerHTML = `<p class="text-muted">${ko ? '녹취록 없음' : 'No transcript'}</p>`;
   }
 
-  // Analysis tab
+  // Analysis tab — strip markdown syntax for clean display
   const analysisEl = $('#refQuickViewerAnalysis');
   if (meeting.analysisHistory?.length) {
     const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
     const md = last.markdown || last.raw || '';
-    analysisEl.textContent = md;
+    const cleaned = md
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/`{1,3}[^`]*`{1,3}/g, match => match.replace(/`/g, ''))
+      .replace(/^[-*+]\s+/gm, '• ')
+      .replace(/^>\s?/gm, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^---+$/gm, '')
+      .trim();
+    analysisEl.textContent = cleaned;
   } else {
-    analysisEl.innerHTML = `<p class="text-muted">${ko ? '분석 없음' : 'No analysis'}</p>`;
+    analysisEl.textContent = ko ? '분석 없음' : 'No analysis';
   }
 
   // Reset tabs

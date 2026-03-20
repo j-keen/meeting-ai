@@ -1048,6 +1048,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
   display: flex;
   gap: 4px;
   align-items: center;
+  justify-content: center;
+}
+#btnFaq {
+  min-width: 100px;
 }
 .faq-add-toggle {
   padding: 3px 8px;
@@ -1943,6 +1947,12 @@ body.loaded-mode #btnNewMeeting { display: none; }
   white-space: pre-wrap;
 }
 
+/* Button color variants */
+.btn-purple { background: #7c3aed; color: #fff; border: none; }
+.btn-purple:hover { background: #6d28d9; }
+.btn-green { background: #059669; color: #fff; border: none; }
+.btn-green:hover { background: #047857; }
+
 /* Profile Form */
 .btn-accent {
   background: var(--accent);
@@ -2011,7 +2021,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   display: flex;
   flex-direction: column;
 }
-.modal-large { max-width: 720px; max-height: 85vh; }
+.modal-large { max-width: 720px; max-height: 90vh; min-height: 70vh; }
 .modal-fullscreen { max-width: 95vw; max-height: 90vh; width: 95vw; }
 .modal-header {
   display: flex;
@@ -4032,27 +4042,43 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 13px;
   cursor: pointer;
   transition: all var(--transition-fast);
+  border-radius: var(--radius);
 }
 .btn-text:hover {
   color: var(--text-primary);
   background: var(--bg-hover);
-  border-radius: var(--radius);
 }
 
-.btn-subtle {
-  background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+/* 회의록 생성 - 보라색 */
+.btn-purple {
+  background: #f3e8ff;
+  border: 1px solid #c084fc;
+  color: #7c3aed;
   padding: 8px 14px;
   font-size: 13px;
   cursor: pointer;
   border-radius: var(--radius);
   transition: all var(--transition-fast);
 }
-.btn-subtle:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--border-color);
+.btn-purple:hover {
+  background: #ede9fe;
+  border-color: #a855f7;
+}
+
+/* AI 문서 - 청록색 */
+.btn-teal {
+  background: #e0f2fe;
+  border: 1px solid #38bdf8;
+  color: #0891b2;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: all var(--transition-fast);
+}
+.btn-teal:hover {
+  background: #cffafe;
+  border-color: #22d3ee;
 }
 
 .btn-lg {
@@ -4065,8 +4091,13 @@ body.loaded-mode #btnNewMeeting { display: none; }
   width: 1px;
   height: 24px;
   background: var(--border-light);
-  margin: 0 4px;
+  margin: 0 8px;
   flex-shrink: 0;
+}
+
+/* Footer centered layout */
+.end-meeting-footer-centered {
+  justify-content: center !important;
 }
 
 /* Disabled form state during progress */
@@ -5248,6 +5279,9 @@ body.loaded-mode #btnNewMeeting { display: none; }
   pointer-events: none;
 }
 /* Quick Viewer Modal */
+#refQuickViewerModal {
+  z-index: 300;
+}
 .ref-quick-viewer-tabs {
   display: flex;
   gap: 0;
@@ -5757,21 +5791,17 @@ body.loaded-mode #btnNewMeeting { display: none; }
   .end-meeting-column-secondary {
     margin-top: 4px;
   }
-  .end-meeting-footer-split {
-    flex-direction: column;
-    gap: 12px;
-  }
-  .end-meeting-footer-left,
-  .end-meeting-footer-right {
-    width: 100%;
-    justify-content: center;
+  .end-meeting-footer-centered {
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .footer-divider {
     display: none;
   }
   #btnEndMeetingSave {
-    flex: 1;
     width: 100%;
+    order: 10;
+    margin-top: 4px;
   }
 }
 
@@ -7319,27 +7349,12 @@ body.loaded-mode #btnNewMeeting { display: none; }
   min-width: 0;
 }
 .ds-input-sm:focus { outline: none; border-color: var(--accent); }
-.ds-autocomplete-dropdown {
-  position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,.12));
-  max-height: 160px;
-  overflow-y: auto;
-  z-index: 10;
-}
-.ds-ac-item {
-  padding: 6px 10px;
-  font-size: 13px;
-  cursor: pointer;
-}
-.ds-ac-item:hover { background: var(--bg-hover); }
 .ds-selected-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   min-height: 0;
+  margin-top: 6px;
 }
 .ds-badge {
   display: inline-flex;
@@ -7361,29 +7376,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 14px;
   padding: 0;
   line-height: 1;
-}
-.ds-contact-pool {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  max-height: 80px;
-  overflow-y: auto;
-  padding: 2px 0;
-}
-.ds-pool-chip {
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-color);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.ds-pool-chip:hover {
-  background: var(--accent-bg);
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 /* ② Reference meetings */
@@ -7490,6 +7482,182 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-tertiary);
   font-size: 14px;
   padding: 0 2px;
+}
+
+/* Location dropdown (unified style) */
+.ds-location-select-wrapper {
+  position: relative;
+}
+.ds-location-dropdown {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Participant tabs (unified style) */
+.ds-participant-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 6px;
+}
+.ds-participant-tab {
+  flex: 1;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+.ds-participant-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.ds-participant-tab:hover { color: var(--text-primary); }
+
+/* Participant search dropdown wrapper */
+.ds-participant-search-wrapper {
+  position: relative;
+}
+.ds-participant-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Reference cards */
+.ds-ref-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ds-ref-filters .ds-input-sm { flex: 1; }
+.ds-ref-type-filter {
+  padding: 6px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 12px;
+  min-width: 100px;
+}
+.ds-ref-list {
+  grid-template-columns: 1fr;
+  max-height: 200px;
+}
+.ds-ref-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+.ds-ref-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+.ds-ref-card.ds-ref-checked {
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+.ds-ref-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ds-ref-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.ds-ref-card-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.ds-ref-card-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ds-ref-card-type {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.ds-ref-card-attendees {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-ref-card-summary {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-ref-card-preview-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.ds-ref-card:hover .ds-ref-card-preview-btn {
+  opacity: 1;
+}
+.ds-ref-card-preview-btn:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.ds-ref-selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.ds-ref-selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+}
+.ds-ref-selected-chip button {
+  border: none;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
 }
 
 @media (max-width: 480px) {
