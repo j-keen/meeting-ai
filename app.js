@@ -1014,7 +1014,7 @@ function loadDemoData() {
   const now = Date.now();
   state.meetingStartTime = now - 55 * 60000;
   state.meetingId = generateId();
-  state.meetingLocation = 'Conference Room A';
+  state.meetingLocation = '';
   state.meetingTitle = '주간 스프린트 리뷰 & 기술 전략 회의';
 
   const script = [

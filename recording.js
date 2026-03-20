@@ -198,7 +198,7 @@ function showDraftRecoveryBanner(draft, source) {
         banner.remove();
         recoverDraft(draft, source);
         // Go directly to end meeting modal
-        setTimeout(() => endMeeting(), 100);
+        setTimeout(() => proceedEndMeeting(), 100);
       };
     }
   }
@@ -1051,7 +1051,7 @@ function resetFooterToDefault(isEditMode = false) {
 
   // Generate Minutes button (opens model selection modal)
   const genBtn = document.createElement('button');
-  genBtn.className = 'btn btn-accent';
+  genBtn.className = 'btn btn-purple';
   genBtn.id = 'btnGenerateMinutes';
   genBtn.textContent = t('end_meeting.generate_minutes');
   if (isEditMode) {
@@ -1103,7 +1103,7 @@ function resetFooterToDefault(isEditMode = false) {
 
   // AI Document Generator button
   const docGenBtn = document.createElement('button');
-  docGenBtn.className = 'btn btn-accent';
+  docGenBtn.className = 'btn btn-green';
   docGenBtn.id = 'btnDocGenerator';
   docGenBtn.textContent = t('dg.button_label');
   docGenBtn.onclick = () => emit('docGenerator:open');

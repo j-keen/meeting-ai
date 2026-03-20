@@ -998,14 +998,24 @@ function openRefQuickViewer(meetingId) {
     transcriptEl.innerHTML = `<p class="text-muted">${t('prep.ref_no_transcript')}</p>`;
   }
 
-  // Analysis tab
+  // Analysis tab — strip markdown syntax for clean display
   const analysisEl = $('#refQuickViewerAnalysis');
   if (meeting.analysisHistory?.length) {
     const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
     const md = last.markdown || last.raw || '';
-    analysisEl.textContent = md;
+    const cleaned = md
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .replace(/`{1,3}[^`]*`{1,3}/g, match => match.replace(/`/g, ''))
+      .replace(/^[-*+]\s+/gm, '• ')
+      .replace(/^>\s?/gm, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/^---+$/gm, '')
+      .trim();
+    analysisEl.textContent = cleaned;
   } else {
-    analysisEl.innerHTML = `<p class="text-muted">${t('prep.ref_no_analysis')}</p>`;
+    analysisEl.textContent = t('prep.ref_no_analysis');
   }
 
   // Reset tabs
