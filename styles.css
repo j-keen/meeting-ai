@@ -1042,14 +1042,26 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .chat-message.user .chat-message-actions button { color: var(--text-inverse); }
 .chat-message.user .chat-message-actions button:hover { background: rgba(255,255,255,0.2); }
 
-/* ===== FAQ Popover ===== */
+/* ===== FAQ Dropdown ===== */
 .faq-wrap { position: relative; }
-.faq-popover {
+.faq-btn-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.faq-add-toggle {
+  padding: 2px 8px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  min-width: 24px;
+}
+.faq-dropdown {
   position: absolute;
   top: 100%;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 30;
-  margin-top: 4px;
+  margin-top: 6px;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -1133,11 +1145,23 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-radius: var(--radius-sm);
 }
 .faq-item-actions button:hover { opacity: 1; background: var(--bg-tertiary); }
-.faq-add-wrap {
+/* FAQ Add Inline */
+.faq-add-inline {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  margin-top: 6px;
   display: flex;
   gap: 4px;
-  padding: 6px 8px 8px;
-  border-top: 1px solid var(--border-light);
+  padding: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  width: 280px;
+  max-width: 90vw;
 }
 .faq-add-input {
   flex: 1;
@@ -1167,7 +1191,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   color: var(--text-primary);
   font-size: 13px;
   outline: none;
-  min-width: 0;
 }
 
 /* Settings Hint */

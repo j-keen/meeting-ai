@@ -640,13 +640,17 @@ export function initFaq() {
   const btn = $('#btnFaq');
   const popover = $('#faqPopover');
   const search = $('#faqSearch');
+  const addToggle = $('#btnFaqAddToggle');
+  const addInline = $('#faqAddInline');
   const addInput = $('#faqAddInput');
   const addBtn = $('#btnFaqAdd');
   if (!btn || !popover) return;
 
+  // Toggle FAQ dropdown
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const isOpen = !popover.hidden;
+    // Close add inline if open
+    if (addInline) addInline.hidden = true;
     popover.hidden = !popover.hidden;
     if (!popover.hidden) {
       search.value = '';
@@ -656,10 +660,27 @@ export function initFaq() {
     }
   });
 
+  // Toggle add question inline
+  if (addToggle && addInline) {
+    addToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close dropdown if open
+      popover.hidden = true;
+      addInline.hidden = !addInline.hidden;
+      if (!addInline.hidden) {
+        addInput.value = '';
+        setTimeout(() => addInput.focus(), 0);
+      }
+    });
+  }
+
   // Close on outside click
   document.addEventListener('click', (e) => {
     if (!popover.hidden && !popover.contains(e.target) && e.target !== btn) {
       popover.hidden = true;
+    }
+    if (addInline && !addInline.hidden && !addInline.contains(e.target) && e.target !== addToggle) {
+      addInline.hidden = true;
     }
   });
 
@@ -701,7 +722,11 @@ export function initFaq() {
     items.push({ id: Date.now().toString(), text, fav: false });
     saveFaqItems(items);
     addInput.value = '';
-    renderFaqList(search.value.trim());
+    addInline.hidden = true;
+    // If dropdown is open, refresh it
+    if (!popover.hidden) {
+      renderFaqList(search.value.trim());
+    }
   }
 
   addBtn.addEventListener('click', addNewFaq);
@@ -710,7 +735,7 @@ export function initFaq() {
       e.preventDefault();
       addNewFaq();
     } else if (e.key === 'Escape') {
-      popover.hidden = true;
+      addInline.hidden = true;
     }
   });
 }

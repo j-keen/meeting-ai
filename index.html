@@ -140,17 +140,20 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.chat">AI Chat</h2>
           <div class="panel-actions">
-            <div class="faq-wrap" style="position:relative">
-              <button class="btn btn-xs" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
-              <div class="faq-popover" id="faqPopover" hidden>
+            <div class="faq-wrap">
+              <div class="faq-btn-group">
+                <button class="btn btn-xs" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
+                <button class="btn btn-xs btn-primary faq-add-toggle" id="btnFaqAddToggle" title="Add new question">+</button>
+              </div>
+              <div class="faq-dropdown" id="faqPopover" hidden>
                 <div class="faq-search-wrap">
                   <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search..." autocomplete="off">
                 </div>
                 <div class="faq-list" id="faqList"></div>
-                <div class="faq-add-wrap">
-                  <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new question..." autocomplete="off">
-                  <button class="btn btn-xs btn-primary faq-add-btn" id="btnFaqAdd">+</button>
-                </div>
+              </div>
+              <div class="faq-add-inline" id="faqAddInline" hidden>
+                <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new question..." autocomplete="off">
+                <button class="btn btn-xs btn-primary faq-add-btn" id="btnFaqAdd">✓</button>
               </div>
             </div>
           </div>
