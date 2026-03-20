@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { t } from './i18n.js';
-import { saveSettings, loadMeetingPrepPresets, loadPreparedMeeting, deletePreparedMeeting } from './storage.js';
+import { saveSettings, loadMeetingPrepPresets, loadPreparedMeeting, deletePreparedMeeting, loadCustomTypes } from './storage.js';
 import { showToast, showTranscriptIdle, showAiIdle, showChatIdle } from './ui.js';
 import { openMeetingPrepForm } from './meeting-prep.js';
 import { openPromptBuilder } from './prompt-builder.js';
@@ -44,9 +44,11 @@ export function showLauncherModal() {
   // Card 3: Preset
   const presets = loadMeetingPrepPresets();
   const prepared = loadPreparedMeeting();
+  const customTypes = loadCustomTypes();
+  const hasPresets = presets.length > 0 || prepared || customTypes.length > 0;
   const presetCard = $('#btnLauncherPreset');
   const presetHint = presetCard.querySelector('.launcher-card-hint');
-  if (!presets.length && !prepared) {
+  if (!hasPresets) {
     presetCard.classList.add('launcher-card-disabled');
     presetCard.disabled = true;
     if (presetHint) presetHint.hidden = false;
@@ -56,8 +58,8 @@ export function showLauncherModal() {
     if (presetHint) presetHint.hidden = true;
   }
   presetCard.onclick = () => {
-    if (!presets.length && !prepared) return;
-    showPresetDropdown(presets, prepared, close);
+    if (!hasPresets) return;
+    showPresetDropdown(presets, prepared, customTypes, close);
   };
 
   $('#launcherCloseBtn').onclick = () => close(true);
@@ -74,7 +76,7 @@ export function showLauncherModal() {
   document.addEventListener('keydown', keyHandler);
 }
 
-function showPresetDropdown(presets, prepared, closeFn) {
+function showPresetDropdown(presets, prepared, customTypes, closeFn) {
   // Remove existing dropdown
   const existing = document.querySelector('.launcher-preset-list');
   if (existing) { existing.remove(); return; }
@@ -101,7 +103,24 @@ function showPresetDropdown(presets, prepared, closeFn) {
     list.appendChild(item);
   }
 
-  // Regular presets
+  // Custom type presets
+  customTypes.forEach((ct) => {
+    const item = document.createElement('div');
+    item.className = 'launcher-preset-item';
+    const name = ct.label || ct.name || ct.id;
+    item.innerHTML = `<span>${escapeHtml(name)}</span><span class="launcher-preset-item-type">${escapeHtml(ct.id)}</span>`;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      list.remove();
+      closeFn();
+      state.settings.meetingPreset = ct.id;
+      saveSettings(state.settings);
+      emit('startRecording');
+    });
+    list.appendChild(item);
+  });
+
+  // Regular presets (meeting prep)
   presets.forEach((p, i) => {
     const item = document.createElement('div');
     item.className = 'launcher-preset-item';
