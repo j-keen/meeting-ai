@@ -244,62 +244,71 @@ export function createSTT() {
         if (text && text.trim()) onFinal(text);
       };
 
-      // Pre-check microphone permission (with constraints fallback)
-      let micStream = null;
-      try {
-        sttDebug(`[STT] Requesting mic permission (platform: ${navigator.userAgent.slice(0, 60)})`);
-        const audioConstraints = isMobile
-          ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
-          : true;
-        try {
-          micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
-        } catch (constraintErr) {
-          if (isMobile && (constraintErr.name === 'OverconstrainedError' || constraintErr.name === 'ConstraintNotSatisfiedError')) {
-            sttDebug(`[STT] Constraints failed (${constraintErr.name}), retrying with {audio: true}`);
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          } else {
-            throw constraintErr;
+      sttDebug(`[STT] Platform: ${isMobile ? 'mobile' : 'desktop'} (${navigator.userAgent.slice(0, 60)})`);
+
+      if (isMobile) {
+        // Mobile: Start SpeechRecognition FIRST, then get recording stream
+        // getUserMedia before SpeechRecognition causes mic contention on Android
+        currentEngine = createWebSpeechEngine(language);
+
+        const onFatalError = () => {
+          sttDebug(`[STT] Fatal engine error — resetting isRunning`);
+          isRunning = false;
+          currentEngine = null;
+        };
+
+        currentEngine.start(
+          onInterim, safeFinal, onError, onReplace, onFatalError,
+          () => {
+            onConnected?.('webspeech');
+            // After SpeechRecognition has mic, get separate stream for audio recording
+            if (onRecordingStream) {
+              navigator.mediaDevices.getUserMedia({ audio: true }).then(recStream => {
+                sttDebug(`[STT] Recording stream acquired after audio start`);
+                onRecordingStream(recStream);
+              }).catch(err => {
+                sttDebug(`[STT] Recording stream failed (non-fatal): ${err.message}`);
+              });
+            }
           }
-        }
-        sttDebug(`[STT] Mic permission granted, tracks: ${micStream.getTracks().length}`);
-      } catch (err) {
-        isRunning = false;
-        sttDebug(`[STT] Mic permission failed: ${err.name} - ${err.message}`);
-        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-          onError(t('stt.mic_not_found'));
-        } else {
-          onError(t('stt.mic_permission_denied_detail'));
-        }
-        return;
-      }
-
-      // Provide stream for audio recording
-      if (onRecordingStream) {
-        if (isMobile) {
-          // Clone stream for recording, then release original to avoid mic contention with SpeechRecognition
-          onRecordingStream(micStream.clone());
-          micStream.getTracks().forEach(tr => tr.stop());
-          sttDebug(`[STT] Mic stream cloned for recording, original released`);
-        } else {
-          onRecordingStream(micStream);
-        }
+        );
       } else {
-        micStream.getTracks().forEach(tr => tr.stop());
+        // Desktop: Pre-check mic permission, then start engine
+        let micStream = null;
+        try {
+          sttDebug(`[STT] Requesting mic permission`);
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          sttDebug(`[STT] Mic permission granted, tracks: ${micStream.getTracks().length}`);
+        } catch (err) {
+          isRunning = false;
+          sttDebug(`[STT] Mic permission failed: ${err.name} - ${err.message}`);
+          if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+            onError(t('stt.mic_not_found'));
+          } else {
+            onError(t('stt.mic_permission_denied_detail'));
+          }
+          return;
+        }
+
+        if (onRecordingStream) {
+          onRecordingStream(micStream);
+        } else {
+          micStream.getTracks().forEach(tr => tr.stop());
+        }
+
+        currentEngine = createWebSpeechEngine(language);
+
+        const onFatalError = () => {
+          sttDebug(`[STT] Fatal engine error — resetting isRunning`);
+          isRunning = false;
+          currentEngine = null;
+        };
+
+        currentEngine.start(
+          onInterim, safeFinal, onError, onReplace, onFatalError,
+          () => onConnected?.('webspeech')
+        );
       }
-
-      currentEngine = createWebSpeechEngine(language);
-
-      // Wrap onError to reset isRunning on fatal engine errors
-      const onFatalError = () => {
-        sttDebug(`[STT] Fatal engine error — resetting isRunning`);
-        isRunning = false;
-        currentEngine = null;
-      };
-
-      currentEngine.start(
-        onInterim, safeFinal, onError, onReplace, onFatalError,
-        () => onConnected?.('webspeech')  // onAudioStart → onConnected
-      );
     },
 
     stop() {
