@@ -1,21 +1,6 @@
-// stt.js - STT abstraction (Web Speech API + Deepgram for mobile)
+// stt.js - STT abstraction (Web Speech API)
 
 import { t } from './i18n.js';
-
-const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-// Deepgram token cache (pre-connect optimization)
-let cachedDeepgramToken = null;
-let tokenFetchPromise = null;
-
-export function prefetchDeepgramToken() {
-  if (!isMobile || cachedDeepgramToken || tokenFetchPromise) return;
-  tokenFetchPromise = fetch('/api/stt-token')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => { cachedDeepgramToken = data.key; })
-    .catch(() => { /* silent — will retry at start */ })
-    .finally(() => { tokenFetchPromise = null; });
-}
 
 function sttDebug(msg) {
   console.log(msg);
@@ -72,13 +57,10 @@ function createWebSpeechEngine(language) {
             }
             const now = Date.now();
             const gap = lastFinalTime ? now - lastFinalTime : 0;
-            // Mobile browsers may send progressive final results (each a superset of the previous).
-            // Detect this and replace the last line instead of creating a new one.
-            // Only REPLACE within the same session to prevent cross-session merging after restart.
-            const growWindow = isMobile ? 3000 : 2000;    // progressive growth (짧게)
-            const dedupWindow = isMobile ? 10000 : 2000;  // duplicate filtering (길게)
-            const isProgressive = text.startsWith(lastFinalText);  // text grew
-            const isSubset = lastFinalText.startsWith(text);  // text is same or shorter (re-sent)
+            const growWindow = 2000;
+            const dedupWindow = 2000;
+            const isProgressive = text.startsWith(lastFinalText);
+            const isSubset = lastFinalText.startsWith(text);
 
             const shouldGrow = isProgressive && (now - lastFinalTime) < growWindow;
             const shouldDedup = isSubset && (now - lastFinalTime) < dedupWindow;
@@ -182,7 +164,7 @@ function createWebSpeechEngine(language) {
                 onError(t('stt.restart_failed'));
               }
             }
-          }, isMobile ? 50 : 300);
+          }, 300);
         } else {
           sttDebug(`⏹️ Stopped (session ${sessionDur}s)`);
         }
@@ -211,131 +193,14 @@ function createWebSpeechEngine(language) {
   };
 }
 
-// Deepgram Nova-3 engine (WebSocket streaming, used on mobile)
-function createDeepgramEngine(language, micStream) {
-  let ws = null;
-  let mediaRecorder = null;
-  let stream = micStream; // Use pre-acquired mic stream
-  let shouldReconnect = false;
-  let reconnectAttempts = 0;
-  const MAX_RECONNECT = 3;
-
-  const langMap = { ko: 'ko', en: 'en', ja: 'ja', zh: 'zh' };
-
-  return {
-    name: 'deepgram',
-
-    async start(onInterim, onFinal, onError, _onReplace, onConnecting, onConnected) {
-      // Signal connecting state
-      onConnecting?.();
-
-      // Fetch API key (use cache if available)
-      let apiKey = cachedDeepgramToken;
-      if (!apiKey) {
-        try {
-          const resp = await fetch('/api/stt-token');
-          if (!resp.ok) throw new Error('Failed to get STT token');
-          const data = await resp.json();
-          apiKey = data.key;
-          cachedDeepgramToken = apiKey;
-        } catch (err) {
-          onError(t('stt.deepgram_key_missing'));
-          return;
-        }
-      }
-
-      const connectWebSocket = () => {
-        const lang = langMap[language] || 'en';
-        const wsUrl = `wss://api.deepgram.com/v1/listen?model=nova-3&language=${lang}&smart_format=true&interim_results=true&utterance_end_ms=1000&vad_events=true`;
-
-        ws = new WebSocket(wsUrl, ['token', apiKey]);
-
-        ws.onopen = () => {
-          sttDebug('[STT:Deepgram] WebSocket connected');
-          reconnectAttempts = 0;
-          onConnected?.();
-
-          // Start MediaRecorder to capture audio
-          mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'audio/webm;codecs=opus',
-          });
-
-          mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0 && ws?.readyState === WebSocket.OPEN) {
-              ws.send(e.data);
-            }
-          };
-
-          mediaRecorder.start(1000); // Send chunks every 1000ms for better context
-        };
-
-        ws.onmessage = (e) => {
-          try {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'Results' && msg.channel?.alternatives?.[0]) {
-              const alt = msg.channel.alternatives[0];
-              const text = alt.transcript;
-              if (!text) return;
-
-              if (msg.is_final) {
-                if (msg.speech_final) {
-                  sttDebug(`[STT:Deepgram] FINAL "${text.slice(0,40)}"`);
-                  onFinal(text);
-                } else {
-                  sttDebug(`[STT:Deepgram] interim(final) "${text.slice(0,40)}"`);
-                  onInterim(text);
-                }
-              } else {
-                onInterim(text);
-              }
-            }
-          } catch (err) {
-            sttDebug(`[STT:Deepgram] Parse error: ${err}`);
-          }
-        };
-
-        ws.onerror = (e) => {
-          sttDebug(`[STT:Deepgram] WebSocket error`);
-        };
-
-        ws.onclose = (e) => {
-          sttDebug(`[STT:Deepgram] WebSocket closed: ${e.code} ${e.reason}`);
-          if (shouldReconnect && reconnectAttempts < MAX_RECONNECT) {
-            reconnectAttempts++;
-            sttDebug(`[STT:Deepgram] Reconnecting... attempt ${reconnectAttempts}`);
-            setTimeout(connectWebSocket, 1000 * reconnectAttempts);
-          } else if (shouldReconnect) {
-            onError(t('stt.connection_failed'));
-          }
-        };
-      };
-
-      shouldReconnect = true;
-      connectWebSocket();
-    },
-
-    stop() {
-      shouldReconnect = false;
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      mediaRecorder = null;
-      if (ws) {
-        ws.close();
-        ws = null;
-      }
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-    }
-  };
-}
+// No-op for backward compatibility (Deepgram removed)
+export function prefetchDeepgramToken() {}
 
 // Unified STT interface
 export function createSTT() {
   let currentEngine = null;
   let isRunning = false;
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   return {
     get isRunning() { return isRunning; },
@@ -349,7 +214,7 @@ export function createSTT() {
         if (text && text.trim()) onFinal(text);
       };
 
-      // Pre-check microphone permission before engine selection
+      // Pre-check microphone permission
       let micStream = null;
       try {
         sttDebug(`[STT] Requesting mic permission (platform: ${navigator.userAgent.slice(0, 60)})`);
@@ -364,60 +229,21 @@ export function createSTT() {
         if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
           onError(t('stt.mic_not_found'));
         } else {
-          // NotAllowedError, SecurityError, etc.
           onError(t('stt.mic_permission_denied_detail'));
         }
         return;
       }
 
-      if (isMobile) {
-        // Provide a cloned stream for audio recording
-        if (onRecordingStream) {
-          try {
-            const cloned = micStream.clone();
-            onRecordingStream(cloned);
-          } catch (e) {
-            sttDebug(`[STT] Failed to clone stream for recording: ${e.message}`);
-          }
-        }
-        currentEngine = createDeepgramEngine(language, micStream);
-        try {
-          await currentEngine.start(onInterim, safeFinal, (err) => {
-            // Only fallback for service errors, not permission errors
-            if (err === t('stt.mic_permission_denied') || err === t('stt.mic_permission_denied_detail')) {
-              sttDebug(`[STT] Permission error in Deepgram, no fallback`);
-              onError(err);
-              return;
-            }
-            // Deepgram service error → Web Speech fallback
-            sttDebug(`Deepgram error, fallback to WebSpeech: ${err}`);
-            // Release mic stream before Web Speech takes over
-            micStream.getTracks().forEach(tr => tr.stop());
-            onError(err + ' ' + t('stt.fallback_webspeech'));
-            currentEngine = createWebSpeechEngine(language);
-            onConnected?.('webspeech');
-            currentEngine.start(onInterim, safeFinal, onError, onReplace);
-          }, onReplace, onConnecting, () => onConnected?.('deepgram'));
-        } catch (err) {
-          sttDebug(`Deepgram failed, fallback: ${err}`);
-          // Release mic stream before Web Speech takes over
-          micStream.getTracks().forEach(tr => tr.stop());
-          currentEngine = createWebSpeechEngine(language);
-          onConnected?.('webspeech');
-          currentEngine.start(onInterim, safeFinal, onError, onReplace);
-        }
+      // Provide stream for audio recording
+      if (onRecordingStream) {
+        onRecordingStream(isMobile ? micStream.clone() : micStream);
       } else {
-        // Desktop: Web Speech manages its own mic, but we need a separate stream for recording
-        if (onRecordingStream) {
-          // Provide the pre-check stream for recording instead of stopping it
-          onRecordingStream(micStream);
-        } else {
-          micStream.getTracks().forEach(tr => tr.stop());
-        }
-        currentEngine = createWebSpeechEngine(language);
-        onConnected?.('webspeech');
-        currentEngine.start(onInterim, safeFinal, onError, onReplace);
+        micStream.getTracks().forEach(tr => tr.stop());
       }
+
+      currentEngine = createWebSpeechEngine(language);
+      onConnected?.('webspeech');
+      currentEngine.start(onInterim, safeFinal, onError, onReplace);
     },
 
     stop() {
