@@ -89,21 +89,137 @@ export function initDragResizer() {
   });
 }
 
-// ===== Mobile Panel Tabs =====
+// ===== Mobile Panel Tabs + Swipe =====
 export function initPanelTabs() {
   const tabs = document.querySelectorAll('.panel-tab');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const panelName = tab.dataset.panel;
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('panel-active'));
-      const targetPanel = panelName === 'left' ? $('#panelLeft')
-        : panelName === 'center' ? $('#panelCenter')
-        : $('#panelRight');
-      if (targetPanel) targetPanel.classList.add('panel-active');
-    });
+  const panels = [document.getElementById('panelLeft'), document.getElementById('panelCenter'), document.getElementById('panelRight')];
+  const mainContent = document.querySelector('.main-content');
+  let currentIndex = 0;
+
+  // Add sliding indicator to tab bar
+  const tabBar = document.getElementById('panelTabs');
+  let indicator = tabBar.querySelector('.panel-tabs-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.className = 'panel-tabs-indicator';
+    tabBar.appendChild(indicator);
+  }
+
+  const isMobile = () => window.innerWidth <= 768;
+
+  function switchToPanel(index, animate = true) {
+    if (index < 0 || index > 2) return;
+    currentIndex = index;
+
+    // Update tabs
+    tabs.forEach(t => t.classList.remove('active'));
+    tabs[index].classList.add('active');
+
+    // Slide indicator
+    indicator.style.transform = `translateX(${index * 100}%)`;
+
+    // Slide panels (mobile only)
+    if (isMobile()) {
+      panels.forEach((p, i) => {
+        if (!animate) p.classList.add('swiping');
+        p.style.transform = `translateX(${(i - index) * 100}%)`;
+        p.classList.toggle('panel-active', i === index);
+        if (!animate) requestAnimationFrame(() => p.classList.remove('swiping'));
+      });
+    } else {
+      panels.forEach((p, i) => {
+        p.style.transform = '';
+        p.classList.toggle('panel-active', i === index);
+      });
+    }
+  }
+
+  // Tab click handlers
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', () => switchToPanel(i));
   });
+
+  // Clear inline transforms when switching to desktop
+  window.addEventListener('resize', () => {
+    if (!isMobile()) {
+      panels.forEach(p => { p.style.transform = ''; p.classList.remove('swiping'); });
+    } else {
+      // Re-apply transforms for current index
+      panels.forEach((p, i) => {
+        p.style.transform = `translateX(${(i - currentIndex) * 100}%)`;
+      });
+    }
+  });
+
+  // ===== Touch Swipe =====
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchDeltaX = 0;
+  let isSwiping = false;
+  let directionLocked = false;
+
+  mainContent.addEventListener('touchstart', (e) => {
+    // Only on mobile
+    if (window.innerWidth > 768) return;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchDeltaX = 0;
+    isSwiping = false;
+    directionLocked = false;
+  }, { passive: true });
+
+  mainContent.addEventListener('touchmove', (e) => {
+    if (window.innerWidth > 768) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    const dy = e.touches[0].clientY - touchStartY;
+
+    // Lock direction on first significant movement
+    if (!directionLocked && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      directionLocked = true;
+      isSwiping = Math.abs(dx) > Math.abs(dy);
+    }
+
+    if (!isSwiping) return;
+    e.preventDefault();
+    touchDeltaX = dx;
+
+    // Rubber-band effect at edges
+    let clampedDx = dx;
+    if ((currentIndex === 0 && dx > 0) || (currentIndex === 2 && dx < 0)) {
+      clampedDx = dx * 0.3; // resistance at edges
+    }
+
+    // Live drag panels
+    panels.forEach((p, i) => {
+      p.classList.add('swiping');
+      p.style.transform = `translateX(calc(${(i - currentIndex) * 100}% + ${clampedDx}px))`;
+    });
+    // Live drag indicator
+    const indicatorOffset = currentIndex * 100;
+    const indicatorDelta = (-clampedDx / mainContent.offsetWidth) * 100;
+    indicator.style.transition = 'none';
+    indicator.style.transform = `translateX(${indicatorOffset + indicatorDelta}%)`;
+  }, { passive: false });
+
+  mainContent.addEventListener('touchend', () => {
+    if (window.innerWidth > 768 || !isSwiping) return;
+    // Restore transitions
+    panels.forEach(p => p.classList.remove('swiping'));
+    indicator.style.transition = '';
+
+    const threshold = 50;
+    if (touchDeltaX < -threshold && currentIndex < 2) {
+      switchToPanel(currentIndex + 1);
+    } else if (touchDeltaX > threshold && currentIndex > 0) {
+      switchToPanel(currentIndex - 1);
+    } else {
+      // Snap back
+      switchToPanel(currentIndex);
+    }
+  }, { passive: true });
+
+  // Initialize position without animation
+  switchToPanel(0, false);
 }
 
 // ===== Modal Helpers =====

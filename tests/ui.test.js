@@ -281,22 +281,31 @@ describe('initPanelTabs', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
 
-    const panels = ['panelLeft', 'panelCenter', 'panelRight'];
-    panels.forEach(id => {
-      const p = document.createElement('div');
-      p.id = id;
-      p.className = 'panel';
-      document.body.appendChild(p);
-    });
-
+    // Tab bar
+    const tabBar = document.createElement('div');
+    tabBar.id = 'panelTabs';
+    tabBar.className = 'panel-tabs';
     const tabDefs = ['left', 'center', 'right'];
     tabDefs.forEach(name => {
       const btn = document.createElement('button');
       btn.className = 'panel-tab';
       btn.dataset.panel = name;
       btn.textContent = name;
-      document.body.appendChild(btn);
+      tabBar.appendChild(btn);
     });
+    document.body.appendChild(tabBar);
+
+    // Main content with panels
+    const main = document.createElement('main');
+    main.className = 'main-content';
+    const panels = ['panelLeft', 'panelCenter', 'panelRight'];
+    panels.forEach(id => {
+      const p = document.createElement('div');
+      p.id = id;
+      p.className = 'panel';
+      main.appendChild(p);
+    });
+    document.body.appendChild(main);
   });
 
   it('runs without throwing', () => {
