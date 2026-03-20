@@ -275,7 +275,14 @@ export function createSTT() {
 
       // Provide stream for audio recording
       if (onRecordingStream) {
-        onRecordingStream(isMobile ? micStream.clone() : micStream);
+        if (isMobile) {
+          // Clone stream for recording, then release original to avoid mic contention with SpeechRecognition
+          onRecordingStream(micStream.clone());
+          micStream.getTracks().forEach(tr => tr.stop());
+          sttDebug(`[STT] Mic stream cloned for recording, original released`);
+        } else {
+          onRecordingStream(micStream);
+        }
       } else {
         micStream.getTracks().forEach(tr => tr.stop());
       }
