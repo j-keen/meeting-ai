@@ -6,7 +6,7 @@
 
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
 import { addCustomType, addContact, loadContacts, loadLocations, addLocation, getLocationFrequency, listMeetings, linkMeetings, getMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
@@ -355,9 +355,12 @@ async function sendMessage(text, isAutoFire = false) {
     if (typingEl) typingEl.remove();
     container.appendChild(streamEl);
 
-    const { text: fullText } = await callGeminiStream(MODEL, body, (chunk, fullSoFar) => {
-      streamContent.innerHTML = renderMarkdown(fullSoFar);
-      container.scrollTop = container.scrollHeight;
+    const { text: fullText } = await callGeminiGuarded(MODEL, body, {
+      category: 'prep',
+      onStream: (chunk, fullSoFar) => {
+        streamContent.innerHTML = renderMarkdown(fullSoFar);
+        container.scrollTop = container.scrollHeight;
+      },
     });
 
     streamContent.innerHTML = renderMarkdown(fullText);
@@ -403,40 +406,40 @@ function renderStep1Form() {
     <!-- date/time -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.datetime')}</label>
-      <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
+      <div class="ds-input-icon-wrapper">
+        <span class="ds-input-icon">📅</span>
+        <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
+      </div>
+      <div class="ds-quick-chips">
+        <button class="ds-quick-chip" data-time="now">${ko ? '지금' : 'Now'}</button>
+        <button class="ds-quick-chip" data-time="1h">${ko ? '1시간 뒤' : '+1h'}</button>
+        <button class="ds-quick-chip" data-time="tmr">${ko ? '내일' : 'Tmr'}</button>
+      </div>
     </div>
 
     <!-- location: input + dropdown -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.location')}</label>
       <div class="ds-location-select-wrapper">
-        <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
+        <div class="ds-input-icon-wrapper">
+          <span class="ds-input-icon">📍</span>
+          <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
+        </div>
         <div class="unified-dropdown ds-location-dropdown" id="dsLocationDropdown" hidden></div>
       </div>
     </div>
 
-    <!-- attendees: tabs (search / register) + badges -->
+    <!-- attendees: integrated tags -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.attendees')}</label>
-      <div class="ds-participant-tabs">
-        <button class="ds-participant-tab active" data-tab="search">${ko ? '검색' : 'Search'}</button>
-        <button class="ds-participant-tab" data-tab="register">${ko ? '등록' : 'Register'}</button>
-      </div>
-      <div id="dsParticipantTabSearch">
-        <div class="ds-participant-search-wrapper">
-          <input type="text" class="ds-input-sm" id="dsParticipantSearchInput" placeholder="${ko ? '참석자 검색...' : 'Search contacts...'}" autocomplete="off">
-          <div class="unified-dropdown ds-participant-dropdown" id="dsParticipantDropdown" hidden></div>
+      <div class="ds-participant-search-wrapper ds-input-icon-wrapper">
+        <span class="ds-input-icon">👤</span>
+        <div class="ds-multi-select-wrap">
+          <div class="ds-selected-badges" id="dsSelectedBadges"></div>
+          <input type="text" class="ds-input-sm ds-multi-input" id="dsParticipantSearchInput" placeholder="${ko ? '이름 검색 및 추가...' : 'Search or add...'}" autocomplete="off">
         </div>
+        <div class="unified-dropdown ds-participant-dropdown" id="dsParticipantDropdown" hidden></div>
       </div>
-      <div id="dsParticipantTabRegister" hidden>
-        <div class="ds-attendee-register">
-          <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
-          <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
-          <input type="text" class="ds-input-sm" id="dsAttendeeCompany" placeholder="${ko ? '회사' : 'Company'}" autocomplete="off">
-          <button class="btn btn-sm btn-primary" id="btnDsAddAttendee">${ko ? '등록' : 'Add'}</button>
-        </div>
-      </div>
-      <div class="ds-selected-badges" id="dsSelectedBadges"></div>
     </div>
   `;
 
@@ -446,6 +449,21 @@ function renderStep1Form() {
 }
 
 function bindStep1Events() {
+  // === Date/Time quick chips ===
+  document.querySelectorAll('.ds-quick-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const dtInput = $('#dsDatetime');
+      if (!dtInput) return;
+      const t = chip.dataset.time;
+      let d = new Date();
+      if (t === '1h') d.setHours(d.getHours() + 1);
+      else if (t === 'tmr') d.setDate(d.getDate() + 1);
+      
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      dtInput.value = d.toISOString().slice(0, 16);
+    });
+  });
+
   // === Location dropdown ===
   const locInput = $('#dsLocation');
   const locDropdown = $('#dsLocationDropdown');
@@ -466,25 +484,6 @@ function bindStep1Events() {
     });
   }
 
-  // === Participant tab switching ===
-  document.querySelectorAll('.ds-participant-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.ds-participant-tab').forEach(t2 => t2.classList.remove('active'));
-      tab.classList.add('active');
-      const isSearch = tab.dataset.tab === 'search';
-      const searchPanel = $('#dsParticipantTabSearch');
-      const registerPanel = $('#dsParticipantTabRegister');
-      if (searchPanel) searchPanel.hidden = !isSearch;
-      if (registerPanel) registerPanel.hidden = isSearch;
-      // Auto-focus the relevant input
-      if (isSearch) {
-        $('#dsParticipantSearchInput')?.focus();
-      } else {
-        $('#dsAttendeeName')?.focus();
-      }
-    });
-  });
-
   // === Participant search dropdown ===
   const searchInput = $('#dsParticipantSearchInput');
   const pDropdown = $('#dsParticipantDropdown');
@@ -495,15 +494,25 @@ function bindStep1Events() {
     searchInput.addEventListener('focus', () => {
       updateDsParticipantDropdown(searchInput.value.trim());
     });
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const firstItem = pDropdown.querySelector('.unified-dropdown-item');
+        if (firstItem && !pDropdown.hidden) {
+          firstItem.click();
+        }
+      } else if (e.key === 'Backspace' && !searchInput.value && selectedAttendees.length > 0) {
+        selectedAttendees.pop();
+        renderSelectedBadges();
+        updateDsParticipantDropdown('');
+      }
+    });
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.ds-participant-search-wrapper')) {
         pDropdown.hidden = true;
       }
     });
   }
-
-  // === Register button + Enter key ===
-  bindAttendeeRegisterEvents();
 }
 
 function updateDsLocationDropdown(query) {
@@ -623,39 +632,74 @@ function updateDsParticipantDropdown(query) {
   const q = (query || '').trim();
   const filtered = q ? available.filter(c => matchContactByName(c, q)) : available;
 
-  if (filtered.length === 0) {
+  const exactMatch = filtered.some(c => c.name.toLowerCase() === q.toLowerCase());
+
+  if (filtered.length === 0 && !q) {
     dropdown.hidden = true;
     return;
   }
 
   dropdown.innerHTML = '';
-  const section = document.createElement('div');
-  section.className = 'unified-dropdown-section';
-  const header = document.createElement('div');
-  header.className = 'unified-dropdown-header';
-  header.textContent = isKorean() ? '연락처' : 'Contacts';
-  section.appendChild(header);
+  
+  if (filtered.length > 0) {
+    const section = document.createElement('div');
+    section.className = 'unified-dropdown-section';
+    const header = document.createElement('div');
+    header.className = 'unified-dropdown-header';
+    header.textContent = isKorean() ? '연락처' : 'Contacts';
+    section.appendChild(header);
 
-  filtered.slice(0, 8).forEach(contact => {
-    const item = document.createElement('div');
-    item.className = 'unified-dropdown-item';
-    const nameSpan = document.createElement('span');
-    nameSpan.textContent = contact.name;
-    item.appendChild(nameSpan);
-    if (contact.title) {
-      const titleSpan = document.createElement('span');
-      titleSpan.className = 'unified-dropdown-item-sub';
-      titleSpan.textContent = contact.title;
-      item.appendChild(titleSpan);
-    }
-    if (contact.company) {
-      const compSpan = document.createElement('span');
-      compSpan.className = 'unified-dropdown-item-sub';
-      compSpan.textContent = contact.company;
-      item.appendChild(compSpan);
-    }
-    item.addEventListener('click', (e) => {
+    filtered.slice(0, 8).forEach(contact => {
+      const item = document.createElement('div');
+      item.className = 'unified-dropdown-item';
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = contact.name;
+      item.appendChild(nameSpan);
+      if (contact.title) {
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'unified-dropdown-item-sub';
+        titleSpan.textContent = contact.title;
+        item.appendChild(titleSpan);
+      }
+      if (contact.company) {
+        const compSpan = document.createElement('span');
+        compSpan.className = 'unified-dropdown-item-sub';
+        compSpan.textContent = contact.company;
+        item.appendChild(compSpan);
+      }
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectedAttendees.push(contact);
+        renderSelectedBadges();
+        const searchInput = $('#dsParticipantSearchInput');
+        if (searchInput) searchInput.value = '';
+        updateDsParticipantDropdown('');
+        searchInput?.focus();
+      });
+      section.appendChild(item);
+    });
+    dropdown.appendChild(section);
+  }
+
+  // Add new attendee row if querying something not exactly matched
+  if (q && !exactMatch) {
+    const addSection = document.createElement('div');
+    addSection.className = 'unified-dropdown-section';
+    const addItem = document.createElement('div');
+    addItem.className = 'unified-dropdown-item location-add-new';
+    
+    const plusSpan = document.createElement('span');
+    plusSpan.style.color = 'var(--accent)';
+    plusSpan.textContent = '+ ';
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = isKorean() ? `"${q}" 새로 추가` : `Add "${q}"`;
+    
+    addItem.appendChild(plusSpan);
+    addItem.appendChild(labelSpan);
+    
+    addItem.addEventListener('click', (e) => {
       e.stopPropagation();
+      const contact = addContact({ name: q, title: '', company: '' });
       selectedAttendees.push(contact);
       renderSelectedBadges();
       const searchInput = $('#dsParticipantSearchInput');
@@ -663,43 +707,15 @@ function updateDsParticipantDropdown(query) {
       updateDsParticipantDropdown('');
       searchInput?.focus();
     });
-    section.appendChild(item);
-  });
+    addSection.appendChild(addItem);
+    dropdown.appendChild(addSection);
+  }
 
-  dropdown.appendChild(section);
-  dropdown.hidden = false;
+  dropdown.hidden = dropdown.children.length === 0;
 }
 
 function bindAttendeeRegisterEvents() {
-  const nameInput = $('#dsAttendeeName');
-  const titleInput = $('#dsAttendeeTitle');
-  const companyInput = $('#dsAttendeeCompany');
-  const addBtn = $('#btnDsAddAttendee');
-
-  function doRegister() {
-    const name = nameInput?.value.trim();
-    if (!name) return;
-    const title = titleInput?.value.trim() || '';
-    const company = companyInput?.value.trim() || '';
-    const contact = addContact({ name, title, company });
-    selectedAttendees.push(contact);
-    renderSelectedBadges();
-    if (nameInput) nameInput.value = '';
-    if (titleInput) titleInput.value = '';
-    if (companyInput) companyInput.value = '';
-    showToast(isKorean() ? `${name} 등록됨` : `${name} added`, 'success');
-  }
-
-  if (addBtn) addBtn.addEventListener('click', doRegister);
-
-  // Enter key in register fields triggers registration
-  [nameInput, titleInput, companyInput].forEach(input => {
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); doRegister(); }
-      });
-    }
-  });
+  // Function logic removed since we merged register into the autocomplete
 }
 
 function renderSelectedBadges() {
@@ -742,40 +758,46 @@ function renderStep2Form() {
   if (desc) desc.textContent = t('ds.step2_desc');
 
   formArea.innerHTML = `
-    <!-- ① 한줄 설명 -->
-    <div class="ds-form-section">
-      <label class="ds-form-label">${t('ds.description')}</label>
-      <input type="text" class="ds-input-sm" id="dsDescription" placeholder="${t('ds.description_placeholder')}" value="${escapeHtml(meetingDescription)}">
-    </div>
-
-    <!-- reference meetings (card UI) -->
-    <div class="ds-form-section">
-      <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
-      <div class="ds-ref-selected-chips" id="dsRefSelectedChips"></div>
-      <div class="ds-ref-box">
-        <div class="ds-ref-filters">
-          <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
-          <select class="ds-ref-type-filter" id="dsRefTypeFilter">
-            <option value="">${ko ? '전체' : 'All'}</option>
-            <option value="copilot">Copilot</option>
-            <option value="minutes">${ko ? '회의록' : 'Minutes'}</option>
-            <option value="learning">${ko ? '학습' : 'Learning'}</option>
-          </select>
+    <div class="ds-step2-grid">
+      <div class="ds-step2-main">
+        <!-- ① 한줄 설명 -->
+        <div class="ds-form-section ds-form-section-transparent">
+          <label class="ds-form-label">${t('ds.description')}</label>
+          <textarea class="ds-input-sm ds-textarea" id="dsDescription" placeholder="${t('ds.description_placeholder')}" rows="2">${escapeHtml(meetingDescription)}</textarea>
         </div>
-        <div class="ds-ref-list" id="dsRefList"></div>
-      </div>
-    </div>
 
-    <!-- ③ 파일 첨부 -->
-    <div class="ds-form-section">
-      <label class="ds-form-label">${t('ds.files')}</label>
-      <div class="ds-file-drops">
-        <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt .doc</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
-        <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx .json</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
-        <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .txt .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
-        <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js .html ...</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+        <!-- reference meetings (card UI) -->
+        <div class="ds-form-section ds-form-section-transparent">
+          <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
+          <div class="ds-ref-selected-chips" id="dsRefSelectedChips"></div>
+          <div class="ds-ref-box">
+            <div class="ds-ref-filters">
+              <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+              <select class="ds-ref-type-filter" id="dsRefTypeFilter">
+                <option value="">${ko ? '전체' : 'All'}</option>
+                <option value="copilot">Copilot</option>
+                <option value="minutes">${ko ? '회의록' : 'Minutes'}</option>
+                <option value="learning">${ko ? '학습' : 'Learning'}</option>
+              </select>
+            </div>
+            <div class="ds-ref-list ds-compact-list" id="dsRefList"></div>
+          </div>
+        </div>
       </div>
-      <div class="ds-file-attached" id="dsFileAttached"></div>
+
+      <div class="ds-step2-side">
+        <!-- ③ 파일 첨부 -->
+        <div class="ds-form-section ds-attachment-section">
+          <label class="ds-form-label">${t('ds.files')}</label>
+          <div class="ds-file-drops ds-file-drops-vertical">
+            <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
+            <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
+            <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
+            <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+          </div>
+          <div class="ds-file-attached" id="dsFileAttached"></div>
+        </div>
+      </div>
     </div>
   `;
 

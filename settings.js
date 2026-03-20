@@ -13,6 +13,7 @@ import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
+import { setAnalyticsOptOut, isAnalyticsEnabled } from './analytics.js';
 import { openPromptBuilder } from './prompt-builder.js';
 
 
@@ -655,6 +656,16 @@ function initAudioRecordingSettings() {
 
   // Always update storage info
   updateAudioStorageInfo(storageInfo);
+
+  // Analytics opt-out toggle
+  const analyticsCheck = $('#checkAnalytics');
+  if (analyticsCheck) {
+    analyticsCheck.checked = isAnalyticsEnabled();
+    analyticsCheck.addEventListener('change', () => {
+      setAnalyticsOptOut(!analyticsCheck.checked);
+      markDirty();
+    });
+  }
 }
 
 async function updateAudioStorageInfo(el) {

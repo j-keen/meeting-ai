@@ -1,5 +1,18 @@
 // gemini-api.js - Client-side Gemini API via server proxy
 
+import { emit } from './event-bus.js';
+import { canUse, incrementUsage, isModelAllowed, getUsage, getWarningLevel } from './usage-limiter.js';
+
+// ─── UsageLimitError ─────────────────────────────────────────────────────────
+export class UsageLimitError extends Error {
+  constructor(category, usage) {
+    super(`Daily limit reached for ${category}`);
+    this.name = 'UsageLimitError';
+    this.category = category;
+    this.usage = usage;
+  }
+}
+
 let _proxyAvailable = null;
 
 // ─── 동시 요청 제한 (최대 2개) ───────────────────────────────────────────────
@@ -200,4 +213,59 @@ export async function callGeminiStream(model, body, onChunk, options = {}) {
   } finally {
     _releaseSemaphore();
   }
+}
+
+// ─── 사용량 제한 게이트웨이 래퍼 ──────────────────────────────────────────────
+
+/**
+ * 사용량 제한이 적용된 Gemini API 호출
+ * @param {string} model - 모델명
+ * @param {object} body - 요청 바디
+ * @param {object} options
+ * @param {string} options.category - 사용량 카테고리 (analysis, chat, minutes 등)
+ * @param {function} [options.onStream] - 스트리밍 콜백 (제공 시 callGeminiStream 사용)
+ * @param {AbortSignal} [options.signal] - 취소 시그널
+ * @returns {Promise<object>} API 응답
+ * @throws {UsageLimitError} 한도 초과 시
+ */
+export async function callGeminiGuarded(model, body, { category, onStream, signal } = {}) {
+  // 1. Pro 모델 체크 → 불가 시 Flash Lite로 다운그레이드
+  if (!isModelAllowed(model)) {
+    const downgraded = 'gemini-2.5-flash-lite';
+    emit('usage:model_downgraded', { original: model, fallback: downgraded });
+    model = downgraded;
+  }
+
+  // 2. 카테고리 한도 체크
+  if (category && !canUse(category)) {
+    const usage = getUsage(category);
+    emit('usage:exhausted', { category, usage });
+    throw new UsageLimitError(category, usage);
+  }
+
+  // 3. 접근 경고 (80% 이상)
+  if (category) {
+    const level = getWarningLevel(category);
+    if (level === 'approaching') {
+      emit('usage:warning', { category, usage: getUsage(category) });
+    }
+  }
+
+  // 4. 실제 API 호출
+  let result;
+  if (onStream) {
+    result = await callGeminiStream(model, body, onStream, { signal });
+  } else {
+    result = await callGemini(model, body);
+  }
+
+  // 5. 성공 시 사용량 증가
+  if (category) {
+    incrementUsage(category);
+  }
+  if (model === 'gemini-2.5-pro') {
+    incrementUsage('pro_model');
+  }
+
+  return result;
 }

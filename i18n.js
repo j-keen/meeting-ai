@@ -939,6 +939,27 @@ const translations = {
     'settings.audio_delete_confirm': 'Delete all saved audio recordings? This cannot be undone.',
     'settings.audio_deleted': 'Deleted {n} recordings',
     'settings.audio_delete_error': 'Failed to delete recordings',
+
+    // Analytics opt-out
+    'settings.analytics': 'Usage Analytics',
+    'settings.analytics_toggle': 'Share anonymous usage data',
+    'settings.analytics_hint': 'Anonymous feature usage only. No personal data collected.',
+
+    // Usage limiter
+    'usage.approaching': '{remaining} {category} uses left today',
+    'usage.exhausted': 'Daily {category} limit reached. Resets at midnight.',
+    'usage.model_downgraded': '{model} unavailable — using Flash Lite instead.',
+    'usage.cat.analysis': 'analysis',
+    'usage.cat.chat': 'chat',
+    'usage.cat.minutes': 'minutes',
+    'usage.cat.docgen': 'document',
+    'usage.cat.tags': 'tagging',
+    'usage.cat.prep': 'prep',
+    'usage.cat.pro_model': 'Pro model',
+    'usage.cat.correction': 'correction',
+    'usage.cat.refine': 'refine',
+    'usage.cat.prompt_adj': 'prompt',
+
     'viewer.download_audio': 'Download audio',
     'viewer.click_to_seek': 'Click timestamp to seek',
     'end_meeting.download_audio': 'Download Recording',
@@ -1915,6 +1936,27 @@ const translations = {
     'settings.audio_delete_confirm': '저장된 모든 오디오 녹음을 삭제하시겠습니까? 되돌릴 수 없습니다.',
     'settings.audio_deleted': '{n}개 녹음 삭제됨',
     'settings.audio_delete_error': '녹음 삭제 실패',
+
+    // 애널리틱스 옵트아웃
+    'settings.analytics': '사용 통계',
+    'settings.analytics_toggle': '익명 사용 데이터 공유',
+    'settings.analytics_hint': '개인정보 없이 기능 사용량만 수집합니다.',
+
+    // 사용량 제한
+    'usage.approaching': '오늘 {category} {remaining}회 남았습니다',
+    'usage.exhausted': '오늘의 {category} 한도에 도달했습니다. 자정에 초기화됩니다.',
+    'usage.model_downgraded': '{model} 사용 불가 — Flash Lite로 대체합니다.',
+    'usage.cat.analysis': '분석',
+    'usage.cat.chat': '채팅',
+    'usage.cat.minutes': '회의록',
+    'usage.cat.docgen': '문서',
+    'usage.cat.tags': '태그',
+    'usage.cat.prep': '미팅 준비',
+    'usage.cat.pro_model': 'Pro 모델',
+    'usage.cat.correction': '교정',
+    'usage.cat.refine': '다듬기',
+    'usage.cat.prompt_adj': '프롬프트',
+
     'viewer.download_audio': '오디오 다운로드',
     'viewer.click_to_seek': '타임스탬프 클릭으로 이동',
     'end_meeting.download_audio': '녹음 파일 다운로드',

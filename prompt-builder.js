@@ -2,7 +2,7 @@
 
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
 import { addCustomType, loadCustomTypes } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
@@ -336,9 +336,12 @@ async function sendUserMessage(text) {
     if (typingEl) typingEl.remove();
     container.appendChild(streamEl);
 
-    const { text: fullText } = await callGeminiStream(MODEL, body, (chunk, fullSoFar) => {
-      streamContent.innerHTML = renderMarkdown(fullSoFar);
-      container.scrollTop = container.scrollHeight;
+    const { text: fullText } = await callGeminiGuarded(MODEL, body, {
+      category: 'prompt_adj',
+      onStream: (chunk, fullSoFar) => {
+        streamContent.innerHTML = renderMarkdown(fullSoFar);
+        container.scrollTop = container.scrollHeight;
+      },
     });
 
     // Final render

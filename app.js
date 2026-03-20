@@ -50,6 +50,8 @@ import {
 import { prefetchDeepgramToken } from './stt.js';
 import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
+import { initAnalytics } from './analytics.js';
+import { CATEGORY_I18N_KEYS } from './usage-limiter.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -75,6 +77,22 @@ function init() {
   initStyleHistory();
   initAnalysisStyleModal();
   initImportTranscript();
+
+  // Usage limiter 경고/소진 토스트
+  on('usage:warning', ({ category, usage }) => {
+    const catName = t(CATEGORY_I18N_KEYS[category] || category);
+    showToast(t('usage.approaching', { category: catName, remaining: usage.remaining }), 'warning');
+  });
+  on('usage:exhausted', ({ category }) => {
+    const catName = t(CATEGORY_I18N_KEYS[category] || category);
+    showToast(t('usage.exhausted', { category: catName }), 'error');
+  });
+  on('usage:model_downgraded', ({ original }) => {
+    showToast(t('usage.model_downgraded', { model: original }), 'warning');
+  });
+
+  // Analytics 초기화
+  initAnalytics();
 
   // Initialize audio recording DB and cleanup old recordings
   initAudioDB().then(() => {

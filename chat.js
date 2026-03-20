@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadSettings, saveSettings } from './storage.js';
 
@@ -274,9 +274,12 @@ async function sendChatMessage(userText) {
     typingEl.remove();
     container.appendChild(streamEl);
 
-    const { text: fullText, parts } = await callGeminiStream(model, body, (chunk, fullSoFar) => {
-      streamContent.innerHTML = renderMarkdown(fullSoFar);
-      container.scrollTop = container.scrollHeight;
+    const { text: fullText, parts } = await callGeminiGuarded(model, body, {
+      category: 'chat',
+      onStream: (chunk, fullSoFar) => {
+        streamContent.innerHTML = renderMarkdown(fullSoFar);
+        container.scrollTop = container.scrollHeight;
+      },
     });
 
     // Check for function calls in parts

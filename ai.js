@@ -1,7 +1,7 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t, getTypeDefaultPrompt, getMeetingTypeCategoryMap } from './i18n.js';
-import { callGemini, callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadTypePrompts, loadCustomTypes } from './storage.js';
 
@@ -290,12 +290,13 @@ export async function analyzeTranscript({
       let rawText;
 
       if (onStream) {
-        const result = await callGeminiStream(model, body, (_chunk, fullSoFar) => {
-          onStream(fullSoFar);
+        const result = await callGeminiGuarded(model, body, {
+          category: 'analysis',
+          onStream: (_chunk, fullSoFar) => { onStream(fullSoFar); },
         });
         rawText = result.text;
       } else {
-        const data = await callGemini(model, body);
+        const data = await callGeminiGuarded(model, body, { category: 'analysis' });
         rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       }
 
@@ -350,16 +351,17 @@ Summary: ${summary}
 Transcript excerpt: ${transcriptSnippet}`;
 
   try {
-    const data = await callGemini(model, {
+    const data = await callGeminiGuarded(model, {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
-    });
+    }, { category: 'tags' });
 
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean).slice(0, 10);
     return [];
-  } catch {
+  } catch (err) {
+    if (err instanceof UsageLimitError) return [];
     return [];
   }
 }
@@ -390,10 +392,10 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGemini('gemini-2.5-flash-lite', {
+    const data = await callGeminiGuarded('gemini-2.5-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
-    });
+    }, { category: 'tags' });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = parseGeminiResponse(rawText);
     return {
@@ -401,7 +403,8 @@ Return ONLY valid JSON:
       alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives : [],
       tags: Array.isArray(parsed.tags) ? parsed.tags : [],
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof UsageLimitError) return null;
     return null;
   }
 }
@@ -543,12 +546,13 @@ export async function generateFinalMinutes({
 
   let rawText;
   if (onStream) {
-    const result = await callGeminiStream(model, body, (_chunk, fullSoFar) => {
-      onStream(fullSoFar);
+    const result = await callGeminiGuarded(model, body, {
+      category: 'minutes',
+      onStream: (_chunk, fullSoFar) => { onStream(fullSoFar); },
     });
     rawText = result.text;
   } else {
-    const data = await callGemini(model, body);
+    const data = await callGeminiGuarded(model, body, { category: 'minutes' });
     rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   }
 
@@ -594,17 +598,18 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGemini('gemini-2.5-flash-lite', {
+    const data = await callGeminiGuarded('gemini-2.5-flash-lite', {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
-    });
+    }, { category: 'tags' });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     return {
       tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 7) : [],
       categories: Array.isArray(parsed.categories) ? parsed.categories.map(c => String(c).trim()).filter(Boolean).slice(0, 2) : [],
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof UsageLimitError) return null;
     return null;
   }
 }
@@ -733,7 +738,7 @@ ${instruction}`;
     generationConfig: { temperature: 0.2 }
   };
 
-  const data = await callGemini('gemini-2.5-flash', body);
+  const data = await callGeminiGuarded('gemini-2.5-flash', body, { category: 'refine' });
   return data.candidates?.[0]?.content?.parts?.[0]?.text || sectionMarkdown;
 }
 
@@ -765,15 +770,16 @@ ${numbered}
 Return a JSON array of objects with "index" (number) and "corrected" (string) for lines that need correction ONLY. Return empty array [] if no corrections needed.`;
 
   try {
-    const data = await callGemini(model, {
+    const data = await callGeminiGuarded(model, {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-    });
+    }, { category: 'correction' });
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText);
     if (Array.isArray(parsed)) return parsed.filter(c => typeof c.index === 'number' && typeof c.corrected === 'string');
     return [];
-  } catch {
+  } catch (err) {
+    if (err instanceof UsageLimitError) return [];
     return [];
   }
 }
