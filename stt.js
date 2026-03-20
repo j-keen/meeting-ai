@@ -58,6 +58,8 @@ function createWebSpeechEngine(language) {
       recognition.onresult = (e) => {
         noSpeechCount = 0;
         abortCount = 0;
+        hasResultInSession = true;
+        clearWatchdog();
         lastResultTime = Date.now();
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
@@ -140,18 +142,36 @@ function createWebSpeechEngine(language) {
       let audioStarted = false;
       let sessionStartTime = Date.now();
       let restartCount = 0;
+      let speechWatchdog = null;
+      let hasResultInSession = false;
+
+      const clearWatchdog = () => {
+        if (speechWatchdog) { clearTimeout(speechWatchdog); speechWatchdog = null; }
+      };
 
       recognition.onaudiostart = () => {
         audioStarted = true;
+        hasResultInSession = false;
         sttDebug('🎤 Audio started');
         onAudioStart?.();
       };
 
       recognition.onspeechstart = () => {
         sttDebug('🗣️ Speech detected');
+        // Watchdog: if speech detected but no result within 5s, force restart
+        if (!hasResultInSession) {
+          clearWatchdog();
+          speechWatchdog = setTimeout(() => {
+            if (!hasResultInSession && shouldRestart && recognition) {
+              sttDebug('⚠️ Watchdog: speech detected but no results in 5s — forcing restart');
+              try { recognition.abort(); } catch (e) { /* ignore */ }
+            }
+          }, 5000);
+        }
       };
 
       recognition.onaudioend = () => {
+        clearWatchdog();
         const sessionDur = ((Date.now() - sessionStartTime) / 1000).toFixed(1);
         sttDebug(`🔇 Audio ended (session ${sessionDur}s)`);
       };
@@ -217,6 +237,7 @@ function createWebSpeechEngine(language) {
 
     stop() {
       shouldRestart = false;
+      if (speechWatchdog) { clearTimeout(speechWatchdog); speechWatchdog = null; }
       recognition?.stop();
       recognition = null;
     }
