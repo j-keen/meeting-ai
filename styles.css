@@ -1062,8 +1062,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .faq-dropdown {
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;
   z-index: 30;
   margin-top: 6px;
   background: var(--bg-primary);
@@ -1156,8 +1155,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .faq-add-inline {
   position: absolute;
   top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;
   z-index: 30;
   margin-top: 6px;
   display: flex;
