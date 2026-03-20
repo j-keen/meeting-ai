@@ -8066,47 +8066,4 @@ body.imported-mode .recording-controls { display: none; }
 }
 
 /* ===== STT Debug Console ===== */
-.stt-debug-toggle {
-  position: fixed; bottom: 12px; right: 12px; z-index: 9999;
-  width: 40px; height: 40px; border-radius: var(--radius-full);
-  background: var(--bg-tertiary); color: var(--text-secondary);
-  border: 1px solid var(--border-color); font-size: 11px; font-weight: 600;
-  cursor: pointer; font-family: var(--font-mono);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: var(--shadow-md);
-}
-.stt-debug-toggle:hover { background: var(--bg-active); }
-.stt-debug-panel {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 9998;
-  max-height: 40vh; display: flex; flex-direction: column;
-  background: var(--bg-primary); border-top: 2px solid var(--accent);
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-}
-.stt-debug-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 12px; background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-light);
-}
-.stt-debug-title {
-  font-size: 12px; font-weight: 600; color: var(--text-primary);
-  font-family: var(--font-mono);
-}
-.stt-debug-actions { display: flex; gap: 4px; }
-.stt-debug-btn {
-  font-size: 11px; padding: 2px 8px; min-height: unset;
-}
-.stt-debug-logs {
-  flex: 1; overflow-y: auto; padding: 8px 12px;
-  font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
-  color: var(--text-secondary);
-}
-.stt-debug-logs .dbg-line { white-space: pre-wrap; word-break: break-all; }
-.stt-debug-logs .dbg-time { color: var(--text-muted); margin-right: 6px; }
-.stt-debug-logs .dbg-error { color: var(--danger); font-weight: 500; }
-
-/* Hide debug console on mobile */
-@media (max-width: 768px) {
-  .stt-debug-toggle,
-  .stt-debug-panel { display: none !important; }
-}
 

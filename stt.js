@@ -2,27 +2,8 @@
 
 import { t } from './i18n.js';
 
-// Debug log storage for debug console
-const debugLogs = [];
-const debugListeners = [];
-const MAX_DEBUG_LOGS = 500;
-
 function sttDebug(msg) {
   console.log(msg);
-  const entry = { time: Date.now(), msg };
-  debugLogs.push(entry);
-  if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.shift();
-  for (const fn of debugListeners) fn(entry);
-}
-
-export function getDebugLogs() { return debugLogs; }
-export function clearDebugLogs() { debugLogs.length = 0; }
-export function onDebugLog(fn) {
-  debugListeners.push(fn);
-  return () => {
-    const idx = debugListeners.indexOf(fn);
-    if (idx >= 0) debugListeners.splice(idx, 1);
-  };
 }
 
 // Web Speech API engine
