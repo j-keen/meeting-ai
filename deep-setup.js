@@ -6,12 +6,11 @@
 
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiStream, callGemini, isProxyAvailable } from './gemini-api.js';
-import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, getMeeting, linkMeetings } from './storage.js';
+import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
+import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, linkMeetings } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
-import { openRefQuickViewer } from './meeting-prep.js';
 
 const $ = (sel) => document.querySelector(sel);
 const MODEL = 'gemini-2.5-flash';
@@ -29,7 +28,6 @@ let meetingDescription = '';
 let meetingDatetime = '';
 let meetingLocation = '';
 let allMeetings = [];
-let aiRecAbort = null;
 
 // ===== Helpers =====
 function isKorean() { return getAiLanguage() === 'ko'; }
@@ -87,20 +85,11 @@ function getStep3Prompt(prevResults, isAutoFire) {
 4. Generate the setup JSON right away`)
     : '';
 
-  const hasRefs = prevResults?.step2?.references?.some(r => r.analysis);
-  const refContextKo = hasRefs ? `\n\n중요: "references"에 포함된 데이터는 모두 과거 미팅 기록입니다.
-이것은 오늘의 안건이 아니라, 오늘 미팅을 더 잘 도울 수 있는 배경 맥락입니다.
-이전 미팅에서의 결정사항, 미해결 이슈, 참석자 관계 등을 파악하여 오늘 미팅에 활용하세요.` : '';
-  const refContextEn = hasRefs ? `\n\nIMPORTANT: Data in "references" are all past meeting records.
-These are NOT today's agenda items — they are historical context to help with today's meeting.
-Identify past decisions, unresolved issues, and attendee dynamics to leverage in today's session.` : '';
-
   return ko
     ? `당신은 사용자의 "믿을 수 있는 동료"입니다. 실시간 음성-AI 분석 앱에서 옆자리에 앉아 대화를 함께 듣고 도와주는 역할입니다.
 
 이전 단계에서 사용자가 입력한 미팅 정보:
 ${ctx}
-${refContextKo}
 ${autoFireInstruction}
 
 ## 앱이 하는 일
@@ -128,7 +117,6 @@ ${autoFireInstruction}
 
 Meeting info from previous steps:
 ${ctx}
-${refContextEn}
 ${autoFireInstruction}
 
 ## What the app does
@@ -210,10 +198,7 @@ function goToStep(n) {
 
   // Collect form data when leaving steps
   if (currentStep === 1 && n !== 1) collectStep1Results();
-  if (currentStep === 2 && n !== 2) {
-    collectStep2Results();
-    if (aiRecAbort) { aiRecAbort.abort(); aiRecAbort = null; }
-  }
+  if (currentStep === 2 && n !== 2) collectStep2Results();
 
   currentStep = n;
 
@@ -243,12 +228,6 @@ function goToStep(n) {
     nextBtn.hidden = n === TOTAL_STEPS;
     // Step 1: always enabled (datetime auto-filled), Step 2: always (skippable), Step 3: needs AI result
     nextBtn.disabled = (n === 1 || n === 2) ? false : !stepResults[3];
-  }
-
-  // Step 2: trigger AI recommendations
-  if (n === 2) {
-    collectStep1Results();
-    fetchAiRecommendations();
   }
 
   // Step 3: auto-fire AI on first visit
@@ -458,7 +437,6 @@ function renderStep1Form() {
       <label class="ds-form-label">${t('ds.location')}</label>
       <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
       <div class="ds-autocomplete-dropdown" id="dsLocationDropdown" hidden></div>
-      <div class="ds-location-chips" id="dsLocationChips"></div>
     </div>
 
     <!-- ③ 참석자 -->
@@ -478,7 +456,6 @@ function renderStep1Form() {
 
   renderSelectedBadges();
   renderContactPool();
-  renderLocationChips('');
   bindStep1Events();
 }
 
@@ -489,7 +466,6 @@ function bindStep1Events() {
   if (locInput && locDropdown) {
     locInput.addEventListener('input', () => {
       const q = locInput.value.trim();
-      renderLocationChips(q);
       if (!q) { locDropdown.hidden = true; return; }
       const locations = loadLocations();
       const matches = locations.filter(l => matchField(l.name, q)).slice(0, 8);
@@ -503,7 +479,6 @@ function bindStep1Events() {
           e.preventDefault();
           locInput.value = item.dataset.locName;
           locDropdown.hidden = true;
-          renderLocationChips(q);
         });
       });
     });
@@ -620,25 +595,6 @@ function renderContactPool() {
   });
 }
 
-function renderLocationChips(filter) {
-  const container = $('#dsLocationChips');
-  if (!container) return;
-  const locations = loadLocations();
-  const filtered = filter ? locations.filter(l => matchField(l.name, filter)) : locations;
-  if (!filtered.length) { container.innerHTML = ''; return; }
-  const locInput = $('#dsLocation');
-  const currentVal = locInput?.value.trim() || '';
-  container.innerHTML = filtered.slice(0, 12).map(l =>
-    `<button class="ds-pool-chip${l.name === currentVal ? ' ds-chip-selected' : ''}" data-loc-name="${escapeHtml(l.name)}">${escapeHtml(l.name)}</button>`
-  ).join('');
-  container.querySelectorAll('.ds-pool-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (locInput) locInput.value = btn.dataset.locName;
-      renderLocationChips(filter);
-    });
-  });
-}
-
 function collectStep1Results() {
   meetingDatetime = $('#dsDatetime')?.value || nowDatetimeLocal();
   meetingLocation = $('#dsLocation')?.value.trim() || '';
@@ -672,12 +628,6 @@ function renderStep2Form() {
     <!-- ② 참고 미팅 -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
-      <div class="ds-ai-rec" id="dsAiRecArea" hidden>
-        <div class="ds-ai-rec-header">
-          <span class="ds-ai-rec-label">${t('ds.ai_recommended')}</span>
-        </div>
-        <div class="ds-ai-rec-list" id="dsAiRecList">${t('ds.ai_rec_loading')}</div>
-      </div>
       <div class="ds-ref-box">
         <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
         <div class="ds-ref-list" id="dsRefList"></div>
@@ -715,16 +665,11 @@ function renderRefList(query) {
   container.innerHTML = filtered.slice(0, 50).map(m => {
     const checked = selectedReferences.some(r => r.id === m.id);
     const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '';
-    return `<div class="ds-ref-item${checked ? ' ds-ref-checked' : ''}">
-      <label class="ds-ref-check">
-        <input type="checkbox" value="${m.id}" ${checked ? 'checked' : ''}>
-      </label>
-      <div class="ds-ref-info">
-        <span class="ds-ref-title">${escapeHtml(m.title || m.id)}</span>
-        <span class="ds-ref-date">${date}</span>
-      </div>
-      <button class="ds-ref-view-btn" data-mid="${m.id}" title="${t('ds.ref_view')}">👁</button>
-    </div>`;
+    return `<label class="ds-ref-item${checked ? ' ds-ref-checked' : ''}">
+      <input type="checkbox" value="${m.id}" ${checked ? 'checked' : ''}>
+      <span class="ds-ref-title">${escapeHtml(m.title || m.id)}</span>
+      <span class="ds-ref-date">${date}</span>
+    </label>`;
   }).join('');
   if (!filtered.length) {
     container.innerHTML = `<div class="ds-ref-empty">${isKorean() ? '검색 결과 없음' : 'No results'}</div>`;
@@ -745,12 +690,6 @@ function renderRefList(query) {
       if (countEl) {
         countEl.textContent = selectedReferences.length ? (isKorean() ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
       }
-    });
-  });
-  container.querySelectorAll('.ds-ref-view-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openRefQuickViewer(btn.dataset.mid);
     });
   });
 }
@@ -815,130 +754,11 @@ function bindStep2Events() {
   });
 }
 
-async function fetchAiRecommendations() {
-  // Cancel any previous request
-  if (aiRecAbort) aiRecAbort.abort();
-  aiRecAbort = new AbortController();
-
-  const area = $('#dsAiRecArea');
-  const listEl = $('#dsAiRecList');
-  if (!area || !listEl) return;
-
-  // Need at least 3 past meetings for meaningful recommendations
-  if (allMeetings.length < 3) {
-    area.hidden = true;
-    return;
-  }
-
-  area.hidden = false;
-  listEl.textContent = t('ds.ai_rec_loading');
-
-  const ko = isKorean();
-  const s1 = stepResults[1] || {};
-
-  // Build meeting snippets (last 20)
-  const snippets = allMeetings.slice(0, 20).map(m => {
-    const last = m.analysisHistory?.length ? m.analysisHistory[m.analysisHistory.length - 1] : null;
-    const text = (last?.markdown || last?.raw || '').slice(0, 300);
-    return { id: m.id, title: m.title || m.id, date: m.createdAt, snippet: text };
-  });
-
-  const prompt = ko
-    ? `현재 미팅 정보:
-- 날짜: ${s1.datetime || '미정'}
-- 장소: ${s1.location || '미정'}
-- 참석자: ${(s1.attendees || []).map(a => a.name).join(', ') || '미정'}
-- 설명: ${meetingDescription || '없음'}
-
-과거 미팅 목록:
-${JSON.stringify(snippets, null, 1)}
-
-위 정보를 바탕으로 오늘 미팅에 가장 관련 있는 과거 미팅 3~5개를 추천해주세요.
-각 추천에 대해 왜 관련이 있는지 한 줄 이유를 포함하세요.
-JSON 배열로 반환: [{"id":"미팅ID","reason":"이유"}]
-관련 미팅이 없으면 빈 배열 []을 반환하세요.`
-    : `Current meeting info:
-- Date: ${s1.datetime || 'TBD'}
-- Location: ${s1.location || 'TBD'}
-- Attendees: ${(s1.attendees || []).map(a => a.name).join(', ') || 'TBD'}
-- Description: ${meetingDescription || 'None'}
-
-Past meetings:
-${JSON.stringify(snippets, null, 1)}
-
-Recommend 3-5 most relevant past meetings for today's meeting.
-Include a one-line reason for each.
-Return JSON array: [{"id":"meetingId","reason":"reason"}]
-If none are relevant, return empty array [].`;
-
-  try {
-    const body = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
-    };
-    const res = await callGemini('gemini-2.5-flash-lite', body);
-    if (aiRecAbort.signal.aborted) return;
-
-    const text = res.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    let recs;
-    try { recs = JSON.parse(text); } catch { recs = []; }
-    if (!Array.isArray(recs)) recs = [];
-
-    if (!recs.length) {
-      listEl.textContent = t('ds.ai_rec_none');
-      return;
-    }
-
-    listEl.innerHTML = '';
-    recs.forEach(rec => {
-      const m = allMeetings.find(x => x.id === rec.id);
-      if (!m) return;
-      const checked = selectedReferences.some(r => r.id === m.id);
-      const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '';
-      const el = document.createElement('div');
-      el.className = `ds-ref-item ds-ai-rec-item${checked ? ' ds-ref-checked' : ''}`;
-      el.innerHTML = `
-        <label class="ds-ref-check">
-          <input type="checkbox" value="${m.id}" ${checked ? 'checked' : ''}>
-        </label>
-        <div class="ds-ref-info">
-          <span class="ds-ref-title">${escapeHtml(m.title || m.id)}</span>
-          <span class="ds-ref-date">${date}</span>
-          <span class="ds-ai-rec-reason">${escapeHtml(rec.reason || '')}</span>
-        </div>
-        <button class="ds-ref-view-btn" data-mid="${m.id}" title="${t('ds.ref_view')}">👁</button>
-      `;
-      el.querySelector('input[type="checkbox"]').addEventListener('change', (e) => {
-        const cb = e.target;
-        if (cb.checked) {
-          if (!selectedReferences.some(r => r.id === m.id)) selectedReferences.push(m);
-        } else {
-          selectedReferences = selectedReferences.filter(r => r.id !== m.id);
-        }
-        el.classList.toggle('ds-ref-checked', cb.checked);
-        // Sync the manual list below
-        renderRefList($('#dsRefSearch')?.value || '');
-      });
-      el.querySelector('.ds-ref-view-btn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        openRefQuickViewer(m.id);
-      });
-      listEl.appendChild(el);
-    });
-  } catch (err) {
-    if (err.name === 'AbortError') return;
-    listEl.textContent = t('ds.ai_rec_none');
-  }
-}
-
 function collectStep2Results() {
   meetingDescription = $('#dsDescription')?.value.trim() || '';
   stepResults[2] = {
     description: meetingDescription,
-    references: selectedReferences.map(r => {
-      const last = r.analysisHistory?.length ? r.analysisHistory[r.analysisHistory.length - 1] : null;
-      return { id: r.id, title: r.title, analysis: last?.markdown || last?.raw || '' };
-    }),
+    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: r.analysis })),
     files: attachedFiles.map(f => ({ name: f.name, category: f.category })),
   };
 }
@@ -1031,10 +851,7 @@ function handleStart() {
     description: meetingDescription,
     attendees: selectedAttendees,
     referenceIds: selectedReferences.map(r => r.id),
-    referenceAnalysis: selectedReferences.map(r => {
-      const last = r.analysisHistory?.length ? r.analysisHistory[r.analysisHistory.length - 1] : null;
-      return last?.markdown || last?.raw || '';
-    }).filter(Boolean).join('\n\n---\n\n') || null,
+    referenceAnalysis: selectedReferences.map(r => r.analysis || '').filter(Boolean).join('\n\n---\n\n') || null,
     attachedFiles: attachedFiles,
   };
   emit('deepSetup:complete', config);

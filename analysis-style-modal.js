@@ -43,8 +43,35 @@ function renderPresets() {
   const container = $('#asmPresets');
   if (!container) return;
   container.innerHTML = '';
+  container.className = 'asm-presets-layout'; // new grid layout
 
   const currentPreset = state.settings.meetingPreset || 'copilot';
+
+  const createCard = (p, isCustom) => {
+    const btn = document.createElement('button');
+    btn.className = `btn asm-preset-card ${currentPreset === p.id ? 'active' : ''} ${isCustom ? 'custom' : ''}`;
+    
+    let icon = isCustom ? '🔖' : '';
+    if (!isCustom) {
+      if (p.id === 'copilot') icon = '🎯';
+      else if (p.id === 'minutes') icon = '📋';
+      else if (p.id === 'learning') icon = '📚';
+    }
+
+    const label = p.label || p.name;
+    const desc = p.desc || p.context || p.guidance || '';
+
+    btn.innerHTML = `
+      <div class="asm-preset-card-icon">${icon}</div>
+      <div class="asm-preset-card-text">
+        <span class="asm-preset-card-title">${label}</span>
+        <span class="asm-preset-card-desc" title="${desc.replace(/"/g, '&quot;')}">${desc.substring(0, 60)}${desc.length > 60 ? '...' : ''}</span>
+      </div>
+      <div class="asm-preset-card-check">${currentPreset === p.id ? '✓' : ''}</div>
+    `;
+    btn.addEventListener('click', () => selectPreset(p.id));
+    return btn;
+  };
 
   // Built-in presets
   const builtIn = [
@@ -53,37 +80,51 @@ function renderPresets() {
     { id: 'learning', label: t('settings.preset_learning'), desc: t('settings.preset_learning_desc') },
   ];
 
-  const builtInRow = document.createElement('div');
-  builtInRow.className = 'asm-preset-row';
-  builtIn.forEach(p => {
-    const chip = document.createElement('button');
-    chip.className = 'asm-preset-chip' + (currentPreset === p.id ? ' active' : '');
-    chip.title = p.desc;
-    chip.innerHTML = `<span class="asm-preset-check">${currentPreset === p.id ? '✓' : ''}</span>${p.label}`;
-    chip.addEventListener('click', () => selectPreset(p.id));
-    builtInRow.appendChild(chip);
-  });
-  container.appendChild(builtInRow);
+  const sectionBuiltIn = document.createElement('div');
+  sectionBuiltIn.className = 'asm-preset-section';
+  sectionBuiltIn.innerHTML = `<div class="asm-preset-section-title">${t('asm.builtin_styles') || 'Built-in Styles'}</div>`;
+  
+  const gridBuiltIn = document.createElement('div');
+  gridBuiltIn.className = 'asm-preset-cards';
+  builtIn.forEach(p => gridBuiltIn.appendChild(createCard(p, false)));
+  sectionBuiltIn.appendChild(gridBuiltIn);
+  container.appendChild(sectionBuiltIn);
 
   // Custom presets
   const customTypes = loadCustomTypes();
   if (customTypes.length > 0) {
-    const customLabel = document.createElement('div');
-    customLabel.className = 'asm-custom-label';
-    customLabel.textContent = t('asm.saved_styles');
-    container.appendChild(customLabel);
-
-    const customRow = document.createElement('div');
-    customRow.className = 'asm-preset-row asm-preset-row-custom';
+    const sectionCustom = document.createElement('div');
+    sectionCustom.className = 'asm-preset-section';
+    sectionCustom.innerHTML = `<div class="asm-preset-section-title">${t('asm.saved_styles') || 'Saved Styles'}</div>`;
+    
+    const gridCustom = document.createElement('div');
+    gridCustom.className = 'asm-preset-cards';
+    
     customTypes.forEach(ct => {
-      const chip = document.createElement('button');
-      chip.className = 'asm-preset-chip asm-preset-custom' + (currentPreset === ct.id ? ' active' : '');
-      chip.title = ct.context || ct.guidance || '';
-      chip.innerHTML = `<span class="asm-preset-check">${currentPreset === ct.id ? '✓' : ''}</span>${ct.name}`;
-      chip.addEventListener('click', () => selectPreset(ct.id));
-      customRow.appendChild(chip);
+      const card = createCard(ct, true);
+      
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn btn-icon asm-preset-del';
+      delBtn.innerHTML = '&times;';
+      delBtn.title = 'Delete';
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (confirm(t('asm.confirm_delete') || '정말 이 분석 스타일을 삭제하시겠습니까?')) {
+          let allCustom = loadCustomTypes();
+          allCustom = allCustom.filter(c => c.id !== ct.id);
+          localStorage.setItem('meetingAI_customTypes', JSON.stringify(allCustom));
+          if (state.settings.meetingPreset === ct.id) {
+             selectPreset('copilot'); // fallback
+          }
+          emit('customTypes:change');
+        }
+      });
+      card.appendChild(delBtn);
+      
+      gridCustom.appendChild(card);
     });
-    container.appendChild(customRow);
+    sectionCustom.appendChild(gridCustom);
+    container.appendChild(sectionCustom);
   }
 }
 
@@ -129,20 +170,22 @@ function handleSaveStyle() {
   const promptText = state.settings.customPrompt;
   if (!promptText) return;
 
+  const modal = $('#asmSaveModal');
   const container = $('#asmSaveFormContainer');
-  if (!container) return;
-  container.hidden = false;
+  if (!modal || !container) return;
+
+  modal.hidden = false;
+  container.innerHTML = '';
 
   createPresetSaveForm(container, promptText, {
     onSaved(newPreset) {
       state.settings.meetingPreset = newPreset.id;
       saveSettings(state.settings);
       emit('customTypes:change');
-      container.hidden = true;
-      closePresetsModal();
+      modal.hidden = true;
     },
     onCancel() {
-      container.hidden = true;
+      modal.hidden = true;
     },
   });
 }
@@ -255,7 +298,18 @@ export function initAnalysisStyleModal() {
   $('#asmPresetsModal')?.addEventListener('click', (e) => {
     if (e.target.id === 'asmPresetsModal') closePresetsModal();
   });
+  
+  // Save Style button (now in panel header)
   $('#asmSaveStyle')?.addEventListener('click', handleSaveStyle);
+  
+  // Save Modal (new)
+  $('#asmSaveCloseBtn')?.addEventListener('click', () => {
+    const m = $('#asmSaveModal');
+    if (m) m.hidden = true;
+  });
+  $('#asmSaveModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'asmSaveModal') e.target.hidden = true;
+  });
 
   // History sub-modal
   $('#asmHistoryCloseBtn')?.addEventListener('click', closeHistoryModal);
@@ -268,6 +322,7 @@ export function initAnalysisStyleModal() {
     if (e.key !== 'Escape') return;
     if (!$('#asmHistoryModal')?.hidden) { closeHistoryModal(); return; }
     if (!$('#asmPresetsModal')?.hidden) { closePresetsModal(); return; }
+    if (!$('#asmSaveModal')?.hidden) { $('#asmSaveModal').hidden = true; return; }
     if (!$('#analysisStyleModal')?.hidden) { closeMain(); }
   });
 

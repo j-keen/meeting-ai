@@ -642,28 +642,13 @@ export function initFaq() {
   const search = $('#faqSearch');
   const addInput = $('#faqAddInput');
   const addBtn = $('#btnFaqAdd');
-  const addNewBtn = $('#btnFaqAddNew');
-  const addRow = $('#faqAddRow');
   if (!btn || !popover) return;
 
-  function closeFaqDropdown() {
-    popover.hidden = true;
-    btn.classList.remove('active');
-  }
-
-  function closeAddRow() {
-    addRow.hidden = true;
-    addNewBtn.classList.remove('active');
-  }
-
-  // FAQ dropdown toggle
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    const willOpen = popover.hidden;
+    const isOpen = !popover.hidden;
     popover.hidden = !popover.hidden;
-    btn.classList.toggle('active', willOpen);
-    if (willOpen) {
-      closeAddRow();
+    if (!popover.hidden) {
       search.value = '';
       faqActiveIdx = -1;
       renderFaqList();
@@ -671,25 +656,10 @@ export function initFaq() {
     }
   });
 
-  // + button toggle for add row
-  addNewBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const willOpen = addRow.hidden;
-    addRow.hidden = !addRow.hidden;
-    addNewBtn.classList.toggle('active', willOpen);
-    if (willOpen) {
-      closeFaqDropdown();
-      addInput.value = '';
-      setTimeout(() => addInput.focus(), 0);
-    }
-  });
-
   // Close on outside click
   document.addEventListener('click', (e) => {
-    const faqBar = btn.closest('.faq-bar');
-    if (!faqBar.contains(e.target)) {
-      closeFaqDropdown();
-      closeAddRow();
+    if (!popover.hidden && !popover.contains(e.target) && e.target !== btn) {
+      popover.hidden = true;
     }
   });
 
@@ -719,7 +689,7 @@ export function initFaq() {
         useFaqItem(faqFiltered[faqActiveIdx]);
       }
     } else if (e.key === 'Escape') {
-      closeFaqDropdown();
+      popover.hidden = true;
     }
   });
 
@@ -731,13 +701,7 @@ export function initFaq() {
     items.push({ id: Date.now().toString(), text, fav: false });
     saveFaqItems(items);
     addInput.value = '';
-    // Switch to dropdown to show the new item
-    closeAddRow();
-    popover.hidden = false;
-    btn.classList.add('active');
-    search.value = '';
-    faqActiveIdx = -1;
-    renderFaqList();
+    renderFaqList(search.value.trim());
   }
 
   addBtn.addEventListener('click', addNewFaq);
@@ -746,7 +710,7 @@ export function initFaq() {
       e.preventDefault();
       addNewFaq();
     } else if (e.key === 'Escape') {
-      closeAddRow();
+      popover.hidden = true;
     }
   });
 }
@@ -834,7 +798,6 @@ function updateFaqActive() {
 function useFaqItem(item) {
   const popover = $('#faqPopover');
   popover.hidden = true;
-  $('#btnFaq')?.classList.remove('active');
 
   // Directly send the FAQ question
   const input = $('#chatInput');
