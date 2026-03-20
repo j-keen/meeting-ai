@@ -2,8 +2,27 @@
 
 import { t } from './i18n.js';
 
+// Debug log storage for debug console
+const debugLogs = [];
+const debugListeners = [];
+const MAX_DEBUG_LOGS = 500;
+
 function sttDebug(msg) {
   console.log(msg);
+  const entry = { time: Date.now(), msg };
+  debugLogs.push(entry);
+  if (debugLogs.length > MAX_DEBUG_LOGS) debugLogs.shift();
+  for (const fn of debugListeners) fn(entry);
+}
+
+export function getDebugLogs() { return debugLogs; }
+export function clearDebugLogs() { debugLogs.length = 0; }
+export function onDebugLog(fn) {
+  debugListeners.push(fn);
+  return () => {
+    const idx = debugListeners.indexOf(fn);
+    if (idx >= 0) debugListeners.splice(idx, 1);
+  };
 }
 
 // Web Speech API engine
@@ -24,11 +43,11 @@ function createWebSpeechEngine(language) {
   return {
     name: 'webspeech',
 
-    start(onInterim, onFinal, onError, onReplace) {
+    start(onInterim, onFinal, onError, onReplace, onFatalError, onAudioStart) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
         onError(t('stt.unsupported'));
-        return;
+        return { started: false };
       }
 
       recognition = new SpeechRecognition();
@@ -95,7 +114,11 @@ function createWebSpeechEngine(language) {
 
       recognition.onerror = (e) => {
         sttDebug(`ERROR: ${e.error} ${e.message || ''}`);
-        if (e.error === 'no-speech') {
+        if (e.error === 'not-allowed') {
+          shouldRestart = false;
+          onError(t('stt.mic_permission_denied_detail'));
+          onFatalError?.();
+        } else if (e.error === 'no-speech') {
           noSpeechCount++;
           if (noSpeechCount >= 3) {
             noSpeechCount = 0;
@@ -107,6 +130,7 @@ function createWebSpeechEngine(language) {
             shouldRestart = false;
             abortCount = 0;
             onError(t('stt.connection_failed'));
+            onFatalError?.();
           }
         } else {
           onError(`Speech recognition error: ${e.error}`);
@@ -120,6 +144,7 @@ function createWebSpeechEngine(language) {
       recognition.onaudiostart = () => {
         audioStarted = true;
         sttDebug('🎤 Audio started');
+        onAudioStart?.();
       };
 
       recognition.onspeechstart = () => {
@@ -173,8 +198,11 @@ function createWebSpeechEngine(language) {
       shouldRestart = true;
       try {
         recognition.start();
+        sttDebug('[WebSpeech] recognition.start() called');
       } catch (err) {
+        sttDebug(`[WebSpeech] start() threw: ${err.message}`);
         onError(err.message);
+        onFatalError?.();
       }
 
       // Network timeout: if no audio input within 10s, notify error
@@ -183,6 +211,8 @@ function createWebSpeechEngine(language) {
           onError(t('stt.network_timeout'));
         }
       }, 10000);
+
+      return { started: true };
     },
 
     stop() {
@@ -214,14 +244,23 @@ export function createSTT() {
         if (text && text.trim()) onFinal(text);
       };
 
-      // Pre-check microphone permission
+      // Pre-check microphone permission (with constraints fallback)
       let micStream = null;
       try {
         sttDebug(`[STT] Requesting mic permission (platform: ${navigator.userAgent.slice(0, 60)})`);
         const audioConstraints = isMobile
           ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
           : true;
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
+        } catch (constraintErr) {
+          if (isMobile && (constraintErr.name === 'OverconstrainedError' || constraintErr.name === 'ConstraintNotSatisfiedError')) {
+            sttDebug(`[STT] Constraints failed (${constraintErr.name}), retrying with {audio: true}`);
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          } else {
+            throw constraintErr;
+          }
+        }
         sttDebug(`[STT] Mic permission granted, tracks: ${micStream.getTracks().length}`);
       } catch (err) {
         isRunning = false;
@@ -242,8 +281,18 @@ export function createSTT() {
       }
 
       currentEngine = createWebSpeechEngine(language);
-      onConnected?.('webspeech');
-      currentEngine.start(onInterim, safeFinal, onError, onReplace);
+
+      // Wrap onError to reset isRunning on fatal engine errors
+      const onFatalError = () => {
+        sttDebug(`[STT] Fatal engine error — resetting isRunning`);
+        isRunning = false;
+        currentEngine = null;
+      };
+
+      currentEngine.start(
+        onInterim, safeFinal, onError, onReplace, onFatalError,
+        () => onConnected?.('webspeech')  // onAudioStart → onConnected
+      );
     },
 
     stop() {

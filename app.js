@@ -47,7 +47,7 @@ import {
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
   clearDraftRecovery, saveActiveSession,
 } from './recording.js';
-import { prefetchDeepgramToken } from './stt.js';
+import { prefetchDeepgramToken, getDebugLogs, clearDebugLogs, onDebugLog } from './stt.js';
 import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
 
@@ -87,6 +87,9 @@ function init() {
 
   // Pre-fetch Deepgram token on mobile for faster STT start
   prefetchDeepgramToken();
+
+  // ===== STT Debug Console =====
+  initDebugConsole();
 
   // ===== Draft Recovery =====
   checkDraftRecovery();
@@ -2025,6 +2028,66 @@ function initMinutesPreview() {
       }
     };
     setTimeout(() => document.addEventListener('click', closePopover), 0);
+  });
+}
+
+// ===== STT Debug Console =====
+function initDebugConsole() {
+  const panel = $('#sttDebugPanel');
+  const logsEl = $('#sttDebugLogs');
+  const toggleBtn = $('#btnDebugToggle');
+  if (!panel || !logsEl || !toggleBtn) return;
+
+  // Show toggle button via URL param ?debug=1 or localStorage
+  const showDebug = new URLSearchParams(location.search).has('debug')
+    || localStorage.getItem('sttDebug') === '1';
+  if (showDebug) {
+    toggleBtn.hidden = false;
+    localStorage.setItem('sttDebug', '1');
+  }
+
+  function formatTime(ts) {
+    const d = new Date(ts);
+    return d.toLocaleTimeString('en-GB', { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3, '0');
+  }
+
+  function appendLogLine(entry) {
+    const div = document.createElement('div');
+    div.className = 'dbg-line' + (entry.msg.includes('ERROR') ? ' dbg-error' : '');
+    div.innerHTML = `<span class="dbg-time">${formatTime(entry.time)}</span>${entry.msg.replace(/</g, '&lt;')}`;
+    logsEl.appendChild(div);
+    logsEl.scrollTop = logsEl.scrollHeight;
+  }
+
+  // Render existing logs
+  for (const entry of getDebugLogs()) appendLogLine(entry);
+
+  // Listen for new logs
+  onDebugLog(appendLogLine);
+
+  // Toggle panel
+  toggleBtn.addEventListener('click', () => {
+    panel.hidden = !panel.hidden;
+  });
+
+  // Close
+  $('#btnDebugClose')?.addEventListener('click', () => {
+    panel.hidden = true;
+  });
+
+  // Clear
+  $('#btnDebugClear')?.addEventListener('click', () => {
+    clearDebugLogs();
+    logsEl.innerHTML = '';
+  });
+
+  // Copy
+  $('#btnDebugCopy')?.addEventListener('click', () => {
+    const logs = getDebugLogs();
+    const text = logs.map(e => `[${formatTime(e.time)}] ${e.msg}`).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Debug logs copied', 'success');
+    });
   });
 }
 

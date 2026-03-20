@@ -1786,6 +1786,20 @@
     </div>
   </template>
 
+  <!-- STT Debug Console -->
+  <div class="stt-debug-panel" id="sttDebugPanel" hidden>
+    <div class="stt-debug-header">
+      <span class="stt-debug-title">STT Debug</span>
+      <div class="stt-debug-actions">
+        <button class="btn btn-sm stt-debug-btn" id="btnDebugCopy">Copy</button>
+        <button class="btn btn-sm stt-debug-btn" id="btnDebugClear">Clear</button>
+        <button class="btn btn-sm stt-debug-btn" id="btnDebugClose">&times;</button>
+      </div>
+    </div>
+    <div class="stt-debug-logs" id="sttDebugLogs"></div>
+  </div>
+  <button class="stt-debug-toggle" id="btnDebugToggle" hidden title="STT Debug Console">DBG</button>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
