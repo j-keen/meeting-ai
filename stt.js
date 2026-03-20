@@ -247,8 +247,8 @@ export function createSTT() {
       sttDebug(`[STT] Platform: ${isMobile ? 'mobile' : 'desktop'} (${navigator.userAgent.slice(0, 60)})`);
 
       if (isMobile) {
-        // Mobile: Start SpeechRecognition FIRST, then get recording stream
-        // getUserMedia before/during SpeechRecognition causes mic contention on Android
+        // Mobile: getUserMedia and SpeechRecognition cannot coexist on Android
+        // Skip recording stream entirely — audio recording unavailable on mobile
         currentEngine = createWebSpeechEngine(language);
 
         const onFatalError = () => {
@@ -257,26 +257,11 @@ export function createSTT() {
           currentEngine = null;
         };
 
-        let recordingStreamAcquired = false;
+        sttDebug(`[STT] Mobile: skipping getUserMedia (incompatible with SpeechRecognition)`);
 
         currentEngine.start(
           onInterim, safeFinal, onError, onReplace, onFatalError,
-          () => {
-            onConnected?.('webspeech');
-            // Get recording stream ONCE, with delay to let SpeechRecognition stabilize
-            if (onRecordingStream && !recordingStreamAcquired) {
-              recordingStreamAcquired = true;
-              setTimeout(() => {
-                if (!isRunning) return;
-                navigator.mediaDevices.getUserMedia({ audio: true }).then(recStream => {
-                  sttDebug(`[STT] Recording stream acquired (delayed)`);
-                  onRecordingStream(recStream);
-                }).catch(err => {
-                  sttDebug(`[STT] Recording stream failed (non-fatal): ${err.message}`);
-                });
-              }, 3000);
-            }
-          }
+          () => onConnected?.('webspeech')
         );
       } else {
         // Desktop: Pre-check mic permission, then start engine
