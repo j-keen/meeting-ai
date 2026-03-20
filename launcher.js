@@ -76,6 +76,12 @@ export function showLauncherModal() {
   document.addEventListener('keydown', keyHandler);
 }
 
+function resolveTypeLabel(typeId) {
+  const builtIn = { copilot: t('settings.preset_copilot'), minutes: t('settings.preset_minutes'), learning: t('settings.preset_learning') };
+  if (builtIn[typeId]) return builtIn[typeId];
+  return typeId ? typeId.charAt(0).toUpperCase() + typeId.slice(1) : null;
+}
+
 function showPresetDropdown(presets, prepared, customTypes, closeFn) {
   // Remove existing dropdown
   const existing = document.querySelector('.launcher-preset-list');
@@ -90,9 +96,9 @@ function showPresetDropdown(presets, prepared, customTypes, closeFn) {
   if (prepared) {
     const item = document.createElement('div');
     item.className = 'launcher-preset-item launcher-preset-prepared';
-    const typeLabel = prepared.meetingType || 'copilot';
+    const typeLabel = resolveTypeLabel(prepared.meetingType || 'copilot');
     const nParticipants = prepared.attendees?.length || 0;
-    item.innerHTML = `<span>📌 ${escapeHtml(t('prep.prepared_meeting'))}${nParticipants ? ' · ' + t('prep.n_participants', { n: nParticipants }) : ''}</span><span class="launcher-preset-item-type">${typeLabel}</span>`;
+    item.innerHTML = `<span>📌 ${escapeHtml(t('prep.prepared_meeting'))}${nParticipants ? ' · ' + t('prep.n_participants', { n: nParticipants }) : ''}</span>${typeLabel ? `<span class="launcher-preset-item-type">${escapeHtml(typeLabel)}</span>` : ''}`;
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       list.remove();
@@ -104,11 +110,17 @@ function showPresetDropdown(presets, prepared, customTypes, closeFn) {
   }
 
   // Custom type presets
+  if (customTypes.length > 0) {
+    const header = document.createElement('div');
+    header.className = 'launcher-preset-section';
+    header.textContent = t('settings.custom_types') || 'Custom';
+    list.appendChild(header);
+  }
   customTypes.forEach((ct) => {
     const item = document.createElement('div');
     item.className = 'launcher-preset-item';
-    const name = ct.label || ct.name || ct.id;
-    item.innerHTML = `<span>${escapeHtml(name)}</span><span class="launcher-preset-item-type">${escapeHtml(ct.id)}</span>`;
+    const name = ct.name || ct.label || ct.id;
+    item.innerHTML = `<span>${escapeHtml(name)}</span>`;
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       list.remove();
@@ -121,11 +133,18 @@ function showPresetDropdown(presets, prepared, customTypes, closeFn) {
   });
 
   // Regular presets (meeting prep)
+  if (presets.length > 0) {
+    const header = document.createElement('div');
+    header.className = 'launcher-preset-section';
+    header.textContent = t('prep.title') || 'Meeting Prep';
+    list.appendChild(header);
+  }
   presets.forEach((p, i) => {
     const item = document.createElement('div');
     item.className = 'launcher-preset-item';
     const name = p.name || `Preset ${i + 1}`;
-    const typeBadge = p.meetingType ? `<span class="launcher-preset-item-type">${p.meetingType}</span>` : '';
+    const typeLabel = p.meetingType ? resolveTypeLabel(p.meetingType) : null;
+    const typeBadge = typeLabel ? `<span class="launcher-preset-item-type">${escapeHtml(typeLabel)}</span>` : '';
     item.innerHTML = `<span>${escapeHtml(name)}</span>${typeBadge}`;
     item.addEventListener('click', (e) => {
       e.stopPropagation();

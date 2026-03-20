@@ -1044,20 +1044,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
 
 /* ===== FAQ Dropdown ===== */
 .faq-wrap { position: relative; }
-.faq-btn-group {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  justify-content: center;
-}
 #btnFaq {
   min-width: 100px;
-}
-.faq-add-toggle {
-  padding: 3px 8px;
-  font-size: 12px;
-  line-height: 1;
-  min-width: 24px;
 }
 .faq-dropdown {
   position: absolute;
@@ -1151,25 +1139,14 @@ body.loaded-mode #btnNewMeeting { display: none; }
   border-radius: var(--radius-sm);
 }
 .faq-item-actions button:hover { opacity: 1; background: var(--bg-tertiary); }
-/* FAQ Add Inline */
-.faq-add-inline {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  z-index: 30;
-  margin-top: 6px;
+.faq-add-section {
   display: flex;
   gap: 4px;
   padding: 8px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  width: 280px;
-  max-width: 90vw;
-}
-.faq-add-inline[hidden] {
-  display: none;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
 }
 .faq-add-input {
   flex: 1;
@@ -5334,25 +5311,42 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .launcher-preset-list {
   position: absolute;
   top: 100%;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 280px;
+  width: max-content;
+  max-width: 460px;
   z-index: 10;
-  max-height: 200px;
+  max-height: 260px;
   overflow-y: auto;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-card);
   box-shadow: var(--shadow-md);
+  margin-top: 4px;
+}
+.launcher-preset-section {
+  padding: 6px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  border-top: 1px solid var(--border-light);
+}
+.launcher-preset-section:first-child {
+  border-top: none;
 }
 .launcher-preset-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   cursor: pointer;
   font-size: 13px;
   color: var(--text-primary);
   transition: background var(--transition-fast);
+  white-space: nowrap;
 }
 .launcher-preset-item:hover {
   background: var(--bg-hover);
@@ -5361,8 +5355,10 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-size: 11px;
   padding: 1px 6px;
   border-radius: var(--radius-full);
-  background: var(--bg-tertiary);
-  color: var(--text-muted);
+  background: var(--accent-bg);
+  color: var(--accent);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .launcher-preset-prepared {
   border-bottom: 1px solid var(--border-light);

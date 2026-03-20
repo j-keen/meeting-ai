@@ -13,6 +13,7 @@ import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
+import { openPromptBuilder } from './prompt-builder.js';
 
 
 
@@ -212,8 +213,110 @@ function initCustomPresets() {
   refreshCustomPresetList();
 
   $('#btnAddCustomPreset')?.addEventListener('click', () => {
-    emit('openMeetingPrep');
+    $('#presetCreateModal').hidden = false;
   });
+
+  // Gateway modal buttons
+  $('#presetCreateAi')?.addEventListener('click', () => {
+    $('#presetCreateModal').hidden = true;
+    openPromptBuilder();
+  });
+
+  $('#presetCreateManual')?.addEventListener('click', () => {
+    $('#presetCreateModal').hidden = true;
+    openManualPresetForm();
+  });
+
+  initManualPresetForm();
+}
+
+// ===== Manual Preset Form =====
+
+let pmChatPresets = [];
+
+function openManualPresetForm() {
+  pmChatPresets = [];
+  $('#pmName').value = '';
+  $('#pmDescription').value = '';
+  $('#pmAnalysisPrompt').value = '';
+  $('#pmChatSystemPrompt').value = '';
+  $('#pmMemoHint').value = '';
+  $('#pmContext').value = '';
+  $('#pmNewPresetInput').value = '';
+  renderPmChatPresets();
+  $('#presetManualModal').hidden = false;
+}
+
+function renderPmChatPresets() {
+  const container = $('#pmChatPresetsList');
+  if (!container) return;
+  container.innerHTML = '';
+  pmChatPresets.forEach((q, i) => {
+    const item = document.createElement('div');
+    item.className = 'pb-preset-item';
+    item.innerHTML = `
+      <input type="text" class="pb-preview-input" value="${q.replace(/"/g, '&quot;')}">
+      <button class="btn btn-sm btn-icon">&times;</button>
+    `;
+    item.querySelector('input').addEventListener('change', (e) => {
+      pmChatPresets[i] = e.target.value;
+    });
+    item.querySelector('button').addEventListener('click', () => {
+      pmChatPresets.splice(i, 1);
+      renderPmChatPresets();
+    });
+    container.appendChild(item);
+  });
+}
+
+function initManualPresetForm() {
+  $('#btnPmAddPreset')?.addEventListener('click', () => {
+    const input = $('#pmNewPresetInput');
+    const val = input.value.trim();
+    if (!val) return;
+    pmChatPresets.push(val);
+    input.value = '';
+    renderPmChatPresets();
+  });
+
+  $('#pmNewPresetInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      $('#btnPmAddPreset').click();
+    }
+  });
+
+  $('#btnPmCancel')?.addEventListener('click', () => {
+    $('#presetManualModal').hidden = true;
+  });
+
+  $('#btnPmSave')?.addEventListener('click', handleManualSave);
+}
+
+function handleManualSave() {
+  const name = $('#pmName').value.trim();
+  if (!name) {
+    emit('toast', { message: t('preset_manual.name_required'), type: 'warning' });
+    $('#pmName').focus();
+    return;
+  }
+
+  const config = {
+    id: 'custom_' + Date.now(),
+    name,
+    description: $('#pmDescription').value.trim(),
+    prompt: $('#pmAnalysisPrompt').value.trim(),
+    chatSystemPrompt: $('#pmChatSystemPrompt').value.trim(),
+    chatPresets: pmChatPresets.filter(q => q.trim()),
+    memoHint: $('#pmMemoHint').value.trim(),
+    context: $('#pmContext').value.trim(),
+  };
+
+  addCustomType(config);
+  emit('customTypes:change');
+  emit('toast', { message: t('preset_manual.saved'), type: 'success' });
+  $('#presetManualModal').hidden = true;
+  refreshCustomPresetList();
 }
 
 function refreshCustomPresetList() {

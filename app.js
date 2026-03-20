@@ -145,10 +145,6 @@ function init() {
     runAnalysis();
   });
 
-  // Open meeting prep from settings "Add Custom Preset" button
-  on('openMeetingPrep', () => {
-    openMeetingPrepForm();
-  });
 
   // Copy analysis as markdown
   $('#btnCopyAnalysis').addEventListener('click', () => {

@@ -142,19 +142,16 @@
           <h2 data-i18n="panel.chat">AI Chat</h2>
           <div class="panel-actions">
             <div class="faq-wrap">
-              <div class="faq-btn-group">
-                <button class="btn btn-sm" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
-                <button class="btn btn-sm btn-primary faq-add-toggle" id="btnFaqAddToggle" title="Add new question">+</button>
-              </div>
+              <button class="btn btn-sm" id="btnFaq" data-i18n="chat.faq_btn" title="Saved Prompts">💡 프롬프트</button>
               <div class="faq-dropdown" id="faqPopover" hidden>
                 <div class="faq-search-wrap">
-                  <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search..." autocomplete="off">
+                  <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search prompts..." autocomplete="off">
                 </div>
                 <div class="faq-list" id="faqList"></div>
-              </div>
-              <div class="faq-add-inline" id="faqAddInline" hidden>
-                <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new question..." autocomplete="off">
-                <button class="btn btn-xs btn-primary faq-add-btn" id="btnFaqAdd">✓</button>
+                <div class="faq-add-section">
+                  <input type="text" class="faq-add-input" id="faqAddInput" data-i18n-placeholder="chat.faq_add_placeholder" placeholder="Add new prompt..." autocomplete="off">
+                  <button class="btn btn-xs btn-primary faq-add-btn" id="btnFaqAdd" data-i18n="chat.faq_save">저장</button>
+                </div>
               </div>
             </div>
           </div>
@@ -332,7 +329,7 @@
           <div class="custom-preset-list" id="customPresetList">
             <p class="text-muted" style="font-size:12px;" data-i18n="settings.custom_presets_empty">No custom presets yet. Create one with AI!</p>
           </div>
-          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset" style="margin-top:8px;">+ Create with AI</button>
+          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset" style="margin-top:8px;">+ 새 프리셋 만들기</button>
         </section>
       </div>
 
@@ -1369,6 +1366,84 @@
             <button class="btn btn-primary" id="btnAudioTranscribe" disabled data-i18n="import.transcribe">Transcribe</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preset Create Gateway Modal -->
+  <div class="modal-overlay" id="presetCreateModal" hidden>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3 data-i18n="preset_create.title">새 프리셋 만들기</h3>
+        <button class="btn btn-icon modal-close" data-close="presetCreateModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="asm-card-grid">
+          <button class="btn asm-card-btn" id="presetCreateAi">
+            <div class="asm-card-icon">✨</div>
+            <div class="asm-card-text">
+              <span class="asm-card-title" data-i18n="preset_create.ai_title">AI로 만들기</span>
+              <span class="asm-card-desc" data-i18n="preset_create.ai_desc">상황을 설명하면 AI가 최적의 프리셋을 만들어줍니다</span>
+            </div>
+            <div class="asm-card-arrow">›</div>
+          </button>
+          <button class="btn asm-card-btn" id="presetCreateManual">
+            <div class="asm-card-icon">✏️</div>
+            <div class="asm-card-text">
+              <span class="asm-card-title" data-i18n="preset_create.manual_title">수동으로 입력</span>
+              <span class="asm-card-desc" data-i18n="preset_create.manual_desc">프롬프트와 설정을 직접 작성합니다</span>
+            </div>
+            <div class="asm-card-arrow">›</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preset Manual Form Modal -->
+  <div class="modal-overlay" id="presetManualModal" hidden>
+    <div class="modal" style="max-width:520px;">
+      <div class="modal-header">
+        <h3 data-i18n="preset_manual.title">프리셋 직접 만들기</h3>
+        <button class="btn btn-icon modal-close" data-close="presetManualModal">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.name">이름 *</label>
+          <input type="text" class="pb-preview-input" id="pmName" required>
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.description">설명</label>
+          <input type="text" class="pb-preview-input" id="pmDescription">
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.analysis_prompt">분석 프롬프트</label>
+          <textarea class="pb-preview-textarea" id="pmAnalysisPrompt" rows="5"></textarea>
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.chat_system_prompt">채팅 시스템 프롬프트</label>
+          <textarea class="pb-preview-textarea" id="pmChatSystemPrompt" rows="4"></textarea>
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.chat_presets">추천 질문</label>
+          <div id="pmChatPresetsList"></div>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <input type="text" class="pb-preview-input" id="pmNewPresetInput" data-i18n-placeholder="preset_manual.add_question_placeholder" placeholder="질문 입력...">
+            <button class="btn btn-sm" id="btnPmAddPreset">+</button>
+          </div>
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.memo_hint">메모 가이드</label>
+          <input type="text" class="pb-preview-input" id="pmMemoHint">
+        </div>
+        <div class="pb-preview-card">
+          <label class="pb-preview-label" data-i18n="preset_manual.context">상황 배경</label>
+          <textarea class="pb-preview-textarea" id="pmContext" rows="3"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid var(--border-color);">
+        <button class="btn" id="btnPmCancel" data-i18n="preset_manual.cancel">취소</button>
+        <button class="btn btn-primary" id="btnPmSave" data-i18n="preset_manual.save">저장</button>
       </div>
     </div>
   </div>
