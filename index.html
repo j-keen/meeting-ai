@@ -67,6 +67,7 @@
                 </div>
               </div>
             </div>
+            <button class="btn btn-sm" id="btnImportTranscript" title="Import">&#128229; <span data-i18n="panel.import">Transcript Import</span></button>
             <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
           </div>
         </div>
@@ -142,8 +143,8 @@
           <div class="panel-actions">
             <div class="faq-wrap">
               <div class="faq-btn-group">
-                <button class="btn btn-xs" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
-                <button class="btn btn-xs btn-primary faq-add-toggle" id="btnFaqAddToggle" title="Add new question">+</button>
+                <button class="btn btn-sm" id="btnFaq" data-i18n="chat.faq_btn" title="Frequently asked questions">FAQ</button>
+                <button class="btn btn-sm btn-primary faq-add-toggle" id="btnFaqAddToggle" title="Add new question">+</button>
               </div>
               <div class="faq-dropdown" id="faqPopover" hidden>
                 <div class="faq-search-wrap">
@@ -866,62 +867,63 @@
         <!-- 0. Meeting Summary Stats -->
         <div class="end-meeting-stats" id="endMeetingStats"></div>
 
-        <!-- 1. Title + AI suggestions (Moved to top) -->
-        <div class="end-meeting-section end-meeting-title-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
-          <input type="text" class="settings-input end-meeting-title-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title" autofocus>
-          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
-            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
-            <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
-            <div class="ai-title-chips" id="aiTitleChips"></div>
-          </div>
-        </div>
-
-        <!-- 2. Date/Time + Location -->
-        <div class="end-meeting-row">
-          <div class="end-meeting-section end-meeting-flex-1">
-            <label class="end-meeting-label" data-i18n="end_meeting.datetime">Date / Time</label>
-            <input type="datetime-local" class="settings-input" id="endMeetingDatetime">
-          </div>
-          <div class="end-meeting-section end-meeting-flex-1">
-            <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
-            <div class="location-select-wrapper">
-              <input type="text" class="settings-input" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
-              <div class="unified-dropdown location-dropdown" id="locationDropdown" hidden></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div class="end-meeting-divider"></div>
-
-        <!-- 3. Metadata Header Background -->
-        <div class="end-meeting-metadata-group">
-          <!-- Participants (100% width) -->
-          <div class="end-meeting-section">
-            <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
-            <div class="participant-tabs">
-              <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
-              <button class="participant-tab" data-participant-tab="register" data-i18n="end_meeting.tab_register">Register</button>
-            </div>
-            <div class="participant-tab-content" id="participantTabSearch">
-              <input type="text" class="unified-input-field" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.search_participant" placeholder="Search name..." autocomplete="off">
-              <div class="unified-dropdown" id="participantDropdown" hidden></div>
-            </div>
-            <div class="participant-tab-content" id="participantTabRegister" hidden>
-              <div class="participant-register-row">
-                <input type="text" class="unified-input-field participant-register-name" id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name" autocomplete="off">
-                <input type="text" class="unified-input-field participant-register-title" id="endMeetingNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title" autocomplete="off">
-                <input type="text" class="unified-input-field participant-register-company" id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company" autocomplete="off">
-                <button class="btn btn-sm" id="btnEndMeetingAddParticipant" data-i18n="end_meeting.tab_register">Register</button>
+        <!-- 2-Column Layout -->
+        <div class="end-meeting-two-column">
+          <!-- Left Column: Primary Info -->
+          <div class="end-meeting-column end-meeting-column-primary">
+            <!-- Title + AI suggestions -->
+            <div class="end-meeting-section end-meeting-title-section">
+              <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
+              <input type="text" class="settings-input end-meeting-title-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title" autofocus>
+              <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
+                <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
+                <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
+                <div class="ai-title-chips" id="aiTitleChips"></div>
               </div>
             </div>
-            <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
+
+            <!-- Date/Time -->
+            <div class="end-meeting-section">
+              <label class="end-meeting-label" data-i18n="end_meeting.datetime">Date / Time</label>
+              <input type="datetime-local" class="settings-input" id="endMeetingDatetime">
+            </div>
+
+            <!-- Location -->
+            <div class="end-meeting-section">
+              <label class="end-meeting-label" data-i18n="end_meeting.location">Location</label>
+              <div class="location-select-wrapper">
+                <input type="text" class="settings-input" id="endMeetingLocation" data-i18n-placeholder="end_meeting.location_placeholder" placeholder="Search or add location..." autocomplete="off">
+                <div class="unified-dropdown location-dropdown" id="locationDropdown" hidden></div>
+              </div>
+            </div>
           </div>
-          
-          <div class="end-meeting-row" style="margin-top: 16px;">
-            <!-- Tags (60%) -->
-            <div class="end-meeting-section end-meeting-flex-6">
+
+          <!-- Right Column: Secondary Info -->
+          <div class="end-meeting-column end-meeting-column-secondary">
+            <!-- Participants -->
+            <div class="end-meeting-section">
+              <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
+              <div class="participant-tabs">
+                <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
+                <button class="participant-tab" data-participant-tab="register" data-i18n="end_meeting.tab_register">Register</button>
+              </div>
+              <div class="participant-tab-content" id="participantTabSearch">
+                <input type="text" class="unified-input-field" id="endMeetingParticipantInput" data-i18n-placeholder="end_meeting.search_participant" placeholder="Search name..." autocomplete="off">
+                <div class="unified-dropdown" id="participantDropdown" hidden></div>
+              </div>
+              <div class="participant-tab-content" id="participantTabRegister" hidden>
+                <div class="participant-register-row">
+                  <input type="text" class="unified-input-field participant-register-name" id="endMeetingNewParticipantName" data-i18n-placeholder="settings.placeholder_name" placeholder="Name" autocomplete="off">
+                  <input type="text" class="unified-input-field participant-register-title" id="endMeetingNewParticipantTitle" data-i18n-placeholder="settings.placeholder_title" placeholder="Title" autocomplete="off">
+                  <input type="text" class="unified-input-field participant-register-company" id="endMeetingNewParticipantCompany" data-i18n-placeholder="settings.placeholder_company" placeholder="Company" autocomplete="off">
+                  <button class="btn btn-sm" id="btnEndMeetingAddParticipant" data-i18n="end_meeting.tab_register">Register</button>
+                </div>
+              </div>
+              <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
+            </div>
+
+            <!-- Tags -->
+            <div class="end-meeting-section">
               <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
               <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
               <div class="unified-dropdown" id="tagDropdown" hidden></div>
@@ -931,9 +933,9 @@
               </div>
               <div class="unified-badges-area" id="endMeetingTags"></div>
             </div>
-            
-            <!-- Importance (40%) -->
-            <div class="end-meeting-section end-meeting-flex-4">
+
+            <!-- Importance -->
+            <div class="end-meeting-section">
               <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
               <div class="star-rating" id="endMeetingStars">
                 <button class="star-btn" data-star="1">&#9733;</button>
@@ -945,7 +947,8 @@
             </div>
           </div>
         </div>
-        <!-- 4.5 Audio Download (P-5) -->
+
+        <!-- Audio Download -->
         <div class="end-meeting-audio-section" id="endMeetingAudioSection" hidden>
           <div class="end-meeting-audio-row">
             <span class="end-meeting-audio-icon">🎙</span>
@@ -957,16 +960,17 @@
           </div>
         </div>
       </div>
-      <!-- 5. Footer: Cancel + Generate Minutes + Save -->
+      <!-- 5. Footer: Cancel + Generate Minutes + AI Doc + Save -->
       <div class="end-meeting-footer" id="endMeetingFooter">
         <div class="end-meeting-footer-actions end-meeting-footer-split" id="endMeetingFooterActions">
           <div class="end-meeting-footer-left">
-            <button class="btn btn-outline" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
-            <button class="btn btn-outline" id="btnDocGenerator" data-i18n="dg.button_label">📄 AI Document</button>
+            <button class="btn btn-text" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
           </div>
           <div class="end-meeting-footer-right">
-            <button class="btn btn-ghost" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-            <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+            <button class="btn btn-subtle" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
+            <button class="btn btn-subtle" id="btnDocGenerator" data-i18n="dg.button_label">AI Document</button>
+            <span class="footer-divider"></span>
+            <button class="btn btn-primary btn-lg" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
           </div>
         </div>
       </div>
@@ -1291,12 +1295,6 @@
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
           <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
-        </button>
-        <button class="launcher-card" id="btnLauncherImport">
-          <span class="launcher-card-badge">4</span>
-          <span class="launcher-card-icon">&#128229;</span>
-          <span class="launcher-card-label" data-i18n="import.launcher_label">Import</span>
-          <span class="launcher-card-desc" data-i18n="import.launcher_desc">Paste text or upload audio</span>
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>

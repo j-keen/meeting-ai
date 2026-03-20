@@ -16,6 +16,7 @@ const translations = {
     'panel.transcript': 'Transcript',
     'panel.highlights': 'Highlights',
     'panel.correct': 'Correct',
+    'panel.import': 'Transcript Import',
     'panel.export': 'Transcript Export',
     'transcript.empty': 'Start recording to see the transcript here.',
     'transcript.empty_hint': 'Press the record button or Ctrl+R to begin.',
@@ -894,6 +895,7 @@ const translations = {
     // Import (P-4 + P-6)
     'import.launcher_label': 'Import',
     'import.launcher_desc': 'Paste text or upload audio',
+    'import.recording_warning': 'Please stop recording before importing a transcript.',
     'import.title': 'Import Transcript',
     'import.tab_text': 'Paste Text',
     'import.tab_audio': 'Upload Audio',
@@ -966,6 +968,7 @@ const translations = {
     'panel.transcript': '녹취록',
     'panel.highlights': '하이라이트',
     'panel.correct': '교정',
+    'panel.import': '녹취록 가져오기',
     'panel.export': '녹취록 내보내기',
     'transcript.empty': '녹음을 시작하면 여기에 회의록이 표시됩니다.',
     'transcript.empty_hint': '녹음 버튼 또는 Ctrl+R을 눌러 시작하세요.',
@@ -1844,6 +1847,7 @@ const translations = {
     // Import (P-4 + P-6)
     'import.launcher_label': '가져오기',
     'import.launcher_desc': '텍스트 붙여넣기 또는 음성 업로드',
+    'import.recording_warning': '녹취록을 가져오려면 먼저 녹음을 정지해주세요.',
     'import.title': '녹취록 가져오기',
     'import.tab_text': '텍스트 붙여넣기',
     'import.tab_audio': '음성 업로드',

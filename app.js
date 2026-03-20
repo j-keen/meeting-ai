@@ -48,7 +48,7 @@ import {
   clearDraftRecovery, saveActiveSession,
 } from './recording.js';
 import { prefetchDeepgramToken } from './stt.js';
-import { initImportTranscript } from './import-transcript.js';
+import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -442,6 +442,15 @@ function init() {
 
   // Toast from other modules
   on('toast', ({ message, type }) => showToast(message, type || 'success'));
+
+  // Import (moved from launcher)
+  $('#btnImportTranscript').addEventListener('click', () => {
+    if (state.isRecording) {
+      showToast(t('import.recording_warning'), 'warning');
+      return;
+    }
+    openImportModal();
+  });
 
   // Export
   $('#btnExport').addEventListener('click', () => { $('#exportModal').hidden = false; });
