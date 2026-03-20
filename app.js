@@ -2038,7 +2038,10 @@ function initDebugConsole() {
   const toggleBtn = $('#btnDebugToggle');
   if (!panel || !logsEl || !toggleBtn) return;
 
-  // Show toggle button via URL param ?debug=1 or localStorage
+  // Show toggle button via URL param ?debug=1 or localStorage (desktop only)
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) return;
+
   const showDebug = new URLSearchParams(location.search).has('debug')
     || localStorage.getItem('sttDebug') === '1';
   if (showDebug) {

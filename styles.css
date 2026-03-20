@@ -8108,3 +8108,9 @@ body.imported-mode .recording-controls { display: none; }
 .stt-debug-logs .dbg-time { color: var(--text-muted); margin-right: 6px; }
 .stt-debug-logs .dbg-error { color: var(--danger); font-weight: 500; }
 
+/* Hide debug console on mobile */
+@media (max-width: 768px) {
+  .stt-debug-toggle,
+  .stt-debug-panel { display: none !important; }
+}
+
