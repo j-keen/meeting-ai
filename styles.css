@@ -3960,6 +3960,36 @@ body.loaded-mode #btnNewMeeting { display: none; }
   align-items: center;
   gap: 8px;
 }
+.end-meeting-footer-split {
+  width: 100%;
+  justify-content: space-between;
+}
+.end-meeting-footer-left,
+.end-meeting-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Modal UI Overhaul styles */
+.end-meeting-title-section {
+  margin-bottom: 12px;
+}
+.end-meeting-title-input {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  padding: 10px 12px !important;
+}
+.end-meeting-divider {
+  height: 1px;
+  background: var(--border-light);
+  margin: 16px 0;
+}
+.end-meeting-metadata-group {
+  background: var(--bg-secondary);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+}
 
 /* Disabled form state during progress */
 .disabled-form {

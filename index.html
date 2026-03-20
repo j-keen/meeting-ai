@@ -865,19 +865,18 @@
       <div class="modal-body">
         <!-- 0. Meeting Summary Stats -->
         <div class="end-meeting-stats" id="endMeetingStats"></div>
-        <!-- 1. Importance -->
-        <div class="end-meeting-row">
-          <div class="end-meeting-section">
-            <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
-            <div class="star-rating" id="endMeetingStars">
-              <button class="star-btn" data-star="1">&#9733;</button>
-              <button class="star-btn" data-star="2">&#9733;</button>
-              <button class="star-btn" data-star="3">&#9733;</button>
-              <button class="star-btn" data-star="4">&#9733;</button>
-              <button class="star-btn" data-star="5">&#9733;</button>
-            </div>
+
+        <!-- 1. Title + AI suggestions (Moved to top) -->
+        <div class="end-meeting-section end-meeting-title-section">
+          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
+          <input type="text" class="settings-input end-meeting-title-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title" autofocus>
+          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
+            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
+            <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
+            <div class="ai-title-chips" id="aiTitleChips"></div>
           </div>
         </div>
+
         <!-- 2. Date/Time + Location -->
         <div class="end-meeting-row">
           <div class="end-meeting-section end-meeting-flex-1">
@@ -892,19 +891,14 @@
             </div>
           </div>
         </div>
-        <!-- 3. Title + AI suggestions -->
-        <div class="end-meeting-section">
-          <label class="end-meeting-label" data-i18n="end_meeting.meeting_title">Meeting Title</label>
-          <input type="text" class="settings-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title">
-          <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
-            <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
-            <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
-            <div class="ai-title-chips" id="aiTitleChips"></div>
-          </div>
-        </div>
-        <!-- 4. Participants + Tags (side by side) — unified input -->
-        <div class="end-meeting-row">
-          <div class="end-meeting-section end-meeting-flex-6">
+
+        <!-- Divider -->
+        <div class="end-meeting-divider"></div>
+
+        <!-- 3. Metadata Header Background -->
+        <div class="end-meeting-metadata-group">
+          <!-- Participants (100% width) -->
+          <div class="end-meeting-section">
             <label class="end-meeting-label" data-i18n="end_meeting.participants">Participants</label>
             <div class="participant-tabs">
               <button class="participant-tab active" data-participant-tab="search" data-i18n="end_meeting.tab_search">Search</button>
@@ -924,15 +918,31 @@
             </div>
             <div class="unified-badges-area" id="endMeetingParticipantsSelected"></div>
           </div>
-          <div class="end-meeting-section end-meeting-flex-4">
-            <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
-            <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
-            <div class="unified-dropdown" id="tagDropdown" hidden></div>
-            <div class="ai-tag-loading" id="aiTagLoading" hidden>
-              <span class="ai-loading-spinner"></span>
-              <span data-i18n="end_meeting.tags_generating">Generating tag suggestions...</span>
+          
+          <div class="end-meeting-row" style="margin-top: 16px;">
+            <!-- Tags (60%) -->
+            <div class="end-meeting-section end-meeting-flex-6">
+              <label class="end-meeting-label" data-i18n="end_meeting.tags">Tags</label>
+              <input type="text" class="unified-input-field" id="endMeetingTagInput" data-i18n-placeholder="end_meeting.add_tag" placeholder="Add tag..." autocomplete="off">
+              <div class="unified-dropdown" id="tagDropdown" hidden></div>
+              <div class="ai-tag-loading" id="aiTagLoading" hidden>
+                <span class="ai-loading-spinner"></span>
+                <span data-i18n="end_meeting.tags_generating">Generating tag suggestions...</span>
+              </div>
+              <div class="unified-badges-area" id="endMeetingTags"></div>
             </div>
-            <div class="unified-badges-area" id="endMeetingTags"></div>
+            
+            <!-- Importance (40%) -->
+            <div class="end-meeting-section end-meeting-flex-4">
+              <label class="end-meeting-label" data-i18n="end_meeting.importance">Importance</label>
+              <div class="star-rating" id="endMeetingStars">
+                <button class="star-btn" data-star="1">&#9733;</button>
+                <button class="star-btn" data-star="2">&#9733;</button>
+                <button class="star-btn" data-star="3">&#9733;</button>
+                <button class="star-btn" data-star="4">&#9733;</button>
+                <button class="star-btn" data-star="5">&#9733;</button>
+              </div>
+            </div>
           </div>
         </div>
         <!-- 4.5 Audio Download (P-5) -->
@@ -949,11 +959,15 @@
       </div>
       <!-- 5. Footer: Cancel + Generate Minutes + Save -->
       <div class="end-meeting-footer" id="endMeetingFooter">
-        <div class="end-meeting-footer-actions" id="endMeetingFooterActions">
-          <button class="btn" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
-          <button class="btn btn-accent" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
-          <button class="btn btn-accent" id="btnDocGenerator" data-i18n="dg.button_label">📄 AI Document</button>
-          <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+        <div class="end-meeting-footer-actions end-meeting-footer-split" id="endMeetingFooterActions">
+          <div class="end-meeting-footer-left">
+            <button class="btn btn-outline" id="btnGenerateMinutes" data-i18n="end_meeting.generate_minutes">Generate Minutes</button>
+            <button class="btn btn-outline" id="btnDocGenerator" data-i18n="dg.button_label">📄 AI Document</button>
+          </div>
+          <div class="end-meeting-footer-right">
+            <button class="btn btn-ghost" id="btnEndMeetingCancel" data-i18n="end_meeting.cancel">Cancel</button>
+            <button class="btn btn-primary" id="btnEndMeetingSave" data-i18n="end_meeting.save">Save</button>
+          </div>
         </div>
       </div>
     </div>
