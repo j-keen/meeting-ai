@@ -831,7 +831,7 @@ function init() {
     // Reference + files + notes → state.analysisContext
     const parts = [];
     if (config.referenceAnalysis) {
-      parts.push('[Reference: Previous Meeting]\n' + config.referenceAnalysis);
+      parts.push('[PAST MEETING REFERENCE — NOT part of current conversation]\nBelow is a summary from a PREVIOUS meeting. Use as background context only.\nDo NOT attribute any statements below to current meeting participants.\n---\n' + config.referenceAnalysis + '\n---\n[END REFERENCE]');
     }
     if (config.attachedFiles?.length) {
       config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));
@@ -949,7 +949,7 @@ function init() {
     // Reference + files → analysisContext
     const parts = [];
     if (config.referenceAnalysis) {
-      parts.push('[Reference: Previous Session]\n' + config.referenceAnalysis);
+      parts.push('[PAST MEETING REFERENCE — NOT part of current conversation]\nBelow is a summary from a PREVIOUS meeting. Use as background context only.\nDo NOT attribute any statements below to current meeting participants.\n---\n' + config.referenceAnalysis + '\n---\n[END REFERENCE]');
     }
     if (config.attachedFiles?.length) {
       config.attachedFiles.forEach(f => parts.push(`[File: ${f.name}]\n${f.content}`));

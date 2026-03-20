@@ -138,6 +138,7 @@ export async function analyzeTranscript({
   onStream = null,
   categories = [],
   categoryHints = {},
+  metadata = {},
 }) {
   if (!isProxyAvailable()) throw new Error('Proxy not available');
   const hasTranscript = transcript && transcript.length > 0;
@@ -188,6 +189,29 @@ export async function analyzeTranscript({
   }
   if (guidance.analysis) {
     messageParts.push('', guidance.analysis);
+  }
+
+  // Inject meeting metadata from deep-setup (participants, location, purpose)
+  if (metadata && Object.keys(metadata).length > 0) {
+    messageParts.push('');
+    messageParts.push('[Meeting Setup — pre-configured meeting information]');
+    if (metadata.datetime) {
+      const dt = new Date(metadata.datetime);
+      messageParts.push(`Date/Time: ${dt.toLocaleDateString(getDateLocale())} ${dt.toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' })}`);
+    }
+    if (metadata.location) messageParts.push(`Location: ${metadata.location}`);
+    if (metadata.participants && metadata.participants.length > 0) {
+      const participantStrs = metadata.participants.map(p => {
+        if (typeof p === 'string') return p;
+        let s = p.name || '';
+        if (p.title) s += `(${p.title}`;
+        if (p.company) s += p.title ? `/${p.company})` : `(${p.company})`;
+        else if (p.title) s += ')';
+        return s;
+      });
+      messageParts.push(`Participants: ${participantStrs.join(' | ')}`);
+    }
+    if (metadata.description) messageParts.push(`Meeting Purpose: ${metadata.description}`);
   }
 
   if (userProfile) {

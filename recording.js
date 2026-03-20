@@ -671,6 +671,12 @@ export async function runAnalysis() {
       model: state.settings.geminiModel || 'gemini-2.5-flash',
       userCorrections: corrections,
       blockMemos,
+      metadata: {
+        datetime: state.meetingStartTime,
+        location: state.meetingLocation || '',
+        participants: state.participants || [],
+        description: state.meetingDescription || '',
+      },
       onStream: (textSoFar) => {
         if (!aiContainer) return;
         if (!streamPreviewEl) {
@@ -1969,6 +1975,7 @@ export function resetMeeting(skipLauncher = false) {
   $('#btnEndMeeting').hidden = true;
   state.meetingId = null;
   state.meetingLocation = '';
+  state.meetingDescription = '';
   state.meetingTitle = '';
   state.starRating = 3;
   state.categories = [];

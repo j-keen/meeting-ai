@@ -7,10 +7,11 @@
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiStream, isProxyAvailable } from './gemini-api.js';
-import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, linkMeetings } from './storage.js';
+import { addCustomType, addContact, loadContacts, loadLocations, addLocation, listMeetings, linkMeetings, getMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
+import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWritingPrinciples, getToneGuidance } from './prompt-templates.js';
 
 const $ = (sel) => document.querySelector(sel);
 const MODEL = 'gemini-2.5-flash';
@@ -67,9 +68,17 @@ function matchContactByName(c, query) {
   return matchField(c.name, query) || matchField(c.title || '', query) || matchField(c.company || '', query);
 }
 
+// ===== Helper: extract last analysis text from a meeting =====
+function getLastAnalysisText(meeting) {
+  if (!meeting?.analysisHistory?.length) return '';
+  const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+  return last.markdown || last.summary || last.raw || '';
+}
+
 // ===== Step 3: AI Prompt =====
 function getStep3Prompt(prevResults, isAutoFire) {
   const ko = isKorean();
+  const lang = ko ? 'ko' : 'en';
   const ctx = JSON.stringify(prevResults, null, 2);
   const autoFireInstruction = isAutoFire
     ? (ko
@@ -85,61 +94,25 @@ function getStep3Prompt(prevResults, isAutoFire) {
 4. Generate the setup JSON right away`)
     : '';
 
-  return ko
-    ? `당신은 사용자의 "믿을 수 있는 동료"입니다. 실시간 음성-AI 분석 앱에서 옆자리에 앉아 대화를 함께 듣고 도와주는 역할입니다.
+  const meetingInfoHeader = ko
+    ? '이전 단계에서 사용자가 입력한 미팅 정보:'
+    : 'Meeting info from previous steps:';
 
-이전 단계에서 사용자가 입력한 미팅 정보:
-${ctx}
-${autoFireInstruction}
-
-## 앱이 하는 일
-1. **실시간 코파일럿 분석**: 대화를 듣고 AI가 주기적으로 인사이트를 정리
-2. **AI 채팅**: 대화 중 궁금한 걸 AI에게 바로 질문
-3. **메모**: 실시간 메모를 남기면 다음 분석에 반영
-
-## 생성할 JSON
-\`\`\`json
-{
-  "name": "프리셋 이름",
-  "description": "한 줄 설명",
-  "summary": "상황 요약 1줄",
-  "focusPoints": ["집중 포인트 1", "집중 포인트 2", "집중 포인트 3"],
-  "analysisPrompt": "분석 AI 프롬프트",
-  "chatSystemPrompt": "채팅 AI 역할 정의",
-  "chatPresets": ["추천 질문 1", "추천 질문 2", "추천 질문 3"],
-  "memoHint": "메모 가이드 텍스트",
-  "context": "상황 배경 설명"
-}
-\`\`\`
-
-톤: 격식 없이 편하게, 하지만 프로페셔널하게.`
-    : `You are the user's "trusted teammate." In this real-time voice-AI analysis app, you sit beside them and help out.
-
-Meeting info from previous steps:
-${ctx}
-${autoFireInstruction}
-
-## What the app does
-1. **Real-time Copilot Analysis**: Listens and surfaces insights periodically
-2. **AI Chat**: Ask AI questions on the spot
-3. **Memo**: Real-time notes reflected in next analysis
-
-## JSON to generate
-\`\`\`json
-{
-  "name": "Preset name",
-  "description": "One-line description",
-  "summary": "Situation summary (1 line)",
-  "focusPoints": ["Focus point 1", "Focus point 2", "Focus point 3"],
-  "analysisPrompt": "Prompt for analysis AI",
-  "chatSystemPrompt": "Role definition for chat AI",
-  "chatPresets": ["Suggested question 1", "Suggested question 2", "Suggested question 3"],
-  "memoHint": "Guide text for memo input",
-  "context": "Background description"
-}
-\`\`\`
-
-Tone: casual but professional.`;
+  return [
+    getRoleIntro(lang),
+    '',
+    meetingInfoHeader,
+    ctx,
+    autoFireInstruction,
+    '',
+    getAppFeatureDescription(lang),
+    '',
+    getJsonSchema(lang),
+    '',
+    getPromptWritingPrinciples(lang),
+    '',
+    getToneGuidance(lang),
+  ].join('\n');
 }
 
 // ===== Chat Render Helpers =====
@@ -425,68 +398,92 @@ function renderStep1Form() {
   const desc = $('#dsStep1Desc');
   if (desc) desc.textContent = t('ds.step1_desc');
 
+  // Note: innerHTML used with escapeHtml() for all user-sourced data - safe pattern in this codebase
   formArea.innerHTML = `
-    <!-- ① 날짜/시간 -->
+    <!-- date/time -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.datetime')}</label>
       <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
     </div>
 
-    <!-- ② 장소 -->
+    <!-- location: input + browsable list -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.location')}</label>
       <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
-      <div class="ds-autocomplete-dropdown" id="dsLocationDropdown" hidden></div>
+      <div class="ds-loc-list" id="dsLocationList"></div>
     </div>
 
-    <!-- ③ 참석자 -->
+    <!-- attendees: badges, search, pool, then register -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.attendees')}</label>
-      <div class="ds-attendee-register">
+      <div class="ds-selected-badges" id="dsSelectedBadges"></div>
+      <div class="ds-pool-search-wrap">
+        <input type="text" class="ds-input-sm" id="dsPoolSearch" placeholder="${ko ? '참석자 검색...' : 'Search contacts...'}" autocomplete="off">
+      </div>
+      <div class="ds-contact-pool" id="dsContactPool"></div>
+      <div class="ds-attendee-register" style="margin-top:8px">
         <input type="text" class="ds-input-sm" id="dsAttendeeName" placeholder="${ko ? '이름' : 'Name'}" autocomplete="off">
         <input type="text" class="ds-input-sm" id="dsAttendeeTitle" placeholder="${ko ? '직급' : 'Title'}" autocomplete="off">
         <input type="text" class="ds-input-sm" id="dsAttendeeCompany" placeholder="${ko ? '회사' : 'Company'}" autocomplete="off">
         <button class="btn btn-sm btn-primary" id="btnDsAddAttendee">${ko ? '등록' : 'Add'}</button>
       </div>
       <div class="ds-autocomplete-dropdown" id="dsAutocomplete" hidden></div>
-      <div class="ds-selected-badges" id="dsSelectedBadges"></div>
-      <div class="ds-contact-pool" id="dsContactPool"></div>
     </div>
   `;
 
   renderSelectedBadges();
-  renderContactPool();
+  renderLocationList('');
+  renderContactPool('');
   bindStep1Events();
 }
 
 function bindStep1Events() {
-  // Location autocomplete
+  // Location: filter browsable list on input
   const locInput = $('#dsLocation');
-  const locDropdown = $('#dsLocationDropdown');
-  if (locInput && locDropdown) {
+  if (locInput) {
     locInput.addEventListener('input', () => {
-      const q = locInput.value.trim();
-      if (!q) { locDropdown.hidden = true; return; }
-      const locations = loadLocations();
-      const matches = locations.filter(l => matchField(l.name, q)).slice(0, 8);
-      if (!matches.length) { locDropdown.hidden = true; return; }
-      locDropdown.innerHTML = matches.map(l =>
-        `<div class="ds-ac-item" data-loc-name="${escapeHtml(l.name)}">${escapeHtml(l.name)}${l.memo ? ' <span class="text-muted">' + escapeHtml(l.memo) + '</span>' : ''}</div>`
-      ).join('');
-      locDropdown.hidden = false;
-      locDropdown.querySelectorAll('.ds-ac-item').forEach(item => {
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          locInput.value = item.dataset.locName;
-          locDropdown.hidden = true;
-        });
-      });
+      renderLocationList(locInput.value.trim());
     });
-    locInput.addEventListener('blur', () => setTimeout(() => { locDropdown.hidden = true; }, 150));
   }
 
-  // Attendee autocomplete & registration (same as before)
+  // Attendee pool search
+  const poolSearch = $('#dsPoolSearch');
+  if (poolSearch) {
+    poolSearch.addEventListener('input', () => {
+      renderContactPool(poolSearch.value.trim());
+    });
+  }
+
+  // Attendee autocomplete & registration
   bindAttendeeEvents();
+}
+
+function renderLocationList(query) {
+  const container = $('#dsLocationList');
+  if (!container) return;
+  const locations = loadLocations();
+  const filtered = locations.filter(l => matchField(l.name, query)).slice(0, 50);
+  const currentVal = $('#dsLocation')?.value.trim() || '';
+  if (!filtered.length) {
+    container.innerHTML = `<div class="ds-loc-empty">${isKorean() ? '저장된 장소 없음' : 'No saved locations'}</div>`;
+    return;
+  }
+  // Note: all values passed through escapeHtml for XSS safety
+  container.innerHTML = filtered.map(l => {
+    const selected = currentVal && l.name === currentVal;
+    return `<div class="ds-loc-item${selected ? ' ds-loc-selected' : ''}" data-loc-name="${escapeHtml(l.name)}">`
+      + `<span>${escapeHtml(l.name)}</span>`
+      + (l.memo ? `<span class="ds-loc-memo">${escapeHtml(l.memo)}</span>` : '')
+      + `</div>`;
+  }).join('');
+  container.querySelectorAll('.ds-loc-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const locInput = $('#dsLocation');
+      if (locInput) locInput.value = item.dataset.locName;
+      // Re-render to update selection highlight
+      renderLocationList($('#dsLocation')?.value.trim() || '');
+    });
+  });
 }
 
 function bindAttendeeEvents() {
@@ -512,7 +509,7 @@ function bindAttendeeEvents() {
         if (contact) {
           selectedAttendees.push(contact);
           renderSelectedBadges();
-          renderContactPool();
+          renderContactPool($('#dsPoolSearch')?.value.trim() || '');
           if (nameInput) nameInput.value = '';
           if (titleInput) titleInput.value = '';
           if (companyInput) companyInput.value = '';
@@ -548,7 +545,7 @@ function bindAttendeeEvents() {
       const contact = addContact({ name, title, company });
       selectedAttendees.push(contact);
       renderSelectedBadges();
-      renderContactPool();
+      renderContactPool($('#dsPoolSearch')?.value.trim() || '');
       if (nameInput) nameInput.value = '';
       if (titleInput) titleInput.value = '';
       if (companyInput) companyInput.value = '';
@@ -568,18 +565,24 @@ function renderSelectedBadges() {
     btn.addEventListener('click', () => {
       selectedAttendees.splice(parseInt(btn.dataset.idx), 1);
       renderSelectedBadges();
-      renderContactPool();
+      renderContactPool($('#dsPoolSearch')?.value.trim() || '');
     });
   });
 }
 
-function renderContactPool() {
+function renderContactPool(query) {
   const container = $('#dsContactPool');
   if (!container) return;
   const contacts = loadContacts();
   const selectedIds = new Set(selectedAttendees.map(a => a.id));
-  const available = contacts.filter(c => !selectedIds.has(c.id));
-  if (!available.length) { container.innerHTML = ''; return; }
+  const available = contacts.filter(c => !selectedIds.has(c.id) && matchContactByName(c, query || ''));
+  if (!available.length) {
+    container.innerHTML = query
+      ? `<div class="ds-loc-empty">${isKorean() ? '검색 결과 없음' : 'No matches'}</div>`
+      : '';
+    return;
+  }
+  // Note: all values passed through escapeHtml for XSS safety
   container.innerHTML = available.map(c =>
     `<button class="ds-pool-chip" data-contact-id="${c.id}">${escapeHtml(c.name)}${c.title ? '/' + escapeHtml(c.title) : ''}${c.company ? ' · ' + escapeHtml(c.company) : ''}</button>`
   ).join('');
@@ -589,7 +592,7 @@ function renderContactPool() {
       if (contact && !selectedAttendees.some(a => a.id === contact.id)) {
         selectedAttendees.push(contact);
         renderSelectedBadges();
-        renderContactPool();
+        renderContactPool($('#dsPoolSearch')?.value.trim() || '');
       }
     });
   });
@@ -625,11 +628,20 @@ function renderStep2Form() {
       <input type="text" class="ds-input-sm" id="dsDescription" placeholder="${t('ds.description_placeholder')}" value="${escapeHtml(meetingDescription)}">
     </div>
 
-    <!-- ② 참고 미팅 -->
+    <!-- reference meetings (card UI) -->
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
+      <div class="ds-ref-selected-chips" id="dsRefSelectedChips"></div>
       <div class="ds-ref-box">
-        <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+        <div class="ds-ref-filters">
+          <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+          <select class="ds-ref-type-filter" id="dsRefTypeFilter">
+            <option value="">${ko ? '전체' : 'All'}</option>
+            <option value="copilot">Copilot</option>
+            <option value="minutes">${ko ? '회의록' : 'Minutes'}</option>
+            <option value="learning">${ko ? '학습' : 'Learning'}</option>
+          </select>
+        </div>
         <div class="ds-ref-list" id="dsRefList"></div>
       </div>
     </div>
@@ -647,51 +659,163 @@ function renderStep2Form() {
     </div>
   `;
 
-  renderRefList('');
+  renderRefList('', '');
+  renderRefSelectedChips();
   renderFileAttached();
   bindStep2Events();
 }
 
-function renderRefList(query) {
+function renderRefList(query, typeFilter) {
   const container = $('#dsRefList');
   const countEl = $('#dsRefCount');
   if (!container) return;
+  const ko = isKorean();
   const q = (query || '').replace(/\s/g, '').toLowerCase();
   const filtered = allMeetings.filter(m => {
-    if (!q) return true;
-    const title = (m.title || m.id || '').replace(/\s/g, '').toLowerCase();
-    return title.includes(q);
+    if (q) {
+      const title = (m.title || m.id || '').replace(/\s/g, '').toLowerCase();
+      if (!title.includes(q)) return false;
+    }
+    if (typeFilter) {
+      const preset = m.preset || 'copilot';
+      if (preset !== typeFilter) return false;
+    }
+    return true;
   });
+  // Note: all values passed through escapeHtml for XSS safety
   container.innerHTML = filtered.slice(0, 50).map(m => {
     const checked = selectedReferences.some(r => r.id === m.id);
     const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString() : '';
-    return `<label class="ds-ref-item${checked ? ' ds-ref-checked' : ''}">
-      <input type="checkbox" value="${m.id}" ${checked ? 'checked' : ''}>
-      <span class="ds-ref-title">${escapeHtml(m.title || m.id)}</span>
-      <span class="ds-ref-date">${date}</span>
-    </label>`;
+    const preset = m.preset || 'copilot';
+    const participants = (m.participants || []).slice(0, 3).join(', ');
+    const truncParticipants = participants.length > 40 ? participants.slice(0, 40) + '...' : participants;
+    let summary = '';
+    if (m.analysisHistory?.length) {
+      const last = m.analysisHistory[m.analysisHistory.length - 1];
+      const raw = last.markdown || last.raw || '';
+      summary = raw.replace(/[#*_`>|\-\[\]]/g, '').trim().slice(0, 80);
+      if (raw.length > 80) summary += '...';
+    }
+    return `<div class="ds-ref-card${checked ? ' ds-ref-checked' : ''}" data-meeting-id="${m.id}">
+      <button class="ds-ref-card-preview-btn" data-preview-id="${m.id}" title="${ko ? '미리보기' : 'Preview'}">&#128065;</button>
+      <div class="ds-ref-card-header">
+        <span class="ds-ref-card-title">${escapeHtml(m.title || m.id)}</span>
+        <span class="ds-ref-card-date">${date}</span>
+      </div>
+      <div class="ds-ref-card-meta">
+        <span class="ds-ref-card-type">${escapeHtml(preset)}</span>
+        ${truncParticipants ? `<span class="ds-ref-card-attendees">${escapeHtml(truncParticipants)}</span>` : ''}
+      </div>
+      ${summary ? `<div class="ds-ref-card-summary">${escapeHtml(summary)}</div>` : ''}
+    </div>`;
   }).join('');
   if (!filtered.length) {
-    container.innerHTML = `<div class="ds-ref-empty">${isKorean() ? '검색 결과 없음' : 'No results'}</div>`;
+    container.innerHTML = `<div class="ds-ref-empty">${ko ? '검색 결과 없음' : 'No results'}</div>`;
   }
   if (countEl) {
-    countEl.textContent = selectedReferences.length ? (isKorean() ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
+    countEl.textContent = selectedReferences.length ? (ko ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
   }
-  container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const id = cb.value;
-      if (cb.checked) {
-        const m = allMeetings.find(x => x.id === id);
-        if (m && !selectedReferences.some(r => r.id === id)) selectedReferences.push(m);
-      } else {
+  // Card click = toggle selection
+  container.querySelectorAll('.ds-ref-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      // Ignore if preview button was clicked
+      if (e.target.closest('.ds-ref-card-preview-btn')) return;
+      const id = card.dataset.meetingId;
+      const isSelected = selectedReferences.some(r => r.id === id);
+      if (isSelected) {
         selectedReferences = selectedReferences.filter(r => r.id !== id);
+      } else {
+        const m = allMeetings.find(x => x.id === id);
+        if (m) selectedReferences.push(m);
       }
-      cb.closest('.ds-ref-item').classList.toggle('ds-ref-checked', cb.checked);
+      card.classList.toggle('ds-ref-checked', !isSelected);
+      renderRefSelectedChips();
       if (countEl) {
-        countEl.textContent = selectedReferences.length ? (isKorean() ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
+        countEl.textContent = selectedReferences.length ? (ko ? `선택됨: ${selectedReferences.length}개` : `Selected: ${selectedReferences.length}`) : '';
       }
     });
   });
+  // Preview button click
+  container.querySelectorAll('.ds-ref-card-preview-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openRefViewer(btn.dataset.previewId);
+    });
+  });
+}
+
+function renderRefSelectedChips() {
+  const container = $('#dsRefSelectedChips');
+  if (!container) return;
+  if (!selectedReferences.length) { container.innerHTML = ''; return; }
+  // Note: all values passed through escapeHtml for XSS safety
+  container.innerHTML = selectedReferences.map(r =>
+    `<span class="ds-ref-selected-chip">${escapeHtml(r.title || r.id)} <button data-ref-id="${r.id}">&times;</button></span>`
+  ).join('');
+  container.querySelectorAll('.ds-ref-selected-chip button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedReferences = selectedReferences.filter(r => r.id !== btn.dataset.refId);
+      renderRefSelectedChips();
+      const searchQ = $('#dsRefSearch')?.value || '';
+      const typeF = $('#dsRefTypeFilter')?.value || '';
+      renderRefList(searchQ, typeF);
+    });
+  });
+}
+
+function openRefViewer(meetingId) {
+  const meeting = getMeeting(meetingId);
+  if (!meeting) return;
+  const ko = isKorean();
+
+  const modal = $('#refQuickViewerModal');
+  if (!modal) return;
+  $('#refQuickViewerTitle').textContent = meeting.title || 'Untitled';
+
+  // Transcript tab
+  const transcriptEl = $('#refQuickViewerTranscript');
+  if (meeting.transcript?.length) {
+    transcriptEl.innerHTML = meeting.transcript.map(line => {
+      const time = line.timestamp ? `<span class="transcript-time">${new Date(line.timestamp).toLocaleTimeString()}</span>` : '';
+      return `<div class="transcript-line">${time}${escapeHtml(line.text || '')}</div>`;
+    }).join('');
+  } else {
+    transcriptEl.innerHTML = `<p class="text-muted">${ko ? '녹취록 없음' : 'No transcript'}</p>`;
+  }
+
+  // Analysis tab
+  const analysisEl = $('#refQuickViewerAnalysis');
+  if (meeting.analysisHistory?.length) {
+    const last = meeting.analysisHistory[meeting.analysisHistory.length - 1];
+    const md = last.markdown || last.raw || '';
+    analysisEl.textContent = md;
+  } else {
+    analysisEl.innerHTML = `<p class="text-muted">${ko ? '분석 없음' : 'No analysis'}</p>`;
+  }
+
+  // Reset tabs
+  modal.querySelectorAll('.ref-quick-viewer-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === 'transcript');
+  });
+  transcriptEl.hidden = false;
+  analysisEl.hidden = true;
+
+  // Tab switching
+  modal.querySelectorAll('.ref-quick-viewer-tab').forEach(tab => {
+    tab.onclick = () => {
+      modal.querySelectorAll('.ref-quick-viewer-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      transcriptEl.hidden = tab.dataset.tab !== 'transcript';
+      analysisEl.hidden = tab.dataset.tab !== 'analysis';
+    };
+  });
+
+  // Close handlers
+  const closeBtn = $('#btnCloseRefQuickViewer');
+  if (closeBtn) closeBtn.onclick = () => { modal.hidden = true; };
+  modal.onclick = (e) => { if (e.target === modal) modal.hidden = true; };
+
+  modal.hidden = false;
 }
 
 async function handleFileAttach(files, category) {
@@ -728,10 +852,18 @@ function renderFileAttached() {
 }
 
 function bindStep2Events() {
-  // Reference search
+  // Reference search + type filter
   const refSearch = $('#dsRefSearch');
+  const refTypeFilter = $('#dsRefTypeFilter');
+  const getFilters = () => ({
+    q: refSearch?.value || '',
+    t: refTypeFilter?.value || '',
+  });
   if (refSearch) {
-    refSearch.addEventListener('input', () => renderRefList(refSearch.value));
+    refSearch.addEventListener('input', () => { const f = getFilters(); renderRefList(f.q, f.t); });
+  }
+  if (refTypeFilter) {
+    refTypeFilter.addEventListener('change', () => { const f = getFilters(); renderRefList(f.q, f.t); });
   }
 
   // File drop zones
@@ -758,7 +890,7 @@ function collectStep2Results() {
   meetingDescription = $('#dsDescription')?.value.trim() || '';
   stepResults[2] = {
     description: meetingDescription,
-    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: r.analysis })),
+    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: getLastAnalysisText(r) })),
     files: attachedFiles.map(f => ({ name: f.name, category: f.category })),
   };
 }
@@ -851,7 +983,7 @@ function handleStart() {
     description: meetingDescription,
     attendees: selectedAttendees,
     referenceIds: selectedReferences.map(r => r.id),
-    referenceAnalysis: selectedReferences.map(r => r.analysis || '').filter(Boolean).join('\n\n---\n\n') || null,
+    referenceAnalysis: selectedReferences.map(r => getLastAnalysisText(r)).filter(Boolean).join('\n\n---\n\n') || null,
     attachedFiles: attachedFiles,
   };
   emit('deepSetup:complete', config);
