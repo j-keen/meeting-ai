@@ -650,6 +650,7 @@ const translations = {
     'chat.idle': 'Chat ready',
     'chat.idle_hint': 'Start a session to ask AI about your meeting.',
     'stt.connected': 'Speech service connected.',
+    'stt.reconnected': 'Speech service reconnected.',
 
     // End Meeting Modal
     'end_meeting.title': 'Save Meeting',
@@ -1602,6 +1603,7 @@ const translations = {
     'chat.idle': '채팅 준비 완료',
     'chat.idle_hint': '세션을 시작하면 AI에게 질문할 수 있습니다.',
     'stt.connected': '음성 서비스에 연결되었습니다.',
+    'stt.reconnected': '음성 서비스에 다시 연결되었습니다.',
 
     // End Meeting Modal
     'end_meeting.title': '회의 저장',

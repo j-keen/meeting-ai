@@ -466,6 +466,54 @@ export async function startRecording() {
   }
 }
 
+// Mobile: restart STT when returning from background
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible') return;
+  if (!state.isRecording || !stt) return;
+
+  // If STT died while in background (isRunning got reset by fatal error), restart it
+  if (!stt.isRunning) {
+    console.log('[Recording] Page visible — STT died in background, restarting...');
+    stt.stop();
+    stt = createSTT();
+    try {
+      await stt.start({
+        language: state.settings.language || 'ko',
+        onRecordingStream: () => {},  // skip recording stream on restart
+        onInterim: (text) => { showInterim(text); },
+        onFinal: (text) => {
+          const line = {
+            id: generateId(),
+            text,
+            timestamp: Date.now(),
+            bookmarked: false,
+          };
+          state.transcript.push(line);
+          addTranscriptLine(line);
+          emit('transcript:add', line);
+          lastTranscriptTime = Date.now();
+        },
+        onReplace: (text) => {
+          const lastLine = state.transcript[state.transcript.length - 1];
+          if (lastLine) {
+            lastLine.text = text;
+            lastLine.timestamp = Date.now();
+            updateTranscriptLineUI(lastLine.id);
+            lastTranscriptTime = Date.now();
+          }
+        },
+        onError: (err) => { showToast(err, 'error'); },
+        onConnecting: () => {},
+        onConnected: (engine) => {
+          showToast(t('stt.reconnected') || t('stt.connected'), 'success');
+        },
+      });
+    } catch (err) {
+      showToast(t('toast.record_fail') + err.message, 'error');
+    }
+  }
+});
+
 export async function stopRecording() {
   if (!state.isRecording) return;
 
