@@ -353,7 +353,10 @@ export function createSTT() {
       let micStream = null;
       try {
         sttDebug(`[STT] Requesting mic permission (platform: ${navigator.userAgent.slice(0, 60)})`);
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioConstraints = isMobile
+          ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+          : true;
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
         sttDebug(`[STT] Mic permission granted, tracks: ${micStream.getTracks().length}`);
       } catch (err) {
         isRunning = false;
