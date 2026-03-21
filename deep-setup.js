@@ -18,9 +18,9 @@ const MODEL = 'gemini-2.5-flash';
 
 // ===== State =====
 let currentStep = 1;
-const TOTAL_STEPS = 4;
-let stepHistories = { 3: [] };
-let stepResults = { 1: null, 2: null, 3: null };
+const TOTAL_STEPS = 5;
+let stepHistories = { 4: [] };
+let stepResults = { 1: null, 2: null, 3: null, 4: null };
 let isStreaming = false;
 let selectedAttendees = [];
 let selectedReferences = [];
@@ -75,8 +75,8 @@ function getLastAnalysisText(meeting) {
   return last.markdown || last.summary || last.raw || '';
 }
 
-// ===== Step 3: AI Prompt =====
-function getStep3Prompt(prevResults, isAutoFire) {
+// ===== Step 4: AI Prompt =====
+function getStep4Prompt(prevResults, isAutoFire) {
   const ko = isKorean();
   const lang = ko ? 'ko' : 'en';
   const ctx = JSON.stringify(prevResults, null, 2);
@@ -117,7 +117,7 @@ function getStep3Prompt(prevResults, isAutoFire) {
 
 // ===== Chat Render Helpers =====
 function getChatContainer() {
-  return $('#dsMessages3');
+  return $('#dsMessages4');
 }
 
 function addMessage(role, html) {
@@ -172,6 +172,7 @@ function goToStep(n) {
   // Collect form data when leaving steps
   if (currentStep === 1 && n !== 1) collectStep1Results();
   if (currentStep === 2 && n !== 2) collectStep2Results();
+  if (currentStep === 3 && n !== 3) collectStep3Results();
 
   currentStep = n;
 
@@ -196,31 +197,32 @@ function goToStep(n) {
   const nextBtn = $('#btnDsNext');
   const skipBtn = $('#btnDsSkip');
   if (backBtn) backBtn.hidden = n === 1;
-  if (skipBtn) skipBtn.hidden = n !== 2;
+  if (skipBtn) skipBtn.hidden = n !== 2 && n !== 3;
   if (nextBtn) {
     nextBtn.hidden = n === TOTAL_STEPS;
-    // Step 1: always enabled (datetime auto-filled), Step 2: always (skippable), Step 3: needs AI result
-    nextBtn.disabled = (n === 1 || n === 2) ? false : !stepResults[3];
+    // Step 1: always enabled (datetime auto-filled), Step 2 & 3: always (skippable), Step 4: needs AI result
+    nextBtn.disabled = (n === 1 || n === 2 || n === 3) ? false : !stepResults[4];
   }
 
-  // Step 3: auto-fire AI on first visit
-  if (n === 3 && stepHistories[3].length === 0) {
+  // Step 4: auto-fire AI on first visit
+  if (n === 4 && stepHistories[4].length === 0) {
     // Collect step data before AI call
     collectStep1Results();
     collectStep2Results();
+    collectStep3Results();
 
     // Render context card (summary of what AI knows)
     renderContextCard();
 
-    const msgs3 = $('#dsMessages3');
-    if (msgs3 && msgs3.children.length === 0) {
+    const msgs4 = $('#dsMessages4');
+    if (msgs4 && msgs4.children.length === 0) {
       // Auto-fire: AI immediately analyzes input and suggests focus points
       // Added a slight delay so UI transitions smoothly before locking
       setTimeout(() => sendMessage('', true), 300);
     }
   }
 
-  // Step 4: render summary
+  // Step 5: render summary
   if (n === TOTAL_STEPS) {
     renderSummary();
   }
@@ -234,6 +236,7 @@ function renderContextCard() {
   const ko = isKorean();
   const s1 = stepResults[1] || {};
   const s2 = stepResults[2] || {};
+  const s3 = stepResults[3] || {};
 
   const items = [];
 
@@ -253,8 +256,8 @@ function renderContextCard() {
   if (s2.references?.length) {
     items.push(`<span class="ds-ctx-chip">${ko ? '참고 미팅' : 'Ref'} ${s2.references.length}${ko ? '개' : ''}</span>`);
   }
-  if (s2.files?.length) {
-    items.push(`<span class="ds-ctx-chip">${ko ? '첨부' : 'Files'} ${s2.files.length}${ko ? '개' : ''}</span>`);
+  if (s3.files?.length) {
+    items.push(`<span class="ds-ctx-chip">${ko ? '첨부' : 'Files'} ${s3.files.length}${ko ? '개' : ''}</span>`);
   }
 
   if (!items.length) {
@@ -262,7 +265,7 @@ function renderContextCard() {
     return;
   }
 
-  card.innerHTML = `<span class="ds-ctx-label">${t('ds.step3_context_card')}</span>${items.join('')}`;
+  card.innerHTML = `<span class="ds-ctx-label">${ko ? '반영된 요약:' : 'Context:'}</span>${items.join('')}`;
   card.hidden = false;
 }
 
@@ -271,8 +274,9 @@ function buildContents(userText, isAutoFire = false) {
   const allResults = {
     step1: stepResults[1],
     step2: stepResults[2],
+    step3: stepResults[3],
   };
-  const systemPrompt = getStep3Prompt(allResults, isAutoFire);
+  const systemPrompt = getStep4Prompt(allResults, isAutoFire);
 
   if (isAutoFire) {
     // Auto-fire: system prompt only, AI responds immediately
@@ -281,13 +285,13 @@ function buildContents(userText, isAutoFire = false) {
     ];
   }
 
-  const greeting = t('ds.step3_greeting');
+  const greeting = t('ds.step4_greeting') || t('ds.step3_greeting');
   const contents = [
     { role: 'user', parts: [{ text: systemPrompt }] },
     { role: 'model', parts: [{ text: greeting }] },
   ];
 
-  (stepHistories[3] || []).forEach(msg => {
+  (stepHistories[4] || []).forEach(msg => {
     contents.push({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }],
@@ -307,13 +311,13 @@ async function sendMessage(text, isAutoFire = false) {
 
   if (!isAutoFire) {
     addUserMessage(text);
-    stepHistories[3].push({ role: 'user', text });
+    stepHistories[4].push({ role: 'user', text });
   }
 
-  const input = $('#dsInput3');
+  const input = $('#dsInput4');
   if (input) input.value = '';
 
-  const chips = $('#dsChips3');
+  const chips = $('#dsChips4');
   if (chips) chips.style.display = 'none';
 
   if (!isProxyAvailable()) {
@@ -324,7 +328,7 @@ async function sendMessage(text, isAutoFire = false) {
   }
 
   isStreaming = true;
-  const sendBtn = $('#btnDsSend3');
+  const sendBtn = $('#btnDsSend4');
   if (sendBtn) sendBtn.disabled = true;
 
   if (isAutoFire) {
@@ -365,19 +369,19 @@ async function sendMessage(text, isAutoFire = false) {
 
     streamContent.innerHTML = renderMarkdown(fullText);
     container.scrollTop = container.scrollHeight;
-    stepHistories[3].push({ role: 'model', text: fullText });
+    stepHistories[4].push({ role: 'model', text: fullText });
 
     // Extract JSON result
     const json = extractJSON(fullText);
     if (json) {
-      stepResults[3] = json;
+      stepResults[4] = json;
       const nextBtn = $('#btnDsNext');
       if (nextBtn) nextBtn.disabled = false;
 
       // Auto-advance after a short delay
       setTimeout(() => {
-        if (currentStep === 3) {
-          goToStep(4);
+        if (currentStep === 4) {
+          goToStep(5);
         }
       }, 800);
     }
@@ -758,44 +762,28 @@ function renderStep2Form() {
   if (desc) desc.textContent = t('ds.step2_desc');
 
   formArea.innerHTML = `
-    <div class="ds-step2-grid">
-      <div class="ds-step2-main">
-        <!-- ① 한줄 설명 -->
-        <div class="ds-form-section ds-form-section-transparent">
-          <label class="ds-form-label">${t('ds.description')}</label>
-          <textarea class="ds-input-sm ds-textarea" id="dsDescription" placeholder="${t('ds.description_placeholder')}" rows="2">${escapeHtml(meetingDescription)}</textarea>
-        </div>
-
-        <!-- reference meetings (card UI) -->
-        <div class="ds-form-section ds-form-section-transparent">
-          <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
-          <div class="ds-ref-selected-chips" id="dsRefSelectedChips"></div>
-          <div class="ds-ref-box">
-            <div class="ds-ref-filters">
-              <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
-              <select class="ds-ref-type-filter" id="dsRefTypeFilter">
-                <option value="">${ko ? '전체' : 'All'}</option>
-                <option value="copilot">Copilot</option>
-                <option value="minutes">${ko ? '회의록' : 'Minutes'}</option>
-                <option value="learning">${ko ? '학습' : 'Learning'}</option>
-              </select>
-            </div>
-            <div class="ds-ref-list ds-compact-list" id="dsRefList"></div>
-          </div>
-        </div>
+    <div class="ds-step-form-layout">
+      <!-- ① 한줄 설명 -->
+      <div class="ds-form-section">
+        <label class="ds-form-label">${t('ds.description')}</label>
+        <textarea class="ds-input-sm ds-textarea" id="dsDescription" placeholder="${t('ds.description_placeholder')}" rows="2">${escapeHtml(meetingDescription)}</textarea>
       </div>
 
-      <div class="ds-step2-side">
-        <!-- ③ 파일 첨부 -->
-        <div class="ds-form-section ds-attachment-section">
-          <label class="ds-form-label">${t('ds.files')}</label>
-          <div class="ds-file-drops ds-file-drops-vertical">
-            <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
-            <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
-            <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
-            <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+      <!-- reference meetings (card UI) -->
+      <div class="ds-form-section">
+        <label class="ds-form-label">${t('ds.ref_meetings')} <span class="ds-ref-count" id="dsRefCount"></span></label>
+        <div class="ds-ref-selected-chips" id="dsRefSelectedChips"></div>
+        <div class="ds-ref-box">
+          <div class="ds-ref-filters">
+            <input type="search" class="ds-input-sm ds-ref-search" id="dsRefSearch" placeholder="${ko ? '검색...' : 'Search...'}">
+            <select class="ds-ref-type-filter" id="dsRefTypeFilter">
+              <option value="">${ko ? '전체' : 'All'}</option>
+              <option value="copilot">Copilot</option>
+              <option value="minutes">${ko ? '회의록' : 'Minutes'}</option>
+              <option value="learning">${ko ? '학습' : 'Learning'}</option>
+            </select>
           </div>
-          <div class="ds-file-attached" id="dsFileAttached"></div>
+          <div class="ds-ref-list ds-compact-list" id="dsRefList"></div>
         </div>
       </div>
     </div>
@@ -1017,8 +1005,44 @@ function bindStep2Events() {
   if (refTypeFilter) {
     refTypeFilter.addEventListener('change', () => { const f = getFilters(); renderRefList(f.q, f.t); });
   }
+}
 
-  // File drop zones
+function collectStep2Results() {
+  meetingDescription = $('#dsDescription')?.value.trim() || '';
+  stepResults[2] = {
+    description: meetingDescription,
+    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: getLastAnalysisText(r) })),
+  };
+}
+
+// ===== Step 3: Files Form =====
+function renderStep3Form() {
+  const formArea = $('#dsFormArea3');
+  if (!formArea) return;
+  const ko = isKorean();
+  const desc = $('#dsStep3Desc');
+  if (desc) desc.textContent = ko ? '참고할 파일이나 자료를 첨부해 주세요. (선택)' : 'Attach any reference files or materials. (Optional)';
+
+  formArea.innerHTML = `
+    <div class="ds-step-form-layout" style="height: 100%;">
+      <div class="ds-form-section ds-attachment-section">
+        <label class="ds-form-label">${t('ds.files')}</label>
+        <div class="ds-file-drops ds-file-drops-vertical">
+          <div class="ds-drop-zone" data-category="minutes"><div class="ds-drop-icon">📄</div><div class="ds-drop-label">${ko ? '회의록' : 'Minutes'}</div><div class="ds-drop-hint">.md .txt</div><input type="file" hidden accept=".md,.txt,.doc,.docx,.hwp,.pdf"></div>
+          <div class="ds-drop-zone" data-category="data"><div class="ds-drop-icon">📊</div><div class="ds-drop-label">${ko ? '자료' : 'Data'}</div><div class="ds-drop-hint">.csv .xlsx</div><input type="file" hidden accept=".csv,.xlsx,.xls,.json,.xml,.yaml,.yml"></div>
+          <div class="ds-drop-zone" data-category="memo"><div class="ds-drop-icon">📋</div><div class="ds-drop-label">${ko ? '메모' : 'Memo'}</div><div class="ds-drop-hint">.md .log</div><input type="file" hidden accept=".md,.txt,.log,.rtf"></div>
+          <div class="ds-drop-zone" data-category="etc"><div class="ds-drop-icon">📁</div><div class="ds-drop-label">${ko ? '기타' : 'Other'}</div><div class="ds-drop-hint">.py .js</div><input type="file" hidden accept=".py,.js,.ts,.html,.css,.xml,.log,.yaml,.yml,.txt,.md,.csv,.json"></div>
+        </div>
+        <div class="ds-file-attached" id="dsFileAttached"></div>
+      </div>
+    </div>
+  `;
+
+  renderFileAttached();
+  bindStep3Events();
+}
+
+function bindStep3Events() {
   document.querySelectorAll('.ds-drop-zone').forEach(zone => {
     const fileInput = zone.querySelector('input[type="file"]');
     zone.addEventListener('click', () => fileInput?.click());
@@ -1038,16 +1062,13 @@ function bindStep2Events() {
   });
 }
 
-function collectStep2Results() {
-  meetingDescription = $('#dsDescription')?.value.trim() || '';
-  stepResults[2] = {
-    description: meetingDescription,
-    references: selectedReferences.map(r => ({ id: r.id, title: r.title, analysis: getLastAnalysisText(r) })),
+function collectStep3Results() {
+  stepResults[3] = {
     files: attachedFiles.map(f => ({ name: f.name, category: f.category })),
   };
 }
 
-// ===== Step 4: Summary =====
+// ===== Step 5: Summary =====
 function renderSummary() {
   const container = $('#dsSummary');
   if (!container) return;
@@ -1055,6 +1076,7 @@ function renderSummary() {
   const s1 = stepResults[1] || {};
   const s2 = stepResults[2] || {};
   const s3 = stepResults[3] || {};
+  const s4 = stepResults[4] || {};
 
   let html = `<div class="ds-summary-card">`;
 
@@ -1090,19 +1112,28 @@ function renderSummary() {
     </div>`;
   }
 
+  // Files
+  if (s3.files?.length) {
+    const ko = isKorean();
+    html += `<div class="ds-summary-section">
+      <div class="ds-summary-label">${ko ? '첨부 파일' : 'Attached Files'}</div>
+      <div class="ds-summary-value">${s3.files.map(f => escapeHtml(f.name)).join(', ')}</div>
+    </div>`;
+  }
+
   // Situation / Summary from AI
-  if (s3.summary) {
+  if (s4.summary) {
     html += `<div class="ds-summary-section">
       <div class="ds-summary-label">${t('ds.summary_situation')}</div>
-      <div class="ds-summary-value">${escapeHtml(s3.summary)}</div>
+      <div class="ds-summary-value">${escapeHtml(s4.summary)}</div>
     </div>`;
   }
 
   // Focus Points
-  if (s3.focusPoints?.length) {
+  if (s4.focusPoints?.length) {
     html += `<div class="ds-summary-section">
       <div class="ds-summary-label">${t('ds.summary_focus')}</div>
-      <ul class="ds-summary-list">${s3.focusPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+      <ul class="ds-summary-list">${s4.focusPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
     </div>`;
   }
 
@@ -1143,16 +1174,16 @@ function handleStart() {
 }
 
 function handleSavePreset() {
-  const s3 = stepResults[3];
-  if (!s3) return;
+  const s4 = stepResults[4];
+  if (!s4) return;
   addCustomType({
-    name: s3.name || '',
-    description: s3.description || '',
-    prompt: s3.analysisPrompt || '',
-    chatSystemPrompt: s3.chatSystemPrompt || '',
-    chatPresets: s3.chatPresets || [],
-    memoHint: s3.memoHint || '',
-    context: s3.context || '',
+    name: s4.name || '',
+    description: s4.description || '',
+    prompt: s4.analysisPrompt || '',
+    chatSystemPrompt: s4.chatSystemPrompt || '',
+    chatPresets: s4.chatPresets || [],
+    memoHint: s4.memoHint || '',
+    context: s4.context || '',
   });
   emit('customTypes:change');
   showToast(t('pb.saved'), 'success');
@@ -1165,8 +1196,8 @@ export function openDeepSetup() {
 
   // Reset
   currentStep = 1;
-  stepHistories = { 3: [] };
-  stepResults = { 1: null, 2: null, 3: null };
+  stepHistories = { 4: [] };
+  stepResults = { 1: null, 2: null, 3: null, 4: null };
   selectedAttendees = [];
   selectedReferences = [];
   attachedFiles = [];
@@ -1177,8 +1208,8 @@ export function openDeepSetup() {
   modal.hidden = false;
 
   // Clear chat area
-  const msgs3 = $('#dsMessages3');
-  if (msgs3) msgs3.innerHTML = '';
+  const msgs4 = $('#dsMessages4');
+  if (msgs4) msgs4.innerHTML = '';
 
   // Reset summary
   const summary = $('#dsSummary');
@@ -1189,27 +1220,28 @@ export function openDeepSetup() {
   // Render step 1 form (datetime, location, attendees)
   renderStep1Form();
 
-  // Pre-render step 2 form
+  // Pre-render step 2 and 3 forms
   renderStep2Form();
+  renderStep3Form();
 }
 
 // ===== Init =====
 export function initDeepSetup() {
-  // Send button for chat step 3
-  const sendBtn = $('#btnDsSend3');
+  // Send button for chat step 4
+  const sendBtn = $('#btnDsSend4');
   if (sendBtn) {
     sendBtn.addEventListener('click', () => {
-      const input = $('#dsInput3');
+      const input = $('#dsInput4');
       if (input?.value.trim()) sendMessage(input.value.trim());
     });
   }
 
-  const input3 = $('#dsInput3');
-  if (input3) {
-    input3.addEventListener('keydown', (e) => {
+  const input4 = $('#dsInput4');
+  if (input4) {
+    input4.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        if (input3.value.trim()) sendMessage(input3.value.trim());
+        if (input4.value.trim()) sendMessage(input4.value.trim());
       }
     });
   }
@@ -1225,16 +1257,21 @@ export function initDeepSetup() {
     nextBtn.addEventListener('click', () => goToStep(currentStep + 1));
   }
 
-  // Skip button (Step 2)
+  // Skip button (Step 2 & 3)
   const skipBtn = $('#btnDsSkip');
   if (skipBtn) {
     skipBtn.addEventListener('click', () => {
-      collectStep2Results();
-      goToStep(3);
+      if (currentStep === 2) {
+        collectStep2Results();
+        goToStep(3);
+      } else if (currentStep === 3) {
+        collectStep3Results();
+        goToStep(4);
+      }
     });
   }
 
-  // Step 4 action buttons
+  // Step 5 action buttons
   const startBtn = $('#btnDsStart');
   if (startBtn) startBtn.addEventListener('click', handleStart);
 
@@ -1242,7 +1279,7 @@ export function initDeepSetup() {
   if (saveBtn) saveBtn.addEventListener('click', handleSavePreset);
 
   const editBtn = $('#btnDsEdit');
-  if (editBtn) editBtn.addEventListener('click', () => goToStep(3));
+  if (editBtn) editBtn.addEventListener('click', () => goToStep(4));
 
   // Close
   const modal = $('#deepSetupModal');

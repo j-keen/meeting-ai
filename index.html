@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -30,6 +31,7 @@
       </button>
       <button class="btn btn-text" id="btnHistory" data-i18n="header.history" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">History</button>
       <button class="btn btn-text" id="btnSettings" data-i18n="header.settings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">Settings</button>
+      <button class="btn btn-text" id="btnAuth" title="Login" aria-label="Login">로그인</button>
     </div>
   </header>
 
@@ -223,6 +225,7 @@
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
+        <button class="settings-tab" data-tab="account">Account</button>
       </div>
 
       <!-- General Tab -->
@@ -382,6 +385,30 @@
             <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
           </button>
+        </section>
+      </div>
+
+      <!-- Account Tab (Supabase) -->
+      <div class="settings-tab-content" data-tab="account">
+        <section class="settings-section">
+          <h3>계정</h3>
+          <div id="accountInfo" style="margin-bottom:12px;">
+            <p class="text-muted">로그인하면 모바일 앱과 데이터를 동기화할 수 있습니다.</p>
+          </div>
+          <button class="btn btn-sm" id="btnAccountLogin" onclick="window.supabaseSignIn()">Google로 로그인</button>
+        </section>
+        <section class="settings-section">
+          <h3>Supabase 설정</h3>
+          <label class="settings-label">Supabase URL</label>
+          <input type="text" class="settings-input" id="inputSupabaseUrl" placeholder="https://your-project.supabase.co">
+          <label class="settings-label" style="margin-top:8px;">Supabase Anon Key</label>
+          <input type="text" class="settings-input" id="inputSupabaseKey" placeholder="your-anon-key">
+          <button class="btn btn-sm" style="margin-top:8px;" id="btnSaveSupabase">저장</button>
+        </section>
+        <section class="settings-section">
+          <h3>동기화</h3>
+          <p class="text-muted" id="syncStatus">동기화 상태: 설정 안됨</p>
+          <button class="btn btn-sm" id="btnManualSync" onclick="window.loadFromCloud && window.loadFromCloud()">수동 동기화</button>
         </section>
       </div>
 
@@ -1609,9 +1636,11 @@
         <div class="prep-step-line"></div>
         <button class="prep-step-dot" data-step="2" disabled><span class="prep-step-num">2</span><span class="prep-step-label" data-i18n="ds.step2">Context</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3">AI Setup</span></button>
+        <button class="prep-step-dot" data-step="3" disabled><span class="prep-step-num">3</span><span class="prep-step-label" data-i18n="ds.step3_files">Files</span></button>
         <div class="prep-step-line"></div>
-        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="ds.step4">Ready</span></button>
+        <button class="prep-step-dot" data-step="4" disabled><span class="prep-step-num">4</span><span class="prep-step-label" data-i18n="ds.step4_ai">AI Setup</span></button>
+        <div class="prep-step-line"></div>
+        <button class="prep-step-dot" data-step="5" disabled><span class="prep-step-num">5</span><span class="prep-step-label" data-i18n="ds.step5_ready">Ready</span></button>
       </div>
 
       <!-- Step 1: Basic Info (form) — datetime, location, attendees -->
@@ -1624,37 +1653,47 @@
         </div>
       </div>
 
-      <!-- Step 2: Context (form) — description, reference meetings, files -->
+      <!-- Step 2: Context (form) — description, reference meetings -->
       <div class="ds-step-panel" data-step="2" hidden>
         <div class="ds-step-form-layout">
           <p class="ds-step-desc" id="dsStep2Desc"></p>
           <div class="ds-form-area ds-form-full" id="dsFormArea2">
-            <!-- dynamically rendered: description, reference, files -->
+            <!-- dynamically rendered: description, reference -->
           </div>
         </div>
       </div>
 
-      <!-- Step 3: AI Setup (chat) -->
+      <!-- Step 3: Files (form) — file attachment -->
       <div class="ds-step-panel" data-step="3" hidden>
+        <div class="ds-step-form-layout">
+          <p class="ds-step-desc" id="dsStep3Desc"></p>
+          <div class="ds-form-area ds-form-full" id="dsFormArea3">
+            <!-- dynamically rendered: file attachments -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: AI Setup (chat) -->
+      <div class="ds-step-panel" data-step="4" hidden>
         <div class="ds-context-card" id="dsContextCard" hidden></div>
         <div class="ds-chat-area">
-          <div class="pb-messages" id="dsMessages3"></div>
-          <div class="pb-chips" id="dsChips3"></div>
+          <div class="pb-messages" id="dsMessages4"></div>
+          <div class="pb-chips" id="dsChips4"></div>
           <div class="pb-input-wrap">
-            <textarea class="pb-input" id="dsInput3" rows="1" placeholder="..."></textarea>
-            <button class="pb-send-btn" id="btnDsSend3">&#10148;</button>
+            <textarea class="pb-input" id="dsInput4" rows="1" placeholder="..."></textarea>
+            <button class="pb-send-btn" id="btnDsSend4">&#10148;</button>
           </div>
         </div>
       </div>
 
-      <!-- Step 4: Summary -->
-      <div class="ds-step-panel" data-step="4" hidden>
+      <!-- Step 5: Summary -->
+      <div class="ds-step-panel" data-step="5" hidden>
         <div class="ds-summary-area">
-          <h3 class="ds-step4-title" data-i18n="ds.step4_title">Ready to go!</h3>
+          <h3 class="ds-step5-title" data-i18n="ds.step5_title">Ready to go!</h3>
           <div id="dsSummary"></div>
-          <div class="ds-step4-actions">
+          <div class="ds-step5-actions">
             <button class="btn btn-text" id="btnDsEdit" data-i18n="ds.btn_edit">&larr; Edit</button>
-            <div class="ds-step4-actions-right">
+            <div class="ds-step5-actions-right">
               <button class="btn btn-outline" id="btnDsSavePreset" data-i18n="ds.btn_save_preset">💾 Save as Preset</button>
               <button class="btn btn-primary" id="btnDsStart" data-i18n="ds.btn_start">▶ Start</button>
             </div>
@@ -1870,6 +1909,9 @@
     </div>
   </template>
 
+  <script src="supabase-client.js"></script>
+  <script src="supabase-auth.js"></script>
+  <script src="supabase-sync.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
