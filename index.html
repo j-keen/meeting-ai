@@ -8,7 +8,57 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <!-- Native app bridge: detect WebView and setup bridge before any modules load -->
+  <script>
+  (function() {
+    var isNativeApp = /MeetingAIApp/i.test(navigator.userAgent) || window.ReactNativeWebView;
+    if (!isNativeApp) return;
+    console.log('[NativeBridge] Native app detected via userAgent');
+    if (!window.__nativeBridge) {
+      window.__nativeBridge = {
+        isNative: true,
+        sttCallbacks: {},
+        onSTTResult: function(data) {
+          if (data.isFinal && this.sttCallbacks.onFinal) {
+            this.sttCallbacks.onFinal(data.text);
+          } else if (!data.isFinal && this.sttCallbacks.onInterim) {
+            this.sttCallbacks.onInterim(data.text);
+          }
+        },
+        onSTTError: function(msg) {
+          if (this.sttCallbacks.onError) this.sttCallbacks.onError(msg);
+        },
+        onSTTStatus: function(status) {
+          if (status === 'connected' && this.sttCallbacks.onConnected) {
+            this.sttCallbacks.onConnected('native');
+          }
+        },
+        startSTT: function(language) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'startSTT', language: language }));
+          }
+        },
+        stopSTT: function() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stopSTT' }));
+          }
+        },
+        pauseSTT: function() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'pauseSTT' }));
+          }
+        },
+        resumeSTT: function(language) {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'resumeSTT', language: language }));
+          }
+        }
+      };
+    }
+  })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase-client.js"></script>
 </head>
 <body>
   <!-- Header -->
@@ -388,26 +438,18 @@
         </section>
       </div>
 
-      <!-- Account Tab (Supabase) -->
+      <!-- Account Tab -->
       <div class="settings-tab-content" data-tab="account">
         <section class="settings-section">
           <h3>계정</h3>
           <div id="accountInfo" style="margin-bottom:12px;">
-            <p class="text-muted">로그인하면 모바일 앱과 데이터를 동기화할 수 있습니다.</p>
+            <p class="text-muted">Google 로그인하면 모바일 앱과 회의록이 자동 동기화됩니다.</p>
           </div>
           <button class="btn btn-sm" id="btnAccountLogin" onclick="window.supabaseSignIn()">Google로 로그인</button>
         </section>
         <section class="settings-section">
-          <h3>Supabase 설정</h3>
-          <label class="settings-label">Supabase URL</label>
-          <input type="text" class="settings-input" id="inputSupabaseUrl" placeholder="https://your-project.supabase.co">
-          <label class="settings-label" style="margin-top:8px;">Supabase Anon Key</label>
-          <input type="text" class="settings-input" id="inputSupabaseKey" placeholder="your-anon-key">
-          <button class="btn btn-sm" style="margin-top:8px;" id="btnSaveSupabase">저장</button>
-        </section>
-        <section class="settings-section">
           <h3>동기화</h3>
-          <p class="text-muted" id="syncStatus">동기화 상태: 설정 안됨</p>
+          <p class="text-muted" id="syncStatus">로그인 후 자동 동기화됩니다</p>
           <button class="btn btn-sm" id="btnManualSync" onclick="window.loadFromCloud && window.loadFromCloud()">수동 동기화</button>
         </section>
       </div>
@@ -1909,8 +1951,6 @@
     </div>
   </template>
 
-  <script src="supabase-client.js"></script>
-  <script src="supabase-auth.js"></script>
   <script src="supabase-sync.js"></script>
   <script type="module" src="app.js"></script>
 </body>
