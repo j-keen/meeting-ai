@@ -231,8 +231,13 @@ export function initModals() {
     });
   });
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    let mouseDownTarget = null;
+    overlay.addEventListener('mousedown', (e) => {
+      mouseDownTarget = e.target;
+    });
     overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.hidden = true;
+      if (e.target === overlay && mouseDownTarget === overlay) overlay.hidden = true;
+      mouseDownTarget = null;
     });
   });
 }
