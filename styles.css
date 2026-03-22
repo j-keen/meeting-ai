@@ -86,6 +86,9 @@ body {
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
+  /* Native app safe area: avoid status bar & navigation bar overlap */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ===== Scrollbar ===== */
