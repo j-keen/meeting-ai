@@ -295,12 +295,14 @@ function updateTimer() {
   const s = Math.floor((diff % 60000) / 1000);
   $('#meetingTimer').textContent =
     `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  // Native app bridge: update foreground notification timer
+  // Native app bridge: update foreground notification timer (every 10s to avoid notification spam)
   if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
     const elapsedSec = Math.floor(diff / 1000);
-    window.ReactNativeWebView.postMessage(JSON.stringify({
-      type: 'updateTimer', elapsed: elapsedSec, title: state.meetingTitle || 'Meeting AI'
-    }));
+    if (elapsedSec % 10 === 0) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'updateTimer', elapsed: elapsedSec, title: state.meetingTitle || 'Meeting AI'
+      }));
+    }
   }
 }
 
