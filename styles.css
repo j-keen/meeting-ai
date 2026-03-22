@@ -89,8 +89,7 @@ body {
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
-  /* Native app safe area: bottom nav bar */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  /* Safe area is handled per-component: header (top), bottom-bar (bottom), settings-panel (both) */
 }
 
 /* ===== Scrollbar ===== */
@@ -1282,6 +1281,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   align-items: center;
   justify-content: center;
   padding: 0 16px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -1452,6 +1452,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   transition: transform var(--transition-normal);
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .settings-panel.open { transform: translateX(0); }
 .settings-header {
@@ -1990,6 +1992,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   align-items: center;
   justify-content: center;
   padding: 20px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 20px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
 }
 .modal-overlay[hidden] { display: none; }
 .modal {
