@@ -32,17 +32,18 @@
   window.supabaseSignIn = async function () {
     // Native app: open OAuth in Chrome Custom Tab instead of WebView redirect
     if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
+      var nativeRedirect = 'com.meetingai.webview://auth/callback';
       const { data, error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + window.location.pathname,
+          redirectTo: nativeRedirect,
           skipBrowserRedirect: true,
         },
       });
       if (error) { alert('로그인 실패: ' + error.message); return; }
       if (data?.url) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'googleLogin', url: data.url
+          type: 'googleLogin', url: data.url, redirectUrl: nativeRedirect
         }));
       }
       return;
