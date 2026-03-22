@@ -74,7 +74,7 @@
 }
 
 html {
-  background: #000;
+  background: var(--bg-primary);
 }
 html, body {
   height: 100%;
@@ -89,7 +89,9 @@ body {
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
-  /* Safe area is handled per-component: header (top), bottom-bar (bottom), settings-panel (both) */
+  /* Native app safe area: top/bottom spacing to avoid status bar & nav bar */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ===== Scrollbar ===== */
@@ -178,7 +180,6 @@ h1, h2, h3 { font-weight: 600; }
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  padding-top: env(safe-area-inset-top, 0px);
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   z-index: 10;
@@ -1281,7 +1282,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
