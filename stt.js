@@ -253,6 +253,20 @@ export function createSTT() {
       if (isRunning) return;
       isRunning = true;
 
+      // Native app bridge: delegate STT to native layer
+      if (window.__nativeBridge?.isNative) {
+        sttDebug('[STT] Native bridge detected — delegating to native STT');
+        window.__nativeBridge.sttCallbacks = {
+          onInterim,
+          onFinal: (text) => { if (text?.trim()) onFinal(text); },
+          onError,
+          onConnected,
+        };
+        window.__nativeBridge.startSTT(language);
+        onConnecting?.();
+        return;
+      }
+
       const safeFinal = (text) => {
         if (text && text.trim()) onFinal(text);
       };
@@ -316,6 +330,13 @@ export function createSTT() {
     },
 
     stop() {
+      // Native app bridge: stop native STT
+      if (window.__nativeBridge?.isNative) {
+        sttDebug('[STT] Native bridge — stopping native STT');
+        window.__nativeBridge.stopSTT();
+        isRunning = false;
+        return;
+      }
       currentEngine?.stop();
       currentEngine = null;
       isRunning = false;

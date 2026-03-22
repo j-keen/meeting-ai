@@ -295,6 +295,13 @@ function updateTimer() {
   const s = Math.floor((diff % 60000) / 1000);
   $('#meetingTimer').textContent =
     `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  // Native app bridge: update foreground notification timer
+  if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
+    const elapsedSec = Math.floor(diff / 1000);
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'updateTimer', elapsed: elapsedSec, title: state.meetingTitle || 'Meeting AI'
+    }));
+  }
 }
 
 export function getElapsedTimeStr() {
@@ -404,6 +411,12 @@ export async function startRecording() {
     // Set recording state only AFTER stt.start() succeeds
     state.isRecording = true;
     emit('recording:started');
+    // Native app bridge: start foreground service
+    if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'recordingStarted', title: state.meetingTitle || 'Meeting AI'
+      }));
+    }
 
     if (!state.meetingStartTime) {
       state.meetingStartTime = Date.now();
@@ -521,6 +534,10 @@ export async function stopRecording() {
   stt = null;
   state.isRecording = false;
   emit('recording:stopped');
+  // Native app bridge: stop foreground service
+  if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingStopped' }));
+  }
 
   // Stop audio recording if active
   if (state._audioRecordingActive) {
@@ -814,6 +831,7 @@ export function autoSave() {
     hasAudio: !!state._audioRecordingActive,
   };
   const result = saveMeeting(meeting);
+  if (window.saveMeetingWithSync) window.saveMeetingWithSync(meeting);
   if (result.warning === 'storage_high') {
     showToast(t('toast.storage_high'), 'warning');
   }
@@ -1897,6 +1915,7 @@ function saveEditMeeting() {
   meeting.participants = [...state.participants];
 
   saveMeeting(meeting);
+  if (window.saveMeetingWithSync) window.saveMeetingWithSync(meeting);
 
   // Restore previous state
   restoreEditState();
