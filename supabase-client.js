@@ -71,21 +71,46 @@
   // UI update (exposed globally for native bridge callback)
   window.updateAuthUI = updateAuthUI;
   function updateAuthUI(user) {
+    // Header button
     const btn = document.getElementById('btnAuth');
-    if (!btn) return;
+    if (btn) {
+      if (user) {
+        const name = user.user_metadata?.full_name || user.email || '사용자';
+        const avatar = user.user_metadata?.avatar_url;
+        btn.innerHTML = avatar
+          ? `<img src="${avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:4px">${name}`
+          : name;
+        btn.onclick = window.supabaseSignOut;
+        btn.title = '클릭하면 로그아웃';
+      } else {
+        btn.textContent = '로그인';
+        btn.onclick = window.supabaseSignIn;
+        btn.title = '로그인';
+      }
+    }
 
-    if (user) {
-      const name = user.user_metadata?.full_name || user.email || '사용자';
-      const avatar = user.user_metadata?.avatar_url;
-      btn.innerHTML = avatar
-        ? `<img src="${avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:4px">${name}`
-        : name;
-      btn.onclick = window.supabaseSignOut;
-      btn.title = '클릭하면 로그아웃';
-    } else {
-      btn.textContent = '로그인';
-      btn.onclick = window.supabaseSignIn;
-      btn.title = '로그인';
+    // Settings Account tab
+    const accountInfo = document.getElementById('accountInfo');
+    const accountLoginBtn = document.getElementById('btnAccountLogin');
+    if (accountInfo && accountLoginBtn) {
+      if (user) {
+        const name = user.user_metadata?.full_name || user.email || '사용자';
+        const avatar = user.user_metadata?.avatar_url;
+        accountInfo.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            ${avatar ? `<img src="${avatar}" style="width:36px;height:36px;border-radius:50%;">` : ''}
+            <div>
+              <div style="font-weight:600;">${name}</div>
+              <div class="text-muted" style="font-size:12px;">${user.email || ''}</div>
+            </div>
+          </div>`;
+        accountLoginBtn.textContent = '로그아웃';
+        accountLoginBtn.onclick = window.supabaseSignOut;
+      } else {
+        accountInfo.innerHTML = '<p class="text-muted">Google 로그인하면 모바일 앱과 회의록이 자동 동기화됩니다.</p>';
+        accountLoginBtn.textContent = 'Google로 로그인';
+        accountLoginBtn.onclick = window.supabaseSignIn;
+      }
     }
   }
 })();

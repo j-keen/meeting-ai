@@ -4764,6 +4764,11 @@ body.loaded-mode #btnNewMeeting { display: none; }
 
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
+  /* Header buttons: icons only on mobile */
+  .header-btn-label { display: none; }
+  .header-right .btn-text { padding: 5px 8px; min-width: 0; font-size: 16px; }
+  .header-right #btnAuth { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+
   .panel-tabs { display: flex; position: relative; }
   .panel-tabs-indicator {
     position: absolute;
