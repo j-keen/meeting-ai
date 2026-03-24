@@ -19,14 +19,8 @@ export function createDeepgramEngine(language, apiKey) {
       isActive = true;
 
       // 1. Get microphone access
-      navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          sampleRate: 16000,
-        }
-      }).then(stream => {
+      // Try simple audio first, fall back if constraints fail
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         mediaStream = stream;
         onAudioStart?.();
 
