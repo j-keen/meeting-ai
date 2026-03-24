@@ -253,28 +253,17 @@ export function createSTT() {
       if (isRunning) return;
       isRunning = true;
 
-      // Native app: use Deepgram WebSocket STT (raw mic, no echo cancellation)
+      // Native app bridge: delegate STT to native Deepgram
       if (window.__nativeBridge?.isNative) {
-        sttDebug('[STT] Native app detected — using Deepgram STT');
-        const { createDeepgramEngine } = await import('./deepgram-web-stt.js');
-        const deepgramKey = '2094656842165282ab1d73e4a24ff0e452eec0f2';
-        currentEngine = createDeepgramEngine(language, deepgramKey);
-
-        const onFatalError = () => {
-          sttDebug('[STT] Deepgram fatal error — resetting');
-          isRunning = false;
-          currentEngine = null;
-        };
-
-        onConnecting?.();
-        currentEngine.start(
+        sttDebug('[STT] Native bridge detected — delegating to native Deepgram STT');
+        window.__nativeBridge.sttCallbacks = {
           onInterim,
-          (text) => { if (text?.trim()) onFinal(text); },
+          onFinal: (text) => { if (text?.trim()) onFinal(text); },
           onError,
-          onReplace,
-          onFatalError,
-          () => onConnected?.('deepgram')
-        );
+          onConnected,
+        };
+        window.__nativeBridge.startSTT(language);
+        onConnecting?.();
         return;
       }
 

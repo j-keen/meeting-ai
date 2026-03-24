@@ -34,13 +34,19 @@
           }
         },
         startSTT: function(language) {
-          // Deepgram runs in WebView, no need to start native STT
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'startSTT', language: language }));
+          }
         },
         stopSTT: function() {
-          // Deepgram runs in WebView, no need to stop native STT
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'stopSTT' }));
+          }
         },
         pauseSTT: function() {
-          // No-op: Deepgram handles pause in WebView
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'pauseSTT' }));
+          }
         },
         resumeSTT: function(language) {
           if (window.ReactNativeWebView) {
