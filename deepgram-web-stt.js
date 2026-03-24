@@ -96,8 +96,10 @@ export function createDeepgramEngine(language, apiKey) {
         };
 
       }).catch(err => {
-        console.error('[Deepgram] Mic access failed:', err);
-        onError('마이크 접근 실패: ' + err.message);
+        console.error('[Deepgram] Mic access failed:', err.name, err.message);
+        // Show detailed error so we can diagnose
+        alert('[STT 디버그]\n에러: ' + err.name + '\n메시지: ' + err.message + '\ngetUserMedia 지원: ' + !!navigator.mediaDevices?.getUserMedia);
+        onError('마이크 접근 실패: ' + err.name + ' - ' + err.message);
         onFatalError?.();
       });
 
