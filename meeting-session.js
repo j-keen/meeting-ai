@@ -71,11 +71,21 @@ export function getTotalPausedMs() {
 }
 
 /** Elapsed meeting time in ms, excluding pauses. */
+/** Timestamp of the last transcript line or memo, or null when there is no content. */
+function lastActivityTs() {
+  const ts = [
+    ...state.transcript.map(l => l.timestamp),
+    ...state.memos.map(m => m.timestamp),
+  ].filter(Boolean);
+  return ts.length ? Math.max(...ts) : null;
+}
+
 export function getElapsedMs() {
   if (!state.meetingStartTime) return 0;
-  if (state.source === 'loaded' && state.phase !== 'recording' && state.transcript.length > 0) {
-    const lastTs = state.transcript[state.transcript.length - 1].timestamp;
-    return Math.max(0, lastTs - state.meetingStartTime);
+  if (state.source === 'loaded' && state.phase !== 'recording') {
+    // A saved meeting's clock is frozen at its last activity, never wall-clock time.
+    const last = lastActivityTs();
+    return last ? Math.max(0, last - state.meetingStartTime) : 0;
   }
   return Math.max(0, Date.now() - state.meetingStartTime - getTotalPausedMs());
 }
@@ -246,11 +256,7 @@ export async function resume() {
 
   // Fold the pause gap into pausedDuration
   if (wasLoaded) {
-    const timestamps = [
-      ...state.transcript.map(l => l.timestamp),
-      ...state.memos.map(m => m.timestamp),
-    ].filter(Boolean);
-    const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : state.meetingStartTime;
+    const lastActivity = lastActivityTs() || state.meetingStartTime;
     state.pausedDuration += Math.max(0, Date.now() - lastActivity);
   } else if (state.pauseStartTime) {
     state.pausedDuration += Date.now() - state.pauseStartTime;
@@ -425,6 +431,10 @@ export function loadMeeting(meeting) {
 /** any → idle. Clears content, timers, STT, and lifecycle chrome. */
 export function reset() {
   stopStt();
+  if (state._audioRecordingActive) {
+    // Fire-and-forget: the recorder finalizes the old meeting's chunks on its own.
+    stopAudioRecording().catch(() => {});
+  }
   recTimers.clearAll();
   sessionTimers.clearAll();
   hooks.clearDraftRecovery?.();

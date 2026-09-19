@@ -45,7 +45,7 @@ import {
   updateParticipantDropdown, updateTagDropdown, updateLocationDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
-  clearDraftRecovery, saveActiveSession, loadMeeting, adoptImport,
+  clearDraftRecovery, saveActiveSession, loadMeeting, adoptImport, markEnded,
 } from './recording.js';
 import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
@@ -1475,9 +1475,9 @@ function initMinutesModelModal() {
       }
 
       // 7. Save state
+      markEnded();
       try { autoSave(); } catch { /* ignore save error */ }
       clearDraftRecovery();
-      state.meetingEnded = true;
 
       // 8. Disable save modal form
       const body = $('#endMeetingModal .modal-body');

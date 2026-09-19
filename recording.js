@@ -263,6 +263,11 @@ export function loadMeeting(meeting) {
   session.loadMeeting(meeting);
 }
 
+/** paused → ended once the meeting has been persisted by the caller. */
+export function markEnded() {
+  session.markEnded();
+}
+
 /** Pasted / uploaded transcript becomes a paused meeting. */
 export function adoptImport(transcript, type) {
   session.adoptImport(transcript, type);
