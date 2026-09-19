@@ -15,6 +15,7 @@ import { callGemini, isProxyAvailable } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
 import { setAnalyticsOptOut, isAnalyticsEnabled } from './analytics.js';
 import { openPromptBuilder } from './prompt-builder.js';
+import { escapeHtml } from './utils.js';
 
 
 
@@ -256,7 +257,7 @@ function renderPmChatPresets() {
     const item = document.createElement('div');
     item.className = 'pb-preset-item';
     item.innerHTML = `
-      <input type="text" class="pb-preview-input" value="${q.replace(/"/g, '&quot;')}">
+      <input type="text" class="pb-preview-input" value="${escapeHtml(q).replace(/"/g, '&quot;')}">
       <button class="btn btn-sm btn-icon">&times;</button>
     `;
     item.querySelector('input').addEventListener('change', (e) => {
@@ -339,8 +340,8 @@ function refreshCustomPresetList() {
     item.dataset.id = ct.id;
     item.innerHTML = `
       <div class="custom-preset-item-info">
-        <span class="custom-preset-item-name">${ct.name}</span>
-        <span class="custom-preset-item-desc">${ct.context || ct.guidance || ''}</span>
+        <span class="custom-preset-item-name">${escapeHtml(ct.name)}</span>
+        <span class="custom-preset-item-desc">${escapeHtml(ct.context || ct.guidance || '')}</span>
       </div>
       <div class="custom-preset-item-actions">
         <button class="custom-preset-item-select btn btn-sm">${t('settings.preset_custom')}</button>
@@ -401,15 +402,15 @@ function openPresetDetailModal(ct) {
   modal.innerHTML = `
     <div class="modal" style="max-width:560px;">
       <div class="modal-header">
-        <h3>${ct.name}</h3>
+        <h3>${escapeHtml(ct.name)}</h3>
         <button class="btn btn-icon" id="btnClosePresetDetail" aria-label="Close">&times;</button>
       </div>
       <div class="modal-body" style="display:flex;flex-direction:column;gap:12px;">
-        ${ct.context ? `<p class="text-muted" style="font-size:12px;margin:0;">${ct.context}</p>` : ''}
+        ${ct.context ? `<p class="text-muted" style="font-size:12px;margin:0;">${escapeHtml(ct.context)}</p>` : ''}
         <label style="font-size:12px;font-weight:600;">${t('settings.preset_analysis_prompt')}</label>
-        <textarea class="settings-textarea" id="presetDetailPrompt" rows="8">${ct.prompt || ''}</textarea>
+        <textarea class="settings-textarea" id="presetDetailPrompt" rows="8">${escapeHtml(ct.prompt || '')}</textarea>
         <label style="font-size:12px;font-weight:600;">${t('settings.preset_chat_prompt')}</label>
-        <textarea class="settings-textarea" id="presetDetailChatPrompt" rows="4">${ct.chatSystemPrompt || ''}</textarea>
+        <textarea class="settings-textarea" id="presetDetailChatPrompt" rows="4">${escapeHtml(ct.chatSystemPrompt || '')}</textarea>
         <div style="display:flex;gap:8px;justify-content:space-between;">
           <button class="btn btn-sm btn-danger" id="btnDeletePresetDetail">${t('settings.custom_type_delete') || 'Delete'}</button>
           <button class="btn btn-sm btn-primary" id="btnSavePresetDetail">${t('settings.preset_save_changes')}</button>

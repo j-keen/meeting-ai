@@ -117,7 +117,7 @@
         console.log(`[sync] Added ${added} meetings from cloud`);
         if (syncStatus) syncStatus.textContent = `${added}개 회의를 클라우드에서 불러왔습니다.`;
         // Refresh history if available
-        if (window.refreshHistoryGrid) window.refreshHistoryGrid();
+        window.dispatchEvent(new CustomEvent('meetingai:cloud-sync'));
       } else {
         if (syncStatus) syncStatus.textContent = `클라우드와 동기화 완료 (${data.length}개 회의, 모두 로컬에 있음)`;
       }
@@ -141,7 +141,7 @@
         { event: '*', schema: 'public', table: 'meetings' },
         (payload) => {
           console.log('[sync] Realtime change:', payload.eventType);
-          if (window.refreshHistoryGrid) window.refreshHistoryGrid();
+          window.dispatchEvent(new CustomEvent('meetingai:cloud-sync'));
         }
       )
       .subscribe();

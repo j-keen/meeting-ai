@@ -27,6 +27,9 @@ vi.mock('../storage.js', () => ({
 
 vi.mock('../gemini-api.js', () => ({
   callGemini: vi.fn(),
+  callGeminiGuarded: vi.fn(),
+  isProxyAvailable: vi.fn(),
+  UsageLimitError: class UsageLimitError extends Error {},
 }));
 
 vi.mock('../i18n.js', () => ({
@@ -302,10 +305,10 @@ describe('openMeetingPrepForm', () => {
 });
 
 describe('ocrBusinessCard', () => {
-  it('parses a clean JSON response from callGemini', async () => {
-    const { callGemini } = await import('../gemini-api.js');
+  it('parses a clean JSON response from callGeminiGuarded', async () => {
+    const { callGeminiGuarded } = await import('../gemini-api.js');
     const cardData = { name: 'John Doe', company: 'Acme', title: 'CEO', email: 'john@acme.com', phone: '010-1234-5678' };
-    callGemini.mockResolvedValueOnce({
+    callGeminiGuarded.mockResolvedValueOnce({
       candidates: [{ content: { parts: [{ text: JSON.stringify(cardData) }] } }],
     });
 
@@ -318,10 +321,10 @@ describe('ocrBusinessCard', () => {
   });
 
   it('extracts JSON from a response with surrounding text', async () => {
-    const { callGemini } = await import('../gemini-api.js');
+    const { callGeminiGuarded } = await import('../gemini-api.js');
     const cardData = { name: 'Jane Smith', company: 'Corp', title: 'CTO', email: '', phone: '' };
     const responseText = 'Here is the result: ' + JSON.stringify(cardData) + ' (done)';
-    callGemini.mockResolvedValueOnce({
+    callGeminiGuarded.mockResolvedValueOnce({
       candidates: [{ content: { parts: [{ text: responseText }] } }],
     });
 
@@ -330,8 +333,8 @@ describe('ocrBusinessCard', () => {
   });
 
   it('throws when response text cannot be parsed as JSON', async () => {
-    const { callGemini } = await import('../gemini-api.js');
-    callGemini.mockResolvedValueOnce({
+    const { callGeminiGuarded } = await import('../gemini-api.js');
+    callGeminiGuarded.mockResolvedValueOnce({
       candidates: [{ content: { parts: [{ text: 'not json at all' }] } }],
     });
 
@@ -339,9 +342,9 @@ describe('ocrBusinessCard', () => {
   });
 
   it('handles empty string fields gracefully', async () => {
-    const { callGemini } = await import('../gemini-api.js');
+    const { callGeminiGuarded } = await import('../gemini-api.js');
     const cardData = { name: 'Only Name', company: '', title: '', email: '', phone: '' };
-    callGemini.mockResolvedValueOnce({
+    callGeminiGuarded.mockResolvedValueOnce({
       candidates: [{ content: { parts: [{ text: JSON.stringify(cardData) }] } }],
     });
 
@@ -351,16 +354,16 @@ describe('ocrBusinessCard', () => {
     expect(result.email).toBe('');
   });
 
-  it('passes correct model name and body structure to callGemini', async () => {
-    const { callGemini } = await import('../gemini-api.js');
+  it('passes correct model name, body structure, and options to callGeminiGuarded', async () => {
+    const { callGeminiGuarded } = await import('../gemini-api.js');
     const cardData = { name: 'Test', company: '', title: '', email: '', phone: '' };
-    callGemini.mockResolvedValueOnce({
+    callGeminiGuarded.mockResolvedValueOnce({
       candidates: [{ content: { parts: [{ text: JSON.stringify(cardData) }] } }],
     });
 
     await ocrBusinessCard('mybase64==');
 
-    expect(callGemini).toHaveBeenCalledWith(
+    expect(callGeminiGuarded).toHaveBeenCalledWith(
       'gemini-2.5-flash-lite',
       expect.objectContaining({
         contents: expect.arrayContaining([
@@ -369,7 +372,8 @@ describe('ocrBusinessCard', () => {
         generationConfig: expect.objectContaining({
           responseMimeType: 'application/json',
         }),
-      })
+      }),
+      expect.objectContaining({ category: 'prep' })
     );
   });
 });

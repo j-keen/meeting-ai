@@ -2,18 +2,11 @@
 
 import { state, emit } from '../event-bus.js';
 import { t } from '../i18n.js';
+import { formatTime } from '../utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
 let interimEl = null;
-
-function formatTime(timestamp) {
-  if (!state.meetingStartTime) return '00:00';
-  const diff = timestamp - state.meetingStartTime;
-  const mins = Math.floor(diff / 60000);
-  const secs = Math.floor((diff % 60000) / 1000);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
 
 export function addTranscriptLine(line) {
   const list = $('#transcriptList');
@@ -24,7 +17,7 @@ export function addTranscriptLine(line) {
   const tmpl = $('#tmplTranscriptLine');
   const el = tmpl.content.cloneNode(true).querySelector('.transcript-line');
   el.dataset.id = line.id;
-  el.querySelector('.transcript-time').textContent = formatTime(line.timestamp);
+  el.querySelector('.transcript-time').textContent = formatTime(state.meetingStartTime ? line.timestamp - state.meetingStartTime : 0);
 
   const textEl = el.querySelector('.transcript-text');
   textEl.textContent = line.text;
@@ -72,7 +65,7 @@ export function showInterim(text) {
     interimEl.appendChild(textSpan);
     list.appendChild(interimEl);
   }
-  interimEl.querySelector('.transcript-time').textContent = formatTime(Date.now());
+  interimEl.querySelector('.transcript-time').textContent = formatTime(state.meetingStartTime ? Date.now() - state.meetingStartTime : 0);
   interimEl.querySelector('.transcript-text').textContent = text;
   autoScroll(list);
 }
@@ -89,7 +82,7 @@ export function addMemoLine(memo) {
   const tmpl = $('#tmplMemoLine');
   const el = tmpl.content.cloneNode(true).querySelector('.transcript-line');
   el.dataset.id = memo.id;
-  el.querySelector('.transcript-time').textContent = formatTime(memo.timestamp);
+  el.querySelector('.transcript-time').textContent = formatTime(state.meetingStartTime ? memo.timestamp - state.meetingStartTime : 0);
   el.querySelector('.transcript-text').textContent = memo.text;
 
   el.querySelector('.transcript-text').addEventListener('dblclick', (e) => {

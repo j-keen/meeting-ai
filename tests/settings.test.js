@@ -44,6 +44,7 @@ vi.mock('../i18n.js', () => ({
   t: vi.fn(k => k),
   setLanguage: vi.fn(),
   setAiLanguage: vi.fn(),
+  getAiLanguage: vi.fn(),
   getTypeDefaultPrompt: vi.fn(() => 'default prompt'),
 }));
 

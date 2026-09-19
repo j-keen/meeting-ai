@@ -70,15 +70,29 @@
 
   // UI update (exposed globally for native bridge callback)
   window.updateAuthUI = updateAuthUI;
+  // Classic script — cannot import from utils.js; this is the one permitted duplicate.
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+  function safeHttpUrl(url) {
+    if (typeof url !== 'string' || !url) return '';
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+    } catch (_) { /* invalid or non-http URL */ }
+    return '';
+  }
   function updateAuthUI(user) {
     // Header button
     const btn = document.getElementById('btnAuth');
     if (btn) {
       if (user) {
-        const name = user.user_metadata?.full_name || user.email || '사용자';
-        const avatar = user.user_metadata?.avatar_url;
+        const name = escapeHtml(user.user_metadata?.full_name || user.email || '사용자');
+        const avatar = safeHttpUrl(user.user_metadata?.avatar_url);
         btn.innerHTML = avatar
-          ? `<img src="${avatar}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:4px">${name}`
+          ? `<img src="${escapeHtml(avatar).replace(/"/g, '&quot;')}" style="width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:4px">${name}`
           : name;
         btn.onclick = window.supabaseSignOut;
         btn.title = '클릭하면 로그아웃';
@@ -94,14 +108,14 @@
     const accountLoginBtn = document.getElementById('btnAccountLogin');
     if (accountInfo && accountLoginBtn) {
       if (user) {
-        const name = user.user_metadata?.full_name || user.email || '사용자';
-        const avatar = user.user_metadata?.avatar_url;
+        const name = escapeHtml(user.user_metadata?.full_name || user.email || '사용자');
+        const avatar = safeHttpUrl(user.user_metadata?.avatar_url);
         accountInfo.innerHTML = `
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-            ${avatar ? `<img src="${avatar}" style="width:36px;height:36px;border-radius:50%;">` : ''}
+            ${avatar ? `<img src="${escapeHtml(avatar).replace(/"/g, '&quot;')}" style="width:36px;height:36px;border-radius:50%;">` : ''}
             <div>
               <div style="font-weight:600;">${name}</div>
-              <div class="text-muted" style="font-size:12px;">${user.email || ''}</div>
+              <div class="text-muted" style="font-size:12px;">${escapeHtml(user.email || '')}</div>
             </div>
           </div>`;
         accountLoginBtn.textContent = '로그아웃';

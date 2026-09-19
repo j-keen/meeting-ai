@@ -139,17 +139,6 @@ h1, h2, h3 { font-weight: 600; }
   line-height: 1;
 }
 .btn-icon:hover { background: var(--bg-hover); border-radius: var(--radius-sm); }
-.btn-text {
-  padding: 4px 10px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: color 0.15s, background 0.15s;
-}
-.btn-text:hover { color: var(--text-primary); background: var(--bg-hover); }
 .header-right .btn-text {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -1184,14 +1173,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
   outline: none;
 }
 
-/* Settings Hint */
-.settings-hint {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 4px 0 0;
-  line-height: 1.4;
-}
-
 /* Interval Toggle Buttons */
 /* Typing indicator */
 .typing-dots {
@@ -1599,6 +1580,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   letter-spacing: 0.5px;
   margin-bottom: 10px;
 }
+/* Inline hint beside section headings. .settings-label .settings-hint stacks under labels. */
 .settings-hint {
   display: inline;
   font-size: 11px;
@@ -1935,16 +1917,6 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .btn-purple:hover { background: #6d28d9; }
 .btn-green { background: #059669; color: #fff; border: none; }
 .btn-green:hover { background: #047857; }
-
-/* Profile Form */
-.btn-accent {
-  background: var(--accent);
-  color: var(--text-inverse);
-  border: none;
-}
-.btn-accent:hover {
-  background: var(--accent-hover);
-}
 
 /* Toggle */
 .toggle-wrap { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
@@ -3896,6 +3868,7 @@ body.loaded-mode #btnNewMeeting { display: none; }
   font-weight: 500;
 }
 .btn-accent:hover {
+  background: var(--accent-hover);
   opacity: 0.9;
 }
 .btn-accent:disabled {

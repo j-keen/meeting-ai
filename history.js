@@ -2,6 +2,7 @@
 
 import { listMeetings } from './storage.js';
 import { renderHistoryGrid } from './ui.js';
+import { debounce } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -23,11 +24,9 @@ export function resetHistorySort() {
   if (sortEl) sortEl.value = 'newest';
 }
 
-let historySearchTimer = null;
 export function refreshHistoryGrid() {
   renderHistoryGrid(listMeetings(), getHistoryFilters());
 }
-export function refreshHistoryGridDebounced() {
-  clearTimeout(historySearchTimer);
-  historySearchTimer = setTimeout(refreshHistoryGrid, 250);
-}
+export const refreshHistoryGridDebounced = debounce(refreshHistoryGrid, 250);
+
+window.addEventListener('meetingai:cloud-sync', () => refreshHistoryGridDebounced());

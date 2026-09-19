@@ -10,10 +10,14 @@ vi.mock('../ai.js', () => ({
   correctSentences: vi.fn(),
   generateMeetingTitle: vi.fn(),
   generateFinalMinutes: vi.fn(),
+  refineSectionContent: vi.fn(),
+  getDefaultMinutesPrompt: vi.fn(),
 }));
 vi.mock('../gemini-api.js', () => ({
   checkProxyAvailable: vi.fn(),
   isProxyAvailable: vi.fn(),
+  callGeminiGuarded: vi.fn(),
+  UsageLimitError: class UsageLimitError extends Error {},
 }));
 vi.mock('../recording.js', () => ({
   generateId: vi.fn(() => 'mock-id'),
@@ -31,6 +35,17 @@ vi.mock('../recording.js', () => ({
   resetMeeting: vi.fn(),
   getElapsedTimeStr: vi.fn(),
   buildFullProfile: vi.fn(),
+  resumeFromLoaded: vi.fn(),
+  showEndMeetingModal: vi.fn(),
+  updateParticipantDropdown: vi.fn(),
+  updateTagDropdown: vi.fn(),
+  updateLocationDropdown: vi.fn(),
+  regenerateMinutes: vi.fn(),
+  checkDraftRecovery: vi.fn(),
+  generateFinalMeetingMinutes: vi.fn(),
+  showSaveFooterWithMinutesReady: vi.fn(),
+  clearDraftRecovery: vi.fn(),
+  saveActiveSession: vi.fn(),
 }));
 vi.mock('../storage.js', () => ({
   saveMeeting: vi.fn(),
@@ -50,6 +65,10 @@ vi.mock('../storage.js', () => ({
   loadMeetingPrepPresets: vi.fn(() => []),
   loadCorrectionDict: vi.fn(() => []),
   addCorrectionEntry: vi.fn(),
+  softDeleteMeeting: vi.fn(),
+  restoreMeeting: vi.fn(),
+  getProUsageCount: vi.fn(),
+  incrementProUsage: vi.fn(),
 }));
 vi.mock('../ui.js', () => ({
   initDragResizer: vi.fn(),
@@ -82,6 +101,13 @@ vi.mock('../ui.js', () => ({
   updateAnalysisNav: vi.fn(),
   getAnalysisAsText: vi.fn(),
   renderAnalysisInto: vi.fn(),
+  renderInboxPreview: vi.fn(),
+  showCenterToast: vi.fn(),
+  showUndoToast: vi.fn(),
+  toggleTrashMode: vi.fn(),
+  isTrashMode: vi.fn(),
+  updateTrashBadge: vi.fn(),
+  refreshTrashView: vi.fn(),
 }));
 vi.mock('../settings.js', () => ({
   initSettings: vi.fn(),
@@ -120,6 +146,7 @@ vi.mock('../compare.js', () => ({
 vi.mock('../history.js', () => ({
   refreshHistoryGrid: vi.fn(),
   refreshHistoryGridDebounced: vi.fn(),
+  resetHistorySort: vi.fn(),
 }));
 
 import { state, on, emit } from '../app.js';

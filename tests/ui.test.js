@@ -19,6 +19,7 @@ import {
 } from '../ui.js';
 
 vi.mock('../event-bus.js', () => ({
+  on: vi.fn(() => () => {}),
   state: {
     isRecording: false,
     transcript: [],

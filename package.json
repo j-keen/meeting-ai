@@ -4,20 +4,29 @@
   "description": "",
   "main": "ai.js",
   "scripts": {
+    "dev": "node dev-server.js",
+    "start": "node dev-server.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "node server.js"
+    "ci": "npm run lint && npm run test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@vercel/kv": "^3.0.0",
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "vitest": "^3.0.0",
-    "happy-dom": "^16.0.0"
+    "eslint": "^9.39.5",
+    "globals": "^17.12.0",
+    "happy-dom": "^16.0.0",
+    "vitest": "^3.0.0"
   }
 }

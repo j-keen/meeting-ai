@@ -9,6 +9,7 @@ import { openPromptAdjuster } from './prompt-adjuster.js';
 import { pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
 import { renderAnalysis } from './ui/analysis.js';
+import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -64,8 +65,8 @@ function renderPresets() {
     btn.innerHTML = `
       <div class="asm-preset-card-icon">${icon}</div>
       <div class="asm-preset-card-text">
-        <span class="asm-preset-card-title">${label}</span>
-        <span class="asm-preset-card-desc" title="${desc.replace(/"/g, '&quot;')}">${desc.substring(0, 60)}${desc.length > 60 ? '...' : ''}</span>
+        <span class="asm-preset-card-title">${escapeHtml(label)}</span>
+        <span class="asm-preset-card-desc" title="${escapeHtml(desc).replace(/"/g, '&quot;')}">${escapeHtml(desc.substring(0, 60))}${desc.length > 60 ? '...' : ''}</span>
       </div>
       <div class="asm-preset-card-check">${currentPreset === p.id ? '✓' : ''}</div>
     `;

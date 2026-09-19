@@ -6,6 +6,7 @@ import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
 import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings } from '../storage.js';
+import { formatTime, escapeHtml } from '../utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -151,7 +152,7 @@ export function renderInboxPreview() {
 
     const time = document.createElement('span');
     time.className = 'inbox-preview-time';
-    time.textContent = formatTime(item.timestamp);
+    time.textContent = formatTime(state.meetingStartTime ? item.timestamp - state.meetingStartTime : 0);
     row.appendChild(time);
 
     row.addEventListener('click', () => {
@@ -227,7 +228,7 @@ export function renderHighlights(filter = 'all', searchTerm = '') {
 
     const timeSpan = document.createElement('span');
     timeSpan.className = 'transcript-time';
-    timeSpan.textContent = formatTime(item.timestamp);
+    timeSpan.textContent = formatTime(state.meetingStartTime ? item.timestamp - state.meetingStartTime : 0);
     div.appendChild(timeSpan);
 
     if (item.type === 'memo') {
@@ -257,19 +258,9 @@ export function renderHighlights(filter = 'all', searchTerm = '') {
   });
 }
 
-function formatTime(timestamp) {
-  if (!state.meetingStartTime) return '00:00';
-  const diff = timestamp - state.meetingStartTime;
-  const mins = Math.floor(diff / 60000);
-  const secs = Math.floor((diff % 60000) / 1000);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
 function formatTimeFromMs(ms) {
   if (ms < 0) ms = 0;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.floor((ms % 60000) / 1000);
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  return formatTime(ms);
 }
 
 // Relative time formatting
@@ -1059,7 +1050,7 @@ function showLinkPopover(meetingId, parentContainer) {
       const item = document.createElement('div');
       item.className = 'viewer-link-result-item';
       const date = m.createdAt ? new Date(m.createdAt).toLocaleDateString(getDateLocale()) : '';
-      item.innerHTML = `<span>${m.title || m.id}</span><span class="ds-ref-date">${date}</span>`;
+      item.innerHTML = `<span>${escapeHtml(m.title || m.id)}</span><span class="ds-ref-date">${date}</span>`;
       item.addEventListener('click', () => {
         linkMeetings(meetingId, m.id);
         popover.remove();

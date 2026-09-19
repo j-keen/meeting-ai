@@ -5,6 +5,7 @@ import { saveSettings, loadCustomTypes } from './storage.js';
 import { getPromptForType } from './ai.js';
 import { showToast } from './ui.js';
 import { t, getAiLanguage } from './i18n.js';
+import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 const STORAGE_KEY = 'meeting-ai-style-history';
@@ -132,10 +133,10 @@ function renderHistoryList() {
     item.innerHTML = `
       <div class="sh-item-header">
         <span class="sh-item-icon">${sourceIcon(entry.source)}</span>
-        <span class="sh-item-label">${entry.label || 'Custom'}</span>
+        <span class="sh-item-label">${escapeHtml(entry.label || 'Custom')}</span>
         <span class="sh-item-time">${formatTime(entry.timestamp)}</span>
       </div>
-      <div class="sh-item-preview">${truncatePrompt(entry.prompt)}</div>
+      <div class="sh-item-preview">${escapeHtml(truncatePrompt(entry.prompt))}</div>
       <div class="sh-item-actions">
         <button class="btn btn-sm btn-primary sh-restore-btn" data-idx="${idx}">${t('sh.restore')}</button>
         <button class="btn btn-sm btn-outline sh-restore-reanalyze-btn" data-idx="${idx}">${t('sh.restore_reanalyze')}</button>
@@ -194,9 +195,9 @@ function renderCurrentPrompt() {
   container.innerHTML = `
     <div class="sh-current-header">
       <span class="sh-current-label">${t('sh.current')}</span>
-      <span class="sh-current-preset">${presetLabel}</span>
+      <span class="sh-current-preset">${escapeHtml(presetLabel)}</span>
     </div>
-    <div class="sh-current-text">${truncatePrompt(currentPrompt, 150)}</div>
+    <div class="sh-current-text">${escapeHtml(truncatePrompt(currentPrompt, 150))}</div>
     <button class="btn btn-sm sh-view-current-btn">${t('sh.view_full')}</button>
   `;
   container.querySelector('.sh-view-current-btn').addEventListener('click', () => {
@@ -214,7 +215,7 @@ function showPromptDetail(prompt, label, title) {
   container.innerHTML = `
     <div class="sh-detail-header">
       <button class="btn btn-sm sh-back-btn">← ${t('sh.back')}</button>
-      <span class="sh-detail-title">${title}: ${label}</span>
+      <span class="sh-detail-title">${escapeHtml(title)}: ${escapeHtml(label)}</span>
     </div>
     <pre class="sh-detail-prompt">${escapeHtml(prompt)}</pre>
   `;
@@ -222,12 +223,6 @@ function showPromptDetail(prompt, label, title) {
     container.style.display = 'none';
     list.style.display = '';
   });
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
 
 function restoreEntry(idx, reanalyze) {
