@@ -6,7 +6,7 @@ import * as session from './meeting-session.js';
 import { initSessionUI } from './session-ui.js';
 import { escapeHtml } from './utils.js';
 import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
-import { isProxyAvailable } from './gemini-api.js';
+import { isAiAvailable } from './gemini-api.js';
 import {
   saveMeeting, getMeeting,
   loadContacts, loadLocations, addLocation,
@@ -332,7 +332,7 @@ function startAiCorrection() {
 }
 
 export async function runCorrection(uncorrectedOnly) {
-  if (isCorrecting || !isProxyAvailable()) return;
+  if (isCorrecting || !isAiAvailable()) return;
   isCorrecting = true;
   try {
     const lines = uncorrectedOnly
@@ -363,8 +363,8 @@ export async function runCorrection(uncorrectedOnly) {
 
 export async function runAnalysis() {
   if (isAnalyzing) return;
-  if (!isProxyAvailable()) {
-    showToast(t('toast.no_api_key'), 'warning');
+  if (!isAiAvailable()) {
+    showToast(t('toast.ai_unavailable'), 'warning');
     return;
   }
   if (state.transcript.length === 0 && state.memos.length === 0 && state.chatHistory.length === 0) {
@@ -686,7 +686,7 @@ export function showEndMeetingModal(editMeeting) {
   // AI title/tag generation (with caching) — skip in edit mode
   const suggestionsEl = $('#aiTitleSuggestions');
   const chipsEl = $('#aiTitleChips');
-  if (!isEditMode && isProxyAvailable() && state.transcript.length > 0) {
+  if (!isEditMode && isAiAvailable() && state.transcript.length > 0) {
     suggestionsEl.hidden = false;
     chipsEl.innerHTML = '';
 
@@ -852,7 +852,7 @@ function resetFooterToDefault(isEditMode = false) {
     : state.transcript;
 
   // Hide generate button if no proxy or no transcript
-  if (!isProxyAvailable() || transcript.length === 0) {
+  if (!isAiAvailable() || transcript.length === 0) {
     genBtn.hidden = true;
   }
 
@@ -872,7 +872,7 @@ function resetFooterToDefault(isEditMode = false) {
   docGenBtn.id = 'btnDocGenerator';
   docGenBtn.textContent = t('dg.button_label');
   docGenBtn.onclick = () => emit('docGenerator:open');
-  if (!isProxyAvailable() || transcript.length === 0) {
+  if (!isAiAvailable() || transcript.length === 0) {
     docGenBtn.hidden = true;
   }
 
@@ -1310,7 +1310,7 @@ export async function finalizeEndMeeting() {
   if (body) body.classList.add('disabled-form');
 
   const hasUncorrected = state.transcript.some(l => !l.originalText);
-  if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
+  if (isAiAvailable() && hasUncorrected && state.transcript.length > 0) {
     await runCorrection(false);
   }
 

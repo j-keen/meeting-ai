@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { saveMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
@@ -254,8 +254,8 @@ async function sendUserMessage(text) {
   const chips = $('#dgChips');
   if (chips) chips.style.display = 'none';
 
-  if (!isProxyAvailable()) {
-    addAiMessage(t('dg.no_api'));
+  if (!isAiAvailable()) {
+    addAiMessage(t('toast.ai_unavailable'));
     return;
   }
 

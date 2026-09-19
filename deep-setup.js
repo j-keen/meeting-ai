@@ -6,7 +6,7 @@
 
 import { emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { addCustomType, addContact, loadContacts, loadLocations, addLocation, getLocationFrequency, listMeetings, linkMeetings, getMeeting } from './storage.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
@@ -320,10 +320,8 @@ async function sendMessage(text, isAutoFire = false) {
   const chips = $('#dsChips4');
   if (chips) chips.style.display = 'none';
 
-  if (!isProxyAvailable()) {
-    addAiMessage(isKorean()
-      ? '<p>API 프록시를 사용할 수 없습니다. 설정을 확인해주세요.</p>'
-      : '<p>API proxy is not available. Please check your settings.</p>');
+  if (!isAiAvailable()) {
+    addAiMessage(`<p>${t('toast.ai_unavailable')}</p>`);
     return;
   }
 

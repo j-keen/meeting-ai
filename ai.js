@@ -1,7 +1,7 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t, getTypeDefaultPrompt, getMeetingTypeCategoryMap } from './i18n.js';
-import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadTypePrompts, loadCustomTypes } from './storage.js';
 
@@ -140,7 +140,7 @@ export async function analyzeTranscript({
   categoryHints = {},
   metadata = {},
 }) {
-  if (!isProxyAvailable()) throw new Error('Proxy not available');
+  if (!isAiAvailable()) throw new Error('Proxy not available');
   const hasTranscript = transcript && transcript.length > 0;
   const hasMemos = memos && memos.length > 0;
   const hasInsights = userInsights && userInsights.length > 0;
@@ -337,7 +337,7 @@ export async function analyzeTranscript({
 
 // Auto-generate tags from analysis
 export async function generateTags({ summary, transcript, model = 'gemini-2.5-flash-lite' }) {
-  if (!isProxyAvailable() || !summary) return [];
+  if (!isAiAvailable() || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
   const lang = getAiLanguage();
@@ -368,7 +368,7 @@ Transcript excerpt: ${transcriptSnippet}`;
 
 // AI-powered meeting title generation
 export async function generateMeetingTitle({ transcript, existingTitle }) {
-  if (!isProxyAvailable() || !transcript || transcript.length === 0) return null;
+  if (!isAiAvailable() || !transcript || transcript.length === 0) return null;
 
   const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
   const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
@@ -433,7 +433,7 @@ export async function generateFinalMinutes({
   categories = [],
   categoryHints = {},
 }) {
-  if (!isProxyAvailable()) throw new Error('Proxy not available');
+  if (!isAiAvailable()) throw new Error('Proxy not available');
   if (!transcript || transcript.length === 0) throw new Error('No transcript');
 
   const effectivePreset = meetingPreset || 'copilot';
@@ -570,7 +570,7 @@ export async function generateFinalMinutes({
 
 // AI-powered meeting metadata suggestions
 export async function suggestMeetingMetadata({ transcript, meetingContext, existingTags = [] }) {
-  if (!isProxyAvailable() || !transcript || transcript.length === 0) return null;
+  if (!isAiAvailable() || !transcript || transcript.length === 0) return null;
 
   const head = transcript.slice(0, 40).map(l => l.text).join('\n').slice(0, 2000);
   const tail = transcript.slice(-20).map(l => l.text).join('\n').slice(0, 1000);
@@ -714,7 +714,7 @@ Rules:
 
 // Refine a single section of the meeting minutes via AI
 export async function refineSectionContent({ fullMarkdown, sectionMarkdown, instruction, lang }) {
-  if (!isProxyAvailable()) throw new Error('Proxy not available');
+  if (!isAiAvailable()) throw new Error('Proxy not available');
 
   const systemPrompt = lang === 'ko'
     ? `당신은 회의록 편집 도우미입니다. 전체 회의록 맥락을 참고하여, 지정된 섹션만 수정하세요.
@@ -744,7 +744,7 @@ ${instruction}`;
 
 // AI-powered sentence correction
 export async function correctSentences({ lines, model = 'gemini-2.5-flash', correctionDict = [] }) {
-  if (!isProxyAvailable() || !lines || lines.length === 0) return [];
+  if (!isAiAvailable() || !lines || lines.length === 0) return [];
 
   const lang = getAiLanguage();
   const langLabel = lang === 'ko' ? 'Korean' : 'English';

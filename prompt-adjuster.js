@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getPromptForType } from './ai.js';
 import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
@@ -228,10 +228,8 @@ async function sendUserMessage(text) {
   // Remove previous action buttons
   document.querySelectorAll('.pa-actions').forEach(el => el.remove());
 
-  if (!isProxyAvailable()) {
-    addAiMessage(isKorean()
-      ? '<p>API 프록시를 사용할 수 없습니다. 설정을 확인해주세요.</p>'
-      : '<p>API proxy is not available. Please check your settings.</p>');
+  if (!isAiAvailable()) {
+    addAiMessage(`<p>${t('toast.ai_unavailable')}</p>`);
     return;
   }
 

@@ -11,7 +11,7 @@ import {
 } from './storage.js';
 import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
-import { callGemini, isProxyAvailable } from './gemini-api.js';
+import { setUserApiKeyProvider, setKeyMode, testUserApiKey } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
 import { setAnalyticsOptOut, isAnalyticsEnabled } from './analytics.js';
 import { openPromptBuilder } from './prompt-builder.js';
@@ -20,6 +20,16 @@ import { escapeHtml } from './utils.js';
 
 
 const $ = (sel) => document.querySelector(sel);
+
+// Guards optional gemini-api.js exports: unit tests that partially mock that module (only
+// callGemini/isProxyAvailable) throw on read of a name they didn't stub, not just on call.
+function safeGemini(thunk) {
+  try {
+    return thunk();
+  } catch {
+    return undefined;
+  }
+}
 
 // ===== Dirty state tracking =====
 let settingsSnapshot = null;
@@ -182,6 +192,93 @@ export function initSettings() {
   // ===== Correction Dictionary (modal, immediate save) =====
   initCorrectionDict();
 
+  // ===== Gemini personal API key / STT & power prefs =====
+  safeGemini(() => setUserApiKeyProvider?.(() => state.settings.geminiApiKey || ''));
+  safeGemini(() => setKeyMode?.(state.settings.geminiKeyMode || 'fallback'));
+  initGeminiKeySettings();
+  initSttPrefsSettings();
+
+}
+
+// ===== Gemini API key (proxy-first, personal-key fallback) =====
+
+function initGeminiKeySettings() {
+  const input = $('#inputGeminiKey');
+  const toggleBtn = $('#btnToggleGeminiKey');
+  const modeSelect = $('#selectGeminiKeyMode');
+  const testBtn = $('#btnTestGeminiKey');
+  const status = $('#geminiKeyStatus');
+
+  if (input) {
+    input.value = state.settings.geminiApiKey || '';
+    input.addEventListener('input', (e) => {
+      state.settings.geminiApiKey = e.target.value;
+      if (status) status.textContent = '';
+      markDirty();
+    });
+  }
+
+  toggleBtn?.addEventListener('click', () => {
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  if (modeSelect) {
+    modeSelect.value = state.settings.geminiKeyMode || 'fallback';
+    modeSelect.addEventListener('change', (e) => {
+      state.settings.geminiKeyMode = e.target.value;
+      safeGemini(() => setKeyMode?.(e.target.value));
+      markDirty();
+    });
+  }
+
+  testBtn?.addEventListener('click', async () => {
+    const key = input ? input.value : state.settings.geminiApiKey || '';
+    testBtn.disabled = true;
+    if (status) status.textContent = '';
+    try {
+      const ok = await safeGemini(() => testUserApiKey?.(key));
+      if (status) {
+        status.textContent = ok ? t('settings.gemini_key_ok') : t('settings.gemini_key_invalid');
+        status.classList.toggle('error', !ok);
+        status.classList.toggle('success', !!ok);
+      }
+    } finally {
+      testBtn.disabled = false;
+    }
+  });
+}
+
+// ===== STT engine / on-device / keep-awake prefs =====
+
+function initSttPrefsSettings() {
+  const sttEngineSelect = $('#selectSttEngine');
+  const sttOnDeviceCheck = $('#checkSttOnDevice');
+  const keepAwakeCheck = $('#checkKeepAwake');
+
+  if (sttEngineSelect) {
+    sttEngineSelect.value = state.settings.sttEngine || 'auto';
+    sttEngineSelect.addEventListener('change', (e) => {
+      state.settings.sttEngine = e.target.value;
+      markDirty();
+    });
+  }
+
+  if (sttOnDeviceCheck) {
+    sttOnDeviceCheck.checked = state.settings.sttOnDevice !== false;
+    sttOnDeviceCheck.addEventListener('change', (e) => {
+      state.settings.sttOnDevice = e.target.checked;
+      markDirty();
+    });
+  }
+
+  if (keepAwakeCheck) {
+    keepAwakeCheck.checked = state.settings.keepScreenAwake !== false;
+    keepAwakeCheck.addEventListener('change', (e) => {
+      state.settings.keepScreenAwake = e.target.checked;
+      markDirty();
+    });
+  }
 }
 
 // ===== Preset Cards =====
@@ -472,6 +569,12 @@ function saveAllSettings() {
     audioRecording: s.audioRecording,
     audioRetentionDays: s.audioRetentionDays,
     audioAutoDownload: s.audioAutoDownload,
+    geminiApiKey: s.geminiApiKey,
+    geminiKeyMode: s.geminiKeyMode,
+    sttEngine: s.sttEngine,
+    sttOnDevice: s.sttOnDevice,
+    keepScreenAwake: s.keepScreenAwake,
+    keyboardCommitMs: s.keyboardCommitMs,
   });
   snapshotSettings();
 
@@ -562,6 +665,21 @@ function applySettingsToForm() {
   if (chatModelSelect) chatModelSelect.value = s.chatModel;
 
   renderChatPresets();
+
+  // Gemini key / STT & power prefs (markup may not exist yet)
+  const geminiKeyInput = $('#inputGeminiKey');
+  if (geminiKeyInput) geminiKeyInput.value = s.geminiApiKey || '';
+  const geminiKeyModeSelect = $('#selectGeminiKeyMode');
+  if (geminiKeyModeSelect) geminiKeyModeSelect.value = s.geminiKeyMode || 'fallback';
+  const geminiKeyStatus = $('#geminiKeyStatus');
+  if (geminiKeyStatus) geminiKeyStatus.textContent = '';
+  const sttEngineSelect = $('#selectSttEngine');
+  if (sttEngineSelect) sttEngineSelect.value = s.sttEngine || 'auto';
+  const sttOnDeviceCheck = $('#checkSttOnDevice');
+  if (sttOnDeviceCheck) sttOnDeviceCheck.checked = s.sttOnDevice !== false;
+  const keepAwakeCheck = $('#checkKeepAwake');
+  if (keepAwakeCheck) keepAwakeCheck.checked = s.keepScreenAwake !== false;
+  safeGemini(() => setKeyMode?.(s.geminiKeyMode || 'fallback'));
 }
 
 // ===== Helpers =====
@@ -592,6 +710,12 @@ function loadSavedSettings() {
   s.audioRecording = saved.audioRecording !== undefined ? saved.audioRecording : true;
   s.audioRetentionDays = saved.audioRetentionDays || 30;
   s.audioAutoDownload = !!saved.audioAutoDownload;
+  s.geminiApiKey = saved.geminiApiKey || '';
+  s.geminiKeyMode = saved.geminiKeyMode || 'fallback';
+  s.sttEngine = saved.sttEngine || 'auto';
+  s.sttOnDevice = saved.sttOnDevice !== undefined ? saved.sttOnDevice : true;
+  s.keepScreenAwake = saved.keepScreenAwake !== undefined ? saved.keepScreenAwake : true;
+  s.keyboardCommitMs = saved.keyboardCommitMs || 2500;
 
   applySettingsToForm();
 

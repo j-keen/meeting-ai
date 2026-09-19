@@ -2,7 +2,7 @@
 
 import { state, emit } from './event-bus.js';
 import { getAiLanguage, t } from './i18n.js';
-import { callGeminiGuarded, UsageLimitError, isProxyAvailable } from './gemini-api.js';
+import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadSettings, saveSettings } from './storage.js';
 
@@ -238,8 +238,8 @@ function getChatModel() {
 }
 
 async function sendChatMessage(userText) {
-  if (!isProxyAvailable()) {
-    renderSystemMessage(t('toast.no_api_key'));
+  if (!isAiAvailable()) {
+    renderSystemMessage(t('toast.ai_unavailable'));
     return;
   }
 

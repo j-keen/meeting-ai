@@ -51,6 +51,12 @@ vi.mock('../i18n.js', () => ({
 vi.mock('../gemini-api.js', () => ({
   callGemini: vi.fn(),
   isProxyAvailable: vi.fn(),
+  isAiAvailable: vi.fn(),
+  setUserApiKeyProvider: vi.fn(),
+  setKeyMode: vi.fn(),
+  getKeyMode: vi.fn(() => 'fallback'),
+  hasUserKey: vi.fn(() => false),
+  testUserApiKey: vi.fn(async () => true),
 }));
 
 vi.mock('../meeting-prep.js', () => ({

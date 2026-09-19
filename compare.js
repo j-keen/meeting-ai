@@ -1,9 +1,9 @@
 // compare.js - Compare Prompts feature
 
-import { state } from './event-bus.js';
+import { state, emit } from './event-bus.js';
 import { t, getPromptPresets } from './i18n.js';
 import { analyzeTranscript, getDefaultPrompt } from './ai.js';
-import { isProxyAvailable } from './gemini-api.js';
+import { isAiAvailable } from './gemini-api.js';
 import { saveSettings } from './storage.js';
 import { showToast, renderAnalysisInto } from './ui.js';
 
@@ -87,8 +87,8 @@ export async function runCompareAnalysis() {
     showToast(t('toast.no_transcript'), 'warning');
     return;
   }
-  if (!isProxyAvailable()) {
-    showToast(t('toast.no_api_key'), 'warning');
+  if (!isAiAvailable()) {
+    showToast(t('toast.ai_unavailable'), 'warning');
     return;
   }
 
@@ -165,7 +165,8 @@ export async function runCompareAnalysis() {
 export function applyComparePromptAsDefault(promptText) {
   state.settings.customPrompt = promptText;
   saveSettings(state.settings);
-  const textPrompt = $('#textPrompt');
-  if (textPrompt) textPrompt.value = promptText;
+  // No dedicated prompt textarea lives in the settings modal (it's card/preset driven via
+  // analysis-style-modal.js) — notify listeners so any open UI reflects the new default.
+  emit('customPrompt:change');
   showToast(t('compare.set_default_success'), 'success');
 }

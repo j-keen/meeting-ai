@@ -27,7 +27,10 @@
     if (!user) return;
 
     try {
-      const { error } = await client.from('meetings').upsert({
+      // Settings (including the user's personal Gemini API key) are never synced to
+      // Supabase — only meeting data is uploaded here. Defensive delete in case a caller
+      // ever merges settings fields into meetingData before calling this.
+      const payload = {
         id: meetingData.id,
         user_id: user.id,
         title: meetingData.title,
@@ -41,7 +44,10 @@
         memos: meetingData.memos || [],
         chat_history: meetingData.chatHistory || [],
         updated_at: new Date().toISOString(),
-      });
+      };
+      delete payload.geminiApiKey;
+
+      const { error } = await client.from('meetings').upsert(payload);
 
       if (error) {
         console.error('[sync] Upload failed:', error.message);
