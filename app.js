@@ -45,15 +45,30 @@ import {
   updateParticipantDropdown, updateTagDropdown, updateLocationDropdown,
   runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
-  clearDraftRecovery, saveActiveSession,
+  clearDraftRecovery, saveActiveSession, loadMeeting, adoptImport,
 } from './recording.js';
-import { prefetchDeepgramToken } from './stt.js';
 import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
 import { initAnalytics } from './analytics.js';
 import { CATEGORY_I18N_KEYS } from './usage-limiter.js';
 
 const $ = (sel) => document.querySelector(sel);
+
+// Inbox badge (module scope: used by init() handlers and the demo loaders)
+function updateInboxBadge() {
+  const inboxBadge = $('#inboxBadge');
+  if (!inboxBadge) return;
+  const count = state.transcript.filter(l => l.bookmarked).length + (state.memos?.length || 0);
+  if (count > 0) {
+    inboxBadge.textContent = count;
+    inboxBadge.hidden = false;
+    inboxBadge.classList.remove('inbox-badge-pulse');
+    void inboxBadge.offsetWidth; // reflow to retrigger animation
+    inboxBadge.classList.add('inbox-badge-pulse');
+  } else {
+    inboxBadge.hidden = true;
+  }
+}
 
 // ===== Init =====
 function init() {
@@ -102,9 +117,6 @@ function init() {
 
   // Check if Vertex AI proxy is available (for keyless operation)
   checkProxyAvailable();
-
-  // Pre-fetch Deepgram token on mobile for faster STT start
-  prefetchDeepgramToken();
 
 
   // ===== Draft Recovery =====
@@ -171,8 +183,8 @@ function init() {
     });
   });
 
-  // Compare prompts modal
-  $('#btnComparePrompts')?.addEventListener('click', () => openCompareModal());
+  // Compare prompts modal (no launch button in the UI yet; wired via compare:open)
+  on('compare:open', () => openCompareModal());
   $('#btnRunCompare')?.addEventListener('click', () => runCompareAnalysis());
   $('#btnSetDefaultA')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextA').value));
   $('#btnSetDefaultB')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextB').value));
@@ -351,21 +363,6 @@ function init() {
   // Minutes Model Selection + Preview Modals
   initMinutesModelModal();
   initMinutesPreview();
-
-  // Inbox badge
-  const inboxBadge = $('#inboxBadge');
-  function updateInboxBadge() {
-    const count = state.transcript.filter(l => l.bookmarked).length + (state.memos?.length || 0);
-    if (count > 0) {
-      inboxBadge.textContent = count;
-      inboxBadge.hidden = false;
-      inboxBadge.classList.remove('inbox-badge-pulse');
-      void inboxBadge.offsetWidth; // reflow to retrigger animation
-      inboxBadge.classList.add('inbox-badge-pulse');
-    } else {
-      inboxBadge.hidden = true;
-    }
-  }
 
   // Memo
   const memoInput = $('#memoInput');
@@ -653,105 +650,7 @@ function init() {
     const meeting = getMeeting(id);
     if (!meeting) return;
 
-    // Reset current state (skip launcher since we're loading a meeting)
-    resetMeeting(true);
-
-    // Restore all fields from saved meeting
-    state.meetingId = meeting.id;
-    state.meetingTitle = meeting.title || '';
-    state.meetingStartTime = meeting.startTime || meeting.createdAt;
-    state.meetingLocation = meeting.location || '';
-    state.transcript = meeting.transcript || [];
-    state.memos = meeting.memos || [];
-    state.analysisHistory = meeting.analysisHistory || [];
-    state.chatHistory = meeting.chatHistory || [];
-    state.userInsights = meeting.userInsights || [];
-    state.tags = meeting.tags || [];
-    state.starRating = meeting.starRating || 3;
-    state.categories = meeting.categories || [];
-    state.participants = meeting.participants || [];
-    state.analysisContext = meeting.analysisContext || '';
-
-    // Set loaded mode
-    state.loadedMeetingId = id;
-    state.loadedMeetingOriginal = JSON.parse(JSON.stringify(meeting));
-
-    // Render transcript + memos merged by timestamp
-    const merged = [
-      ...state.transcript.map(l => ({ ...l, _type: 'transcript' })),
-      ...state.memos.map(m => ({ ...m, _type: 'memo' })),
-    ].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-    merged.forEach(item => {
-      if (item._type === 'memo') addMemoLine(item);
-      else addTranscriptLine(item);
-    });
-
-    // Render latest analysis
-    const lastAnalysis = state.analysisHistory[state.analysisHistory.length - 1];
-    if (lastAnalysis) {
-      state.currentAnalysis = lastAnalysis;
-      renderAnalysis(lastAnalysis);
-    }
-
-    // Load chat history
-    loadChatHistory();
-
-    // Show meeting timer with loaded meeting duration
-    if (state.meetingStartTime && state.transcript.length > 0) {
-      const lastTs = state.transcript[state.transcript.length - 1].timestamp;
-      const diff = lastTs - state.meetingStartTime;
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      $('#meetingTimer').textContent =
-        `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    // Show title input
-    const titleInput = $('#meetingTitleInput');
-    if (titleInput) {
-      titleInput.hidden = false;
-      titleInput.value = state.meetingTitle;
-    }
-
-    // Show banner
-    const banner = $('#loadedMeetingBanner');
-    $('#loadedBannerTitle').textContent = state.meetingTitle || t('history.untitled');
-    $('#loadedBannerDate').textContent = new Date(state.meetingStartTime).toLocaleDateString();
-    banner.hidden = false;
-    document.body.classList.add('loaded-mode');
-    $('#meetingStatus').textContent = t('history.load');
-
-    // Show [이어서 녹음] + [저장정보] buttons in bottom bar
-    const endBtn = $('#btnEndMeeting');
-    const existingResume = $('#btnBottomResume');
-    if (existingResume) existingResume.remove();
-    const existing = $('#btnEditSaveInfo');
-    if (existing) existing.remove();
-
-    // 이어서 녹음 button
-    const btnResume = document.createElement('button');
-    btnResume.className = 'btn btn-end-meeting';
-    btnResume.id = 'btnBottomResume';
-    btnResume.innerHTML = `<span>▶</span> <span>${t('loaded.resume_recording')}</span>`;
-    btnResume.onclick = async () => {
-      if (!confirm(t('loaded.resume_confirm'))) return;
-      showToast(t('loaded.resumed'), 'info');
-      await resumeFromLoaded();
-    };
-    endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
-
-    // 저장정보 button
-    const btnEditInfo = document.createElement('button');
-    btnEditInfo.className = 'btn btn-end-meeting';
-    btnEditInfo.id = 'btnEditSaveInfo';
-    btnEditInfo.innerHTML = `<span>📋</span> <span>${t('end_meeting.edit_info_btn')}</span>`;
-    btnEditInfo.onclick = () => {
-      const m = getMeeting(state.loadedMeetingId);
-      if (m) showEndMeetingModal(m);
-    };
-    btnResume.parentNode.insertBefore(btnEditInfo, btnResume.nextSibling);
+    loadMeeting(meeting);
 
     // Close history & viewer modals
     $('#historyModal').hidden = true;
@@ -861,26 +760,7 @@ function init() {
 
   // Import complete (P-4 text paste / P-6 audio upload)
   on('import:complete', ({ transcript, type }) => {
-    resetMeeting(true);
-    state.meetingId = generateId();
-    state.meetingStartTime = transcript[0]?.timestamp || Date.now();
-    state.isImported = true;
-    state.importType = type;
-    state.transcript = transcript;
-    transcript.forEach(line => addTranscriptLine(line));
-    document.body.classList.add('imported-mode');
-    // Show meeting pill
-    const pill = $('#meetingPill');
-    pill.hidden = false;
-    pill.classList.remove('recording');
-    pill.classList.add('paused');
-    $('#meetingStatus').textContent = type === 'uploaded' ? t('import.status_uploaded') : t('import.status_imported');
-    // Show title input
-    const titleInput = $('#meetingTitleInput');
-    if (titleInput) { titleInput.hidden = false; titleInput.value = ''; }
-    // Show end meeting button
-    $('#btnEndMeeting').hidden = false;
-    autoSave();
+    adoptImport(transcript, type);
   });
 
   // Prompt Builder complete — apply 3-channel settings and start recording

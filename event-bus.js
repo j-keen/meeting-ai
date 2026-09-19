@@ -12,8 +12,20 @@ export function emit(event, data) {
 }
 
 // ===== State =====
+/**
+ * Meeting lifecycle is a single explicit phase (see meeting-session.js):
+ *   'idle' | 'recording' | 'paused' | 'ended'
+ * `source` says where the current meeting content came from:
+ *   'live' | 'loaded' (opened from history) | 'imported' (pasted / uploaded)
+ * `isRecording` and `meetingEnded` are kept as derived accessors for existing
+ * readers; the only intended writer of `phase` is meeting-session.js.
+ */
 export const state = {
-  isRecording: false,
+  phase: 'idle',
+  source: 'live',
+  pausedDuration: 0,
+  pauseStartTime: null,
+  sttEngineName: null,
   meetingStartTime: null,
   meetingId: null,
   meetingLocation: '',
@@ -25,7 +37,6 @@ export const state = {
   chatHistory: [],
   userInsights: [],
   tags: [],
-  meetingEnded: false,
   meetingTitle: '',
   starRating: 3,
   categories: [],
@@ -42,3 +53,28 @@ export const state = {
   aiMetadataCached: null, // { participants: string[], tags: string[], categories: string[] } | null
   documents: [], // [{ id, title, content, createdAt, updatedAt }]
 };
+
+function setPhase(to, reason) {
+  const from = state.phase;
+  if (from === to) return;
+  state.phase = to;
+  emit('session:transition', { from, to, reason });
+}
+
+Object.defineProperties(state, {
+  isRecording: {
+    enumerable: true,
+    get() { return this.phase === 'recording'; },
+    // Legacy writers: prefer meeting-session.js start()/pause().
+    set(v) { setPhase(v ? 'recording' : (this.phase === 'recording' ? 'paused' : this.phase), 'legacy-isRecording'); },
+  },
+  meetingEnded: {
+    enumerable: true,
+    get() { return this.phase === 'ended'; },
+    // Legacy writers: prefer meeting-session.js markEnded()/resume().
+    set(v) {
+      if (v) setPhase('ended', 'legacy-meetingEnded');
+      else if (this.phase === 'ended') setPhase('paused', 'legacy-meetingEnded');
+    },
+  },
+});

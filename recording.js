@@ -1,30 +1,27 @@
 // recording.js - Recording lifecycle, STT, analysis, correction, auto-save, idle detection
 
-import { state, on, emit } from './event-bus.js';
-import { createSTT } from './stt.js';
-import { startAudioRecording, stopAudioRecording, hasRecording, recoverChunks, getCurrentRecordingSize } from './audio-recorder.js';
+import { state, emit } from './event-bus.js';
+import { hasRecording, getCurrentRecordingSize } from './audio-recorder.js';
+import * as session from './meeting-session.js';
+import { initSessionUI } from './session-ui.js';
+import { escapeHtml } from './utils.js';
 import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isProxyAvailable } from './gemini-api.js';
 import {
-  saveMeeting, getMeeting, loadSettings, saveSettings,
-  loadContacts, addContact, loadLocations, addLocation,
+  saveMeeting, getMeeting,
+  loadContacts, loadLocations, addLocation,
   getLocationFrequency, linkMeetings,
-  loadCorrectionDict, addCorrectionEntry,
-  getProUsageCount, incrementProUsage,
+  loadCorrectionDict,
+  getProUsageCount,
 } from './storage.js';
 import {
   showToast, showCenterToast, showWhisperToast,
-  addTranscriptLine, showInterim, clearInterim,
-  showAnalysisSkeletons, renderAnalysis, renderHighlights,
-  updateTranscriptLineUI, removeTranscriptLineUI,
-  showTranscriptConnecting, showTranscriptWaiting, hideTranscriptWaiting, resetTranscriptEmpty,
-  showAiWaiting, hideAiWaiting, resetAiEmpty,
-  showChatWaiting, resetChatEmpty,
-  addMemoLine, getAnalysisAsText,
+  showAnalysisSkeletons, renderAnalysis,
+  updateTranscriptLineUI,
+  showAiWaiting, showChatWaiting,
 } from './ui.js';
-import { t, getDateLocale, getAiLanguage } from './i18n.js';
+import { t, getDateLocale } from './i18n.js';
 import { showLauncherModal } from './launcher.js';
-import { loadChatHistory } from './chat.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -32,41 +29,71 @@ export function buildFullProfile() {
   return state.settings.userProfile || '';
 }
 
-function buildCategoryHints() {
-  return {};
-}
-
 // ===== Core Logic =====
-let stt = null;
-let timerInterval = null;
-let autoSaveInterval = null;
-let autoAnalysisInterval = null;
 let isAnalyzing = false;
 let isCorrecting = false;
 let charsSinceLastAnalysis = 0;
 let linesSinceLastAnalysis = 0;
-let lastAnalysisTimestamp = 0;
 let charsSinceLastCorrection = 0;
 
-// Pause tracking
-let pausedDuration = 0;
-let pauseStartTime = null;
-
-// Guard: idle detection + max duration
+// Guard: idle detection (max duration lives in meeting-session.js)
 const IDLE_WARNING_MS = 15 * 60 * 1000;
 const IDLE_AUTOPAUSE_MS = 20 * 60 * 1000;
 const MAX_RECORDING_MS = 6 * 60 * 60 * 1000;
 let lastTranscriptTime = 0;
-let idleCheckInterval = null;
 let idleWarningShown = false;
-let maxDurationTimeout = null;
-let audioSizeInterval = null;
 
+export const generateId = session.generateId;
+const getTotalPausedMs = session.getTotalPausedMs;
+
+// ===== Lifecycle wiring =====
+// meeting-session.js owns phase / STT / timers / chrome. This file keeps analysis,
+// correction, persistence and the end-meeting modal, and plugs in through hooks.
+session.configureSession({
+  onFinalLine: (line) => {
+    checkCharThreshold(line.text);
+    lastTranscriptTime = Date.now();
+    idleWarningShown = false;
+  },
+  onReplaceLine: () => { lastTranscriptTime = Date.now(); },
+  autoSave: () => autoSave(),
+  clearDraftRecovery: () => clearDraftRecovery(),
+  onRecordingTimers: (timers) => {
+    timers.every('autoSave', 30000, () => autoSave());
+    timers.every('idle', 60000, () => checkIdle());
+    timers.every('audioSize', 10000, () => updateAudioRecBadge());
+    startAutoAnalysis(timers);
+    startAiCorrection();
+    lastTranscriptTime = Date.now();
+    idleWarningShown = false;
+    updateAudioRecBadge();
+  },
+  onSessionTimers: (timers) => {
+    timers.every('draft', 15000, () => { saveDraft(); saveActiveSession(); });
+  },
+});
+
+initSessionUI({
+  onResume: async () => {
+    if (state.source === 'loaded') {
+      if (!confirm(t('loaded.resume_confirm'))) return;
+      showToast(t('loaded.resumed'), 'info');
+      await resumeFromLoaded();
+    } else {
+      await resumeMeeting();
+    }
+  },
+  onNew: () => resetMeeting(),
+  onDocGen: () => emit('docGenerator:open'),
+  onEditInfo: () => {
+    const m = getMeeting(state.loadedMeetingId);
+    if (m) showEndMeetingModal(m);
+  },
+});
 
 // ===== Draft Recovery (sessionStorage + localStorage crash recovery) =====
 const DRAFT_KEY = 'meeting-ai-draft';
 const ACTIVE_SESSION_KEY = 'meeting-ai-active-session';
-let draftSaveInterval = null;
 
 function buildDraftData() {
   return {
@@ -119,15 +146,7 @@ function clearActiveSession() {
 export function clearDraftRecovery() {
   sessionStorage.removeItem(DRAFT_KEY);
   clearActiveSession();
-  if (draftSaveInterval) { clearInterval(draftSaveInterval); draftSaveInterval = null; }
-}
-
-function startDraftSaving() {
-  if (draftSaveInterval) clearInterval(draftSaveInterval);
-  draftSaveInterval = setInterval(() => {
-    saveDraft();
-    saveActiveSession();
-  }, 15000); // every 15s
+  session.sessionTimers.clear('draft');
 }
 
 export function checkDraftRecovery() {
@@ -207,372 +226,62 @@ function showDraftRecoveryBanner(draft, source) {
 function recoverDraft(draft, source) {
   sessionStorage.removeItem(DRAFT_KEY);
   if (source === 'crash') clearActiveSession();
-
-  state.meetingId = draft.meetingId;
-  state.meetingTitle = draft.meetingTitle || '';
-  state.meetingStartTime = draft.meetingStartTime;
-  pausedDuration = draft.pausedDuration || 0;
-  pauseStartTime = null;
-  state.meetingLocation = draft.meetingLocation || '';
-  state.transcript = draft.transcript || [];
-  state.memos = draft.memos || [];
-  state.chatHistory = draft.chatHistory || [];
-  state.analysisHistory = draft.analysisHistory || [];
-  state.currentAnalysis = draft.currentAnalysis || null;
-  state.userInsights = draft.userInsights || [];
-  state.tags = draft.tags || [];
-  state.starRating = draft.starRating || 3;
-  state.categories = draft.categories || [];
-  state.participants = draft.participants || [];
-  if (draft.settings) {
-    if (draft.settings.meetingPreset) state.settings.meetingPreset = draft.settings.meetingPreset;
-    if (draft.settings.meetingContext) state.settings.meetingContext = draft.settings.meetingContext;
-  }
-
+  session.adoptDraft(draft, source);
   // Multi-tab lock: mark this tab as owning this meeting
   sessionStorage.setItem('meeting-ai-tab-' + state.meetingId, '1');
-
-  // Render recovered transcript
-  state.transcript.forEach(line => addTranscriptLine(line));
-  // Render recovered memos
-  state.memos.forEach(memo => addMemoLine(memo));
-  // Render recovered chat history
-  loadChatHistory();
-  // Render analysis if available
-  if (state.currentAnalysis) renderAnalysis(state.currentAnalysis);
-  // Show meeting as paused (user can resume or save)
-  state.meetingEnded = true;
-  const titleInput = $('#meetingTitleInput');
-  if (titleInput) { titleInput.value = state.meetingTitle; titleInput.hidden = false; }
-
-  // Restore timer display
-  if (state.meetingStartTime) {
-    const diff = draft.savedAt - state.meetingStartTime - (draft.pausedDuration || 0);
-    const h = Math.floor(diff / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    $('#meetingTimer').textContent =
-      `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  } else {
-    $('#meetingTimer').textContent = '00:00:00';
-  }
-
-  const draftPill = $('#meetingPill');
-  draftPill.hidden = false;
-  draftPill.classList.remove('recording');
-  draftPill.classList.add('paused');
-  $('#meetingStatus').textContent = source === 'crash'
-    ? t('draft.crash_recovered_status')
-    : t('draft.recovered_status');
-
-  // Show post-end buttons so user can resume or save
-  const endBtn = $('#btnEndMeeting');
-  endBtn.hidden = false;
-
-  // Hide launcher if showing
-  const launcher = $('#launcherModal');
-  if (launcher) launcher.hidden = true;
-
-  const toastMsg = source === 'crash'
-    ? t('toast.crash_recovered')
-    : t('toast.draft_recovered');
-  showToast(toastMsg, 'success');
-}
-
-export function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-function getTotalPausedMs() {
-  return pausedDuration + (pauseStartTime ? Date.now() - pauseStartTime : 0);
-}
-
-function updateTimer() {
-  if (!state.meetingStartTime) return;
-  const diff = Date.now() - state.meetingStartTime - getTotalPausedMs();
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  $('#meetingTimer').textContent =
-    `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  // Native app bridge: notification is shown once at recordingStarted.
-  // No repeated updates — Android treats each update as a new alert.
+  showToast(source === 'crash' ? t('toast.crash_recovered') : t('toast.draft_recovered'), 'success');
 }
 
 export function getElapsedTimeStr() {
   if (!state.meetingStartTime) return 'unknown';
-  // In loaded mode, use last transcript timestamp instead of current time
-  if (state.loadedMeetingId && state.transcript.length > 0) {
-    const lastTs = state.transcript[state.transcript.length - 1].timestamp;
-    const diff = lastTs - state.meetingStartTime;
-    const mins = Math.floor(diff / 60000);
-    return t('minutes', { n: mins });
-  }
-  const diff = Date.now() - state.meetingStartTime - getTotalPausedMs();
-  const mins = Math.floor(diff / 60000);
+  const mins = Math.floor(session.getElapsedMs() / 60000);
   return t('minutes', { n: mins });
 }
 
+function afterRecordingStarted() {
+  showAiWaiting(state.settings.analysisCharThreshold || 1000);
+  showChatWaiting();
+  showToast(t('toast.recording_started'), 'success');
+}
+
+/** Resume a meeting opened from history (source=loaded). */
 export async function resumeFromLoaded() {
-  if (state.isRecording || !state.loadedMeetingId) return;
-
-  // Calculate pause gap: time between last transcript/memo and now
-  const timestamps = [
-    ...state.transcript.map(l => l.timestamp),
-    ...state.memos.map(m => m.timestamp),
-  ].filter(Boolean);
-  const lastActivity = timestamps.length > 0 ? Math.max(...timestamps) : state.meetingStartTime;
-  pausedDuration += Date.now() - lastActivity;
-  pauseStartTime = null;
-
-  // Exit loaded mode
-  state.loadedMeetingId = null;
-  state.loadedMeetingOriginal = null;
-  const banner = document.querySelector('#loadedMeetingBanner');
-  if (banner) banner.hidden = true;
-  document.body.classList.remove('loaded-mode');
-  const editInfoBtn = document.querySelector('#btnEditSaveInfo');
-  if (editInfoBtn) editInfoBtn.remove();
-  const bottomResume = document.querySelector('#btnBottomResume');
-  if (bottomResume) bottomResume.remove();
-
-  // Start recording (meetingId & meetingStartTime already set, so no new ID created)
-  await startRecording();
+  if (state.phase === 'recording' || !state.loadedMeetingId) return;
+  if (await session.resume()) afterRecordingStarted();
 }
 
+/** REC button: start a new meeting, or resume the paused/ended one. */
 export async function startRecording() {
-  if (state.isRecording) return;
-  if (state.loadedMeetingId) return; // Cannot record while a past meeting is loaded
-
-  stt = createSTT();
-
-  try {
-    await stt.start({
-      language: state.settings.language || 'ko',
-      onRecordingStream: (stream) => {
-        if (state.settings.audioRecording) {
-          startAudioRecording(state.meetingId, stream);
-          state._audioRecordingActive = true;
-        } else {
-          stream.getTracks().forEach(tr => tr.stop());
-        }
-      },
-      onInterim: (text) => {
-        showInterim(text);
-      },
-      onFinal: (text) => {
-        const line = {
-          id: generateId(),
-          text,
-          timestamp: Date.now(),
-          bookmarked: false,
-        };
-        state.transcript.push(line);
-        addTranscriptLine(line);
-        emit('transcript:add', line);
-        checkCharThreshold(text);
-        lastTranscriptTime = Date.now();
-        idleWarningShown = false;
-      },
-      onReplace: (text) => {
-        // Mobile: replace last transcript line instead of creating a new one
-        const lastLine = state.transcript[state.transcript.length - 1];
-        if (lastLine) {
-          lastLine.text = text;
-          lastLine.timestamp = Date.now();
-          updateTranscriptLineUI(lastLine.id);
-          lastTranscriptTime = Date.now();
-        }
-      },
-      onError: (err) => {
-        showToast(err, 'error');
-      },
-      onConnecting: () => {
-        showTranscriptConnecting();
-      },
-      onConnected: (engine) => {
-        showTranscriptWaiting();
-        showToast(t('stt.connected'), 'success');
-        // Show engine badge
-        const badge = document.querySelector('#sttEngineBadge');
-        if (badge) {
-          badge.textContent = engine === 'deepgram' ? 'DG' : 'WS';
-          badge.title = engine === 'deepgram' ? 'Deepgram Nova-2' : 'Web Speech API';
-          badge.hidden = false;
-        }
-      },
-    });
-
-    // Set recording state only AFTER stt.start() succeeds
-    state.isRecording = true;
-    emit('recording:started');
-    // Native app bridge: start foreground service
-    if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'recordingStarted', title: state.meetingTitle || 'Meeting AI'
-      }));
-    }
-
-    if (!state.meetingStartTime) {
-      state.meetingStartTime = Date.now();
-      state.meetingId = generateId();
-    } else if (pauseStartTime) {
-      pausedDuration += Date.now() - pauseStartTime;
-      pauseStartTime = null;
-    }
-    // Show meeting title input in header
-    const titleInput = $('#meetingTitleInput');
-    if (titleInput) {
-      titleInput.hidden = false;
-      titleInput.value = state.meetingTitle;
-    }
-
-    timerInterval = setInterval(updateTimer, 1000);
-    autoSaveInterval = setInterval(() => autoSave(), 30000);
-    startAutoAnalysis();
-    startAiCorrection();
-    startDraftSaving();
-
-    // Guards: idle detection + max duration
-    lastTranscriptTime = Date.now();
-    idleWarningShown = false;
-    idleCheckInterval = setInterval(checkIdle, 60000);
-    maxDurationTimeout = setTimeout(() => {
-      stopRecording();
-      showToast(t('guard.max_duration'), 'warning');
-    }, MAX_RECORDING_MS);
-
-    const btn = $('#btnRecord');
-    btn.classList.remove('paused');
-    btn.classList.add('recording');
-    btn.querySelector('.record-label').textContent = t('record.meeting_active');
-    const pill = $('#meetingPill');
-    pill.hidden = false;
-    pill.classList.remove('paused');
-    pill.classList.add('recording');
-    $('#meetingStatus').textContent = t('record.status_recording');
-    $('#btnEndMeeting').hidden = false;
-
-    // Show audio recording badge in pill
-    if (state._audioRecordingActive) {
-      const recBadge = $('#audioRecBadge');
-      if (recBadge) recBadge.hidden = false;
-      updateAudioRecBadge();
-      if (audioSizeInterval) clearInterval(audioSizeInterval);
-      audioSizeInterval = setInterval(updateAudioRecBadge, 10000);
-    }
-
-    showAiWaiting(state.settings.analysisCharThreshold || 1000);
-    showChatWaiting();
-    showToast(t('toast.recording_started'), 'success');
-
-  } catch (err) {
-    stt?.stop();
-    stt = null;
-    state.isRecording = false;
-    showToast(t('toast.record_fail') + err.message, 'error');
-  }
+  if (state.phase === 'recording') return;
+  if (state.loadedMeetingId) return; // use resumeFromLoaded()
+  const ok = state.phase === 'idle' ? await session.start() : await session.resume();
+  if (ok) afterRecordingStarted();
 }
 
-// Mobile: restart STT when returning from background
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState !== 'visible') return;
-  if (!state.isRecording || !stt) return;
+/** Open a saved meeting into the workspace (source=loaded). */
+export function loadMeeting(meeting) {
+  session.loadMeeting(meeting);
+}
 
-  // If STT died while in background (isRunning got reset by fatal error), restart it
-  if (!stt.isRunning) {
-    console.log('[Recording] Page visible — STT died in background, restarting...');
-    stt.stop();
-    stt = createSTT();
-    try {
-      await stt.start({
-        language: state.settings.language || 'ko',
-        onRecordingStream: () => {},  // skip recording stream on restart
-        onInterim: (text) => { showInterim(text); },
-        onFinal: (text) => {
-          const line = {
-            id: generateId(),
-            text,
-            timestamp: Date.now(),
-            bookmarked: false,
-          };
-          state.transcript.push(line);
-          addTranscriptLine(line);
-          emit('transcript:add', line);
-          lastTranscriptTime = Date.now();
-        },
-        onReplace: (text) => {
-          const lastLine = state.transcript[state.transcript.length - 1];
-          if (lastLine) {
-            lastLine.text = text;
-            lastLine.timestamp = Date.now();
-            updateTranscriptLineUI(lastLine.id);
-            lastTranscriptTime = Date.now();
-          }
-        },
-        onError: (err) => { showToast(err, 'error'); },
-        onConnecting: () => {},
-        onConnected: (engine) => {
-          showToast(t('stt.reconnected') || t('stt.connected'), 'success');
-        },
-      });
-    } catch (err) {
-      showToast(t('toast.record_fail') + err.message, 'error');
-    }
-  }
-});
+/** Pasted / uploaded transcript becomes a paused meeting. */
+export function adoptImport(transcript, type) {
+  session.adoptImport(transcript, type);
+}
 
+/** Pause (the REC button's second click). Kept under its historical name. */
 export async function stopRecording() {
-  if (!state.isRecording) return;
+  await session.pause('user');
+}
 
-  stt?.stop();
-  stt = null;
-  state.isRecording = false;
-  emit('recording:stopped');
-  // Native app bridge: stop foreground service
-  if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'recordingStopped' }));
-  }
-
-  // Stop audio recording if active
-  if (state._audioRecordingActive) {
-    await stopAudioRecording().catch(() => {});
-    state._audioRecordingActive = false;
-  }
-  pauseStartTime = Date.now();
-  clearInterim();
-
-  clearInterval(timerInterval);
-  clearInterval(autoSaveInterval);
-  clearInterval(autoAnalysisInterval);
-  clearInterval(idleCheckInterval);
-  clearTimeout(maxDurationTimeout);
-  charsSinceLastAnalysis = 0;
-  linesSinceLastAnalysis = 0;
-  charsSinceLastCorrection = 0;
-
-  const btn = $('#btnRecord');
-  btn.classList.remove('recording');
-  btn.classList.add('paused');
-  btn.querySelector('.record-label').textContent = t('record.paused');
-  const pill = $('#meetingPill');
-  pill.classList.remove('recording');
-  pill.classList.add('paused');
-  $('#meetingStatus').textContent = t('record.status_paused');
-  const badge = $('#sttEngineBadge');
-  if (badge) badge.hidden = true;
-  const recBadge = $('#audioRecBadge');
-  if (recBadge) recBadge.hidden = true;
-  if (audioSizeInterval) { clearInterval(audioSizeInterval); audioSizeInterval = null; }
-
-  autoSave();
+async function resumeMeeting() {
+  if (await session.resume()) showToast(t('toast.meeting_resumed'), 'success');
 }
 
 function checkIdle() {
-  if (!state.isRecording) return;
+  if (state.phase !== 'recording') return;
   const idleMs = Date.now() - lastTranscriptTime;
   if (idleMs >= IDLE_AUTOPAUSE_MS) {
-    stopRecording();
+    session.pause('idle');
     showToast(t('guard.idle_auto_stopped'), 'warning');
   } else if (idleMs >= IDLE_WARNING_MS && !idleWarningShown) {
     idleWarningShown = true;
@@ -580,17 +289,15 @@ function checkIdle() {
   }
 }
 
-function startAutoAnalysis() {
-  clearInterval(autoAnalysisInterval);
+function startAutoAnalysis(timers) {
   if (!state.settings.autoAnalysis) return;
   charsSinceLastAnalysis = 0;
   linesSinceLastAnalysis = 0;
-  lastAnalysisTimestamp = Date.now();
   charsSinceLastCorrection = 0;
   // 10-minute fallback timer: run analysis if at least 3 lines accumulated
-  autoAnalysisInterval = setInterval(() => {
-    if (state.isRecording && linesSinceLastAnalysis >= 3) runAnalysis();
-  }, 10 * 60 * 1000);
+  timers.every('autoAnalysis', 10 * 60 * 1000, () => {
+    if (state.phase === 'recording' && linesSinceLastAnalysis >= 3) runAnalysis();
+  });
 }
 
 function checkCharThreshold(newLineText) {
@@ -604,7 +311,6 @@ function checkCharThreshold(newLineText) {
   if (charsSinceLastAnalysis >= threshold && linesSinceLastAnalysis >= 5) {
     charsSinceLastAnalysis = 0;
     linesSinceLastAnalysis = 0;
-    lastAnalysisTimestamp = Date.now();
     runAnalysis();
   }
 
@@ -618,7 +324,6 @@ function checkCharThreshold(newLineText) {
 function onAnalysisComplete() {
   charsSinceLastAnalysis = 0;
   linesSinceLastAnalysis = 0;
-  lastAnalysisTimestamp = Date.now();
 }
 
 // AI sentence correction (triggered by char threshold in checkCharThreshold)
@@ -823,7 +528,7 @@ export function autoSave() {
     documents: state.documents || [],
     interrupted: !state.meetingEnded,
     type: state.importType || 'live',
-    hasAudio: !!state._audioRecordingActive,
+    hasAudio: !!(state._audioRecordingActive || state._audioRecorded),
   };
   const result = saveMeeting(meeting);
   if (window.saveMeetingWithSync) window.saveMeetingWithSync(meeting);
@@ -851,9 +556,9 @@ export function endMeeting() {
   });
 }
 
-function proceedEndMeeting() {
+async function proceedEndMeeting() {
   emit('meeting:ending');
-  stopRecording();
+  await session.pause('end');
   clearDraftRecovery();
   state.meetingTitle = $('#meetingTitleInput')?.value || state.meetingTitle;
   showEndMeetingModal();
@@ -890,7 +595,6 @@ function showEndConfirmDialog(onConfirm) {
   });
 }
 
-let _minutesGenerationPromise = null; // Track ongoing minutes generation
 
 // editMeeting: meeting object from storage (for viewer edit mode)
 export function showEndMeetingModal(editMeeting) {
@@ -1043,7 +747,7 @@ async function renderEndMeetingAudio(isEditMode) {
   if (!section) return;
 
   // Only show for live recordings (not edit mode, not imported)
-  if (isEditMode || !state._audioRecordingActive) {
+  if (isEditMode || !(state._audioRecordingActive || state._audioRecorded)) {
     section.hidden = true;
     return;
   }
@@ -1533,7 +1237,7 @@ export function updateLocationDropdown(query) {
     section.className = 'unified-dropdown-section';
     const item = document.createElement('div');
     item.className = 'unified-dropdown-item location-add-new';
-    item.innerHTML = `<span style="color:var(--accent)">+ </span><span>${t('end_meeting.add_location') || 'Add'} "<strong>${query.trim()}</strong>"</span>`;
+    item.innerHTML = `<span style="color:var(--accent)">+ </span><span>${t('end_meeting.add_location') || 'Add'} "<strong>${escapeHtml(query.trim())}</strong>"</span>`;
     item.addEventListener('click', (e) => {
       e.stopPropagation();
       const name = query.trim();
@@ -1589,7 +1293,6 @@ export async function finalizeEndMeeting() {
     $('#endMeetingModal').hidden = true;
     showToast(t('toast.empty_meeting'), 'warning');
     resetMeeting();
-    restoreEndButton(false);
     return;
   }
 
@@ -1611,12 +1314,12 @@ export async function finalizeEndMeeting() {
     await runCorrection(false);
   }
 
-  state.meetingEnded = true;
+  session.markEnded();
   autoSave();
   clearDraftRecovery();
 
   // Auto-download audio if enabled
-  if (state.settings.audioAutoDownload && state._audioRecordingActive) {
+  if (state.settings.audioAutoDownload && (state._audioRecordingActive || state._audioRecorded)) {
     const title = state.meetingTitle || 'recording';
     await downloadAudioFile(state.meetingId, title);
   }
@@ -1624,86 +1327,8 @@ export async function finalizeEndMeeting() {
   // Close modal and show toast
   footer.classList.remove('save-progress-state');
   if (body) body.classList.remove('disabled-form');
-  closeAndFinalizeMeeting();
-  showCenterToast(t('end_meeting.save_complete'));
-}
-
-// Save + generate minutes with selected model
-async function finalizeWithMinutes() {
-  state.meetingTitle = $('#endMeetingTitle').value.trim();
-  state.meetingLocation = $('#endMeetingLocation').value.trim();
-  if (state.meetingLocation) addLocation(state.meetingLocation);
-
-  const dtVal = $('#endMeetingDatetime').value;
-  if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
-
-  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
-  if (!hasContent) {
-    $('#endMeetingModal').hidden = true;
-    showToast(t('toast.empty_meeting'), 'warning');
-    resetMeeting();
-    restoreEndButton(false);
-    return;
-  }
-
-  const hasUncorrected = state.transcript.some(l => !l.originalText);
-  if (isProxyAvailable() && hasUncorrected && state.transcript.length > 0) {
-    await runCorrection(false);
-  }
-
-  state.meetingEnded = true;
-  autoSave();
-  clearDraftRecovery();
-
-  // Auto-download audio if enabled
-  if (state.settings.audioAutoDownload && state._audioRecordingActive) {
-    const title = state.meetingTitle || 'recording';
-    await downloadAudioFile(state.meetingId, title);
-  }
-
-  // Show progress in footer
-  showSaveProgress();
-
-  const body = $('#endMeetingModal .modal-body');
-  if (body) body.classList.add('disabled-form');
-
-  _minutesGenerationPromise = generateFinalMeetingMinutes().then(() => {
-    _minutesGenerationPromise = null;
-    showSaveComplete();
-  }).catch(err => {
-    _minutesGenerationPromise = null;
-    showSaveError(err.message);
-  });
-}
-
-
-function updatePostEndUI() {
-  const recBtn = $('#btnRecord');
-  recBtn.classList.remove('recording', 'paused');
-  recBtn.querySelector('.record-label').textContent = t('record.label');
-  $('#meetingStatus').textContent = t('record.status_ended');
-  const pill = $('#meetingPill');
-  pill.classList.remove('recording');
-  pill.classList.add('paused');
-  const titleInput = $('#meetingTitleInput');
-  if (titleInput) titleInput.hidden = true;
-}
-
-function closeAndFinalizeMeeting() {
   $('#endMeetingModal').hidden = true;
-
-  const recBtn = $('#btnRecord');
-  recBtn.classList.remove('recording', 'paused');
-  recBtn.querySelector('.record-label').textContent = t('record.label');
-
-  showPostEndButtons();
-
-  $('#meetingStatus').textContent = t('record.status_ended');
-  const pill2 = $('#meetingPill');
-  pill2.classList.remove('recording');
-  pill2.classList.add('paused');
-  const titleInput = $('#meetingTitleInput');
-  if (titleInput) titleInput.hidden = true;
+  showCenterToast(t('end_meeting.save_complete'));
 }
 
 export function showSaveFooterWithMinutesReady(onViewMinutes) {
@@ -1735,88 +1360,6 @@ export function showSaveFooterWithMinutesReady(onViewMinutes) {
   saveBtn.onclick = () => finalizeEndMeeting();
 
   actions.append(cancelBtn, viewBtn, saveBtn);
-}
-
-function showSaveProgress() {
-  const footer = $('#endMeetingFooter');
-  footer.classList.add('save-progress-state');
-
-  const actions = $('#endMeetingFooterActions');
-  actions.innerHTML = `
-    <div class="save-progress-content">
-      <div class="save-progress-bar"><div class="save-progress-bar-inner"></div></div>
-      <span class="save-progress-text">${t('end_meeting.generating_minutes')}</span>
-    </div>
-    <button class="btn btn-sm" id="btnSaveProgressClose">${t('end_meeting.close_background')}</button>
-  `;
-
-  actions.querySelector('#btnSaveProgressClose').onclick = () => {
-    closeAndFinalizeMeeting();
-    showToast(t('toast.minutes_generating_bg'), 'info');
-  };
-
-  // X button during generation → same as background close
-  const closeBtn = $('#endMeetingModal .modal-close');
-  closeBtn.onclick = (e) => {
-    e.stopPropagation();
-    closeAndFinalizeMeeting();
-    showToast(t('toast.minutes_generating_bg'), 'info');
-  };
-
-  // Overlay click during generation → same as background close
-  const modal = $('#endMeetingModal');
-  modal._progressClickHandler = (e) => {
-    if (e.target === modal) {
-      e.stopImmediatePropagation();
-      closeAndFinalizeMeeting();
-      showToast(t('toast.minutes_generating_bg'), 'info');
-    }
-  };
-  modal.addEventListener('click', modal._progressClickHandler, true);
-}
-
-function showSaveComplete() {
-  const footer = $('#endMeetingFooter');
-  footer.classList.remove('save-progress-state');
-  footer.classList.add('save-complete-state');
-
-  // Remove progress overlay click handler
-  cleanupProgressHandlers();
-
-  // Re-enable form
-  const body = $('#endMeetingModal .modal-body');
-  if (body) body.classList.remove('disabled-form');
-
-  // Close modal and show toast
-  closeAndFinalizeMeeting();
-  showCenterToast(t('end_meeting.save_complete'));
-}
-
-function showSaveError(errorMsg) {
-  const footer = $('#endMeetingFooter');
-  footer.classList.remove('save-progress-state');
-  footer.classList.add('save-error-state');
-
-  // Remove progress overlay click handler
-  cleanupProgressHandlers();
-
-  const actions = $('#endMeetingFooterActions');
-  actions.innerHTML = `
-    <div class="save-error-content">
-      <span class="save-error-text">${t('end_meeting.minutes_error')}: ${errorMsg}</span>
-    </div>
-    <button class="btn" id="btnSaveErrorClose">${t('end_meeting.close')}</button>
-  `;
-
-  actions.querySelector('#btnSaveErrorClose').onclick = () => closeAndFinalizeMeeting();
-}
-
-function cleanupProgressHandlers() {
-  const modal = $('#endMeetingModal');
-  if (modal._progressClickHandler) {
-    modal.removeEventListener('click', modal._progressClickHandler, true);
-    modal._progressClickHandler = null;
-  }
 }
 
 export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
@@ -1938,138 +1481,7 @@ function restoreEditState() {
   state._editMeetingId = null;
 }
 
-function showPostEndButtons() {
-  // 기존 버튼이 있으면 먼저 제거 (중복 방지)
-  const existingResume = $('#btnResumeMeeting');
-  const existingExport = $('#btnPostExport');
-  const existingNew = $('#btnNewMeeting');
-  const existingDocGen = $('#btnPostDocGen');
-  if (existingResume) existingResume.remove();
-  if (existingExport) existingExport.remove();
-  if (existingNew) existingNew.remove();
-  if (existingDocGen) existingDocGen.remove();
-
-  const endBtn = $('#btnEndMeeting');
-  const btnResume = document.createElement('button');
-  btnResume.className = 'btn btn-sm';
-  btnResume.id = 'btnResumeMeeting';
-  btnResume.textContent = t('meeting.resume');
-  btnResume.style.color = 'var(--accent)';
-  btnResume.style.borderColor = 'var(--accent)';
-
-  const btnNew = document.createElement('button');
-  btnNew.className = 'btn btn-sm';
-  btnNew.id = 'btnNewMeeting';
-  btnNew.textContent = t('meeting.new');
-
-  const btnDocGen = document.createElement('button');
-  btnDocGen.className = 'btn btn-sm';
-  btnDocGen.id = 'btnPostDocGen';
-  btnDocGen.textContent = '📄 ' + t('dg.button_label');
-
-  endBtn.hidden = true;
-  endBtn.parentNode.insertBefore(btnResume, endBtn.nextSibling);
-  endBtn.parentNode.insertBefore(btnDocGen, btnResume.nextSibling);
-  endBtn.parentNode.insertBefore(btnNew, btnDocGen.nextSibling);
-
-  btnDocGen.addEventListener('click', () => emit('docGenerator:open'));
-  btnResume.addEventListener('click', () => resumeMeeting());
-  btnNew.addEventListener('click', () => {
-    resetMeeting();
-    restoreEndButton(false);
-  });
-}
-
-async function resumeMeeting() {
-  state.meetingEnded = false;
-  restoreEndButton();
-  await startRecording();
-  showToast(t('toast.meeting_resumed'), 'success');
-}
-
-function restoreEndButton(showEnd = true) {
-  const endBtn = $('#btnEndMeeting');
-  endBtn.hidden = !showEnd;
-  const resume = $('#btnResumeMeeting');
-  const exportBtn = $('#btnPostExport');
-  const newBtn = $('#btnNewMeeting');
-  const editInfoBtn = $('#btnEditSaveInfo');
-  const docGenBtn = $('#btnPostDocGen');
-  if (resume) resume.remove();
-  if (exportBtn) exportBtn.remove();
-  if (newBtn) newBtn.remove();
-  if (editInfoBtn) editInfoBtn.remove();
-  if (docGenBtn) docGenBtn.remove();
-  const bottomResume = $('#btnBottomResume');
-  if (bottomResume) bottomResume.remove();
-}
-
 export function resetMeeting(skipLauncher = false) {
-  clearDraftRecovery();
-  state.meetingEnded = false;
-  state.meetingStartTime = null;
-  state.isImported = false;
-  state.importType = null;
-  state._audioRecordingActive = false;
-  document.body.classList.remove('imported-mode');
-  pausedDuration = 0;
-  pauseStartTime = null;
-  // Clear loaded meeting state
-  state.loadedMeetingId = null;
-  state.loadedMeetingOriginal = null;
-  const banner = document.querySelector('#loadedMeetingBanner');
-  if (banner) banner.hidden = true;
-  document.body.classList.remove('loaded-mode');
-  // Remove bottom bar buttons if present
-  const editInfoBtn = document.querySelector('#btnEditSaveInfo');
-  if (editInfoBtn) editInfoBtn.remove();
-  const bottomResume = document.querySelector('#btnBottomResume');
-  if (bottomResume) bottomResume.remove();
-  // Reset record button and hide end meeting button
-  const recBtn = $('#btnRecord');
-  recBtn.classList.remove('recording', 'paused');
-  recBtn.querySelector('.record-label').textContent = t('record.label');
-  const badge = $('#sttEngineBadge');
-  if (badge) badge.hidden = true;
-  const resetRecBadge = $('#audioRecBadge');
-  if (resetRecBadge) resetRecBadge.hidden = true;
-  if (audioSizeInterval) { clearInterval(audioSizeInterval); audioSizeInterval = null; }
-  $('#btnEndMeeting').hidden = true;
-  state.meetingId = null;
-  state.meetingLocation = '';
-  state.meetingDescription = '';
-  state.meetingTitle = '';
-  state.starRating = 3;
-  state.categories = [];
-  state.participants = [];
-  state.transcript = [];
-  state.memos = [];
-  state.analysisHistory = [];
-  state.currentAnalysis = null;
-  state.chatHistory = [];
-  state.userInsights = [];
-  state.tags = [];
-  state.analysisContext = '';
-  state.analysisCorrections = [];
-  state.aiTitleCached = null;
-  state.aiMetadataCached = null;
-  state.documents = [];
-  state._aiTags = null;
-  $('#transcriptList').innerHTML = '';
-  resetTranscriptEmpty();
-  $('#aiSections').innerHTML = '';
-  resetAiEmpty();
-  $('#chatMessages').innerHTML = '';
-  resetChatEmpty();
-  $('#meetingTimer').textContent = '00:00:00';
-  const pill = $('#meetingPill');
-  pill.hidden = true;
-  pill.classList.remove('recording', 'paused');
-  $('#meetingStatus').textContent = '';
-  const headerTitleInput = $('#meetingTitleInput');
-  if (headerTitleInput) { headerTitleInput.value = ''; headerTitleInput.hidden = true; }
-  // Reset inbox badge
-  const inboxBadge = document.querySelector('#inboxBadge');
-  if (inboxBadge) inboxBadge.hidden = true;
+  session.reset();
   if (!skipLauncher) showLauncherModal();
 }
