@@ -12,6 +12,7 @@
 //   'webspeech'  browser SpeechRecognition (cloud, or on-device when Chrome offers it)
 
 import { t } from './i18n.js';
+import { createKeyboardEngine } from './stt-keyboard.js';
 
 const DEBUG_KEY = 'meeting-ai-stt-debug';
 let debugEnabled = null;
@@ -308,16 +309,9 @@ function createNativeBridgeEngine(language) {
   };
 }
 
-// ===== Keyboard voice-input engine (optional module) =====
-async function loadKeyboardEngine(settings) {
-  try {
-    const spec = './stt-keyboard.js';
-    const mod = await import(/* @vite-ignore */ spec);
-    return mod.createKeyboardEngine({ commitIdleMs: settings.keyboardCommitMs || 2500 });
-  } catch (err) {
-    sttDebug(`[STT] keyboard engine unavailable: ${err.message}`);
-    return null;
-  }
+// ===== Keyboard voice-input engine =====
+function loadKeyboardEngine(settings) {
+  return createKeyboardEngine({ commitIdleMs: settings.keyboardCommitMs || 2500 });
 }
 
 // ===== Unified STT interface =====
@@ -353,11 +347,7 @@ export function createSTT() {
 
       // Keyboard engine must focus its textarea inside the user gesture: no awaits before start().
       if (which === 'keyboard') {
-        engine = await loadKeyboardEngine(cfg);
-        if (!engine) {
-          onError(t('stt.unsupported'));
-          return false;
-        }
+        engine = loadKeyboardEngine(cfg);
       } else if (which === 'native') {
         engine = createNativeBridgeEngine(language);
       } else {

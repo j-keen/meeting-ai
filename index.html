@@ -245,6 +245,12 @@
     </section>
   </main>
 
+  <div class="kb-stt-bar" id="kbSttBar" hidden>
+    <textarea id="kbSttInput" rows="2" enterkeyhint="send" autocapitalize="sentences" autocomplete="off" data-i18n-placeholder="stt.kb_placeholder" placeholder="Tap the mic on your keyboard and speak…"></textarea>
+    <button class="btn btn-sm btn-primary" id="kbSttSend" data-i18n="stt.kb_send">Add</button>
+    <div class="kb-stt-hint" data-i18n="stt.kb_hint">Use your keyboard microphone to dictate, then tap Add.</div>
+  </div>
+
   <!-- Bottom Bar -->
   <footer class="bottom-bar">
     <div class="bottom-center">
@@ -306,6 +312,19 @@
               <option value="zh" data-i18n="settings.lang_zh">Chinese</option>
             </select>
           </label>
+          <label class="settings-label">
+            <span data-i18n="settings.stt_engine">STT engine</span>
+            <small class="settings-hint" data-i18n="settings.stt_engine_hint">Auto picks the best available option. Browser uses Web Speech in this tab. Keyboard voice input uses your phone's built-in dictation.</small>
+            <select class="settings-select" id="selectSttEngine">
+              <option value="auto" data-i18n="settings.stt_engine_auto">Auto</option>
+              <option value="webspeech" data-i18n="settings.stt_engine_webspeech">Browser (Web Speech)</option>
+              <option value="keyboard" data-i18n="settings.stt_engine_keyboard">Keyboard voice input (phone's own STT)</option>
+            </select>
+          </label>
+          <label class="settings-label settings-toggle-label">
+            <span data-i18n="settings.stt_on_device">Prefer on-device recognition</span>
+            <input type="checkbox" id="checkSttOnDevice">
+          </label>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.audio_recording">Audio Recording</h3>
@@ -329,6 +348,32 @@
           <small class="settings-hint" data-i18n="settings.audio_storage_hint">Saved in browser storage (IndexedDB). Cleared if browser data is deleted.</small>
           <div id="audioStorageInfo" class="audio-storage-info" hidden></div>
           <button class="btn btn-xs btn-danger" id="btnAudioDeleteAll" hidden data-i18n="settings.audio_delete_all">Delete All Recordings</button>
+          <label class="settings-label settings-toggle-label">
+            <span data-i18n="settings.keep_awake">Keep screen awake while recording</span>
+            <input type="checkbox" id="checkKeepAwake" checked>
+            <small class="settings-hint" data-i18n="settings.keep_awake_hint">Prevents the screen from turning off during a recording session.</small>
+          </label>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.gemini_key">Personal Gemini API key</h3>
+          <div class="gemini-key-row">
+            <input type="password" class="settings-input" id="inputGeminiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
+            <button type="button" class="btn btn-icon btn-sm" id="btnToggleGeminiKey" aria-label="Show API key" title="Show">&#128065;</button>
+          </div>
+          <label class="settings-label">
+            <span data-i18n="settings.gemini_key_mode">Gemini key mode</span>
+            <select class="settings-select" id="selectGeminiKeyMode">
+              <option value="proxy" data-i18n="settings.gemini_key_mode_proxy">Server proxy only</option>
+              <option value="fallback" selected data-i18n="settings.gemini_key_mode_fallback">Proxy first, personal key as fallback</option>
+              <option value="direct" data-i18n="settings.gemini_key_mode_direct">Personal key only</option>
+            </select>
+          </label>
+          <div class="gemini-key-actions">
+            <button type="button" class="btn btn-sm" id="btnTestGeminiKey" data-i18n="settings.gemini_key_test">Test key</button>
+            <span id="geminiKeyStatus"></span>
+          </div>
+          <small class="settings-hint" data-i18n="settings.gemini_key_hint">Stored unencrypted in this browser only. Used when the server proxy is unavailable or rate-limited.</small>
         </section>
 
         <section class="settings-section">

@@ -24,6 +24,7 @@ import {
 import { t } from './i18n.js';
 import { startAudioRecording, stopAudioRecording } from './audio-recorder.js';
 import { loadChatHistory } from './chat.js';
+import * as wakeLock from './wake-lock.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -99,33 +100,19 @@ on('session:transition', ({ to }) => {
   else releaseWakeLock();
 });
 
-// ===== Wake lock (module is created by a sibling task; degrade gracefully if absent) =====
-let wakeLockMod = null;
+// ===== Wake lock =====
 let wakeLockWarned = false;
-async function wakeLock() {
-  if (wakeLockMod !== null) return wakeLockMod || null;
-  try {
-    // Optional module: keep the specifier opaque so bundlers/vitest don't fail when it is absent.
-    const spec = './wake-lock.js';
-    wakeLockMod = await import(/* @vite-ignore */ spec);
-  } catch {
-    wakeLockMod = false;
-  }
-  return wakeLockMod || null;
-}
 async function acquireWakeLock() {
   if (state.settings?.keepScreenAwake === false) return;
-  const mod = await wakeLock();
-  if (!mod || !mod.isSupported?.()) return;
-  const ok = await mod.acquire();
+  if (!wakeLock.isSupported()) return;
+  const ok = await wakeLock.acquire();
   if (!ok && !wakeLockWarned) {
     wakeLockWarned = true;
     showToast(t('toast.wake_lock_failed'), 'warning');
   }
 }
 async function releaseWakeLock() {
-  const mod = await wakeLock();
-  if (mod) await mod.release();
+  await wakeLock.release();
 }
 
 // ===== STT =====
