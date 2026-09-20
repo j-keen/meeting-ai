@@ -50,11 +50,25 @@ export function getKeyMode() {
  * Tests a personal API key with a minimal direct request.
  * @returns {Promise<boolean>}
  */
+/**
+ * Google issues two kinds of Gemini keys:
+ *  - Google AI Studio keys ("AIza…")  → generativelanguage.googleapis.com
+ *  - Vertex AI Express keys ("AQ.…")   → aiplatform.googleapis.com
+ * Both accept the same request body and the same `alt=sse` streaming frames.
+ */
+export function geminiEndpoint(key, model, method) {
+  const m = encodeURIComponent(model);
+  if ((key || '').startsWith('AQ.')) {
+    return `https://aiplatform.googleapis.com/v1/publishers/google/models/${m}:${method}`;
+  }
+  return `https://generativelanguage.googleapis.com/v1beta/models/${m}:${method}`;
+}
+
 export async function testUserApiKey(key) {
   if (!key) return false;
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${encodeURIComponent(key)}`,
+      `${geminiEndpoint(key, 'gemini-2.5-flash-lite', 'generateContent')}?key=${encodeURIComponent(key)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,7 +170,9 @@ function _resolveTargets() {
 function _isFallbackableError(err) {
   if (err?.name === 'AbortError') return false;
   if (!err.status) return true; // network error — fetch threw before a Response existed
-  return [404, 429, 500, 501, 502, 503].includes(err.status);
+  // 400/401/403 from the proxy almost always mean the server-side key is missing/invalid;
+  // a personal key is exactly the remedy for that.
+  return [400, 401, 403, 404, 429, 500, 501, 502, 503].includes(err.status);
 }
 
 function _buildUrl(target, model, stream) {
@@ -166,7 +182,7 @@ function _buildUrl(target, model, stream) {
   const key = _userApiKeyProvider() || '';
   const method = stream ? 'streamGenerateContent' : 'generateContent';
   const query = stream ? `alt=sse&key=${encodeURIComponent(key)}` : `key=${encodeURIComponent(key)}`;
-  return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${method}?${query}`;
+  return `${geminiEndpoint(key, model, method)}?${query}`;
 }
 
 // SSE frames are `data: {...}` either way (proxy passthrough or Gemini's alt=sse), so both

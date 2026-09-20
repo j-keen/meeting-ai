@@ -98,7 +98,11 @@ export default async function handler(req, res) {
 
   try {
     const action = isStream ? 'streamGenerateContent' : 'generateContent';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
+    // "AQ.…" keys are Vertex AI Express keys (aiplatform); "AIza…" keys are Google AI Studio keys.
+    const base = apiKey.startsWith('AQ.')
+      ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:${action}`
+      : `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}`;
+    const url = `${base}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
 
     const response = await fetch(url, {
       method: 'POST',

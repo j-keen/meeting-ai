@@ -34,7 +34,7 @@ Gemini API 호출을 Vercel Serverless 프록시(`/api/gemini`)를 통해 라우
 
 | 이름 | 설명 | 필요한 곳 |
 |------|------|----------|
-| `GEMINI_API_KEY` | Google AI Studio에서 발급한 Gemini API 키 | `api/gemini.js` |
+| `GEMINI_API_KEY` | Google AI Studio 키(`AIza…`) 또는 Vertex AI Express 키(`AQ.…`); 접두사로 generativelanguage / aiplatform 엔드포인트 자동 선택 | `api/gemini.js` |
 | `DEEPGRAM_API_KEY` | Deepgram API 키 (사전 녹음 전사) | `api/transcribe.js` |
 | `KV_REST_API_URL` | Vercel KV(Upstash Redis) REST URL | rate limit, `api/analytics*.js`, `api/dashboard.js` |
 | `KV_REST_API_TOKEN` | Vercel KV REST 토큰 | 위와 동일 |
