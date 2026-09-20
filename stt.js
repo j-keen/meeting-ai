@@ -16,7 +16,7 @@
 import { t } from './i18n.js';
 import { createKeyboardEngine } from './stt-keyboard.js';
 import { createCloudEngine } from './stt-cloud.js';
-import { getUserApiKey } from './gemini-api.js';
+import { getUserApiKey, isCloudSttAvailable } from './gemini-api.js';
 
 const DEBUG_KEY = 'meeting-ai-stt-debug';
 let debugEnabled = null;
@@ -44,10 +44,16 @@ export function isMobileUA() {
 export function resolveEngine(settings = {}, env = {}) {
   const hasNative = env.hasNative ?? !!window.__nativeBridge?.isNative;
   const hasSpeech = env.hasSpeech ?? !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  const isMobile = env.isMobile ?? isMobileUA();
+  const hasCloud = env.hasCloud ?? isCloudSttAvailable();
   const pref = settings.sttEngine;
   if (pref === 'cloud' || pref === 'whisper' || pref === 'keyboard') return pref;
+  if (pref && pref !== 'auto') return hasNative ? 'native' : 'webspeech';
+  // 'auto': phones get the cloud engine when it is available — the browser recognizer on
+  // Android restarts every few seconds and dies with the screen off; the cloud engine
+  // (mic capture + WebSocket) keeps running in the background.
+  if (isMobile && hasCloud) return 'cloud';
   if (hasNative) return 'native';
-  if (pref && pref !== 'auto') return 'webspeech';
   if (!hasSpeech) return 'keyboard';
   return 'webspeech';
 }

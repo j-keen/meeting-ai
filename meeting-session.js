@@ -25,6 +25,7 @@ import { t } from './i18n.js';
 import { startAudioRecording, stopAudioRecording } from './audio-recorder.js';
 import { loadChatHistory } from './chat.js';
 import * as wakeLock from './wake-lock.js';
+import { startKeepAlive, stopKeepAlive, isMobileLike } from './background-keepalive.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -316,6 +317,8 @@ export async function resume() {
 }
 
 function afterRecordingStarted() {
+  // Screen-off recording: media-session keep-alive so Android keeps the tab (and mic) alive.
+  if (isMobileLike()) startKeepAlive({ title: state.meetingTitle || 'Meeting AI' }).then(ok => log(`keep-alive ${ok ? 'on' : 'unavailable'}`));
   if (window.__nativeBridge?.isNative && window.ReactNativeWebView) {
     window.ReactNativeWebView.postMessage(JSON.stringify({
       type: 'recordingStarted', title: state.meetingTitle || 'Meeting AI',
@@ -351,6 +354,7 @@ export async function pause(reason = 'user') {
   state.pauseStartTime = Date.now();
   clearInterim();
   recTimers.clearAll();
+  stopKeepAlive();
 
   applyPhase('paused', reason);
   emit('recording:stopped');
@@ -465,6 +469,7 @@ export function loadMeeting(meeting) {
 /** any → idle. Clears content, timers, STT, and lifecycle chrome. */
 export function reset() {
   stopStt();
+  stopKeepAlive();
   if (state._audioRecordingActive) {
     // Fire-and-forget: the recorder finalizes the old meeting's chunks on its own.
     stopAudioRecording().catch(() => {});

@@ -22,6 +22,7 @@ let _userApiKeyProvider = () => '';
 let _openaiKeyProvider = () => '';
 let _provider = 'gemini'; // 'gemini' | 'openai'
 let _openaiProxyAvailable = null;
+let _realtimeTokenAvailable = null;
 let _keyMode = 'fallback'; // 'proxy' | 'fallback' | 'direct'
 let _fallbackNotified = false; // emit gemini:fallback once per page load
 
@@ -172,8 +173,15 @@ export async function checkProxyAvailable() {
       return false;
     }
   };
-  [_proxyAvailable, _openaiProxyAvailable] = await Promise.all([probe('/api/gemini'), probe('/api/openai')]);
+  [_proxyAvailable, _openaiProxyAvailable, _realtimeTokenAvailable] = await Promise.all([
+    probe('/api/gemini'), probe('/api/openai'), probe('/api/realtime-token'),
+  ]);
   return _proxyAvailable;
+}
+
+/** Cloud STT (OpenAI Realtime) can run: server token endpoint or a personal OpenAI key. */
+export function isCloudSttAvailable() {
+  return _realtimeTokenAvailable === true || !!_keyFor('openai');
 }
 
 /**

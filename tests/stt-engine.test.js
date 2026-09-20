@@ -70,6 +70,12 @@ describe('resolveEngine', () => {
 
   it("returns webspeech for 'auto' when speech is available", () => {
     expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true })).toBe('webspeech');
+    // phones: 'auto' prefers the cloud engine when it is available (Android's recognizer flaps / dies with the screen off)
+    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('cloud');
+    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: true, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('cloud');
+    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: false })).toBe('webspeech');
+    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: false, hasCloud: true })).toBe('webspeech');
+    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('webspeech');
   });
 });
 

@@ -19,10 +19,12 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
   /** @type {MediaStream | null} */ let stream = null;
   /** @type {AudioContext | null} */ let ctx = null;
   /** @type {ScriptProcessorNode | null} */ let processor = null;
+  /** @type {AudioWorkletNode | null} */ let worklet = null;
   let active = false;
   let paused = false;
   let reconnects = 0;
   let interim = '';
+  let captureMode = 'none';
   let cb = /** @type {any} */ ({});
 
   const lang = ['ko', 'en', 'ja', 'zh'].includes(language) ? language : 'ko';
@@ -117,16 +119,38 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
     };
   }
 
-  function startAudio(mediaStream) {
+  function bytesToBase64(bytes) {
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, /** @type {any} */ (bytes.subarray(i, i + 0x8000)));
+    }
+    return btoa(bin);
+  }
+
+  function sendPcm(base64) {
+    if (paused || !ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64 }));
+  }
+
+  async function startAudio(mediaStream) {
     ctx = new (window.AudioContext || /** @type {any} */ (window).webkitAudioContext)({ sampleRate: SAMPLE_RATE });
     const source = ctx.createMediaStreamSource(mediaStream);
+    // Preferred: AudioWorklet — runs on the audio thread, so capture continues while the
+    // tab is in the background / the screen is off (main-thread ScriptProcessor is throttled).
+    if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === 'function') {
+      try {
+        await ctx.audioWorklet.addModule('./pcm-worklet.js');
+        worklet = new AudioWorkletNode(ctx, 'pcm-capture', { numberOfInputs: 1, numberOfOutputs: 0, channelCount: 1 });
+        worklet.port.onmessage = (e) => sendPcm(bytesToBase64(new Uint8Array(e.data)));
+        source.connect(worklet);
+        return 'worklet';
+      } catch { /* fall back below */ }
+    }
     processor = ctx.createScriptProcessor(4096, 1, 1);
-    processor.onaudioprocess = (e) => {
-      if (paused || !ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: floatToPcm16Base64(e.inputBuffer.getChannelData(0)) }));
-    };
+    processor.onaudioprocess = (e) => sendPcm(floatToPcm16Base64(e.inputBuffer.getChannelData(0)));
     source.connect(processor);
     processor.connect(ctx.destination);
+    return 'scriptprocessor';
   }
 
   return {
@@ -156,16 +180,18 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
         onFatalError?.('cloud');
         return { started: false };
       }
-      startAudio(stream);
+      captureMode = await startAudio(stream);
       return { started: true };
     },
 
-    pause() { paused = true; },
-    resume() { paused = false; },
+    get captureMode() { return captureMode; },
+    pause() { paused = true; worklet?.port.postMessage('pause'); },
+    resume() { paused = false; worklet?.port.postMessage('resume'); },
 
     stop() {
       active = false;
       paused = false;
+      if (worklet) { try { worklet.port.onmessage = null; worklet.disconnect(); } catch { /* ignore */ } worklet = null; }
       if (processor) { try { processor.disconnect(); } catch { /* ignore */ } processor = null; }
       if (ctx) { ctx.close().catch(() => {}); ctx = null; }
       if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
