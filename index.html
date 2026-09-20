@@ -236,8 +236,8 @@
             <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
           </label>
           <select class="chat-model-select" id="chatModelSelect">
+            <option value="gemini-3.5-flash-lite" selected>Flash 3.5 Lite</option>
             <option value="gemini-3.5-flash">Flash 3.5</option>
-            <option value="gemini-3.5-flash-lite">Flash 3.5 Lite</option>
             <option value="gemini-3.1-pro-preview">Pro 3.1</option>
           </select>
         </div>
@@ -356,6 +356,17 @@
         </section>
 
         <section class="settings-section">
+          <label class="settings-label">
+            <span data-i18n="settings.ai_provider">AI provider</span>
+            <small class="settings-hint" data-i18n="settings.ai_provider_hint">Gemini uses the server proxy or your Gemini key; OpenAI uses your OpenAI key or the server's OPENAI_API_KEY.</small>
+            <select class="settings-select" id="selectAiProvider">
+              <option value="gemini" data-i18n="settings.ai_provider_gemini">Google Gemini</option>
+              <option value="openai" data-i18n="settings.ai_provider_openai">OpenAI (GPT)</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="settings-section">
           <h3 data-i18n="settings.gemini_key">Personal Gemini API key</h3>
           <div class="gemini-key-row">
             <input type="password" class="settings-input" id="inputGeminiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
@@ -374,6 +385,19 @@
             <span id="geminiKeyStatus"></span>
           </div>
           <small class="settings-hint" data-i18n="settings.gemini_key_hint">Stored unencrypted in this browser only. Used when the server proxy is unavailable or rate-limited.</small>
+        </section>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.openai_key">Personal OpenAI API key</h3>
+          <div class="gemini-key-row">
+            <input type="password" class="settings-input" id="inputOpenaiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.openai_key" placeholder="Enter API key">
+            <button type="button" class="btn btn-icon btn-sm" id="btnToggleOpenaiKey" aria-label="Show API key" title="Show">&#128065;</button>
+          </div>
+          <div class="gemini-key-actions">
+            <button type="button" class="btn btn-sm" id="btnTestOpenaiKey" data-i18n="settings.openai_key_test">Test key</button>
+            <span id="openaiKeyStatus"></span>
+          </div>
+          <small class="settings-hint" data-i18n="settings.openai_key_hint">Stored unencrypted in this browser only.</small>
         </section>
 
         <section class="settings-section">
@@ -784,6 +808,7 @@
           </div>
           <span class="minutes-model-card-usage" id="modelModalProUsage" hidden></span>
         </button>
+        <div class="settings-hint" data-i18n="settings.model_tiers_hint">Light tasks (correction, titles, chat) use the light model; live analysis uses the standard model; only meeting minutes and documents use the model you pick here.</div>
       </div>
     </div>
   </div>

@@ -1,6 +1,7 @@
 // compare.js - Compare Prompts feature
 
 import { state, emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { t, getPromptPresets } from './i18n.js';
 import { analyzeTranscript, getDefaultPrompt } from './ai.js';
 import { isAiAvailable } from './gemini-api.js';
@@ -123,7 +124,7 @@ export async function runCompareAnalysis() {
     userInsights: state.userInsights,
     memos: state.memos,
     userProfile: buildFullProfile(),
-    model: state.settings.geminiModel || 'gemini-3.5-flash',
+    model: modelFor('compare'),
   };
 
   const progress = $('#compareProgress');

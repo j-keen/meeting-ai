@@ -1,6 +1,7 @@
 // prompt-adjuster.js - Conversational prompt adjustment module
 
 import { state, emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getPromptForType } from './ai.js';
@@ -13,7 +14,7 @@ import { pushStyleHistory } from './style-history.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-3.5-flash';
+const MODEL = modelFor('prompt_adjuster');
 
 // ===== Internal State =====
 let chatHistory = [];

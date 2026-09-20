@@ -1,6 +1,7 @@
 // chat.js - AI Chat module with Gemini function calling + model selection
 
 import { state, emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
@@ -234,7 +235,7 @@ function handleSend() {
 }
 
 function getChatModel() {
-  return state.settings.chatModel || 'gemini-3.5-flash';
+  return state.settings.chatModel || modelFor('chat');
 }
 
 async function sendChatMessage(userText) {

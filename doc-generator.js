@@ -1,6 +1,7 @@
 // doc-generator.js - AI document generator module (prompt-builder pattern)
 
 import { state, emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { saveMeeting } from './storage.js';
@@ -12,7 +13,8 @@ import { exportPDF, exportWord } from './export-doc.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-3.5-flash';
+// Documents are a deliverable: use the model the user picked in settings.
+const docModel = () => modelFor('docs', { userModel: state.settings.geminiModel });
 const DOC_START = '---DOCUMENT_START---';
 const DOC_END = '---DOCUMENT_END---';
 
@@ -283,7 +285,7 @@ async function sendUserMessage(text) {
     if (typingEl) typingEl.remove();
     container.appendChild(streamEl);
 
-    const { text: fullText } = await callGeminiGuarded(MODEL, body, {
+    const { text: fullText } = await callGeminiGuarded(docModel(), body, {
       category: 'docgen',
       onStream: (chunk, fullSoFar) => {
         // Strip document markers for display in chat

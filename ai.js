@@ -1,6 +1,7 @@
 // ai.js - Gemini API analysis module with model selection and auto-tagging
 
 import { getAiPrompt, getAiPresetContext, getAiLanguage, getDateLocale, t, getTypeDefaultPrompt, getMeetingTypeCategoryMap } from './i18n.js';
+import { modelFor } from './models.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadTypePrompts, loadCustomTypes } from './storage.js';
@@ -738,7 +739,7 @@ ${instruction}`;
     generationConfig: { temperature: 0.2 }
   };
 
-  const data = await callGeminiGuarded('gemini-3.5-flash', body, { category: 'refine' });
+  const data = await callGeminiGuarded(modelFor('refine'), body, { category: 'refine' });
   return data.candidates?.[0]?.content?.parts?.[0]?.text || sectionMarkdown;
 }
 

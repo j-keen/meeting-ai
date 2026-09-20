@@ -5,6 +5,7 @@
 // Step 4: Ready (summary + start)
 
 import { emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { addCustomType, addContact, loadContacts, loadLocations, addLocation, getLocationFrequency, listMeetings, linkMeetings, getMeeting } from './storage.js';
@@ -14,7 +15,7 @@ import { escapeHtml } from './utils.js';
 import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWritingPrinciples, getToneGuidance } from './prompt-templates.js';
 
 const $ = (sel) => document.querySelector(sel);
-const MODEL = 'gemini-3.5-flash';
+const MODEL = modelFor('deep_setup');
 
 // ===== State =====
 let currentStep = 1;

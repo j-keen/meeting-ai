@@ -1,7 +1,8 @@
 // gemini-api.js - Client-side Gemini API via server proxy, with personal-key fallback
 
 import { emit } from './event-bus.js';
-import { MODEL, resolveModel, isProModel } from './models.js';
+import { MODEL, OPENAI, resolveModel, isProModel, toProviderModel, tierOf } from './models.js';
+import { toOpenAIRequest, fromOpenAIResponse, parseOpenAISSE } from './openai-adapter.js';
 import { canUse, incrementUsage, isModelAllowed, getUsage, getWarningLevel } from './usage-limiter.js';
 
 // ─── UsageLimitError ─────────────────────────────────────────────────────────
@@ -18,6 +19,9 @@ let _proxyAvailable = null;
 
 // ─── 사용자 개인 API 키 ──────────────────────────────────────────────────────
 let _userApiKeyProvider = () => '';
+let _openaiKeyProvider = () => '';
+let _provider = 'gemini'; // 'gemini' | 'openai'
+let _openaiProxyAvailable = null;
 let _keyMode = 'fallback'; // 'proxy' | 'fallback' | 'direct'
 let _fallbackNotified = false; // emit gemini:fallback once per page load
 
@@ -28,8 +32,27 @@ export function setUserApiKeyProvider(fn) {
   _userApiKeyProvider = typeof fn === 'function' ? fn : () => '';
 }
 
+/** Register a function that returns the user's personal OpenAI API key (or ''). */
+export function setOpenAIKeyProvider(fn) {
+  _openaiKeyProvider = typeof fn === 'function' ? fn : () => '';
+}
+
+/** Active provider: 'gemini' (default) or 'openai'. Callers keep sending Gemini-shaped requests. */
+export function setProvider(p) {
+  _provider = p === 'openai' ? 'openai' : 'gemini';
+}
+
+export function getProvider() {
+  return _provider;
+}
+
+function _keyFor(provider) {
+  return ((provider === 'openai' ? _openaiKeyProvider() : _userApiKeyProvider()) || '').trim();
+}
+
+/** Whether the user has a personal key for the ACTIVE provider. */
 export function hasUserKey() {
-  return !!(_userApiKeyProvider() || '').trim();
+  return !!_keyFor(_provider);
 }
 
 /**
@@ -60,8 +83,20 @@ export function geminiEndpoint(key, model, method) {
   return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${method}`;
 }
 
-export async function testUserApiKey(key) {
+export async function testUserApiKey(key, provider = 'gemini') {
   if (!key) return false;
+  if (provider === 'openai') {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: OPENAI.light, messages: [{ role: 'user', content: 'hi' }], max_completion_tokens: 5 }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
   try {
     const res = await fetch(
       `${geminiEndpoint(key, MODEL.lite, 'generateContent')}?key=${encodeURIComponent(key)}`,
@@ -124,20 +159,23 @@ function _backoffDelay(attempt, retryAfterSec) {
  * Check if the server proxy is available (called once at app load)
  */
 export async function checkProxyAvailable() {
-  try {
-    const res = await fetch('/api/gemini', { method: 'OPTIONS' });
-    _proxyAvailable = res.status === 204 || res.ok;
-  } catch {
-    _proxyAvailable = false;
-  }
+  const probe = async (path) => {
+    try {
+      const res = await fetch(path, { method: 'OPTIONS' });
+      return res.status === 204 || res.ok;
+    } catch {
+      return false;
+    }
+  };
+  [_proxyAvailable, _openaiProxyAvailable] = await Promise.all([probe('/api/gemini'), probe('/api/openai')]);
   return _proxyAvailable;
 }
 
 /**
- * Returns whether the proxy is available (cached result)
+ * Returns whether the proxy for the ACTIVE provider is available (cached result)
  */
 export function isProxyAvailable() {
-  return _proxyAvailable === true;
+  return _provider === 'openai' ? _openaiProxyAvailable === true : _proxyAvailable === true;
 }
 
 function prepareBody(body) {
@@ -172,6 +210,9 @@ function _isFallbackableError(err) {
 }
 
 function _buildUrl(target, model, stream) {
+  if (_provider === 'openai') {
+    return target === 'proxy' ? '/api/openai' : 'https://api.openai.com/v1/chat/completions';
+  }
   if (target === 'proxy') {
     return `/api/gemini?model=${encodeURIComponent(model)}${stream ? '&stream=true' : ''}`;
   }
@@ -236,14 +277,18 @@ async function _parseSSE(res, onChunk) {
  * @param {boolean} [opts.retryOn429]
  */
 async function _request(target, model, body, { stream = false, onChunk, signal, retryOn429 = true } = {}) {
-  model = resolveModel(model);
+  const openai = _provider === 'openai';
+  model = openai ? toProviderModel(model, 'openai') : resolveModel(model);
+  const payload = openai ? toOpenAIRequest(model, body, { stream, tier: tierOf(model) }) : body;
+  const headers = { 'Content-Type': 'application/json' };
+  if (openai && target === 'direct') headers.Authorization = `Bearer ${_keyFor('openai')}`;
   const maxRetries = retryOn429 ? MAX_RETRIES : 0;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const url = _buildUrl(target, model, stream);
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      headers,
+      body: JSON.stringify(payload),
       signal,
     });
 
@@ -257,12 +302,13 @@ async function _request(target, model, body, { stream = false, onChunk, signal, 
 
     if (!res.ok) {
       const errText = await res.text();
-      const label = target === 'proxy' ? 'Proxy' : 'Gemini';
+      const label = target === 'proxy' ? 'Proxy' : (openai ? 'OpenAI' : 'Gemini');
       const err = new Error(`${label} API error (${res.status}): ${errText.slice(0, 200)}`);
       err.status = res.status;
       throw err;
     }
 
+    if (openai) return stream ? parseOpenAISSE(res, onChunk) : fromOpenAIResponse(await res.json());
     return stream ? _parseSSE(res, onChunk) : res.json();
   }
 

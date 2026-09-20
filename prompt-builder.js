@@ -1,6 +1,7 @@
 // prompt-builder.js - AI conversational prompt builder module
 
 import { emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { addCustomType, loadCustomTypes } from './storage.js';
@@ -11,7 +12,7 @@ import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWriting
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-3.5-flash';
+const MODEL = modelFor('prompt_builder');
 
 // ===== Internal State =====
 let builderHistory = [];   // chat history for the builder conversation

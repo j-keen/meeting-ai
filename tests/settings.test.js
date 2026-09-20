@@ -57,6 +57,9 @@ vi.mock('../gemini-api.js', () => ({
   getKeyMode: vi.fn(() => 'fallback'),
   hasUserKey: vi.fn(() => false),
   testUserApiKey: vi.fn(async () => true),
+  setProvider: vi.fn(),
+  getProvider: vi.fn(() => 'gemini'),
+  setOpenAIKeyProvider: vi.fn(),
 }));
 
 vi.mock('../meeting-prep.js', () => ({

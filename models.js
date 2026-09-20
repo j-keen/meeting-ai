@@ -1,35 +1,127 @@
 // @ts-check
-// models.js - The one place Gemini model ids live.
-// Verified 2026-09-20 against the Generative Language API: gemini-2.5-flash-lite and
-// gemini-2.5-pro are "no longer available to new users"; the ids below respond.
+// models.js - The one place model ids and task→tier routing live.
+//
+// Tiers: light (cheap, frequent), standard (balanced), heavy (only when the user asks for it).
+// Verified 2026-09-20: gemini-2.5-flash-lite / gemini-2.5-pro are "no longer available to new
+// users"; the ids below respond. OpenAI ids verified against /v1/models the same day.
 
-export const MODEL = Object.freeze({
-  lite: 'gemini-3.5-flash-lite',
-  flash: 'gemini-3.5-flash',
-  pro: 'gemini-3.1-pro-preview',
+export const PROVIDERS = /** @type {const} */ (['gemini', 'openai']);
+
+export const GEMINI = Object.freeze({
+  light: 'gemini-3.5-flash-lite',
+  standard: 'gemini-3.5-flash',
+  heavy: 'gemini-3.1-pro-preview',
 });
+
+export const OPENAI = Object.freeze({
+  light: 'gpt-5.4-nano',
+  standard: 'gpt-5.4-mini',
+  heavy: 'gpt-5.5',
+});
+
+/** Backward-compatible aliases (lite/flash/pro) used across the codebase. */
+export const MODEL = Object.freeze({ lite: GEMINI.light, flash: GEMINI.standard, pro: GEMINI.heavy });
 
 /** Ids that may still be stored in settings / sent by old clients. */
 const LEGACY = Object.freeze({
-  'gemini-2.5-flash-lite': MODEL.lite,
-  'gemini-2.5-flash': MODEL.flash,
-  'gemini-2.5-pro': MODEL.pro,
-  'gemini-2.0-flash-lite': MODEL.lite,
-  'gemini-2.0-flash': MODEL.flash,
-  'gemini-1.5-flash': MODEL.flash,
-  'gemini-1.5-pro': MODEL.pro,
+  'gemini-2.5-flash-lite': GEMINI.light,
+  'gemini-2.5-flash': GEMINI.standard,
+  'gemini-2.5-pro': GEMINI.heavy,
+  'gemini-2.0-flash-lite': GEMINI.light,
+  'gemini-2.0-flash': GEMINI.standard,
+  'gemini-1.5-flash': GEMINI.standard,
+  'gemini-1.5-pro': GEMINI.heavy,
+  'gpt-4o-mini': OPENAI.light,
+  'gpt-4o': OPENAI.standard,
+  'gpt-4.1-nano': OPENAI.light,
+  'gpt-4.1-mini': OPENAI.standard,
+  'gpt-4.1': OPENAI.standard,
+  'gpt-5-nano': OPENAI.light,
+  'gpt-5-mini': OPENAI.standard,
+  'gpt-5': OPENAI.heavy,
 });
 
-/** Every id the proxy accepts (current + legacy, legacy is rewritten before the upstream call). */
-export const ALLOWED_MODELS = Object.freeze([...Object.values(MODEL), ...Object.keys(LEGACY)]);
+/** Every Gemini id the proxy accepts (current + legacy; legacy is rewritten before the upstream call). */
+export const ALLOWED_MODELS = Object.freeze([
+  ...Object.values(GEMINI),
+  ...Object.keys(LEGACY).filter(k => k.startsWith('gemini')),
+]);
+export const OPENAI_ALLOWED_MODELS = Object.freeze([
+  ...Object.values(OPENAI),
+  ...Object.keys(LEGACY).filter(k => k.startsWith('gpt')),
+]);
+
+/**
+ * Which tier each task runs on. 'user' = the model the user picked in settings
+ * (only meeting minutes and generated documents deserve the heavy model).
+ */
+export const TASK_TIER = Object.freeze({
+  correction: 'light',
+  title: 'light',
+  metadata: 'light',
+  tags: 'light',
+  ocr: 'light',
+  refine: 'light',
+  prep: 'light',
+  prompt_adjuster: 'light',
+  chat: 'light',
+  analysis: 'standard',
+  compare: 'standard',
+  prompt_builder: 'standard',
+  deep_setup: 'standard',
+  minutes: 'user',
+  docs: 'user',
+});
 
 /** @param {string | undefined | null} name */
 export function resolveModel(name) {
-  if (!name) return MODEL.flash;
+  if (!name) return GEMINI.standard;
   return LEGACY[name] || name;
 }
 
 /** @param {string | undefined | null} name */
+export function providerOf(name) {
+  const id = resolveModel(name);
+  return id.startsWith('gpt-') || /^o[0-9]/.test(id) ? 'openai' : 'gemini';
+}
+
+/** @param {string | undefined | null} name → 'light' | 'standard' | 'heavy' */
+export function tierOf(name) {
+  const id = resolveModel(name);
+  for (const table of [GEMINI, OPENAI]) {
+    for (const [tier, tid] of Object.entries(table)) if (tid === id) return tier;
+  }
+  if (/lite|nano|mini/.test(id)) return 'light';
+  if (/pro|5\.5/.test(id)) return 'heavy';
+  return 'standard';
+}
+
+/** @param {string | undefined | null} name */
 export function isProModel(name) {
-  return resolveModel(name) === MODEL.pro;
+  return tierOf(name) === 'heavy';
+}
+
+/**
+ * Same tier, other provider. Ids already on the requested provider pass through.
+ * @param {string} name
+ * @param {'gemini'|'openai'} provider
+ */
+export function toProviderModel(name, provider) {
+  const id = resolveModel(name);
+  if (providerOf(id) === provider) return id;
+  return (provider === 'openai' ? OPENAI : GEMINI)[tierOf(id)];
+}
+
+/**
+ * Model id for a task, on the given provider (defaults to Gemini ids; the request
+ * layer converts to the active provider).
+ * @param {keyof typeof TASK_TIER} task
+ * @param {{ userModel?: string, provider?: 'gemini'|'openai' }} [opts]
+ */
+export function modelFor(task, opts = {}) {
+  const provider = opts.provider || 'gemini';
+  const table = provider === 'openai' ? OPENAI : GEMINI;
+  const tier = TASK_TIER[task] || 'standard';
+  if (tier === 'user') return toProviderModel(opts.userModel || GEMINI.standard, provider);
+  return table[tier];
 }

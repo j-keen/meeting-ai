@@ -1,6 +1,7 @@
 // recording.js - Recording lifecycle, STT, analysis, correction, auto-save, idle detection
 
 import { state, emit } from './event-bus.js';
+import { modelFor } from './models.js';
 import { hasRecording, getCurrentRecordingSize } from './audio-recorder.js';
 import * as session from './meeting-session.js';
 import { initSessionUI } from './session-ui.js';
@@ -351,7 +352,7 @@ export async function runCorrection(uncorrectedOnly) {
       const batch = lines.slice(i, i + batchSize);
       const corrections = await correctSentences({
         lines: batch,
-        model: 'gemini-3.5-flash-lite',
+        model: modelFor('correction'),
         correctionDict,
       });
       for (const c of corrections) {
@@ -438,7 +439,7 @@ export async function runAnalysis() {
       memos: state.memos,
       chatHistory: state.chatHistory,
       userProfile: buildFullProfile(),
-      model: state.settings.geminiModel || 'gemini-3.5-flash',
+      model: modelFor('analysis'), // live analysis: standard tier, never the heavy model
       userCorrections: corrections,
       blockMemos,
       metadata: {
@@ -1394,7 +1395,7 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     elapsedTime: getElapsedTimeStr(),
     memos: state.memos,
     userProfile: buildFullProfile(),
-    model: state.settings.geminiModel || 'gemini-3.5-flash',
+    model: modelFor('minutes', { userModel: state.settings.geminiModel }),
     template: template || '',
     referenceDoc: promptConfig.referenceDoc || '',
     basePromptOverride: promptConfig.basePromptOverride || '',
