@@ -1,3 +1,4 @@
+import { isProModel } from './models.js';
 // usage-limiter.js - 일일 API 사용량 관리 (클라이언트 사이드)
 
 import { emit } from './event-bus.js';
@@ -127,7 +128,7 @@ export function getAllUsage() {
  * Pro 모델 사용 가능 여부
  */
 export function isModelAllowed(model) {
-  if (model === 'gemini-2.5-pro') {
+  if (isProModel(model)) {
     return canUse('pro_model');
   }
   return true;

@@ -34,7 +34,7 @@ Gemini API 호출을 Vercel Serverless 프록시(`/api/gemini`)를 통해 라우
 
 | 이름 | 설명 | 필요한 곳 |
 |------|------|----------|
-| `GEMINI_API_KEY` | Google AI Studio 키(`AIza…`) 또는 Vertex AI Express 키(`AQ.…`); 접두사로 generativelanguage / aiplatform 엔드포인트 자동 선택 | `api/gemini.js` |
+| `GEMINI_API_KEY` | Google AI Studio 키(`AIza…`) 또는 Google Cloud API 키(`AQ.…`); 항상 generativelanguage 엔드포인트, 프로젝트에 Generative Language API 활성화 필요 | `api/gemini.js` |
 | `DEEPGRAM_API_KEY` | Deepgram API 키 (사전 녹음 전사) | `api/transcribe.js` |
 | `KV_REST_API_URL` | Vercel KV(Upstash Redis) REST URL | rate limit, `api/analytics*.js`, `api/dashboard.js` |
 | `KV_REST_API_TOKEN` | Vercel KV REST 토큰 | 위와 동일 |
@@ -55,7 +55,7 @@ npm run dev
 
 ## 보안
 - API 키는 서버(Vercel 환경변수)에만 저장, 브라우저에 노출되지 않음
-- 프록시에서 모델 화이트리스트 검증 (`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro`)
+- 프록시에서 모델 화이트리스트 검증 (`models.js`의 `MODEL`: gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.1-pro-preview; 예전 2.5 계열 id는 자동 변환)
 - Origin 체크 (`meeting-ai-seven.vercel.app`, `localhost`)
 
 ## 트러블슈팅

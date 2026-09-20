@@ -1318,7 +1318,7 @@ function startMinutesBlockEdit(blockEl, block, index, blocks, containerDiv) {
 function saveMinutesVersion() {
   const markdown = state.currentAnalysis?.markdown;
   if (!markdown) return;
-  const model = state.settings.geminiModel || 'gemini-2.5-flash';
+  const model = state.settings.geminiModel || 'gemini-3.5-flash';
   state.minutesVersions.push({ markdown, timestamp: Date.now(), model });
   if (state.minutesVersions.length > 10) state.minutesVersions.shift();
 }
@@ -1553,7 +1553,7 @@ function initMinutesPreview() {
     });
 
     // Pre-select current model
-    const currentModel = state.settings.geminiModel || 'gemini-2.5-flash';
+    const currentModel = state.settings.geminiModel || 'gemini-3.5-flash';
     regenModal.querySelectorAll('.regen-model-card').forEach(card => {
       card.classList.toggle('active', card.dataset.regenModel === currentModel);
     });
@@ -1564,7 +1564,7 @@ function initMinutesPreview() {
   // Model card click → execute regeneration
   regenModal.querySelectorAll('.regen-model-card').forEach(card => {
     card.addEventListener('click', async () => {
-      const model = card.dataset.regenModel || 'gemini-2.5-flash';
+      const model = card.dataset.regenModel || 'gemini-3.5-flash';
       regenModal.hidden = true;
 
       saveMinutesVersion();

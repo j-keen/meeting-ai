@@ -1123,7 +1123,7 @@ ${analysisText.slice(0, 3000)}`
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
     };
 
-    const res = await callGeminiGuarded('gemini-2.5-flash-lite', body, { category: 'prep' });
+    const res = await callGeminiGuarded('gemini-3.5-flash-lite', body, { category: 'prep' });
     const text = res.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     let items;
     try { items = JSON.parse(text); } catch { items = []; }
@@ -1207,7 +1207,7 @@ export async function ocrBusinessCard(base64) {
     }
   };
 
-  const response = await callGeminiGuarded('gemini-2.5-flash-lite', body, { category: 'prep' });
+  const response = await callGeminiGuarded('gemini-3.5-flash-lite', body, { category: 'prep' });
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
   try {

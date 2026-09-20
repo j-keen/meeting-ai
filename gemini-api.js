@@ -1,6 +1,7 @@
 // gemini-api.js - Client-side Gemini API via server proxy, with personal-key fallback
 
 import { emit } from './event-bus.js';
+import { MODEL, resolveModel, isProModel } from './models.js';
 import { canUse, incrementUsage, isModelAllowed, getUsage, getWarningLevel } from './usage-limiter.js';
 
 // ─── UsageLimitError ─────────────────────────────────────────────────────────
@@ -51,24 +52,19 @@ export function getKeyMode() {
  * @returns {Promise<boolean>}
  */
 /**
- * Google issues two kinds of Gemini keys:
- *  - Google AI Studio keys ("AIza…")  → generativelanguage.googleapis.com
- *  - Vertex AI Express keys ("AQ.…")   → aiplatform.googleapis.com
- * Both accept the same request body and the same `alt=sse` streaming frames.
+ * Direct Gemini endpoint. Both Google AI Studio keys ("AIza…") and Google Cloud API keys
+ * ("AQ.…") work here as long as the project has the Generative Language API enabled.
+ * (Verified 2026-09-20: an "AQ." key succeeds on generativelanguage and is blocked on aiplatform.)
  */
 export function geminiEndpoint(key, model, method) {
-  const m = encodeURIComponent(model);
-  if ((key || '').startsWith('AQ.')) {
-    return `https://aiplatform.googleapis.com/v1/publishers/google/models/${m}:${method}`;
-  }
-  return `https://generativelanguage.googleapis.com/v1beta/models/${m}:${method}`;
+  return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${method}`;
 }
 
 export async function testUserApiKey(key) {
   if (!key) return false;
   try {
     const res = await fetch(
-      `${geminiEndpoint(key, 'gemini-2.5-flash-lite', 'generateContent')}?key=${encodeURIComponent(key)}`,
+      `${geminiEndpoint(key, MODEL.lite, 'generateContent')}?key=${encodeURIComponent(key)}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -240,6 +236,7 @@ async function _parseSSE(res, onChunk) {
  * @param {boolean} [opts.retryOn429]
  */
 async function _request(target, model, body, { stream = false, onChunk, signal, retryOn429 = true } = {}) {
+  model = resolveModel(model);
   const maxRetries = retryOn429 ? MAX_RETRIES : 0;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const url = _buildUrl(target, model, stream);
@@ -310,7 +307,7 @@ async function _dispatch(model, body, opts = {}) {
 
 /**
  * Call Gemini API — via proxy, personal key, or both with fallback depending on key mode.
- * @param {string} model - Model name (e.g. 'gemini-2.5-flash')
+ * @param {string} model - Model name (e.g. 'gemini-3.5-flash')
  * @param {object} body - Request body (contents, generationConfig, etc.)
  * @returns {Promise<object>} - Parsed JSON response
  */
@@ -354,7 +351,7 @@ export async function callGeminiGuarded(model, body, { category, onStream, signa
   if (!directOnly) {
     // 1. Pro 모델 체크 → 불가 시 Flash Lite로 다운그레이드
     if (!isModelAllowed(model)) {
-      const downgraded = 'gemini-2.5-flash-lite';
+      const downgraded = MODEL.lite;
       emit('usage:model_downgraded', { original: model, fallback: downgraded });
       model = downgraded;
     }
@@ -383,7 +380,7 @@ export async function callGeminiGuarded(model, body, { category, onStream, signa
   // 5. 성공 시 사용량 증가 — proxy(공유 쿼터)를 실제로 사용했을 때만
   if (!directOnly && target === 'proxy') {
     if (category) incrementUsage(category);
-    if (model === 'gemini-2.5-pro') incrementUsage('pro_model');
+    if (isProModel(model)) incrementUsage('pro_model');
   }
 
   return result;

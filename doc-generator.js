@@ -12,7 +12,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash';
 const DOC_START = '---DOCUMENT_START---';
 const DOC_END = '---DOCUMENT_END---';
 

@@ -234,7 +234,7 @@ function handleSend() {
 }
 
 function getChatModel() {
-  return state.settings.chatModel || 'gemini-2.5-flash';
+  return state.settings.chatModel || 'gemini-3.5-flash';
 }
 
 async function sendChatMessage(userText) {

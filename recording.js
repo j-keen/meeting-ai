@@ -351,7 +351,7 @@ export async function runCorrection(uncorrectedOnly) {
       const batch = lines.slice(i, i + batchSize);
       const corrections = await correctSentences({
         lines: batch,
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.5-flash-lite',
         correctionDict,
       });
       for (const c of corrections) {
@@ -438,7 +438,7 @@ export async function runAnalysis() {
       memos: state.memos,
       chatHistory: state.chatHistory,
       userProfile: buildFullProfile(),
-      model: state.settings.geminiModel || 'gemini-2.5-flash',
+      model: state.settings.geminiModel || 'gemini-3.5-flash',
       userCorrections: corrections,
       blockMemos,
       metadata: {
@@ -1394,7 +1394,7 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     elapsedTime: getElapsedTimeStr(),
     memos: state.memos,
     userProfile: buildFullProfile(),
-    model: state.settings.geminiModel || 'gemini-2.5-flash',
+    model: state.settings.geminiModel || 'gemini-3.5-flash',
     template: template || '',
     referenceDoc: promptConfig.referenceDoc || '',
     basePromptOverride: promptConfig.basePromptOverride || '',

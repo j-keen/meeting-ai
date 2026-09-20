@@ -123,7 +123,7 @@ export async function runCompareAnalysis() {
     userInsights: state.userInsights,
     memos: state.memos,
     userProfile: buildFullProfile(),
-    model: state.settings.geminiModel || 'gemini-2.5-flash',
+    model: state.settings.geminiModel || 'gemini-3.5-flash',
   };
 
   const progress = $('#compareProgress');

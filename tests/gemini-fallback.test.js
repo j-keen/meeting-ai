@@ -84,7 +84,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
       .mockResolvedValueOnce(jsonResponse(429, { error: 'rate limited' }))
       .mockResolvedValueOnce(jsonResponse(200, { candidates: [{ content: { parts: [{ text: 'ok' }] } }] }));
 
-    const result = await api.callGemini('gemini-2.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
+    const result = await api.callGemini('gemini-3.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const secondUrl = fetchMock.mock.calls[1][0];
@@ -104,7 +104,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
     fetchMock.mockClear();
     fetchMock.mockResolvedValue(jsonResponse(429, { error: 'rate limited' }));
 
-    const promise = api.callGemini('gemini-2.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
+    const promise = api.callGemini('gemini-3.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
     const assertion = expect(promise).rejects.toMatchObject({ status: 429 });
     await vi.runAllTimersAsync();
     await assertion;
@@ -128,7 +128,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
     fetchMock.mockClear();
     fetchMock.mockResolvedValueOnce(jsonResponse(200, { candidates: [{ content: { parts: [{ text: 'direct-ok' }] } }] }));
 
-    const result = await api.callGemini('gemini-2.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
+    const result = await api.callGemini('gemini-3.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0][0]).toContain('generativelanguage');
@@ -147,7 +147,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
 
     const proxyChunks = [];
     const proxyResult = await apiProxy.callGeminiStream(
-      'gemini-2.5-flash',
+      'gemini-3.5-flash',
       { contents: [{ parts: [{ text: 'hi' }] }] },
       (chunk) => proxyChunks.push(chunk)
     );
@@ -162,7 +162,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
 
     const directChunks = [];
     const directResult = await apiDirect.callGeminiStream(
-      'gemini-2.5-flash',
+      'gemini-3.5-flash',
       { contents: [{ parts: [{ text: 'hi' }] }] },
       (chunk) => directChunks.push(chunk)
     );
@@ -183,7 +183,7 @@ describe('gemini-api.js — proxy-first, personal-key-fallback', () => {
     fetchMock.mockResolvedValue(jsonResponse(500, { error: 'boom' }));
 
     await expect(
-      api.callGemini('gemini-2.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] })
+      api.callGemini('gemini-3.5-flash', { contents: [{ parts: [{ text: 'hi' }] }] })
     ).rejects.toMatchObject({ status: 500 });
 
     fetchMock.mock.calls.forEach(call => {

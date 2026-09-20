@@ -14,7 +14,7 @@ import { escapeHtml } from './utils.js';
 import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWritingPrinciples, getToneGuidance } from './prompt-templates.js';
 
 const $ = (sel) => document.querySelector(sel);
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash';
 
 // ===== State =====
 let currentStep = 1;

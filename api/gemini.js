@@ -2,13 +2,13 @@
 
 import { createClient } from '@vercel/kv';
 
-const ALLOWED_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'];
+import { ALLOWED_MODELS, resolveModel, isProModel, MODEL } from '../models.js';
 const ALLOWED_ORIGINS = ['https://meeting-ai-seven.vercel.app', 'http://localhost:3000', 'http://localhost:5173'];
 
 // Rate limit 설정
 const RATE_LIMITS = {
   default: { max: 100, windowMs: 60 * 60 * 1000 },     // 100요청/시간
-  'gemini-2.5-pro': { max: 10, windowMs: 60 * 60 * 1000 }, // 10요청/시간
+  [MODEL.pro]: { max: 10, windowMs: 60 * 60 * 1000 }, // 10요청/시간
 };
 
 function getCorsHeaders(origin) {
@@ -39,7 +39,7 @@ async function checkRateLimit(ip, model) {
   });
 
   const config = RATE_LIMITS[model] || RATE_LIMITS.default;
-  const key = `rl:${ip}:${model === 'gemini-2.5-pro' ? 'pro' : 'std'}`;
+  const key = `rl:${ip}:${isProModel(model) ? 'pro' : 'std'}`;
 
   try {
     const count = await kv.incr(key);
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const model = req.query.model || 'gemini-2.5-flash';
+  const model = resolveModel(req.query.model);
   if (!ALLOWED_MODELS.includes(model)) {
     return res.status(400).json({ error: `Model not allowed: ${model}` });
   }
@@ -98,11 +98,9 @@ export default async function handler(req, res) {
 
   try {
     const action = isStream ? 'streamGenerateContent' : 'generateContent';
-    // "AQ.…" keys are Vertex AI Express keys (aiplatform); "AIza…" keys are Google AI Studio keys.
-    const base = apiKey.startsWith('AQ.')
-      ? `https://aiplatform.googleapis.com/v1/publishers/google/models/${model}:${action}`
-      : `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}`;
-    const url = `${base}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
+    // Google AI Studio keys (AIza…) and Google Cloud API keys (AQ.…) both work on this endpoint
+    // when the project has the Generative Language API enabled.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${action}?key=${apiKey}${isStream ? '&alt=sse' : ''}`;
 
     const response = await fetch(url, {
       method: 'POST',

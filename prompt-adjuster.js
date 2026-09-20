@@ -13,7 +13,7 @@ import { pushStyleHistory } from './style-history.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash';
 
 // ===== Internal State =====
 let chatHistory = [];

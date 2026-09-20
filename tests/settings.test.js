@@ -136,7 +136,7 @@ function setupSettingsDOM() {
   // Chat model
   const chatModelSelect = makeEl('select', 'chatModelSelect');
   const flashOpt = makeEl('option');
-  flashOpt.value = 'gemini-2.5-flash';
+  flashOpt.value = 'gemini-3.5-flash';
   flashOpt.textContent = 'Flash';
   chatModelSelect.appendChild(flashOpt);
 

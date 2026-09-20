@@ -173,7 +173,7 @@ export function initSettings() {
   // Chat model select
   const chatModelSelect = $('#chatModelSelect');
   if (chatModelSelect) {
-    chatModelSelect.value = state.settings.chatModel || 'gemini-2.5-flash';
+    chatModelSelect.value = state.settings.chatModel || 'gemini-3.5-flash';
     chatModelSelect.addEventListener('change', (e) => {
       state.settings.chatModel = e.target.value;
       markDirty();
@@ -625,8 +625,8 @@ function resetAllSettings() {
   const s = state.settings;
   s.uiLanguage = 'auto';
   s.aiLanguage = 'auto';
-  s.geminiModel = 'gemini-2.5-flash';
-  s.chatModel = 'gemini-2.5-flash';
+  s.geminiModel = 'gemini-3.5-flash';
+  s.chatModel = 'gemini-3.5-flash';
   s.language = 'ko';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
@@ -689,8 +689,8 @@ function loadSavedSettings() {
   const saved = loadSettings();
   const s = state.settings;
 
-  s.geminiModel = saved.geminiModel || 'gemini-2.5-flash';
-  s.chatModel = saved.chatModel || 'gemini-2.5-flash';
+  s.geminiModel = saved.geminiModel || 'gemini-3.5-flash';
+  s.chatModel = saved.chatModel || 'gemini-3.5-flash';
   s.language = saved.language || 'ko';
   s.autoAnalysis = true;
   s.analysisInterval = 180;

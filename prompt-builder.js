@@ -11,7 +11,7 @@ import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWriting
 
 const $ = (sel) => document.querySelector(sel);
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash';
 
 // ===== Internal State =====
 let builderHistory = [];   // chat history for the builder conversation

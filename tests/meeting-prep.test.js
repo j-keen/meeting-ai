@@ -364,7 +364,7 @@ describe('ocrBusinessCard', () => {
     await ocrBusinessCard('mybase64==');
 
     expect(callGeminiGuarded).toHaveBeenCalledWith(
-      'gemini-2.5-flash-lite',
+      'gemini-3.5-flash-lite',
       expect.objectContaining({
         contents: expect.arrayContaining([
           expect.objectContaining({ role: 'user' }),
