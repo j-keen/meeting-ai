@@ -10,9 +10,13 @@
 //   'native'     WebView bridge → the phone's own speech recognizer (window.__nativeBridge)
 //   'keyboard'   the phone keyboard's voice typing into a textarea (stt-keyboard.js)
 //   'webspeech'  browser SpeechRecognition (cloud, or on-device when Chrome offers it)
+//   'cloud'      OpenAI Realtime transcription — high accuracy, paid per minute (stt-cloud.js)
+//   'whisper'    Whisper running in the browser, model downloaded once (stt-whisper.js)
 
 import { t } from './i18n.js';
 import { createKeyboardEngine } from './stt-keyboard.js';
+import { createCloudEngine } from './stt-cloud.js';
+import { getUserApiKey } from './gemini-api.js';
 
 const DEBUG_KEY = 'meeting-ai-stt-debug';
 let debugEnabled = null;
@@ -34,14 +38,16 @@ export function isMobileUA() {
 
 /**
  * Pick the engine for the current device + settings. Pure; unit-testable.
- * @returns {'native'|'keyboard'|'webspeech'}
+ * An explicit cloud/whisper/keyboard choice wins even on the native app.
+ * @returns {'native'|'keyboard'|'webspeech'|'cloud'|'whisper'}
  */
 export function resolveEngine(settings = {}, env = {}) {
   const hasNative = env.hasNative ?? !!window.__nativeBridge?.isNative;
   const hasSpeech = env.hasSpeech ?? !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  if (hasNative) return 'native';
   const pref = settings.sttEngine;
-  if (pref && pref !== 'auto') return pref === 'keyboard' ? 'keyboard' : 'webspeech';
+  if (pref === 'cloud' || pref === 'whisper' || pref === 'keyboard') return pref;
+  if (hasNative) return 'native';
+  if (pref && pref !== 'auto') return 'webspeech';
   if (!hasSpeech) return 'keyboard';
   return 'webspeech';
 }
@@ -348,6 +354,18 @@ export function createSTT() {
       // Keyboard engine must focus its textarea inside the user gesture: no awaits before start().
       if (which === 'keyboard') {
         engine = loadKeyboardEngine(cfg);
+      } else if (which === 'cloud') {
+        engine = createCloudEngine({ language, model: cfg.cloudSttModel, getPersonalKey: () => getUserApiKey('openai') });
+      } else if (which === 'whisper') {
+        try {
+          const spec = './stt-whisper.js';
+          const mod = await import(/* @vite-ignore */ spec);
+          engine = mod.createWhisperEngine({ language, modelId: cfg.whisperModel });
+        } catch (err) {
+          sttDebug(`[STT] whisper engine unavailable: ${err.message}`);
+          onError(t('settings.whisper_unsupported'));
+          return false;
+        }
       } else if (which === 'native') {
         engine = createNativeBridgeEngine(language);
       } else {

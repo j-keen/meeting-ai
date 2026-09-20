@@ -18,6 +18,8 @@ const ENGINE_BADGE = {
   keyboard: { text: 'KB', title: 'Keyboard voice input' },
   webspeech: { text: 'WS', title: 'Web Speech API' },
   'webspeech-local': { text: 'WS·L', title: 'Web Speech API (on-device)' },
+  cloud: { text: 'HQ', title: 'High-accuracy cloud STT (OpenAI)' },
+  whisper: { text: 'WH', title: 'Whisper (in-browser)' },
 };
 
 /** Register click handlers for the dynamic post-end / loaded-mode buttons. */

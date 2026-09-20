@@ -15,6 +15,7 @@ npm install
 | 이름 | 설명 |
 |------|------|
 | `GEMINI_API_KEY` | Gemini API 키 — Google AI Studio 키(`AIza…`) 또는 Google Cloud API 키(`AQ.…`); 프로젝트에 Generative Language API가 켜져 있어야 함 (`api/gemini.js`) |
+| `OPENAI_API_KEY` | OpenAI 키 — GPT 프록시(`api/openai.js`)와 고정확도 클라우드 STT 임시 토큰(`api/realtime-token.js`)에 사용. 없으면 앱 설정의 개인 OpenAI 키로 직접 호출 |
 | `DEEPGRAM_API_KEY` | Deepgram API 키 (`api/transcribe.js`) |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Vercel KV — rate limit, 애널리틱스 저장용 (없으면 rate limit은 fail-open) |
 | `ANALYTICS_SECRET` | 애널리틱스 조회 API/대시보드 인증 시크릿 |

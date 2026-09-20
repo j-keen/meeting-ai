@@ -1,0 +1,112 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createCloudEngine, CLOUD_STT_MODELS } from '../stt-cloud.js';
+
+class FakeSocket {
+  static instances = [];
+  constructor(url, protocols) {
+    this.url = url;
+    this.protocols = protocols;
+    this.readyState = 0;
+    this.sent = [];
+    FakeSocket.instances.push(this);
+  }
+  send(data) { this.sent.push(JSON.parse(data)); }
+  close() { this.readyState = 3; this.onclose?.({}); }
+  open() { this.readyState = 1; this.onopen?.(); }
+  message(obj) { this.onmessage?.({ data: JSON.stringify(obj) }); }
+}
+FakeSocket.OPEN = 1;
+
+class FakeProcessor {
+  connect() {}
+  disconnect() {}
+}
+class FakeAudioContext {
+  constructor(opts) { this.sampleRate = opts?.sampleRate; this.destination = {}; }
+  createMediaStreamSource() { return { connect() {} }; }
+  createScriptProcessor() { const p = new FakeProcessor(); FakeAudioContext.lastProcessor = p; return p; }
+  close() { return Promise.resolve(); }
+}
+
+function fakeStream() {
+  const track = { stop: vi.fn() };
+  return { getTracks: () => [track], track };
+}
+
+describe('createCloudEngine', () => {
+  let stream;
+  beforeEach(() => {
+    FakeSocket.instances = [];
+    stream = fakeStream();
+    global.WebSocket = FakeSocket;
+    window.AudioContext = FakeAudioContext;
+    Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia: vi.fn(async () => stream) }, configurable: true });
+    global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({ value: 'ek_test' }) }));
+  });
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('uses the personal key directly and configures the session on open', async () => {
+    const engine = createCloudEngine({ language: 'ko', model: 'gpt-4o-transcribe', getPersonalKey: () => 'sk-personal' });
+    const onAudioStart = vi.fn();
+    const p = engine.start(vi.fn(), vi.fn(), vi.fn(), null, vi.fn(), onAudioStart);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    const ws = FakeSocket.instances[0];
+    expect(ws.url).toContain('intent=transcription');
+    expect(ws.protocols).toEqual(['realtime', 'openai-insecure-api-key.sk-personal']);
+    expect(global.fetch).not.toHaveBeenCalled();
+    ws.open();
+    const res = await p;
+    expect(res.started).toBe(true);
+    expect(onAudioStart).toHaveBeenCalled();
+    const update = ws.sent.find(m => m.type === 'session.update');
+    expect(update.session.audio.input.transcription).toEqual({ model: 'gpt-4o-transcribe', language: 'ko' });
+    expect(update.session.audio.input.format.rate).toBe(24000);
+  });
+
+  it('mints a server token when there is no personal key', async () => {
+    const engine = createCloudEngine({ language: 'en' });
+    const p = engine.start(vi.fn(), vi.fn(), vi.fn(), null, vi.fn(), vi.fn());
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+    expect(global.fetch).toHaveBeenCalledWith('/api/realtime-token', expect.objectContaining({ method: 'POST' }));
+    const ws = FakeSocket.instances[0];
+    expect(ws.protocols[1]).toBe('openai-insecure-api-key.ek_test');
+    ws.open();
+    await p;
+  });
+
+  it('routes deltas to onInterim and completed transcripts to onFinal; stop closes everything', async () => {
+    const engine = createCloudEngine({ getPersonalKey: () => 'k' });
+    const onInterim = vi.fn(); const onFinal = vi.fn();
+    const p = engine.start(onInterim, onFinal, vi.fn(), null, vi.fn(), vi.fn());
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    const ws = FakeSocket.instances[0]; ws.open(); await p;
+    ws.message({ type: 'conversation.item.input_audio_transcription.delta', delta: '안녕' });
+    ws.message({ type: 'conversation.item.input_audio_transcription.delta', delta: '하세요' });
+    expect(onInterim).toHaveBeenLastCalledWith('안녕하세요');
+    ws.message({ type: 'conversation.item.input_audio_transcription.completed', transcript: ' 안녕하세요 ' });
+    expect(onFinal).toHaveBeenCalledWith('안녕하세요');
+    ws.message({ type: 'conversation.item.input_audio_transcription.completed', transcript: '' });
+    expect(onFinal).toHaveBeenCalledTimes(1);
+    engine.stop();
+    expect(stream.track.stop).toHaveBeenCalled();
+    expect(ws.readyState).toBe(3);
+  });
+
+  it('reports a fatal error when the microphone is unavailable', async () => {
+    navigator.mediaDevices.getUserMedia = vi.fn(async () => { const e = new Error('denied'); e.name = 'NotAllowedError'; throw e; });
+    const engine = createCloudEngine({ getPersonalKey: () => 'k' });
+    const onError = vi.fn(); const onFatal = vi.fn();
+    const res = await engine.start(vi.fn(), vi.fn(), onError, null, onFatal, vi.fn());
+    expect(res.started).toBe(false);
+    expect(onError).toHaveBeenCalled();
+    expect(onFatal).toHaveBeenCalledWith('cloud');
+  });
+
+  it('falls back to the default model for unknown ids', async () => {
+    const engine = createCloudEngine({ model: 'nope', getPersonalKey: () => 'k' });
+    const p = engine.start(vi.fn(), vi.fn(), vi.fn(), null, vi.fn(), vi.fn());
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    const ws = FakeSocket.instances[0]; ws.open(); await p;
+    expect(ws.sent[0].session.audio.input.transcription.model).toBe(CLOUD_STT_MODELS[0]);
+  });
+});

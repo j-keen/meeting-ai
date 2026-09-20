@@ -50,6 +50,11 @@ function _keyFor(provider) {
   return ((provider === 'openai' ? _openaiKeyProvider() : _userApiKeyProvider()) || '').trim();
 }
 
+/** Personal key for a provider ('' when none). Used by the cloud STT engine. */
+export function getUserApiKey(provider = 'gemini') {
+  return _keyFor(provider);
+}
+
 /** Whether the user has a personal key for the ACTIVE provider. */
 export function hasUserKey() {
   return !!_keyFor(_provider);

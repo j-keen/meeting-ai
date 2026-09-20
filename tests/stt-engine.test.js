@@ -43,8 +43,11 @@ function makeStartCallbacks(overrides = {}) {
 }
 
 describe('resolveEngine', () => {
-  it('returns native when env.hasNative is true regardless of settings', () => {
-    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: true })).toBe('native');
+  it('returns native when env.hasNative is true unless the user explicitly picked another engine', () => {
+    // An explicit keyboard / cloud / whisper choice wins even on the native app
+    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: true })).toBe('keyboard');
+    expect(resolveEngine({ sttEngine: 'cloud' }, { hasNative: true })).toBe('cloud');
+    expect(resolveEngine({ sttEngine: 'whisper' }, { hasNative: false, hasSpeech: true })).toBe('whisper');
     expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: true, hasSpeech: false })).toBe('native');
     expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: true, hasSpeech: true })).toBe('native');
     expect(resolveEngine({}, { hasNative: true })).toBe('native');

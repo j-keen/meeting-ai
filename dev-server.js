@@ -41,6 +41,7 @@ const PORT = process.env.PORT || 3000;
 const API_ROUTES = {
   '/api/gemini': './api/gemini.js',
   '/api/openai': './api/openai.js',
+  '/api/realtime-token': './api/realtime-token.js',
   '/api/transcribe': './api/transcribe.js',
   '/api/analytics': './api/analytics.js',
   '/api/analytics-dashboard': './api/analytics-dashboard.js',

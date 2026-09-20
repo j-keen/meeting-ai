@@ -216,6 +216,9 @@ function offerKeyboardSwitch() {
   import('./ui.js').then(({ showUndoToast }) => showUndoToast(t('stt.switch_to_keyboard'), undo, 8000));
 }
 
+// Settings / the high-accuracy button change state.settings.sttEngine and emit this.
+on('stt:engine-changed', ({ engine }) => { switchSttEngine(engine); });
+
 /** Swap the STT engine without touching phase or transcript. */
 export async function switchSttEngine(engineName) {
   state.settings.sttEngine = engineName;
