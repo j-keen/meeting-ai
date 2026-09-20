@@ -8289,6 +8289,32 @@ body.imported-mode .recording-controls { display: none; }
   font-size: 12px; color: var(--text-secondary); margin-top: 6px;
 }
 
+/* Whisper (local STT) model management */
+.whisper-model-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.whisper-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.whisper-progress {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  accent-color: var(--accent);
+}
+.whisper-progress[hidden] { display: none; }
+
+/* High-accuracy (cloud STT) quick toggle */
+#btnHighAccuracy.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* ===== End Meeting Audio Download Section (P-5) ===== */
 .end-meeting-audio-section {
   margin-top: 12px; padding: 12px 14px;

@@ -259,6 +259,7 @@
         <span class="record-label">REC</span>
         <span class="stt-engine-badge" id="sttEngineBadge" hidden></span>
       </button>
+      <button class="btn btn-sm" id="btnHighAccuracy" title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
@@ -319,12 +320,39 @@
               <option value="auto" data-i18n="settings.stt_engine_auto">Auto</option>
               <option value="webspeech" data-i18n="settings.stt_engine_webspeech">Browser (Web Speech)</option>
               <option value="keyboard" data-i18n="settings.stt_engine_keyboard">Keyboard voice input (phone's own STT)</option>
+              <option value="cloud" data-i18n="settings.stt_engine_cloud">Cloud high-accuracy (OpenAI)</option>
+              <option value="whisper" data-i18n="settings.stt_engine_whisper">Local Whisper (browser)</option>
             </select>
           </label>
           <label class="settings-label settings-toggle-label">
             <span data-i18n="settings.stt_on_device">Prefer on-device recognition</span>
             <input type="checkbox" id="checkSttOnDevice">
           </label>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.stt_engine_cloud">Cloud high-accuracy (OpenAI)</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.cloud_stt_model">Cloud STT model</span>
+            <select class="settings-select" id="selectCloudSttModel">
+              <option value="gpt-4o-mini-transcribe" data-i18n="settings.cloud_stt_model_mini">표준 (약 $0.003/분)</option>
+              <option value="gpt-4o-transcribe" data-i18n="settings.cloud_stt_model_full">고정확도 (약 $0.006/분)</option>
+            </select>
+          </label>
+          <small class="settings-hint" data-i18n="settings.cloud_stt_hint">OpenAI 실시간 전사. 설정의 OpenAI 키 또는 서버의 OPENAI_API_KEY를 사용. 1시간 회의 ≈ $0.18–0.36</small>
+        </section>
+        <section class="settings-section">
+          <h3 data-i18n="settings.stt_engine_whisper">Local Whisper (browser)</h3>
+          <label class="settings-label">
+            <span data-i18n="settings.whisper_model">Whisper model</span>
+            <select class="settings-select" id="selectWhisperModel"></select>
+          </label>
+          <small class="settings-hint" data-i18n="settings.whisper_hint">브라우저에서 실행되는 로컬 모델. 한 번 내려받으면 오프라인에서도 동작하고 음성이 외부로 나가지 않습니다. 데스크톱 권장.</small>
+          <div class="whisper-model-actions">
+            <button type="button" class="btn btn-sm" id="btnWhisperDownload" data-i18n="settings.whisper_download">모델 다운로드</button>
+            <button type="button" class="btn btn-sm btn-danger" id="btnWhisperDelete" data-i18n="settings.whisper_delete">삭제</button>
+            <span id="whisperStatus" class="whisper-status"></span>
+          </div>
+          <progress id="whisperProgress" class="whisper-progress" value="0" max="100" hidden></progress>
         </section>
         <section class="settings-section">
           <h3 data-i18n="settings.audio_recording">Audio Recording</h3>

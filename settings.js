@@ -19,6 +19,10 @@ import { ocrBusinessCard } from './meeting-prep.js';
 import { setAnalyticsOptOut, isAnalyticsEnabled } from './analytics.js';
 import { openPromptBuilder } from './prompt-builder.js';
 import { escapeHtml } from './utils.js';
+import {
+  WHISPER_MODELS, isWhisperSupported, getWhisperModelStatus,
+  downloadWhisperModel, deleteWhisperModel,
+} from './stt-whisper.js';
 
 
 
@@ -204,6 +208,8 @@ export function initSettings() {
   initGeminiKeySettings();
   initOpenaiKeySettings();
   initSttPrefsSettings();
+  initWhisperSettings();
+  initHighAccuracyButton();
 
 }
 
@@ -338,6 +344,105 @@ function initSttPrefsSettings() {
       markDirty();
     });
   }
+
+  const cloudSttModelSelect = $('#selectCloudSttModel');
+  if (cloudSttModelSelect) {
+    cloudSttModelSelect.value = state.settings.cloudSttModel || 'gpt-4o-mini-transcribe';
+    cloudSttModelSelect.addEventListener('change', (e) => {
+      state.settings.cloudSttModel = e.target.value;
+      markDirty();
+    });
+  }
+}
+
+// ===== Whisper (local, in-browser) model management =====
+
+async function refreshWhisperStatus() {
+  const select = $('#selectWhisperModel');
+  const status = $('#whisperStatus');
+  const downloadBtn = $('#btnWhisperDownload');
+  const deleteBtn = $('#btnWhisperDelete');
+  if (!select || !status) return;
+
+  if (!isWhisperSupported()) {
+    status.textContent = t('settings.whisper_unsupported');
+    if (downloadBtn) downloadBtn.disabled = true;
+    if (deleteBtn) deleteBtn.hidden = true;
+    return;
+  }
+
+  const modelId = select.value;
+  if (!modelId) return; // options not populated yet (initWhisperSettings runs later in init order)
+  const model = WHISPER_MODELS.find((m) => m.id === modelId);
+  const { downloaded, bytes } = await getWhisperModelStatus(modelId);
+  if (downloaded) {
+    const mb = bytes ? Math.round(bytes / (1024 * 1024)) : (model?.sizeMB ?? '?');
+    status.textContent = `${t('settings.whisper_installed')} · ${mb}MB`;
+    if (downloadBtn) downloadBtn.disabled = true;
+    if (deleteBtn) deleteBtn.hidden = false;
+  } else {
+    status.textContent = t('settings.whisper_not_installed');
+    if (downloadBtn) downloadBtn.disabled = false;
+    if (deleteBtn) deleteBtn.hidden = true;
+  }
+}
+
+function initWhisperSettings() {
+  const select = $('#selectWhisperModel');
+  if (!select) return;
+
+  select.innerHTML = WHISPER_MODELS.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`).join('');
+  select.value = state.settings.whisperModel || WHISPER_MODELS[0].id;
+  select.addEventListener('change', () => {
+    state.settings.whisperModel = select.value;
+    markDirty();
+    refreshWhisperStatus();
+  });
+
+  $('#btnWhisperDownload')?.addEventListener('click', async () => {
+    const modelId = select.value;
+    const downloadBtn = $('#btnWhisperDownload');
+    const progress = $('#whisperProgress');
+    if (downloadBtn) downloadBtn.disabled = true;
+    if (progress) { progress.hidden = false; progress.value = 0; }
+    try {
+      await downloadWhisperModel(modelId, ({ percent }) => {
+        if (progress) progress.value = percent || 0;
+      });
+    } catch (err) {
+      emit('toast', { message: err?.message || t('settings.whisper_unsupported'), type: 'error' });
+    } finally {
+      if (progress) progress.hidden = true;
+      await refreshWhisperStatus();
+    }
+  });
+
+  $('#btnWhisperDelete')?.addEventListener('click', async () => {
+    await deleteWhisperModel(select.value);
+    await refreshWhisperStatus();
+  });
+
+  refreshWhisperStatus();
+}
+
+// ===== High-accuracy (cloud STT) quick toggle in the bottom bar =====
+
+function initHighAccuracyButton() {
+  const btn = $('#btnHighAccuracy');
+  if (!btn) return;
+
+  btn.classList.toggle('active', state.settings.sttEngine === 'cloud');
+
+  btn.addEventListener('click', () => {
+    const next = state.settings.sttEngine === 'cloud' ? 'auto' : 'cloud';
+    state.settings.sttEngine = next;
+    saveSettings({ sttEngine: next });
+    snapshotSettings();
+    btn.classList.toggle('active', next === 'cloud');
+    const sttEngineSelect = $('#selectSttEngine');
+    if (sttEngineSelect) sttEngineSelect.value = next;
+    emit('stt:engine-changed', { engine: next });
+  });
 }
 
 // ===== Preset Cards =====
@@ -636,6 +741,8 @@ function saveAllSettings() {
     sttOnDevice: s.sttOnDevice,
     keepScreenAwake: s.keepScreenAwake,
     keyboardCommitMs: s.keyboardCommitMs,
+    cloudSttModel: s.cloudSttModel,
+    whisperModel: s.whisperModel,
   });
   snapshotSettings();
 
@@ -748,6 +855,15 @@ function applySettingsToForm() {
   const keepAwakeCheck = $('#checkKeepAwake');
   if (keepAwakeCheck) keepAwakeCheck.checked = s.keepScreenAwake !== false;
   safeGemini(() => setKeyMode?.(s.geminiKeyMode || 'fallback'));
+  const cloudSttModelSelect = $('#selectCloudSttModel');
+  if (cloudSttModelSelect) cloudSttModelSelect.value = s.cloudSttModel || 'gpt-4o-mini-transcribe';
+  const whisperModelSelect = $('#selectWhisperModel');
+  if (whisperModelSelect) {
+    whisperModelSelect.value = s.whisperModel || 'onnx-community/whisper-base';
+    refreshWhisperStatus();
+  }
+  const highAccuracyBtn = $('#btnHighAccuracy');
+  if (highAccuracyBtn) highAccuracyBtn.classList.toggle('active', s.sttEngine === 'cloud');
 }
 
 // ===== Helpers =====
@@ -786,6 +902,8 @@ function loadSavedSettings() {
   s.sttOnDevice = saved.sttOnDevice !== undefined ? saved.sttOnDevice : true;
   s.keepScreenAwake = saved.keepScreenAwake !== undefined ? saved.keepScreenAwake : true;
   s.keyboardCommitMs = saved.keyboardCommitMs || 2500;
+  s.cloudSttModel = saved.cloudSttModel || 'gpt-4o-mini-transcribe';
+  s.whisperModel = saved.whisperModel || 'onnx-community/whisper-base';
 
   applySettingsToForm();
 
