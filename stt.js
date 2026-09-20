@@ -88,6 +88,12 @@ function createWebSpeechEngine(language, settings = {}) {
   let speechWatchdog = null;
   let hasResultInSession = false;
   let onDevice = false;
+  let selfAbort = false;          // abort() we triggered ourselves (watchdog / empty finals)
+  let errorsSinceResult = 0;      // consecutive engine errors with no transcript in between
+  let noSpeechNotified = false;
+  let audioStartedOnce = false;
+  let lastErrorToastAt = 0;
+  let dead = false;               // fatal or stopped: late events from the old recognizer are ignored
 
   const clearWatchdog = () => {
     if (speechWatchdog) { clearTimeout(speechWatchdog); speechWatchdog = null; }
@@ -117,8 +123,10 @@ function createWebSpeechEngine(language, settings = {}) {
       let restartCount = 0;
 
       recognition.onresult = (e) => {
+        if (dead) return;
         noSpeechCount = 0;
         abortCount = 0;
+        errorsSinceResult = 0;
         for (let i = e.resultIndex; i < e.results.length; i++) {
           const result = e.results[i];
           let text = result[0].transcript.trim();
@@ -133,6 +141,7 @@ function createWebSpeechEngine(language, settings = {}) {
               sttDebug(`FINAL(skip) empty #${emptyFinalCount}`);
               if (emptyFinalCount >= 8 && !hasResultInSession && shouldRestart && recognition) {
                 sttDebug(`⚠️ Too many empty finals (${emptyFinalCount}) — aborting session`);
+                selfAbort = true;
                 try { recognition.abort(); } catch { /* ignore */ }
               }
               hadFinalSinceLastInterim = true;
@@ -170,43 +179,57 @@ function createWebSpeechEngine(language, settings = {}) {
         }
       };
 
+      // Android Chrome ends/errors the recognizer every few seconds. Restarts are silent;
+      // the user only hears about it when the engine is truly stuck (then the session
+      // recovers it) or the mic permission is gone.
+      const toastThrottled = (msg) => {
+        const now = Date.now();
+        if (now - lastErrorToastAt < 30000) return;
+        lastErrorToastAt = now;
+        onError(msg);
+      };
       recognition.onerror = (e) => {
+        if (dead) return;
         sttDebug(`ERROR: ${e.error} ${e.message || ''}`);
-        if (e.error === 'not-allowed') {
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          dead = true;
           shouldRestart = false;
           onError(t('stt.mic_permission_denied_detail'));
           onFatalError?.(this.variant);
-        } else if (e.error === 'no-speech') {
+          return;
+        }
+        if (e.error === 'aborted' && selfAbort) { selfAbort = false; return; } // our own watchdog
+        if (e.error === 'no-speech') {
           noSpeechCount++;
-          if (noSpeechCount >= 3) {
-            noSpeechCount = 0;
+          if (noSpeechCount >= 3 && !noSpeechNotified) {
+            noSpeechNotified = true;
             onError(t('stt.no_mic_input'));
           }
-        } else if (e.error === 'aborted') {
-          abortCount++;
-          if (abortCount >= 5) {
-            shouldRestart = false;
-            abortCount = 0;
-            onError(t('stt.connection_failed'));
-            onFatalError?.(this.variant);
-          }
-        } else if (e.error === 'network' || e.error === 'audio-capture') {
-          onError(`Speech recognition error: ${e.error}`);
-          // Repeated network/capture failures are what break Android Chrome in the field
-          if (++restartFailCount >= 3) {
-            shouldRestart = false;
-            onFatalError?.(this.variant);
-          }
-        } else {
-          onError(`Speech recognition error: ${e.error}`);
+          return; // silence is normal, never fatal
         }
+        errorsSinceResult++;
+        if (e.error === 'aborted') abortCount++;
+        if (errorsSinceResult >= 8 || abortCount >= 12) {
+          // Give up quietly; the session restarts a fresh engine and only warns the
+          // user if that keeps failing too.
+          dead = true;
+          shouldRestart = false;
+          onFatalError?.(this.variant);
+          return;
+        }
+        if (e.error !== 'aborted' && e.error !== 'network') toastThrottled(`Speech recognition error: ${e.error}`);
       };
 
       recognition.onaudiostart = () => {
         audioStarted = true;
         hasResultInSession = false;
         sttDebug('🎤 Audio started');
-        onAudioStart?.();
+        // Only the first audio start of this engine instance counts as "connected";
+        // every later one is an internal restart and must not flap the UI.
+        if (!audioStartedOnce) {
+          audioStartedOnce = true;
+          onAudioStart?.();
+        }
       };
 
       recognition.onspeechstart = () => {
@@ -216,6 +239,7 @@ function createWebSpeechEngine(language, settings = {}) {
           speechWatchdog = setTimeout(() => {
             if (!hasResultInSession && shouldRestart && recognition) {
               sttDebug('⚠️ Watchdog: speech detected but no results in 5s — forcing restart');
+              selfAbort = true;
               try { recognition.abort(); } catch { /* ignore */ }
             }
           }, 5000);
@@ -225,6 +249,7 @@ function createWebSpeechEngine(language, settings = {}) {
       recognition.onaudioend = () => clearWatchdog();
 
       recognition.onend = () => {
+        if (dead) return;
         const sessionDur = ((Date.now() - sessionStartTime) / 1000).toFixed(1);
         // Flush pending interim text as final before restarting
         if (lastInterimText && !hadFinalSinceLastInterim) {
@@ -278,6 +303,7 @@ function createWebSpeechEngine(language, settings = {}) {
     },
 
     stop() {
+      dead = true;
       shouldRestart = false;
       clearWatchdog();
       try { recognition?.stop(); } catch { /* ignore */ }

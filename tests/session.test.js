@@ -385,6 +385,47 @@ describe('background return', () => {
   });
 });
 
+describe('STT auto-recovery', () => {
+  it('silently restarts the engine after a fatal error while recording, then gives up after 5 tries', async () => {
+    vi.useFakeTimers();
+    try {
+      await start();
+      expect(createSTT).toHaveBeenCalledTimes(1);
+      // engine reports a fatal error (Android Chrome giving up)
+      fakeStt.cb.onFatalError('webspeech');
+      expect(state.phase).toBe('recording');
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(createSTT).toHaveBeenCalledTimes(2); // restarted quietly
+      // a transcript line resets the attempt counter
+      fakeStt.cb.onFinal('hello');
+      for (let i = 0; i < 5; i++) {
+        fakeStt.cb.onFatalError('webspeech');
+        await vi.advanceTimersByTimeAsync(5100);
+      }
+      expect(createSTT).toHaveBeenCalledTimes(7);
+      fakeStt.cb.onFatalError('webspeech'); // 6th consecutive failure → stop trying
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(createSTT).toHaveBeenCalledTimes(7);
+      expect(state.phase).toBe('recording');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not restart once the meeting is paused', async () => {
+    vi.useFakeTimers();
+    try {
+      await start();
+      fakeStt.cb.onFatalError('webspeech');
+      await pause('user');
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(createSTT).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('loadMeeting', () => {
   it('sets ended/loaded and resume() folds the gap since the last transcript timestamp', async () => {
     const lastTs = T0 + 10_000;

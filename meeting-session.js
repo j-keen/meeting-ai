@@ -39,6 +39,8 @@ export const sessionTimers = createTimerGroup();
 let stt = null;
 let webspeechFatalCount = 0;
 let switchOfferShown = false;
+let connectedShown = false;   // "connected" toast once per recording run, not per engine restart
+let sttRecoverAttempts = 0;   // silent auto-recovery after an engine gives up
 
 /**
  * Hooks let recording.js keep analysis/persistence logic without a circular import.
@@ -153,6 +155,7 @@ export function buildSttCallbacks({ withStream }) {
     },
     onInterim: (text) => showInterim(text),
     onFinal: (text) => {
+      sttRecoverAttempts = 0;
       const line = { id: generateId(), text, timestamp: Date.now(), bookmarked: false };
       state.transcript.push(line);
       addTranscriptLine(line);
@@ -168,14 +171,15 @@ export function buildSttCallbacks({ withStream }) {
       hooks.onReplaceLine?.(lastLine);
     },
     onError: (err) => showToast(err, 'error'),
-    onFatalError: (engineName) => {
-      if (engineName === 'webspeech' || engineName === 'webspeech-local') offerKeyboardSwitch();
-    },
-    onConnecting: () => showTranscriptConnecting(),
+    onFatalError: (engineName) => recoverStt(engineName),
+    onConnecting: () => { if (!connectedShown) showTranscriptConnecting(); },
     onConnected: (engine) => {
       state.sttEngineName = engine;
-      showTranscriptWaiting();
-      showToast(t('stt.connected'), 'success');
+      if (!connectedShown) {
+        connectedShown = true;
+        showTranscriptWaiting();
+        showToast(t('stt.connected'), 'success');
+      }
       syncSessionUI();
     },
   };
@@ -204,6 +208,29 @@ function stopStt() {
   stt.stop();
   stt = null;
   state.sttEngineName = null;
+}
+
+/**
+ * An engine gave up mid-meeting (Android Chrome does this): restart it quietly with
+ * backoff while the phase is still 'recording'. Only after repeated failures do we
+ * tell the user and, on mobile, offer the keyboard engine.
+ */
+function recoverStt(engineName) {
+  if (state.phase !== 'recording') return;
+  sttRecoverAttempts++;
+  if (sttRecoverAttempts > 5) {
+    log(`stt recovery gave up after ${sttRecoverAttempts - 1} attempts`);
+    showToast(t('stt.connection_failed'), 'error');
+    if (engineName === 'webspeech' || engineName === 'webspeech-local') offerKeyboardSwitch();
+    return;
+  }
+  const delay = Math.min(1000 * sttRecoverAttempts, 5000);
+  log(`stt recovery #${sttRecoverAttempts} in ${delay}ms`);
+  recTimers.after('sttRecover', delay, async () => {
+    if (state.phase !== 'recording') return;
+    const ok = await startStt({ withStream: false });
+    if (!ok) recoverStt(engineName);
+  });
 }
 
 function offerKeyboardSwitch() {
@@ -238,6 +265,8 @@ export async function start() {
   state.source = 'live';
   webspeechFatalCount = 0;
   switchOfferShown = false;
+  connectedShown = false;
+  sttRecoverAttempts = 0;
 
   const ok = await startStt({ withStream: true });
   if (!ok) {
@@ -265,6 +294,8 @@ export async function resume() {
     state.pausedDuration += Date.now() - state.pauseStartTime;
   }
   state.pauseStartTime = null;
+  connectedShown = false;
+  sttRecoverAttempts = 0;
 
   const ok = (stt && stt.isPaused) ? (stt.resume(), true) : await startStt({ withStream: !wasLoaded });
   if (!ok) {
