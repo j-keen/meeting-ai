@@ -2125,6 +2125,7 @@ function renderCorrectionDict() {
 
 export function openSettings() {
   $('#settingsPanel').classList.add('open');
+  emit('settings:opened');
   $('#settingsOverlay').classList.add('visible');
   $('#settingsPanel').setAttribute('aria-hidden', 'false');
   snapshotSettings();

@@ -51,6 +51,7 @@ import { initImportTranscript, openImportModal } from './import-transcript.js';
 import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.js';
 import { initAnalytics } from './analytics.js';
 import { CATEGORY_I18N_KEYS } from './usage-limiter.js';
+import { initStatusPanel } from './status-panel.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -108,6 +109,9 @@ function init() {
 
   // Analytics 초기화
   initAnalytics();
+
+  // "What is running right now" chip + settings section
+  initStatusPanel();
 
   // Initialize audio recording DB and cleanup old recordings
   initAudioDB().then(() => {

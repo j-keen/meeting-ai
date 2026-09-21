@@ -173,10 +173,29 @@ export async function checkProxyAvailable() {
       return false;
     }
   };
+  const probeRealtime = async () => {
+    try {
+      const res = await fetch('/api/realtime-token', { method: 'GET' });
+      if (!res.ok) return false;
+      const data = await res.json().catch(() => ({}));
+      return data.configured === true;
+    } catch {
+      return false;
+    }
+  };
   [_proxyAvailable, _openaiProxyAvailable, _realtimeTokenAvailable] = await Promise.all([
-    probe('/api/gemini'), probe('/api/openai'), probe('/api/realtime-token'),
+    probe('/api/gemini'), probe('/api/openai'), probeRealtime(),
   ]);
   return _proxyAvailable;
+}
+
+export function isRealtimeTokenAvailable() {
+  return _realtimeTokenAvailable === true;
+}
+
+/** Proxy availability for a specific provider (not just the active one). */
+export function isProxyAvailableFor(provider) {
+  return provider === 'openai' ? _openaiProxyAvailable === true : _proxyAvailable === true;
 }
 
 /** Cloud STT (OpenAI Realtime) can run: server token endpoint or a personal OpenAI key. */

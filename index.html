@@ -260,6 +260,7 @@
         <span class="stt-engine-badge" id="sttEngineBadge" hidden></span>
       </button>
       <button class="btn btn-sm" id="btnHighAccuracy" title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
+      <button class="stt-status-chip" id="sttStatusChip" type="button" title="Current STT / AI status">STT</button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
@@ -289,6 +290,10 @@
 
       <!-- General Tab -->
       <div class="settings-tab-content active" data-tab="general">
+        <section class="settings-section settings-status-section">
+          <h3><span data-i18n="status.title">Current engines</span> <button class="btn btn-sm" id="btnRuntimeStatusRefresh" type="button" data-i18n="status.refresh">Refresh</button></h3>
+          <div id="runtimeStatus" class="status-body"></div>
+        </section>
         <section class="settings-section">
           <h3 data-i18n="settings.language">Language</h3>
           <label class="settings-label">
@@ -395,7 +400,7 @@
         </section>
 
         <section class="settings-section">
-          <h3 data-i18n="settings.gemini_key">Personal Gemini API key</h3>
+          <h3 data-i18n="settings.gemini_key">Gemini API key — for Gemini analysis</h3>
           <div class="gemini-key-row">
             <input type="password" class="settings-input" id="inputGeminiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
             <button type="button" class="btn btn-icon btn-sm" id="btnToggleGeminiKey" aria-label="Show API key" title="Show">&#128065;</button>
@@ -416,7 +421,7 @@
         </section>
 
         <section class="settings-section">
-          <h3 data-i18n="settings.openai_key">Personal OpenAI API key</h3>
+          <h3 data-i18n="settings.openai_key">OpenAI API key — for GPT analysis and high-accuracy STT</h3>
           <div class="gemini-key-row">
             <input type="password" class="settings-input" id="inputOpenaiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.openai_key" placeholder="Enter API key">
             <button type="button" class="btn btn-icon btn-sm" id="btnToggleOpenaiKey" aria-label="Show API key" title="Show">&#128065;</button>

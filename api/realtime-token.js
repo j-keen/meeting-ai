@@ -42,6 +42,8 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+  // GET is a capability probe for the status panel: says whether the server key exists, never reveals it.
+  if (req.method === 'GET') return res.status(200).json({ configured: !!process.env.OPENAI_API_KEY });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.OPENAI_API_KEY;

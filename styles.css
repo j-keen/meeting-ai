@@ -8337,3 +8337,36 @@ body.imported-mode .recording-controls { display: none; }
 
 /* ===== STT Debug Console ===== */
 
+
+/* ===== Runtime status (which STT / AI is in use) ===== */
+.stt-status-chip {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  cursor: pointer;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stt-status-chip:hover { background: var(--bg-active); color: var(--text-primary); }
+.stt-status-chip.status-bad { color: var(--danger); border-color: var(--danger); }
+.status-body { display: flex; flex-direction: column; gap: 14px; }
+.status-block { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg-secondary); }
+.status-title { font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.status-live { font-size: 0.7rem; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 6px; }
+.status-row { display: grid; grid-template-columns: 110px 1fr; gap: 8px; font-size: 0.85rem; padding: 3px 0; }
+.status-k { color: var(--text-secondary); }
+.status-v { word-break: break-word; }
+.status-bad .status-v { color: var(--danger); font-weight: 600; }
+.status-problem { margin-top: 6px; color: var(--danger); font-size: 0.82rem; }
+.status-note { margin-top: 6px; color: var(--text-secondary); font-size: 0.78rem; }
+.settings-status-section h3 { display: flex; align-items: center; justify-content: space-between; }
+@media (max-width: 600px) {
+  .stt-status-chip { max-width: 140px; }
+  .status-row { grid-template-columns: 90px 1fr; }
+}

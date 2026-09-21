@@ -7,6 +7,8 @@
 // Server VAD closes each utterance; deltas → onInterim, completed → onFinal.
 // Verified 2026-09-20 against the GA Realtime API (subprotocol auth, no beta header).
 
+import { t } from './i18n.js';
+
 const WS_URL = 'wss://api.openai.com/v1/realtime?intent=transcription';
 const SAMPLE_RATE = 24000;
 export const CLOUD_STT_MODELS = ['gpt-4o-mini-transcribe', 'gpt-4o-transcribe'];
@@ -39,7 +41,12 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
       body: JSON.stringify({ model: sttModel, language: lang }),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.value) throw new Error(data.error || `realtime token error (${res.status})`);
+    if (!res.ok || !data.value) {
+      const msg = String(data.error || '');
+      if (res.status === 404 || /not configured/i.test(msg)) throw new Error(t('stt.cloud_no_key'));
+      if (res.status === 429) throw new Error(t('stt.cloud_rate_limited'));
+      throw new Error(msg || `realtime token error (${res.status})`);
+    }
     return data.value;
   }
 
@@ -166,7 +173,7 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (err) {
         active = false;
-        onError?.(`Cloud STT: microphone unavailable (${err.name})`);
+        onError?.(t('stt.cloud_mic_unavailable', { reason: err.name }));
         onFatalError?.('cloud');
         return { started: false };
       }
@@ -176,7 +183,7 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
         active = false;
         stream.getTracks().forEach(t => t.stop());
         stream = null;
-        onError?.(`Cloud STT: ${err.message}`);
+        onError?.(t('stt.cloud_error', { message: err.message }));
         onFatalError?.('cloud');
         return { started: false };
       }
