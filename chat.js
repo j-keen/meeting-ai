@@ -275,7 +275,7 @@ async function sendChatMessage(userText) {
     typingEl.remove();
     container.appendChild(streamEl);
 
-    const { text: fullText, parts } = await callGeminiGuarded(model, body, {
+    let { text: fullText, parts } = await callGeminiGuarded(model, body, {
       category: 'chat',
       onStream: (chunk, fullSoFar) => {
         streamContent.innerHTML = renderMarkdown(fullSoFar);
@@ -285,12 +285,37 @@ async function sendChatMessage(userText) {
 
     // Check for function calls in parts
     let hasFunctionCall = false;
-    for (const part of parts) {
-      if (part.functionCall) {
-        hasFunctionCall = true;
-        streamEl.remove();
-        await handleFunctionCall(part.functionCall);
-      }
+    const calls = parts.filter(p => p.functionCall);
+    for (const part of calls) {
+      hasFunctionCall = true;
+      await handleFunctionCall(part.functionCall);
+    }
+
+    // The model chose a tool instead of answering (e.g. it filed the question as "context").
+    // Feed the tool results back and ask for the actual answer, so the user never gets
+    // only "[context added]" as a reply.
+    if (hasFunctionCall && !fullText.trim()) {
+      const followUp = [
+        ...contents,
+        { role: 'model', parts: calls },
+        {
+          role: 'user',
+          parts: [
+            ...calls.map(c => ({ functionResponse: { name: c.functionCall.name, response: { result: 'ok' } } })),
+            { text: t('chat.answer_after_tool') },
+          ],
+        },
+      ];
+      streamContent.textContent = '';
+      const second = await callGeminiGuarded(model, { contents: followUp, generationConfig: { temperature: 0.5 } }, {
+        category: 'chat',
+        onStream: (chunk, fullSoFar) => {
+          streamContent.innerHTML = renderMarkdown(fullSoFar);
+          container.scrollTop = container.scrollHeight;
+        },
+      });
+      fullText = second.text || '';
+      parts = second.parts || [];
     }
 
     if (fullText) {
@@ -327,9 +352,11 @@ function buildChatSystemPrompt() {
     : lang === 'ko'
       ? `당신은 AI 비서입니다. 현재 회의 맥락이 제공되지만, 어떤 주제든 자유롭게 대화할 수 있습니다.
 사용 가능한 도구: add_context (맥락 추가), add_memo (메모 추가), rerun_analysis (재분석 실행)
+중요: 사용자의 질문에는 항상 텍스트로 직접 답하세요. 도구는 사용자가 "메모해줘", "맥락에 추가해줘", "다시 분석해줘"처럼 명시적으로 요청할 때만 사용하고, 도구를 썼더라도 반드시 답변 문장을 함께 제공하세요.
 한국어로 답변하세요.`
       : `You are an AI assistant. Meeting context is provided below, but you can discuss any topic freely.
 Available tools: add_context, add_memo, rerun_analysis
+Important: always answer the user's question directly in text. Use a tool only when the user explicitly asks to add a memo, add context, or re-run analysis, and even then include an answer.
 Respond in English.`;
 
   // Inject category-specific persona and name handling rules

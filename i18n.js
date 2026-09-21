@@ -449,6 +449,12 @@ const translations = {
     // Settings tabs
     'settings.tab_general': 'General',
     'settings.tab_analysis': 'Analysis',
+    'settings.trigger_title': 'Live analysis trigger',
+    'settings.trigger_auto': 'Analyze automatically while recording',
+    'settings.trigger_chars': 'Run an analysis every N new characters',
+    'settings.trigger_unit': 'chars',
+    'chat.answer_after_tool': 'The tool has been applied. Now answer my previous question directly, in text.',
+    'settings.trigger_hint': 'Also needs at least 5 new transcript lines. If nothing triggered for 10 minutes and 3+ lines arrived, it runs anyway. Smaller = more frequent and more API cost. Each run sends the full transcript plus the previous analysis.',
     'settings.tab_chat': 'Chat',
 
     // Strategy descriptions
@@ -1567,6 +1573,12 @@ const translations = {
     // Settings tabs
     'settings.tab_general': '일반',
     'settings.tab_analysis': '분석',
+    'settings.trigger_title': '실시간 분석 트리거',
+    'settings.trigger_auto': '녹음 중 자동으로 분석',
+    'settings.trigger_chars': '새 녹취가 N자 쌓일 때마다 분석',
+    'settings.trigger_unit': '자',
+    'chat.answer_after_tool': '도구가 적용되었습니다. 이제 방금 질문에 텍스트로 직접 답해 주세요.',
+    'settings.trigger_hint': '최소 5줄의 새 녹취도 필요합니다. 10분 동안 분석이 없었고 3줄 이상 쌓이면 그냥 실행됩니다. 값이 작을수록 자주 돌고 API 비용이 늘어납니다. 매 분석은 전체 녹취록과 직전 분석을 함께 보냅니다.',
     'settings.tab_chat': '채팅',
 
     // Strategy descriptions

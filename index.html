@@ -446,6 +446,23 @@
       <!-- Analysis Tab -->
       <div class="settings-tab-content" data-tab="analysis">
         <section class="settings-section">
+          <h3 data-i18n="settings.trigger_title">Live analysis trigger</h3>
+          <label class="settings-label settings-checkbox-label">
+            <input type="checkbox" id="checkAutoAnalysis" checked>
+            <span data-i18n="settings.trigger_auto">Analyze automatically while recording</span>
+          </label>
+          <label class="settings-label">
+            <span data-i18n="settings.trigger_chars">Run an analysis every N new characters</span>
+            <div class="threshold-row">
+              <input type="range" class="settings-range" id="rangeAnalysisThreshold" min="200" max="5000" step="50" value="1000">
+              <input type="number" class="settings-input threshold-number" id="inputAnalysisThreshold" min="100" max="20000" step="50" value="1000" title="Click to type a value">
+              <span data-i18n="settings.trigger_unit">chars</span>
+            </div>
+            <small class="settings-hint" id="analysisThresholdHint" data-i18n="settings.trigger_hint">Also needs at least 5 new transcript lines. If nothing triggered for 10 minutes and 3+ lines arrived, it runs anyway. Smaller = more frequent, more API cost.</small>
+          </label>
+        </section>
+
+        <section class="settings-section">
           <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
           <label class="settings-label">
               <span data-i18n="settings.ai_language">AI Analysis Language</span>

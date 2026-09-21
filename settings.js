@@ -345,6 +345,35 @@ function initSttPrefsSettings() {
     });
   }
 
+  // Live analysis trigger: slider ↔ number input stay in sync; either one updates the setting.
+  const autoAnalysisCheck = $('#checkAutoAnalysis');
+  const thresholdRange = $('#rangeAnalysisThreshold');
+  const thresholdInput = $('#inputAnalysisThreshold');
+  const clampThreshold = (v) => Math.min(20000, Math.max(100, Math.round((Number(v) || 1000) / 50) * 50));
+  const applyThreshold = (v, from) => {
+    const n = clampThreshold(v);
+    state.settings.analysisCharThreshold = n;
+    if (thresholdRange && from !== 'range') thresholdRange.value = String(Math.min(5000, n));
+    if (thresholdInput && from !== 'input') thresholdInput.value = String(n);
+    markDirty();
+  };
+  if (autoAnalysisCheck) {
+    autoAnalysisCheck.checked = state.settings.autoAnalysis !== false;
+    autoAnalysisCheck.addEventListener('change', (e) => {
+      state.settings.autoAnalysis = e.target.checked;
+      markDirty();
+    });
+  }
+  if (thresholdRange) {
+    thresholdRange.value = String(Math.min(5000, state.settings.analysisCharThreshold || 1000));
+    thresholdRange.addEventListener('input', (e) => applyThreshold(e.target.value, 'range'));
+  }
+  if (thresholdInput) {
+    thresholdInput.value = String(state.settings.analysisCharThreshold || 1000);
+    thresholdInput.addEventListener('change', (e) => applyThreshold(e.target.value, 'input'));
+    thresholdInput.addEventListener('focus', (e) => e.target.select());
+  }
+
   const cloudSttModelSelect = $('#selectCloudSttModel');
   if (cloudSttModelSelect) {
     cloudSttModelSelect.value = state.settings.cloudSttModel || 'gpt-4o-mini-transcribe';
@@ -740,6 +769,8 @@ function saveAllSettings() {
     sttEngine: s.sttEngine,
     sttOnDevice: s.sttOnDevice,
     keepScreenAwake: s.keepScreenAwake,
+    autoAnalysis: s.autoAnalysis,
+    analysisCharThreshold: s.analysisCharThreshold,
     keyboardCommitMs: s.keyboardCommitMs,
     cloudSttModel: s.cloudSttModel,
     whisperModel: s.whisperModel,
@@ -854,6 +885,12 @@ function applySettingsToForm() {
   if (sttOnDeviceCheck) sttOnDeviceCheck.checked = s.sttOnDevice !== false;
   const keepAwakeCheck = $('#checkKeepAwake');
   if (keepAwakeCheck) keepAwakeCheck.checked = s.keepScreenAwake !== false;
+  const autoAnalysisCheck = $('#checkAutoAnalysis');
+  if (autoAnalysisCheck) autoAnalysisCheck.checked = s.autoAnalysis !== false;
+  const thresholdRange = $('#rangeAnalysisThreshold');
+  if (thresholdRange) thresholdRange.value = String(Math.min(5000, s.analysisCharThreshold || 1000));
+  const thresholdInput = $('#inputAnalysisThreshold');
+  if (thresholdInput) thresholdInput.value = String(s.analysisCharThreshold || 1000);
   safeGemini(() => setKeyMode?.(s.geminiKeyMode || 'fallback'));
   const cloudSttModelSelect = $('#selectCloudSttModel');
   if (cloudSttModelSelect) cloudSttModelSelect.value = s.cloudSttModel || 'gpt-4o-mini-transcribe';
@@ -901,6 +938,8 @@ function loadSavedSettings() {
   s.sttEngine = saved.sttEngine || 'auto';
   s.sttOnDevice = saved.sttOnDevice !== undefined ? saved.sttOnDevice : true;
   s.keepScreenAwake = saved.keepScreenAwake !== undefined ? saved.keepScreenAwake : true;
+  s.autoAnalysis = saved.autoAnalysis !== undefined ? saved.autoAnalysis : true;
+  s.analysisCharThreshold = Number(saved.analysisCharThreshold) || 1000;
   s.keyboardCommitMs = saved.keyboardCommitMs || 2500;
   s.cloudSttModel = saved.cloudSttModel || 'gpt-4o-mini-transcribe';
   s.whisperModel = saved.whisperModel || 'onnx-community/whisper-base';
