@@ -2,14 +2,14 @@
 
 import { state, emit } from './event-bus.js';
 import { modelFor } from './models.js';
-import { hasRecording, getCurrentRecordingSize } from './audio-recorder.js';
+import { hasRecording, getCurrentRecordingSize, deleteRecording } from './audio-recorder.js';
 import * as session from './meeting-session.js';
 import { initSessionUI } from './session-ui.js';
 import { escapeHtml } from './utils.js';
 import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
 import { isAiAvailable } from './gemini-api.js';
 import {
-  saveMeeting, getMeeting,
+  saveMeeting, getMeeting, deleteMeeting,
   loadContacts, loadLocations, addLocation,
   getLocationFrequency, linkMeetings,
   loadCorrectionDict,
@@ -581,10 +581,11 @@ function showEndConfirmDialog(onConfirm) {
         <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
           ${t('end_confirm.stats', { duration: elapsed, lines: state.transcript.length })}
         </p>
-        <div style="display:flex;gap:8px;justify-content:center;">
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
           <button class="btn" id="btnEndConfirmCancel">${t('end_confirm.cancel')}</button>
           <button class="btn btn-primary" id="btnEndConfirmOk">${t('end_confirm.confirm')}</button>
         </div>
+        <button class="btn btn-text btn-danger" id="btnEndConfirmDiscard" style="margin-top:12px;">${t('discard.button')}</button>
       </div>
     </div>
   `;
@@ -594,6 +595,10 @@ function showEndConfirmDialog(onConfirm) {
   overlay.querySelector('#btnEndConfirmOk').onclick = () => {
     overlay.remove();
     onConfirm();
+  };
+  overlay.querySelector('#btnEndConfirmDiscard').onclick = () => {
+    overlay.remove();
+    discardMeeting();
   };
   // Clicking overlay background closes
   overlay.addEventListener('click', (e) => {
@@ -880,6 +885,16 @@ function resetFooterToDefault(isEditMode = false) {
   docGenBtn.onclick = () => emit('docGenerator:open');
   if (!isAiAvailable() || transcript.length === 0) {
     docGenBtn.hidden = true;
+  }
+
+  // Discard (delete everything, no save) — only for the live meeting, not for editing a saved one
+  if (!isEditMode) {
+    const discardBtn = document.createElement('button');
+    discardBtn.className = 'btn btn-text btn-danger';
+    discardBtn.id = 'btnDiscardMeeting';
+    discardBtn.textContent = t('discard.button');
+    discardBtn.onclick = () => discardMeeting();
+    actions.append(discardBtn);
   }
 
   actions.append(cancelBtn, genBtn, docGenBtn, saveBtn);
@@ -1440,6 +1455,52 @@ export async function regenerateMinutes(model, template, promptConfig = {}) {
 
 export function cancelEndMeeting() {
   $('#endMeetingModal').hidden = true;
+}
+
+// ===== Discard (cancel the whole meeting, nothing is kept) =====
+
+/** Ask for confirmation, then delete transcript, memos, analyses, autosaves, draft and audio. */
+export function discardMeeting() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay end-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-body" style="padding:24px;text-align:center;">
+        <p style="font-size:1.05rem;margin-bottom:6px;">${t('discard.title')}</p>
+        <p style="color:var(--danger);font-size:0.9rem;margin-bottom:4px;">${t('discard.warning')}</p>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:16px;">
+          ${t('discard.stats', { lines: state.transcript.length, memos: state.memos.length })}
+        </p>
+        <div style="display:flex;gap:8px;justify-content:center;">
+          <button class="btn" id="btnDiscardCancel">${t('discard.cancel')}</button>
+          <button class="btn btn-danger" id="btnDiscardOk" style="border:1px solid var(--danger);">${t('discard.confirm')}</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#btnDiscardCancel').onclick = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  overlay.querySelector('#btnDiscardOk').onclick = async () => {
+    overlay.remove();
+    await performDiscard();
+  };
+}
+
+async function performDiscard() {
+  const id = state.meetingId;
+  $('#endMeetingModal').hidden = true;
+  if (state.phase === 'recording') await session.pause('end');
+  clearDraftRecovery();
+  if (id) {
+    try { deleteMeeting(id); } catch { /* nothing saved yet */ }
+    try { await deleteRecording(id); } catch { /* no audio */ }
+    if (window.deleteMeetingWithSync) window.deleteMeetingWithSync(id);
+    try { sessionStorage.removeItem('meeting-ai-tab-' + id); } catch { /* ignore */ }
+  }
+  resetMeeting();
+  window.dispatchEvent(new CustomEvent('meetingai:cloud-sync')); // refresh history grid
+  showToast(t('toast.meeting_discarded'), 'success');
 }
 
 // Edit mode: save metadata changes to the stored meeting

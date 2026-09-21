@@ -20,7 +20,8 @@ function loadDictionaries() {
     throw new Error('Could not locate translations object in i18n.js');
   }
   const snippet = src.slice(start, end);
-  const translations = new Function(`${snippet}; return translations;`)();
+  const translations = new Function(`${snippet}
+; return translations;`)(); // newline: the snippet may end on a comment line
   if (!translations?.en || !translations?.ko) {
     throw new Error('translations.en / translations.ko missing');
   }

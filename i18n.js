@@ -924,6 +924,13 @@ const translations = {
     'end_confirm.stats': '{duration} · {lines} transcript lines',
     'end_confirm.cancel': 'Cancel',
     'end_confirm.confirm': 'End Meeting',
+    'discard.button': 'Cancel without saving',
+    'discard.title': 'Cancel this meeting without saving?',
+    'discard.warning': 'Nothing will be saved: the transcript, memos, analyses and audio so far will be discarded. This cannot be undone.',
+    'discard.stats': '{lines} transcript lines · {memos} memos',
+    'discard.cancel': 'Keep',
+    'discard.confirm': 'Cancel meeting',
+    'toast.meeting_discarded': 'Meeting cancelled — nothing was saved.',
 
     // Draft recovery
     'draft.recovery_message': 'Unsaved meeting found (last saved {time}, {lines} lines). Recover?',
@@ -1988,6 +1995,13 @@ const translations = {
     'end_confirm.stats': '{duration} · 트랜스크립트 {lines}줄',
     'end_confirm.cancel': '취소',
     'end_confirm.confirm': '종료',
+    'discard.button': '저장하지 않고 취소',
+    'discard.title': '이 회의를 저장하지 않고 취소할까요?',
+    'discard.warning': '지금까지의 녹취·메모·분석·녹음이 저장되지 않고 사라집니다. 되돌릴 수 없습니다.',
+    'discard.stats': '녹취 {lines}줄 · 메모 {memos}개',
+    'discard.cancel': '유지',
+    'discard.confirm': '취소하고 삭제',
+    'toast.meeting_discarded': '회의를 취소했습니다. 저장된 내용은 없습니다.',
 
     // Draft recovery
     'draft.recovery_message': '저장되지 않은 회의가 있습니다 (마지막 저장: {time}, {lines}줄). 복구할까요?',

@@ -62,6 +62,18 @@
   /**
    * Load meetings from Supabase cloud and merge into local storage
    */
+  // Delete a meeting remotely (used when the user discards a meeting that was already autosaved).
+  window.deleteMeetingWithSync = async function (meetingId) {
+    try {
+      const client = window.getSupabaseClient && window.getSupabaseClient();
+      const user = window.getSupabaseUser ? await window.getSupabaseUser() : null;
+      if (!client || !user || !meetingId) return;
+      await client.from('meetings').delete().eq('id', meetingId).eq('user_id', user.id);
+    } catch (err) {
+      console.warn('[Sync] delete failed:', err.message);
+    }
+  };
+
   window.loadFromCloud = async function () {
     const client = window.getSupabaseClient();
     if (!client) return;
