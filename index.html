@@ -93,7 +93,7 @@
     <span id="loadedBannerTitle"></span>
     <span id="loadedBannerDate" class="loaded-banner-date"></span>
     <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서 녹음</button>
-    <button class="loaded-banner-close" id="loadedBannerClose">&times;</button>
+    <button class="loaded-banner-close" id="loadedBannerClose" data-i18n-aria="a11y.close" aria-label="Close">&times;</button>
   </div>
 
   <!-- Mobile Panel Tabs -->
@@ -153,7 +153,7 @@
     </section>
 
     <!-- Drag Resizer 1 -->
-    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" data-i18n-aria="a11y.resize_panels" aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
@@ -187,7 +187,7 @@
     </section>
 
     <!-- Drag Resizer 2 -->
-    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" data-i18n-aria="a11y.resize_panels" aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Right Panel: AI Chat -->
     <section class="panel panel-right" id="panelRight">
@@ -231,11 +231,11 @@
           <button class="btn btn-primary" id="btnChatSend" data-i18n="chat.send">Send</button>
         </div>
         <div class="chat-input-actions">
-          <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
+          <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file" data-i18n-title="a11y.attach_file">
             &#128206;
-            <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
+            <input type="file" id="chatFileInput" class="a11y-visually-hidden" data-i18n-aria="a11y.attach_file" aria-label="Attach file" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat">
           </label>
-          <select class="chat-model-select" id="chatModelSelect">
+          <select class="chat-model-select" id="chatModelSelect" data-i18n-aria="a11y.chat_model" aria-label="Chat AI model">
             <option value="gemini-3.5-flash-lite" selected>Flash 3.5 Lite</option>
             <option value="gemini-3.5-flash">Flash 3.5</option>
             <option value="gemini-3.1-pro-preview">Pro 3.1</option>
