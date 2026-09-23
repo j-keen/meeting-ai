@@ -304,7 +304,8 @@
       <h2 data-i18n="settings.title">Settings</h2>
       <div class="settings-header-actions">
         <span class="settings-unsaved-dot" id="settingsUnsavedDot"></span>
-        <button class="btn btn-sm btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
+        <span class="settings-unsaved-label" id="settingsUnsavedLabel" data-i18n="settings.unsaved_changes">Unsaved changes</span>
+        <button class="btn btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
         <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
       </div>
     </div>
@@ -587,6 +588,11 @@
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
           </button>
         </section>
+        <section class="settings-section settings-danger-zone">
+          <h3 data-i18n="settings.danger_zone_title">Danger zone</h3>
+          <p class="settings-hint" data-i18n="settings.danger_zone_hint">Resets every setting below back to its default. This cannot be undone.</p>
+          <button class="btn btn-danger settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
+        </section>
       </div>
 
       <!-- Account Tab -->
@@ -752,9 +758,6 @@
         </div>
       </div>
 
-    </div>
-    <div class="settings-footer" id="settingsFooter">
-      <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
     </div>
   </aside>
 

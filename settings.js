@@ -58,11 +58,10 @@ function markDirty() {
 function updateDirtyUI() {
   const saveBtn = $('#btnSettingsSave');
   const dot = $('#settingsUnsavedDot');
+  const label = $('#settingsUnsavedLabel');
   if (saveBtn) saveBtn.disabled = !isDirty;
-  if (dot) {
-    if (isDirty) dot.classList.add('visible');
-    else dot.classList.remove('visible');
-  }
+  if (dot) dot.classList.toggle('visible', isDirty);
+  if (label) label.classList.toggle('visible', isDirty);
 }
 
 function highlightField(el) {

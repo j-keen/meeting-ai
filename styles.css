@@ -1549,6 +1549,20 @@ body.kb-stt-active #transcriptList {
 .settings-unsaved-dot.visible {
   opacity: 1;
 }
+/* === UX: Settings IA — dirty-state label next to the save button === */
+.settings-unsaved-label {
+  font-size: 11px;
+  color: var(--warning);
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity var(--transition-fast);
+}
+.settings-unsaved-label.visible {
+  opacity: 1;
+  max-width: 160px;
+}
 .settings-body {
   flex: 1;
   overflow-y: auto;
@@ -1576,6 +1590,17 @@ body.kb-stt-active #transcriptList {
 }
 .settings-footer-reset:hover {
   background: var(--danger-bg) !important;
+}
+/* === UX: Settings IA — danger zone (Reset All moved out of the sticky footer, into the Data tab) === */
+.settings-danger-zone {
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+}
+.settings-danger-zone h3 { color: var(--danger); }
+.settings-danger-zone .settings-footer-reset {
+  font-size: 13px !important;
+  margin-top: 8px;
 }
 @keyframes settings-save-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(79, 110, 247, 0.4); }
@@ -8389,6 +8414,21 @@ body.imported-mode .recording-controls { display: none; }
   .stt-status-chip { max-width: 140px; }
   .status-row { grid-template-columns: 90px 1fr; }
 }
+
+/* === UX: Settings IA — compact status summary + collapsed advanced info === */
+.status-summary { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.status-summary-row { color: var(--text-primary); }
+.status-summary-row.status-bad { color: var(--danger); font-weight: 600; }
+.status-advanced { margin-top: 10px; }
+.status-advanced > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  user-select: none;
+  list-style: revert;
+}
+.status-advanced > summary:hover { color: var(--text-primary); }
+.status-advanced-body { display: flex; flex-direction: column; gap: 14px; margin-top: 10px; }
 
 /* ===== Live analysis trigger controls ===== */
 .threshold-row { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
