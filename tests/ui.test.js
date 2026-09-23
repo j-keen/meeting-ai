@@ -141,6 +141,23 @@ describe('showToast', () => {
     const container = document.getElementById('toastContainer');
     expect(container.querySelectorAll('.toast').length).toBe(2);
   });
+
+  it('keeps at most 2 visible toasts, dismissing the oldest', () => {
+    showToast('First');
+    showToast('Second');
+    showToast('Third');
+    const live = [...document.querySelectorAll('#toastContainer .toast:not(.toast-out)')];
+    expect(live.map(el => el.querySelector('.toast-message').textContent)).toEqual(['Second', 'Third']);
+    const first = [...document.querySelectorAll('#toastContainer .toast')]
+      .find(el => el.querySelector('.toast-message').textContent === 'First');
+    expect(first.classList.contains('toast-out')).toBe(true);
+  });
+
+  it('dedupes an identical message that is already showing', () => {
+    showToast('Same', 'warning');
+    showToast('Same', 'warning');
+    expect(document.querySelectorAll('#toastContainer .toast').length).toBe(1);
+  });
 });
 
 describe('addTranscriptLine', () => {

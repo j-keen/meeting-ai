@@ -242,7 +242,7 @@ export function getElapsedTimeStr() {
 function afterRecordingStarted() {
   showAiWaiting(state.settings.analysisCharThreshold || 1000);
   showChatWaiting();
-  showToast(t('toast.recording_started'), 'success');
+  // No "recording started" toast: the bottom bar's recording state says it.
 }
 
 /** Resume a meeting opened from history (source=loaded). */
@@ -280,7 +280,8 @@ export async function stopRecording() {
 }
 
 async function resumeMeeting() {
-  if (await session.resume()) showToast(t('toast.meeting_resumed'), 'success');
+  // The bottom bar switching back to its red recording state is the confirmation.
+  await session.resume();
 }
 
 function checkIdle() {
@@ -744,6 +745,8 @@ function updateAudioRecBadge() {
   const sizeEl = $('#audioRecSize');
   if (!badge || !sizeEl) return;
   const size = getCurrentRecordingSize();
+  // "0 B" is noise — keep the badge hidden until there is real audio.
+  badge.classList.toggle('is-empty', size <= 0);
   if (size < 1024) {
     sizeEl.textContent = size + ' B';
   } else if (size < 1024 * 1024) {

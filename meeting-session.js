@@ -119,10 +119,16 @@ async function acquireWakeLock() {
   if (state.settings?.keepScreenAwake === false) return;
   if (!wakeLock.isSupported()) return;
   const ok = await wakeLock.acquire();
-  if (!ok && !wakeLockWarned) {
+  // Only phones/tablets need this warning — on desktop the screen timeout doesn't
+  // stop recording, so a toast there is just noise.
+  if (!ok && !wakeLockWarned && isTouchDevice()) {
     wakeLockWarned = true;
     showToast(t('toast.wake_lock_failed'), 'warning');
   }
+}
+function isTouchDevice() {
+  if (isMobileLike()) return true;
+  try { return !!window.matchMedia?.('(pointer: coarse)').matches; } catch { return false; }
 }
 async function releaseWakeLock() {
   await wakeLock.release();
@@ -179,7 +185,7 @@ export function buildSttCallbacks({ withStream }) {
       if (!connectedShown) {
         connectedShown = true;
         showTranscriptWaiting();
-        showToast(t('stt.connected'), 'success');
+        // No toast: the recording-state bar and #sttStatusChip already show it.
       }
       syncSessionUI();
     },

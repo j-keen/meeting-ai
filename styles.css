@@ -2732,15 +2732,20 @@ body.kb-stt-active #transcriptList {
 }
 
 /* ===== Toast ===== */
+/* Top-right under the header so toasts never cover the memo / chat inputs at the
+   bottom (mobile: full-width strip under the header — see the UX toast block). */
 .toast-container {
   position: fixed;
-  bottom: 60px;
-  left: 16px;
+  top: calc(var(--header-height) + 8px + env(safe-area-inset-top, 0px));
+  right: 16px;
   z-index: 500;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 6px;
+  pointer-events: none;
 }
+.toast-container > * { pointer-events: auto; }
 .toast {
   display: flex;
   align-items: center;
@@ -2777,12 +2782,12 @@ body.kb-stt-active #transcriptList {
   line-height: 1;
 }
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 .toast.toast-out { animation: toast-out 0.3s ease forwards; }
 @keyframes toast-out {
-  to { opacity: 0; transform: translateY(10px); }
+  to { opacity: 0; transform: translateY(-10px); }
 }
 
 /* Undo toast */
@@ -8376,3 +8381,113 @@ body.imported-mode .recording-controls { display: none; }
 .threshold-row .settings-range { flex: 1; min-width: 120px; }
 .threshold-number { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
 .settings-checkbox-label { flex-direction: row; align-items: center; gap: 8px; }
+
+/* === UX: recording state + toast policy === */
+/* Live status block injected by session-ui.js into .bottom-center. */
+.rec-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--danger-bg);
+  color: var(--danger);
+  white-space: nowrap;
+}
+.rec-live[hidden] { display: none; }
+.rec-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent);
+  animation: rec-live-pulse 1.4s ease-out infinite;
+}
+.rec-live-timer {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+.rec-live-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+@keyframes rec-live-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Recording: red accent band on top of the bottom bar */
+body.is-recording .bottom-bar,
+body.is-paused .bottom-bar {
+  border-top: 3px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--bg-primary));
+}
+/* Pause/resume and End Meeting sit side by side, right after the live timer */
+body.is-recording .bottom-center > .rec-live,
+body.is-recording #btnRecord,
+body.is-recording #btnEndMeeting,
+body.is-paused .bottom-center > .rec-live,
+body.is-paused #btnRecord,
+body.is-paused #btnEndMeeting { order: -1; }
+body.is-recording #btnEndMeeting,
+body.is-paused #btnEndMeeting {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-color));
+  font-weight: 600;
+}
+body.is-recording #btnEndMeeting .stop-icon,
+body.is-paused #btnEndMeeting .stop-icon { background: var(--danger); }
+
+/* Paused: amber, static */
+body.is-paused .bottom-bar {
+  border-top-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--bg-primary));
+}
+body.is-paused .rec-live {
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
+}
+body.is-paused .rec-live-dot {
+  background: var(--warning);
+  animation: none;
+  box-shadow: none;
+  border-radius: 2px;
+}
+body.is-paused .rec-live-timer { color: var(--text-secondary); }
+
+/* The record-button engine badge ("WS"…) is never shown — engine lives in #sttStatusChip */
+#sttEngineBadge { display: none !important; }
+/* Audio size badge: only once there is something meaningful to show */
+.audio-rec-badge.is-empty,
+.audio-rec-badge:has(#audioRecSize:empty) { display: none; }
+
+@media (max-width: 768px) {
+  .rec-live { padding: 3px 10px 3px 8px; gap: 6px; }
+  .rec-live-timer { font-size: 17px; }
+  .rec-live-label { display: none; }
+  /* If the bar is too narrow, keep the live timer + pause/end (ordered first) on
+     screen instead of clipping them off the left edge. */
+  body.is-recording .bottom-bar,
+  body.is-paused .bottom-bar { justify-content: safe center; }
+  /* Mobile toasts: full-width strip under the header */
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    align-items: stretch;
+  }
+  .toast { max-width: none; }
+  .toast .toast-message { flex: 1; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec-live-dot { animation: none; }
+  .meeting-pill.recording .meeting-pill-dot,
+  .meeting-pill.paused .meeting-pill-dot { animation: none; }
+}
