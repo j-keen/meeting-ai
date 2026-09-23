@@ -549,6 +549,8 @@ function init() {
     if (!inTrash) refreshHistoryGrid();
     updateTrashBadge();
   });
+  // History empty state -> "start a new session" opens the launcher
+  on('launcher:open', () => showLauncherModal());
   $('#historySearch').addEventListener('input', () => refreshHistoryGridDebounced());
   $('#historyFilterType').addEventListener('change', () => refreshHistoryGrid());
   $('#historyFilterTag')?.addEventListener('input', () => refreshHistoryGridDebounced());
