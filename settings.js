@@ -11,6 +11,7 @@ import {
 } from './storage.js';
 import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
+import { confirmDialog, promptDialog } from './ui/dialogs.js';
 import {
   setUserApiKeyProvider, setKeyMode, testUserApiKey,
   setProvider, setOpenAIKeyProvider,
@@ -645,9 +646,9 @@ function refreshCustomPresetList() {
     });
 
     // Delete button
-    item.querySelector('.custom-preset-item-delete').addEventListener('click', (e) => {
+    item.querySelector('.custom-preset-item-delete').addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (!confirm(t('settings.custom_preset_delete_confirm'))) return;
+      if (!(await confirmDialog({ message: t('settings.custom_preset_delete_confirm'), confirmText: t('dialog.delete'), danger: true }))) return;
       deleteCustomType(ct.id);
       if (state.settings.meetingPreset === ct.id) {
         state.settings.meetingPreset = 'copilot';
@@ -728,8 +729,8 @@ function openPresetDetailModal(ct) {
   });
 
   // Delete
-  modal.querySelector('#btnDeletePresetDetail').addEventListener('click', () => {
-    if (!confirm(t('settings.custom_preset_delete_confirm'))) return;
+  modal.querySelector('#btnDeletePresetDetail').addEventListener('click', async () => {
+    if (!(await confirmDialog({ message: t('settings.custom_preset_delete_confirm'), confirmText: t('dialog.delete'), danger: true }))) return;
     deleteCustomType(ct.id);
     if (state.settings.meetingPreset === ct.id) {
       state.settings.meetingPreset = 'copilot';
@@ -818,8 +819,8 @@ function revertSettings() {
   clearAllHighlights();
 }
 
-function resetAllSettings() {
-  if (!confirm(t('settings.reset_confirm'))) return;
+async function resetAllSettings() {
+  if (!(await confirmDialog({ message: t('settings.reset_confirm'), confirmText: t('dialog.reset'), danger: true }))) return;
 
   const s = state.settings;
   s.uiLanguage = 'auto';
@@ -988,7 +989,7 @@ function initAudioRecordingSettings() {
 
   // Manual delete button
   $('#btnAudioDeleteAll')?.addEventListener('click', async () => {
-    if (!confirm(t('settings.audio_delete_confirm'))) return;
+    if (!(await confirmDialog({ message: t('settings.audio_delete_confirm'), confirmText: t('dialog.delete'), danger: true }))) return;
     try {
       const { getAudioStorageInfo, deleteRecording } = await import('./audio-recorder.js');
       const info = await getAudioStorageInfo();
@@ -1930,8 +1931,8 @@ function createLocationItem(loc, freq) {
   nameEl.textContent = loc.name;
   nameEl.style.cssText = 'cursor:pointer;font-weight:500;';
   nameEl.title = t('settings.click_to_edit');
-  nameEl.addEventListener('click', () => {
-    const newName = prompt(t('settings.location_edit_name'), loc.name);
+  nameEl.addEventListener('click', async () => {
+    const newName = await promptDialog({ label: t('settings.location_edit_name'), defaultValue: loc.name });
     if (newName?.trim() && newName.trim() !== loc.name) {
       updateLocation(loc.name, { name: newName.trim() });
       renderDataLocations();
@@ -1958,8 +1959,8 @@ function createLocationItem(loc, freq) {
     memoEl.classList.add('location-memo--empty');
     memoEl.textContent = t('settings.location_add_memo');
   }
-  memoEl.addEventListener('click', () => {
-    const newMemo = prompt(t('settings.location_edit_memo'), loc.memo || '');
+  memoEl.addEventListener('click', async () => {
+    const newMemo = await promptDialog({ label: t('settings.location_edit_memo'), defaultValue: loc.memo || '' });
     if (newMemo != null) {
       updateLocation(loc.name, { memo: newMemo.trim() });
       renderDataLocations();

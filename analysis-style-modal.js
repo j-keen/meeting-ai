@@ -5,6 +5,7 @@ import { state, emit, on } from './event-bus.js';
 import { saveSettings, loadCustomTypes } from './storage.js';
 import { getPromptForType } from './ai.js';
 import { t, getDateLocale } from './i18n.js';
+import { confirmDialog } from './ui/dialogs.js';
 import { openPromptAdjuster } from './prompt-adjuster.js';
 import { pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
@@ -108,9 +109,9 @@ function renderPresets() {
       delBtn.className = 'btn btn-icon asm-preset-del';
       delBtn.innerHTML = '&times;';
       delBtn.title = 'Delete';
-      delBtn.addEventListener('click', (e) => {
+      delBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm(t('asm.confirm_delete') || '정말 이 분석 스타일을 삭제하시겠습니까?')) {
+        if (await confirmDialog({ message: t('asm.confirm_delete'), confirmText: t('dialog.delete'), danger: true })) {
           let allCustom = loadCustomTypes();
           allCustom = allCustom.filter(c => c.id !== ct.id);
           localStorage.setItem('meetingAI_customTypes', JSON.stringify(allCustom));

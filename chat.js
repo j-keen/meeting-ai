@@ -3,6 +3,7 @@
 import { state, emit } from './event-bus.js';
 import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
+import { confirmDialog } from './ui/dialogs.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadSettings, saveSettings } from './storage.js';
@@ -192,7 +193,7 @@ export function renderChatMessageWithButtons(role, text, buttons) {
   return el;
 }
 
-function handleSend() {
+async function handleSend() {
   const input = $('#chatInput');
   const text = input.value.trim();
   if (!text) return;
@@ -224,7 +225,7 @@ function handleSend() {
   // Guard 5: confirm before sending large transcripts
   const totalChars = state.transcript.reduce((sum, l) => sum + l.text.length, 0);
   if (totalChars > 80000) {
-    if (!confirm(t('guard.chat_large_confirm', { lines: state.transcript.length }))) {
+    if (!(await confirmDialog({ message: t('guard.chat_large_confirm', { lines: state.transcript.length }), confirmText: t('dialog.send') }))) {
       input.value = text;
       return;
     }

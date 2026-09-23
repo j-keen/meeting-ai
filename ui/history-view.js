@@ -4,6 +4,7 @@
 
 import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
+import { confirmDialog, promptDialog } from './dialogs.js';
 import { renderMarkdown } from '../chat.js';
 import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings } from '../storage.js';
 import { formatTime, escapeHtml } from '../utils.js';
@@ -513,9 +514,9 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     const addTagBtn = document.createElement('button');
     addTagBtn.className = 'history-tag-add';
     addTagBtn.textContent = t('history.add_tag');
-    addTagBtn.addEventListener('click', (e) => {
+    addTagBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const tag = prompt(t('history.enter_tag'));
+      const tag = await promptDialog({ label: t('history.enter_tag'), confirmText: t('dialog.add') });
       if (tag) emit('meeting:addTag', { id: meeting.id, tag: tag.trim() });
     });
     tagsContainer.appendChild(addTagBtn);
@@ -862,9 +863,9 @@ export function renderMeetingViewer(meeting) {
   const btnViewerLoad = $('#btnViewerLoad');
   if (btnViewerLoad) {
     btnViewerLoad.textContent = t('viewer.load');
-    btnViewerLoad.onclick = () => {
+    btnViewerLoad.onclick = async () => {
       if (state.transcript.length > 0 || state.isRecording) {
-        if (!confirm(t('viewer.load_confirm'))) return;
+        if (!(await confirmDialog({ message: t('viewer.load_confirm'), confirmText: t('dialog.load') }))) return;
       }
       emit('meeting:load', { id: meeting.id });
       $('#viewerModal').hidden = true;
