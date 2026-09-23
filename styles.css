@@ -8376,3 +8376,13 @@ body.imported-mode .recording-controls { display: none; }
 .threshold-row .settings-range { flex: 1; min-width: 120px; }
 .threshold-number { width: 92px; text-align: right; font-variant-numeric: tabular-nums; }
 .settings-checkbox-label { flex-direction: row; align-items: center; gap: 8px; }
+
+/* === UX: header icons, icon set, demo buttons, wording === */
+/* Inline SVG icon set replacing emoji on header/panel action buttons (16px, stroke=currentColor). */
+/* Theme toggle icons keep the existing .icon-theme-light/.icon-theme-dark show/hide-by-theme rules (see ~line 229). */
+.icon-16 {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  vertical-align: middle;
+}

@@ -76,13 +76,19 @@
     </div>
     <div class="header-right">
       <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
-        <span class="icon-theme-light">🌙</span>
-        <span class="icon-theme-dark">☀️</span>
+        <svg class="icon-16 icon-theme-light" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="icon-16 icon-theme-dark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         <span class="header-btn-label icon-theme-light" data-i18n="header.theme_dark">Dark</span>
         <span class="header-btn-label icon-theme-dark" data-i18n="header.theme_light">Light</span>
       </button>
-      <button class="btn btn-text" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">🔍 <span class="header-btn-label" data-i18n="header.history">History</span></button>
-      <button class="btn btn-text" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">⚙️ <span class="header-btn-label" data-i18n="header.settings">Settings</span></button>
+      <button class="btn btn-text" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">
+        <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="header-btn-label" data-i18n="header.history">History</span>
+      </button>
+      <button class="btn btn-text" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">
+        <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="header-btn-label" data-i18n="header.settings">Settings</span>
+      </button>
       <button class="btn btn-text" id="btnAuth" title="Login" aria-label="Login">로그인</button>
     </div>
   </header>
@@ -112,7 +118,10 @@
           <h2 data-i18n="panel.transcript">Transcript</h2>
           <div class="panel-actions">
             <div class="inbox-btn-wrap">
-              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
+              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">
+                <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span>
+              </button>
               <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
                 <div class="inbox-preview-items" id="inboxPreviewItems"></div>
                 <div class="inbox-preview-footer">
@@ -121,8 +130,14 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn-sm" id="btnImportTranscript" title="Import">&#128229; <span data-i18n="panel.import">Transcript Import</span></button>
-            <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
+            <button class="btn btn-sm" id="btnImportTranscript" title="Import">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+              <span data-i18n="panel.import">Transcript Import</span>
+            </button>
+            <button class="btn btn-sm" id="btnExport" title="Export">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              <span data-i18n="panel.export">Transcript Export</span>
+            </button>
           </div>
         </div>
       </div>
@@ -161,10 +176,22 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-actions">
-            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
+            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span data-i18n="panel.copy_md">Copy</span>
+            </button>
+            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+              <span id="btnAnalyzeNowLabel" data-i18n="panel.analyze">Analyze Now</span>
+            </button>
+            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+              <span data-i18n="asm.save_style">이 분석 스타일 저장</span>
+            </button>
+            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              <span data-i18n="panel.analysis_style">Change Analysis Style</span>
+            </button>
           </div>
         </div>
         <!-- selectAnalysisStyle removed — label lookup now in style-history.js via i18n + loadCustomTypes -->
@@ -196,7 +223,10 @@
           <h2 data-i18n="panel.chat">AI Chat</h2>
           <div class="panel-actions">
             <div class="faq-wrap">
-              <button class="btn btn-sm" id="btnFaq" data-i18n="chat.faq_btn" title="Saved Prompts">💡 프롬프트</button>
+              <button class="btn btn-sm" id="btnFaq" title="Saved Prompts">
+                <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                <span data-i18n="chat.faq_btn">프롬프트</span>
+              </button>
               <div class="faq-dropdown" id="faqPopover" hidden>
                 <div class="faq-search-wrap">
                   <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search prompts..." autocomplete="off">
@@ -232,7 +262,7 @@
         </div>
         <div class="chat-input-actions">
           <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
-            &#128206;
+            <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
           </label>
           <select class="chat-model-select" id="chatModelSelect">
@@ -263,8 +293,8 @@
       <button class="stt-status-chip" id="sttStatusChip" type="button" title="Current STT / AI status">STT</button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider"></span>
-      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
-      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
+      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);" hidden>&#9654; Demo1</button>
+      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);" hidden>&#9654; Demo2</button>
     </div>
   </footer>
 
@@ -285,7 +315,7 @@
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
-        <button class="settings-tab" data-tab="account">Account</button>
+        <button class="settings-tab" data-tab="account" data-i18n="settings.tab_account">Account</button>
       </div>
 
       <!-- General Tab -->
@@ -1491,7 +1521,7 @@
           <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
         </button>
       </div>
-      <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
+      <button class="launcher-close-btn" id="launcherCloseBtn" data-i18n="launcher.close">Close</button>
     </div>
   </div>
 
