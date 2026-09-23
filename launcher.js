@@ -29,6 +29,14 @@ export function showLauncherModal() {
     }
   };
 
+  // Primary action: start recording immediately — reuses the same
+  // 'recording:toggle' event the main #btnRecord button emits, so the
+  // actual start-recording logic lives in one place (app.js).
+  $('#btnLauncherRecord').onclick = () => {
+    close();
+    emit('recording:toggle');
+  };
+
   // Card 1: Quick Start (opens prompt builder)
   $('#btnLauncherQuickStart').onclick = () => {
     close();
@@ -48,14 +56,19 @@ export function showLauncherModal() {
   const hasPresets = presets.length > 0 || prepared || customTypes.length > 0;
   const presetCard = $('#btnLauncherPreset');
   const presetHint = presetCard.querySelector('.launcher-card-hint');
+  const presetDesc = presetCard.querySelector('.launcher-card-desc');
   if (!hasPresets) {
     presetCard.classList.add('launcher-card-disabled');
     presetCard.disabled = true;
+    presetCard.setAttribute('aria-disabled', 'true');
     if (presetHint) presetHint.hidden = false;
+    if (presetDesc) presetDesc.hidden = true;
   } else {
     presetCard.classList.remove('launcher-card-disabled');
     presetCard.disabled = false;
+    presetCard.removeAttribute('aria-disabled');
     if (presetHint) presetHint.hidden = true;
+    if (presetDesc) presetDesc.hidden = false;
   }
   presetCard.onclick = () => {
     if (!hasPresets) return;
@@ -71,6 +84,7 @@ export function showLauncherModal() {
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherDeepSetup').click(); }
     else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
+    else if (e.key === 'Enter') { e.preventDefault(); $('#btnLauncherRecord').click(); }
     else if (e.key === 'Escape') { close(true); }
   };
   document.addEventListener('keydown', keyHandler);

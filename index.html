@@ -1501,27 +1501,33 @@
   <!-- Launcher Modal -->
   <div class="modal-overlay" id="launcherModal" hidden>
     <div class="modal launcher-modal">
-      <!-- 3 action cards -->
       <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new session</p>
+      <!-- Primary action: start recording immediately, no setup -->
+      <button class="launcher-record-btn" id="btnLauncherRecord" type="button">
+        <span class="launcher-record-dot" aria-hidden="true"></span>
+        <span data-i18n="meeting.launcher_record">Start recording now</span>
+      </button>
+      <p class="launcher-setup-label" data-i18n="meeting.setup_options_title">Or set up first</p>
+      <!-- 3 secondary setup cards -->
       <div class="launcher-actions-grid">
         <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
           <span class="launcher-card-badge">1</span>
           <span class="launcher-card-icon">&#129302;</span>
           <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
-          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">AI sets up for your situation</span>
+          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Chat with AI to set your meeting goal</span>
         </button>
         <button class="launcher-card" id="btnLauncherDeepSetup">
           <span class="launcher-card-badge">2</span>
           <span class="launcher-card-icon">&#127911;</span>
-          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Listen Prep</span>
-          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Deep setup, step by step</span>
+          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Meeting Prep</span>
+          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Enter attendees, materials and agenda ahead of time</span>
         </button>
         <button class="launcher-card" id="btnLauncherPreset">
           <span class="launcher-card-badge">3</span>
           <span class="launcher-card-icon">&#128203;</span>
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
-          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
+          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets saved yet</span>
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn" data-i18n="launcher.close">Close</button>
@@ -1903,7 +1909,7 @@
         <button class="btn btn-sm" id="btnDsBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
         <div style="flex:1"></div>
         <button class="btn btn-sm btn-text" id="btnDsSkip" hidden data-i18n="ds.step2_skip">Skip</button>
-        <button class="btn btn-sm btn-primary" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
+        <button class="btn btn-primary ds-next-btn" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
       </div>
     </div>
   </div>
