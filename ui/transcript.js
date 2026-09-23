@@ -8,6 +8,22 @@ const $ = (sel) => document.querySelector(sel);
 
 let interimEl = null;
 
+// UX: interleave memos into the transcript in timestamp order at render time
+// (state.transcript / state.memos stay separate and unsorted; only DOM order changes).
+function insertLineInOrder(list, el, timestamp) {
+  const ts = Number(timestamp) || 0;
+  const siblings = list.querySelectorAll('.transcript-line:not(.interim)');
+  for (const sibling of siblings) {
+    const siblingTs = Number(sibling.dataset.timestamp);
+    if (!Number.isNaN(siblingTs) && siblingTs > ts) {
+      list.insertBefore(el, sibling);
+      return;
+    }
+  }
+  if (interimEl) list.insertBefore(el, interimEl);
+  else list.appendChild(el);
+}
+
 export function addTranscriptLine(line) {
   const list = $('#transcriptList');
   const empty = $('#transcriptEmpty');
@@ -17,6 +33,7 @@ export function addTranscriptLine(line) {
   const tmpl = $('#tmplTranscriptLine');
   const el = tmpl.content.cloneNode(true).querySelector('.transcript-line');
   el.dataset.id = line.id;
+  el.dataset.timestamp = String(line.timestamp || 0);
   el.querySelector('.transcript-time').textContent = formatTime(state.meetingStartTime ? line.timestamp - state.meetingStartTime : 0);
 
   const textEl = el.querySelector('.transcript-text');
@@ -44,7 +61,7 @@ export function addTranscriptLine(line) {
     showContextPopup(e, line.id);
   });
 
-  list.appendChild(el);
+  insertLineInOrder(list, el, line.timestamp);
   autoScroll(list);
 }
 
@@ -82,6 +99,7 @@ export function addMemoLine(memo) {
   const tmpl = $('#tmplMemoLine');
   const el = tmpl.content.cloneNode(true).querySelector('.transcript-line');
   el.dataset.id = memo.id;
+  el.dataset.timestamp = String(memo.timestamp || 0);
   el.querySelector('.transcript-time').textContent = formatTime(state.meetingStartTime ? memo.timestamp - state.meetingStartTime : 0);
   el.querySelector('.transcript-text').textContent = memo.text;
 
@@ -107,7 +125,7 @@ export function addMemoLine(memo) {
     });
   }
 
-  list.appendChild(el);
+  insertLineInOrder(list, el, memo.timestamp);
   autoScroll(list);
 }
 

@@ -9,16 +9,19 @@
   --bg-overlay: rgba(0, 0, 0, 0.4);
   --text-primary: #1a1a2e;
   --text-secondary: #555770;
-  --text-muted: #8b8da3;
+  /* UX: color contrast — darkened from #8b8da3 (3.26:1 on white) to clear WCAG AA 4.5:1 for body text */
+  --text-muted: #5c5f75;
   --text-inverse: #ffffff;
   --border-color: #dcdee3;
   --border-light: #ebedf0;
-  --accent: #4f6ef7;
+  /* UX: color contrast — darkened from #4f6ef7 (4.28:1 on white) to clear 4.5:1 for text/badge use */
+  --accent: #4a68ee;
   --accent-hover: #3b5ce4;
   --accent-bg: #eef1fe;
   --success: #22c55e;
   --warning: #f59e0b;
-  --danger: #ef4444;
+  /* UX: color contrast — darkened from #ef4444 (3.44:1 on --danger-bg) to clear 4.5:1 */
+  --danger: #cc2b2b;
   --danger-bg: #fef2f2;
   --record-color: #ef4444;
   --record-glow: rgba(239, 68, 68, 0.3);
@@ -48,7 +51,8 @@
   --bg-overlay: rgba(0, 0, 0, 0.6);
   --text-primary: #e8e8f0;
   --text-secondary: #a8a8c0;
-  --text-muted: #6e6e8a;
+  /* UX: color contrast — lightened from #6e6e8a (3.86:1 on --bg-primary) to clear WCAG AA 4.5:1 */
+  --text-muted: #9a97b3;
   --text-inverse: #0f0f1a;
   --border-color: #2e2e4a;
   --border-light: #252540;
@@ -542,16 +546,29 @@ body.loaded-mode #btnNewMeeting { display: none; }
 }
 
 /* ===== Drag Resizer ===== */
+/* UX: subtle by default (thin border-color line), only highlights on hover/focus,
+   in both light and dark themes. Hit area stays 5px wide for easy dragging. */
 .drag-resizer {
   width: 5px;
   cursor: col-resize;
-  background: var(--border-color);
+  background: transparent;
   flex-shrink: 0;
   transition: background var(--transition-fast);
   position: relative;
 }
+.drag-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: var(--border-color);
+}
 .drag-resizer:hover,
-.drag-resizer.active { background: var(--accent); }
+.drag-resizer.active,
+.drag-resizer:focus-visible { background: var(--accent); }
 .drag-resizer::after {
   content: '';
   position: absolute;
@@ -565,7 +582,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
   opacity: 0;
   transition: opacity var(--transition-fast);
 }
-.drag-resizer:hover::after { opacity: 0.5; }
+.drag-resizer:hover::after,
+.drag-resizer:focus-visible::after { opacity: 0.5; }
 
 /* ===== Transcript ===== */
 .transcript-list {
@@ -694,7 +712,8 @@ body.loaded-mode #btnNewMeeting { display: none; }
 .memo-placeholder {
   position: absolute; left: 10px; top: 8px;
   z-index: 1;
-  color: var(--text-secondary); opacity: 0.6; pointer-events: none;
+  /* UX: color contrast — text-secondary at 0.6 opacity fell to ~3.5:1; use text-muted at full opacity instead */
+  color: var(--text-muted); pointer-events: none;
   font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   max-width: calc(100% - 20px);
 }
