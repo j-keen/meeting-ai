@@ -167,6 +167,7 @@ function init() {
     }
     lastManualAnalysisTime = now;
     btnAnalyzeNow.disabled = true;
+    btnAnalyzeNow.classList.add('is-cooldown');
     let remaining = 10;
     const origText = btnAnalyzeNowLabel.textContent;
     const cooldownTimer = setInterval(() => {
@@ -174,6 +175,7 @@ function init() {
       if (remaining <= 0) {
         clearInterval(cooldownTimer);
         btnAnalyzeNow.disabled = false;
+        btnAnalyzeNow.classList.remove('is-cooldown');
         btnAnalyzeNowLabel.textContent = origText;
       } else {
         btnAnalyzeNowLabel.textContent = `${remaining}s`;

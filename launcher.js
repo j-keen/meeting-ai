@@ -84,7 +84,11 @@ export function showLauncherModal() {
     if (e.key === '1') { e.preventDefault(); $('#btnLauncherQuickStart').click(); }
     else if (e.key === '2') { e.preventDefault(); $('#btnLauncherDeepSetup').click(); }
     else if (e.key === '3') { e.preventDefault(); $('#btnLauncherPreset').click(); }
-    else if (e.key === 'Enter') { e.preventDefault(); $('#btnLauncherRecord').click(); }
+    else if (e.key === 'Enter') {
+      // Let a focused control (card, close button, preset row) handle its own Enter.
+      if (e.target.closest?.('button, a[href], select, summary, [role="button"], [tabindex]:not(.modal-overlay)')) return;
+      e.preventDefault(); $('#btnLauncherRecord').click();
+    }
     else if (e.key === 'Escape') { close(true); }
   };
   document.addEventListener('keydown', keyHandler);

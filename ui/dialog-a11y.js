@@ -88,8 +88,11 @@ function labelIconButtons(root) {
 function focusInitial(overlay) {
   if (overlay.contains(document.activeElement) && document.activeElement !== overlay) return;
   const items = focusables(overlay);
+  // Touch devices: focusing a text/date field on open pops the soft keyboard or a
+  // native picker over the dialog, so only honour an explicit [autofocus] there.
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches;
   const target = items.find(el => el.hasAttribute('autofocus'))
-    || items.find(el => el.matches(TEXT_ENTRY));
+    || (coarse ? null : items.find(el => el.matches(TEXT_ENTRY)));
   (target || overlay).focus({ preventScroll: true });
 }
 

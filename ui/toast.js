@@ -31,15 +31,44 @@ function placeContainer(container) {
     const head = o.querySelector('.modal-header');
     if (head) avoid.push(head);
   });
-  if (!avoid.length) return;
+  // Main-panel controls: mobile panel tabs and panel header actions (e.g. chat 프롬프트).
+  if (!panel || wide) {
+    document.querySelectorAll('.panel-tabs, .panel-header').forEach(h => avoid.push(h));
+  }
   const box = container.getBoundingClientRect();
   let top = box.top;
-  for (const el of avoid) {
-    const r = el.getBoundingClientRect();
-    if (!r.width || r.left >= box.right || r.right <= box.left) continue;
-    if (r.bottom + GAP > top && r.top < box.bottom) top = r.bottom + GAP;
+  // Repeat until stable: moving below one header can put the toast on the next.
+  for (let moved = true, guard = 0; moved && guard < 5; guard++) {
+    moved = false;
+    for (const el of avoid) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || r.left >= box.right || r.right <= box.left) continue;
+      if (r.bottom + GAP > top && r.top < top + box.height) { top = r.bottom + GAP; moved = true; }
+    }
   }
   if (top !== box.top) container.style.setProperty('--toast-top', `${Math.round(top)}px`);
+  watchLayout(container);
+}
+
+// Re-place visible toasts when the settings panel or a modal opens/closes after
+// they were shown. Observes only while toasts are on screen.
+let layoutObserver = null;
+let layoutQueued = false;
+function watchLayout(container) {
+  if (layoutObserver) return;
+  layoutObserver = new MutationObserver(() => {
+    if (layoutQueued) return;
+    layoutQueued = true;
+    requestAnimationFrame(() => {
+      layoutQueued = false;
+      if (!liveToasts(container).length) { layoutObserver?.disconnect(); layoutObserver = null; return; }
+      placeContainer(container);
+    });
+  });
+  layoutObserver.observe(document.body, {
+    subtree: true, childList: true, attributes: true,
+    attributeFilter: ['hidden', 'class', 'aria-hidden'],
+  });
 }
 
 function liveToasts(container) {

@@ -12,15 +12,17 @@ let interimEl = null;
 // (state.transcript / state.memos stay separate and unsorted; only DOM order changes).
 function insertLineInOrder(list, el, timestamp) {
   const ts = Number(timestamp) || 0;
-  const siblings = list.querySelectorAll('.transcript-line:not(.interim)');
-  for (const sibling of siblings) {
-    const siblingTs = Number(sibling.dataset.timestamp);
-    if (!Number.isNaN(siblingTs) && siblingTs > ts) {
-      list.insertBefore(el, sibling);
-      return;
-    }
+  // Walk backwards from the end: live recording and pre-sorted bulk loads append
+  // after the last line (O(1)); only out-of-order inserts scan further.
+  let before = interimEl && interimEl.parentNode === list ? interimEl : null;
+  for (let sib = before ? before.previousElementSibling : list.lastElementChild; sib; sib = sib.previousElementSibling) {
+    if (!sib.classList.contains('transcript-line') || sib.classList.contains('interim')) continue;
+    const siblingTs = Number(sib.dataset.timestamp);
+    if (Number.isNaN(siblingTs)) continue;
+    if (siblingTs <= ts) break;
+    before = sib;
   }
-  if (interimEl) list.insertBefore(el, interimEl);
+  if (before) list.insertBefore(el, before);
   else list.appendChild(el);
 }
 

@@ -4122,11 +4122,13 @@ body.kb-stt-active #transcriptList {
 }
 
 /* Center Toast */
+/* Sits just above the bottom bar (not dead-centre over panel content). */
 .center-toast {
   position: fixed;
-  top: 50%;
+  bottom: calc(var(--bottom-height) + 72px + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
+  max-width: calc(100vw - 32px);
   z-index: var(--z-dialog-top);
   padding: 12px 24px;
   border-radius: var(--radius-md);
@@ -4141,11 +4143,11 @@ body.kb-stt-active #transcriptList {
   animation: center-toast-out 0.3s ease forwards;
 }
 @keyframes center-toast-in {
-  from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
-  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  from { opacity: 0; transform: translateX(-50%) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 @keyframes center-toast-out {
-  to { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 0; transform: translateX(-50%) scale(0.9); }
 }
 
 /* Export button loading spinner */
@@ -8943,6 +8945,31 @@ body.is-paused .rec-live-timer { color: var(--text-secondary); }
   }
   .toast { max-width: none; }
   .toast .toast-message { flex: 1; min-width: 0; }
+  /* ⋯ toggle carries a warning dot when the (hidden) STT status chip is in trouble */
+  .bottom-overflow-toggle { position: relative; }
+  .bottom-overflow-toggle.has-warning::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--warning, #f59e0b);
+    box-shadow: 0 0 0 2px var(--bg-primary);
+  }
+  /* Icon-only panel buttons still show the analyze cooldown countdown */
+  .panel-actions .btn.is-cooldown > span[data-i18n] { display: inline; }
+  /* Header: let the title shrink so the right-hand icon buttons always fit */
+  .header { gap: 8px; }
+  .header-left { flex: 1 1 auto; min-width: 0; }
+  .header-left .logo { white-space: nowrap; }
+  /* During a meeting the timer pill + title replace the logo */
+  .header-left:has(.meeting-pill:not([hidden])) .logo { display: none; }
+  .meeting-pill { flex-shrink: 0; }
+  .header-left .meeting-status,
+  .header-left .meeting-pill-sep { display: none; }
+  .meeting-title-input { flex: 1 1 auto; min-width: 0; max-width: none; width: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -171,6 +171,8 @@ export async function refreshStatusUI() {
     chip.classList.toggle('status-bad', !status.stt.ok);
     chip.title = status.stt.problem || t('status.chip_hint');
   }
+  // On phones the chip lives in the ⋯ menu: flag the toggle so a warning stays visible.
+  $('#btnBottomOverflow')?.classList.toggle('has-warning', !status.stt.ok);
   const panel = $('#runtimeStatus');
   if (panel) panel.innerHTML = renderStatusHtml(status);
   return status;

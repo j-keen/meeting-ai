@@ -339,6 +339,9 @@ async function sendChatMessage(userText) {
     }
   } catch (err) {
     typingEl.remove();
+    // Drop the empty streaming bubble left by a request that failed before any text.
+    const last = container.lastElementChild;
+    if (last?.classList.contains('model') && !last.querySelector('.chat-message-content')?.textContent.trim()) last.remove();
     renderChatMessage('system', t('chat.error') + ': ' + err.message);
   }
 }
