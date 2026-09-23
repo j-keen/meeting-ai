@@ -110,7 +110,7 @@ export function syncSessionUI() {
   endBtn.hidden = !(phase === 'recording' || phase === 'paused');
   if (phase === 'ended') {
     if (isLoaded) {
-      const btnResume = makeBtn('btnBottomResume', 'btn btn-end-meeting', `<span>▶</span> <span>${t('loaded.resume_recording')}</span>`);
+      const btnResume = makeBtn('btnBottomResume', 'btn btn-end-meeting', `<span>${t('loaded.resume_recording')}</span>`);
       btnResume.onclick = () => actions.onResume?.();
       const btnEdit = makeBtn('btnEditSaveInfo', 'btn btn-end-meeting', `<span>📋</span> <span>${t('end_meeting.edit_info_btn')}</span>`);
       btnEdit.onclick = () => actions.onEditInfo?.();
