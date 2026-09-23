@@ -317,6 +317,67 @@ export function initBottomBarOverflow() {
   mq.addEventListener('change', (e) => applyLayout(e.matches));
 }
 
+// ===== Narrow Header Overflow Menu =====
+// On phones the header can't fit logo/timer pill + title + four icon buttons, so
+// secondary buttons move (not cloned — listeners and the auth label updates in
+// supabase-client.js keep working) into a "⋯" popover: theme + login at <=430px,
+// history too at <=360px. Settings stays in the bar.
+export function initHeaderOverflow() {
+  const toggleBtn = document.getElementById('btnHeaderMore');
+  const menu = document.getElementById('headerMoreMenu');
+  const settingsBtn = document.getElementById('btnSettings');
+  if (!toggleBtn || !menu || !settingsBtn) return;
+  const bar = settingsBtn.parentElement;
+  const narrow = window.matchMedia('(max-width: 430px)');
+  const tiny = window.matchMedia('(max-width: 360px)');
+
+  function closeMenu() {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function place(id, inMenu, restore) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (inMenu) { if (el.parentElement !== menu) menu.appendChild(el); }
+    else if (el.parentElement !== bar) restore(el);
+  }
+
+  function applyLayout() {
+    const isNarrow = narrow.matches;
+    const isTiny = tiny.matches;
+    toggleBtn.hidden = !isNarrow;
+    if (!isNarrow) closeMenu();
+    // Menu order: history, theme, login. Bar order: theme, history, settings, login, ⋯
+    place('btnHistory', isTiny, el => bar.insertBefore(el, settingsBtn));
+    const history = document.getElementById('btnHistory');
+    place('btnThemeToggle', isNarrow, el => bar.insertBefore(el, history?.parentElement === bar ? history : settingsBtn));
+    place('btnAuth', isNarrow, el => bar.insertBefore(el, toggleBtn));
+    if (history?.parentElement === menu && menu.firstElementChild !== history) menu.prepend(history);
+  }
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    toggleBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+  menu.addEventListener('click', (e) => {
+    if (e.target.closest('button')) closeMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!menu.hidden && !menu.contains(e.target) && !toggleBtn.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) { closeMenu(); toggleBtn.focus(); }
+  });
+
+  applyLayout();
+  narrow.addEventListener('change', applyLayout);
+  tiny.addEventListener('change', applyLayout);
+}
+
 // ===== Modal Helpers =====
 export function initModals() {
   document.querySelectorAll('.modal-close').forEach(btn => {

@@ -203,10 +203,21 @@ function showDraftRecoveryBanner(draft, source) {
     <span>${message}</span>
     <div class="draft-recovery-actions">
       <button class="btn btn-sm btn-primary" id="btnDraftRecover">${t('draft.recover')}</button>
-      ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd" style="border:1px solid var(--accent)">${t('draft.save_and_end')}</button>` : ''}
+      ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd">${t('draft.save_and_end')}</button>` : ''}
+      <button class="draft-recovery-close" id="btnDraftDismiss" type="button" aria-label="${t('a11y.close')}" title="${t('a11y.close')}">&times;</button>
     </div>
   `;
-  document.body.prepend(banner);
+  // In normal flow right under the app header (pushes content down) so it never
+  // covers the logo / timer / header buttons. app.js holds back the start-up
+  // launcher while it's shown; dismissing hides the banner (the draft stays
+  // saved and is offered again on the next reload) and opens the launcher.
+  const header = document.querySelector('.header');
+  if (header) header.after(banner);
+  else document.body.prepend(banner);
+  $('#btnDraftDismiss').onclick = () => {
+    banner.remove();
+    if (!state.isRecording) showLauncherModal();
+  };
 
   $('#btnDraftRecover').onclick = () => {
     banner.remove();
