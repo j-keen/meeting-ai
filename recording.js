@@ -22,6 +22,7 @@ import {
   showAiWaiting, showChatWaiting,
 } from './ui.js';
 import { t, getDateLocale } from './i18n.js';
+import { confirmDialog } from './ui/dialogs.js';
 import { showLauncherModal } from './launcher.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -77,7 +78,7 @@ session.configureSession({
 initSessionUI({
   onResume: async () => {
     if (state.source === 'loaded') {
-      if (!confirm(t('loaded.resume_confirm'))) return;
+      if (!(await confirmDialog({ message: t('loaded.resume_confirm'), confirmText: t('dialog.resume') }))) return;
       showToast(t('loaded.resumed'), 'info');
       await resumeFromLoaded();
     } else {

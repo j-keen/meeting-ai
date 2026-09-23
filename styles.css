@@ -8433,3 +8433,86 @@ body.imported-mode .recording-controls { display: none; }
     scroll-behavior: auto !important;
   }
 }
+
+/* === UX: in-app confirm/prompt/alert dialogs (ui/dialogs.js) === */
+.app-dialog-overlay {
+  z-index: 10050; /* above every other modal, popover and toast layer */
+  animation: appDialogFade 0.12s ease-out;
+}
+.app-dialog {
+  max-width: 400px;
+  overflow: hidden;
+  animation: appDialogPop 0.14s ease-out;
+}
+.app-dialog-body { padding: 20px 20px 4px; overflow-y: auto; }
+.app-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.app-dialog-message {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.app-dialog-title + .app-dialog-message { color: var(--text-secondary); }
+.app-dialog-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+.app-dialog-message + .app-dialog-label { margin-top: 12px; }
+.app-dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-family: var(--font-sans);
+  font-size: 16px; /* 16px keeps iOS Safari from zooming on focus */
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+.app-dialog-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+.app-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px 20px;
+}
+.app-dialog-actions .btn {
+  min-width: 76px;
+  justify-content: center;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+.app-dialog .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app-dialog-ok--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.app-dialog-ok--danger:hover { background: #dc2626; border-color: #dc2626; }
+.app-dialog-ok--danger:focus-visible { outline-color: var(--danger); }
+@media (max-width: 480px) {
+  .app-dialog-actions .btn { flex: 1; min-height: 44px; }
+}
+@keyframes appDialogFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes appDialogPop {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-dialog-overlay, .app-dialog { animation: none; }
+}

@@ -9,6 +9,7 @@ import {
 } from './storage.js';
 import { callGeminiGuarded, UsageLimitError } from './gemini-api.js';
 import { t } from './i18n.js';
+import { promptDialog } from './ui/dialogs.js';
 import { showToast } from './ui.js';
 import { escapeHtml } from './utils.js';
 
@@ -374,8 +375,8 @@ function bindFormEvents() {
   });
 
   // Save preset
-  $('#btnPrepSavePreset').addEventListener('click', () => {
-    const name = prompt(t('prep.preset_name'));
+  $('#btnPrepSavePreset').addEventListener('click', async () => {
+    const name = await promptDialog({ label: t('prep.preset_name'), confirmText: t('dialog.save') });
     if (!name) return;
     collectFormConfig();
     saveMeetingPrepPreset({

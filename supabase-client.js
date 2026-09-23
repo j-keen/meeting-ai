@@ -28,6 +28,14 @@
   window.getSupabaseClient = function () { return client; };
   window.isSupabaseConfigured = function () { return true; };
 
+  // Sign-in errors go to the app's in-app dialog (ui/dialogs.js sets
+  // window.appDialogs once the modules load); native alert is the fallback.
+  function showLoginError(message) {
+    var d = window.appDialogs;
+    if (d && typeof d.authError === 'function') d.authError(message);
+    else alert('로그인 실패: ' + message);
+  }
+
   // Auth functions
   window.supabaseSignIn = async function () {
     // Native app: open OAuth in Chrome Custom Tab instead of WebView redirect
@@ -40,7 +48,7 @@
           skipBrowserRedirect: true,
         },
       });
-      if (error) { alert('로그인 실패: ' + error.message); return; }
+      if (error) { showLoginError(error.message); return; }
       if (data?.url) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           type: 'googleLogin', url: data.url, redirectUrl: nativeRedirect
@@ -55,7 +63,7 @@
         redirectTo: window.location.origin + window.location.pathname,
       },
     });
-    if (error) alert('로그인 실패: ' + error.message);
+    if (error) showLoginError(error.message);
   };
 
   window.supabaseSignOut = async function () {

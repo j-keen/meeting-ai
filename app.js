@@ -26,6 +26,7 @@ import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown, initFaq } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
 import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
+import { confirmDialog, promptDialog } from './ui/dialogs.js';
 import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
 import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
 import { handleExport, handleExportMeeting } from './export-md.js';
@@ -642,8 +643,8 @@ function init() {
     showToast(t('trash.restore_selected', { n: ids.length }), 'success');
   });
 
-  on('meeting:permanentDelete', ({ id }) => {
-    if (confirm(t('trash.confirm_permanent'))) {
+  on('meeting:permanentDelete', async ({ id }) => {
+    if (await confirmDialog({ message: t('trash.confirm_permanent'), confirmText: t('dialog.delete'), danger: true })) {
       deleteMeeting(id);
       deleteRecording(id).catch(() => {});
       refreshTrashView();
@@ -673,7 +674,7 @@ function init() {
 
   // Banner: resume recording from loaded meeting
   $('#loadedBannerResume').addEventListener('click', async () => {
-    if (!confirm(t('loaded.resume_confirm'))) return;
+    if (!(await confirmDialog({ message: t('loaded.resume_confirm'), confirmText: t('dialog.resume') }))) return;
     showToast(t('loaded.resumed'), 'info');
     await resumeFromLoaded();
   });
@@ -1779,8 +1780,8 @@ function initMinutesPreview() {
     });
 
     // Save preset
-    overlay.querySelector('#btnSavePreset').addEventListener('click', () => {
-      const name = prompt(t('minutes_preview.preset_name'));
+    overlay.querySelector('#btnSavePreset').addEventListener('click', async () => {
+      const name = await promptDialog({ label: t('minutes_preview.preset_name'), confirmText: t('dialog.save') });
       if (!name) return;
       const newPreset = {
         id: generateId(),
@@ -1800,12 +1801,12 @@ function initMinutesPreview() {
     });
 
     // Delete preset
-    overlay.querySelector('#btnDeletePreset').addEventListener('click', () => {
+    overlay.querySelector('#btnDeletePreset').addEventListener('click', async () => {
       const selectedId = presetSelect.value;
       if (!selectedId) return;
       const idx = presets.findIndex(p => p.id === selectedId);
       if (idx === -1) return;
-      if (!confirm(t('minutes_preview.preset_delete_confirm'))) return;
+      if (!(await confirmDialog({ message: t('minutes_preview.preset_delete_confirm'), confirmText: t('dialog.delete'), danger: true }))) return;
       presets.splice(idx, 1);
       saveSettings({ minutesPromptPresets: presets });
       state.settings.minutesPromptPresets = presets;

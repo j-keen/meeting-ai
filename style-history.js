@@ -4,7 +4,8 @@ import { state, emit } from './event-bus.js';
 import { saveSettings, loadCustomTypes } from './storage.js';
 import { getPromptForType } from './ai.js';
 import { showToast } from './ui.js';
-import { t, getAiLanguage } from './i18n.js';
+import { t } from './i18n.js';
+import { confirmDialog } from './ui/dialogs.js';
 import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -114,7 +115,6 @@ function renderHistoryList() {
   if (!container) return;
 
   const history = loadHistory();
-  const ko = getAiLanguage() === 'ko';
 
   if (history.length === 0) {
     container.innerHTML = `<div class="sh-empty">${t('sh.empty')}</div>`;
@@ -140,7 +140,7 @@ function renderHistoryList() {
       <div class="sh-item-actions">
         <button class="btn btn-sm btn-primary sh-restore-btn" data-idx="${idx}">${t('sh.restore')}</button>
         <button class="btn btn-sm btn-outline sh-restore-reanalyze-btn" data-idx="${idx}">${t('sh.restore_reanalyze')}</button>
-        <button class="btn btn-sm sh-view-btn" data-idx="${idx}" title="${t('sh.view')}">${ko ? '보기' : 'View'}</button>
+        <button class="btn btn-sm sh-view-btn" data-idx="${idx}" title="${t('sh.view')}">${t('sh.view_btn')}</button>
         <button class="btn btn-sm sh-delete-btn" data-idx="${idx}" title="${t('sh.delete')}">✕</button>
       </div>
     `;
@@ -160,8 +160,8 @@ function renderHistoryList() {
     container.appendChild(clearRow);
   }
   clearRow.innerHTML = `<button class="btn btn-sm sh-clear-all-btn">${t('sh.clear_all')}</button>`;
-  clearRow.querySelector('.sh-clear-all-btn').addEventListener('click', () => {
-    if (confirm(ko ? '모든 이력을 삭제하시겠습니까?' : 'Clear all history?')) {
+  clearRow.querySelector('.sh-clear-all-btn').addEventListener('click', async () => {
+    if (await confirmDialog({ message: t('sh.clear_all_confirm'), confirmText: t('dialog.delete'), danger: true })) {
       saveHistory([]);
       updateBadge();
       renderHistoryList();
@@ -244,8 +244,7 @@ function restoreEntry(idx, reanalyze) {
   emit('customPrompt:change');
   saveSettings(state.settings);
 
-  const ko = getAiLanguage() === 'ko';
-  showToast(ko ? `"${entry.label}" 스타일로 복원했습니다` : `Restored to "${entry.label}" style`, 'success');
+  showToast(t('sh.restored', { label: entry.label }), 'success');
   closeModal();
 
   if (reanalyze) {
