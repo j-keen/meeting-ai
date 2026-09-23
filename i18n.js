@@ -5,10 +5,10 @@ const translations = {
     // Header
     'header.timer': '00:00:00',
     'header.theme_tooltip': 'Toggle theme (Ctrl+T)',
-    'header.theme_dark': '🌙 Dark',
-    'header.theme_light': '☀ Light',
-    'header.history': '🔍 History',
-    'header.settings': '⚙ Settings',
+    'header.theme_dark': 'Dark',
+    'header.theme_light': 'Light',
+    'header.history': 'History',
+    'header.settings': 'Settings',
     'header.history_tooltip': 'Meeting history',
     'header.settings_tooltip': 'Settings',
 
@@ -436,7 +436,7 @@ const translations = {
     'chat.regenerate': 'Regenerate',
     'chat.edit': 'Edit',
     'chat.file_unsupported': 'Unsupported file type. Please attach text files (.txt, .md, .json, etc.)',
-    'chat.faq_btn': '💡 Prompts',
+    'chat.faq_btn': 'Prompts',
     'chat.faq_search_placeholder': 'Search prompts...',
     'chat.faq_add_placeholder': 'Add new prompt...',
     'chat.faq_empty': 'No saved prompts yet.',
@@ -456,6 +456,7 @@ const translations = {
     'chat.answer_after_tool': 'The tool has been applied. Now answer my previous question directly, in text.',
     'settings.trigger_hint': 'Also needs at least 5 new transcript lines. If nothing triggered for 10 minutes and 3+ lines arrived, it runs anyway. Smaller = more frequent and more API cost. Each run sends the full transcript plus the previous analysis.',
     'settings.tab_chat': 'Chat',
+    'settings.tab_account': 'Account',
 
     // Strategy descriptions
     'strategy.smart_desc': 'Previous summary + recent N minutes. Best for long meetings. Uses fewer tokens.',
@@ -606,6 +607,8 @@ const translations = {
 
     // Analyze cooldown
     'toast.analyze_cooldown': 'Please wait before analyzing again.',
+    'demo.loaded': 'Demo data loaded — 65 transcript lines',
+    'demo.loaded2': 'Demo 2 loaded — extended transcript (115 lines, ~90min)',
 
     // Session quick start
     'meeting.quick_start_title': 'Start a new session',
@@ -618,6 +621,7 @@ const translations = {
     'meeting.preset_start': 'Preset',
     'meeting.preset_start_desc': 'Start from saved preset',
     'meeting.no_presets': 'No presets',
+    'launcher.close': 'Close',
     'meeting.ai_setup': 'Quick Start',
     'meeting.ai_setup_desc': 'AI sets up for your situation',
     'meeting.deep_setup': 'Listen Prep',
@@ -1129,10 +1133,10 @@ const translations = {
     // Header
     'header.timer': '00:00:00',
     'header.theme_tooltip': '테마 전환 (Ctrl+T)',
-    'header.theme_dark': '🌙 다크',
-    'header.theme_light': '☀ 라이트',
-    'header.history': '🔍 지난회의검색',
-    'header.settings': '⚙ 설정',
+    'header.theme_dark': '다크',
+    'header.theme_light': '라이트',
+    'header.history': '지난회의검색',
+    'header.settings': '설정',
     'header.history_tooltip': '회의 기록',
     'header.settings_tooltip': '설정',
 
@@ -1168,8 +1172,8 @@ const translations = {
     'ai.empty': 'AI 분석 결과가 여기에 표시됩니다.',
     'ai.empty_hint': '녹음 중 자동으로 분석이 실행됩니다.',
     'ai.waiting': '잠시만 기다려주세요...',
-    'ai.waiting_hint': '녹음 중 {n}초마다 자동으로 분석됩니다.',
-    'ai.waiting_hint_chars': '녹음 중 {n}자마다 자동으로 분석됩니다.',
+    'ai.waiting_hint': '대화가 {n}초쯤 쌓이면 자동으로 분석해요.',
+    'ai.waiting_hint_chars': '대화가 {n}자쯤 쌓이면 자동으로 분석해요.',
 
     // Bottom bar
     'record.label': '녹음 시작',
@@ -1560,7 +1564,7 @@ const translations = {
     'chat.regenerate': '다시 생성',
     'chat.edit': '수정',
     'chat.file_unsupported': '지원되지 않는 파일 형식입니다. 텍스트 파일(.txt, .md, .json 등)을 사용해주세요.',
-    'chat.faq_btn': '💡 프롬프트',
+    'chat.faq_btn': '프롬프트',
     'chat.faq_search_placeholder': '프롬프트 검색...',
     'chat.faq_add_placeholder': '새 프롬프트 추가...',
     'chat.faq_empty': '저장된 프롬프트가 없습니다.',
@@ -1580,6 +1584,7 @@ const translations = {
     'chat.answer_after_tool': '도구가 적용되었습니다. 이제 방금 질문에 텍스트로 직접 답해 주세요.',
     'settings.trigger_hint': '최소 5줄의 새 녹취도 필요합니다. 10분 동안 분석이 없었고 3줄 이상 쌓이면 그냥 실행됩니다. 값이 작을수록 자주 돌고 API 비용이 늘어납니다. 매 분석은 전체 녹취록과 직전 분석을 함께 보냅니다.',
     'settings.tab_chat': '채팅',
+    'settings.tab_account': '계정',
 
     // Strategy descriptions
     'strategy.smart_desc': '이전 요약 + 최근 N분. 긴 회의에 최적. 토큰 적게 사용.',
@@ -1730,6 +1735,8 @@ const translations = {
 
     // Analyze cooldown
     'toast.analyze_cooldown': '잠시 후 다시 분석해주세요.',
+    'demo.loaded': '데모 데이터를 불러왔어요 — 대화 기록 65줄',
+    'demo.loaded2': '데모 2를 불러왔어요 — 확장된 대화 기록 (115줄, 약 90분)',
 
     // 세션 시작
     'meeting.quick_start_title': '새 세션 시작',
@@ -1742,6 +1749,7 @@ const translations = {
     'meeting.preset_start': '프리셋',
     'meeting.preset_start_desc': '저장된 프리셋으로 시작',
     'meeting.no_presets': '프리셋 없음',
+    'launcher.close': '닫기',
     'meeting.ai_setup': '빠른 시작',
     'meeting.ai_setup_desc': 'AI가 상황에 맞게 설정',
     'meeting.deep_setup': '경청 준비',

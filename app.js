@@ -154,6 +154,7 @@ function init() {
   // Analyze now (with 10s cooldown)
   let lastManualAnalysisTime = 0;
   const btnAnalyzeNow = $('#btnAnalyzeNow');
+  const btnAnalyzeNowLabel = $('#btnAnalyzeNowLabel') || btnAnalyzeNow;
   btnAnalyzeNow.addEventListener('click', () => {
     const now = Date.now();
     if (now - lastManualAnalysisTime < 10000) {
@@ -163,15 +164,15 @@ function init() {
     lastManualAnalysisTime = now;
     btnAnalyzeNow.disabled = true;
     let remaining = 10;
-    const origText = btnAnalyzeNow.textContent;
+    const origText = btnAnalyzeNowLabel.textContent;
     const cooldownTimer = setInterval(() => {
       remaining--;
       if (remaining <= 0) {
         clearInterval(cooldownTimer);
         btnAnalyzeNow.disabled = false;
-        btnAnalyzeNow.textContent = origText;
+        btnAnalyzeNowLabel.textContent = origText;
       } else {
-        btnAnalyzeNow.textContent = `${remaining}s`;
+        btnAnalyzeNowLabel.textContent = `${remaining}s`;
       }
     }, 1000);
     runAnalysis();
@@ -193,7 +194,13 @@ function init() {
   $('#btnSetDefaultA')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextA').value));
   $('#btnSetDefaultB')?.addEventListener('click', () => applyComparePromptAsDefault($('#compareTextB').value));
 
-  // Demo data
+  // Demo data — only exposed on localhost or with ?demo in the URL, never in production
+  const isDemoAllowed = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+    || new URLSearchParams(location.search).has('demo');
+  if (isDemoAllowed) {
+    $('#btnLoadDemo').hidden = false;
+    $('#btnLoadDemo2').hidden = false;
+  }
   $('#btnLoadDemo').addEventListener('click', () => loadDemoData());
   $('#btnLoadDemo2').addEventListener('click', () => loadDemoData2());
 
@@ -1039,7 +1046,7 @@ function loadDemoData() {
   setInterval(demoUpdateTimer, 1000);
 
   $('#meetingStatus').textContent = 'Demo Mode';
-  showToast('Demo data loaded - 65 transcript lines', 'success');
+  showToast(t('demo.loaded'), 'success');
   updateInboxBadge();
 }
 
@@ -1177,7 +1184,7 @@ function loadDemoData2() {
   });
 
   state.meetingStartTime = Date.now() - 90 * 60000;
-  showToast('Demo 2 loaded — extended transcript (115 lines, ~90min)', 'success');
+  showToast(t('demo.loaded2'), 'success');
   updateInboxBadge();
 }
 
