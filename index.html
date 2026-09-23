@@ -282,8 +282,9 @@
   </div>
 
   <!-- Bottom Bar -->
-  <footer class="bottom-bar">
-    <div class="bottom-center">
+  <footer class="bottom-bar" id="bottomBar">
+    <div class="bottom-center" id="bottomCenter">
+      <button class="btn btn-icon bottom-overflow-toggle" id="btnBottomOverflow" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-title="bottom.more_controls" data-i18n-aria="bottom.more_controls" title="More controls" aria-label="More controls" hidden>&#8943;</button>
       <button class="btn btn-record" id="btnRecord" title="Start/Stop recording (Ctrl+R)" aria-label="Toggle recording">
         <span class="record-icon record-dot"></span>
         <span class="record-label">REC</span>
@@ -292,10 +293,11 @@
       <button class="btn btn-sm" id="btnHighAccuracy" title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
       <button class="stt-status-chip" id="sttStatusChip" type="button" title="Current STT / AI status">STT</button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
-      <span class="bottom-divider"></span>
+      <span class="bottom-divider" id="bottomDivider"></span>
       <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);" hidden>&#9654; Demo1</button>
       <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);" hidden>&#9654; Demo2</button>
     </div>
+    <div class="bottom-overflow-menu" id="bottomOverflowMenu" hidden></div>
   </footer>
 
   <!-- Settings Panel (Slide-in) -->

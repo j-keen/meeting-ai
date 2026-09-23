@@ -13,7 +13,7 @@ import {
   getProUsageCount, incrementProUsage, addLocation,
 } from './storage.js';
 import {
-  initDragResizer, initPanelTabs, addTranscriptLine,
+  initDragResizer, initPanelTabs, initBottomBarOverflow, addTranscriptLine,
   addMemoLine, renderAnalysis, renderHighlights,
   renderMeetingViewer, renderInboxPreview,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
@@ -82,6 +82,7 @@ function init() {
   initSettings();
   initDragResizer();
   initPanelTabs();
+  initBottomBarOverflow();
   initModals();
   initContextPopup();
   initKeyboardShortcuts();
