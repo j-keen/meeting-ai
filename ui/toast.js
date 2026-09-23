@@ -2,15 +2,46 @@
 
 const $ = (sel) => document.querySelector(sel);
 
+// Toast policy: at most MAX_VISIBLE on screen (oldest dismissed first; undo toasts
+// are kept over plain ones), and an identical message already showing is refreshed
+// instead of stacking a duplicate.
+const MAX_VISIBLE = 2;
+const TOAST_MS = 4000;
+
+function liveToasts(container) {
+  return [...container.querySelectorAll('.toast')].filter(el => !el.classList.contains('toast-out'));
+}
+
+function enforceLimit(container, incoming = 1) {
+  const live = liveToasts(container);
+  let excess = live.length + incoming - MAX_VISIBLE;
+  if (excess <= 0) return;
+  const plain = live.filter(el => !el.classList.contains('undo-toast'));
+  const undo = live.filter(el => el.classList.contains('undo-toast'));
+  for (const el of [...plain, ...undo]) {
+    if (excess-- <= 0) break;
+    removeToast(el);
+  }
+}
+
 export function showToast(message, type = 'success') {
   const container = $('#toastContainer');
+  const dup = liveToasts(container).find(el =>
+    !el.classList.contains('undo-toast') && el.classList.contains(type)
+    && el.querySelector('.toast-message')?.textContent === String(message));
+  if (dup) {
+    clearTimeout(dup._toastTimer);
+    dup._toastTimer = setTimeout(() => removeToast(dup), TOAST_MS);
+    return;
+  }
+  enforceLimit(container);
   const tmpl = $('#tmplToast');
   const el = tmpl.content.cloneNode(true).querySelector('.toast');
   el.classList.add(type);
   el.querySelector('.toast-message').textContent = message;
   el.querySelector('.toast-close').addEventListener('click', () => removeToast(el));
   container.appendChild(el);
-  setTimeout(() => removeToast(el), 4000);
+  el._toastTimer = setTimeout(() => removeToast(el), TOAST_MS);
 }
 
 export function showCenterToast(message, duration = 2500) {
@@ -59,6 +90,7 @@ export function showUndoToast(message, undoCallback, duration = 5000) {
   progress.style.animationDuration = duration + 'ms';
   el.appendChild(progress);
 
+  enforceLimit(container);
   container.appendChild(el);
   setTimeout(() => {
     if (!undone) removeToast(el);
