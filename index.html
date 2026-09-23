@@ -615,7 +615,7 @@
 
       <!-- Correction Dictionary Modal -->
       <div class="modal-overlay correction-dict-modal-overlay" id="correctionDictModal" hidden>
-        <div class="modal" style="max-width:520px;">
+        <div class="modal modal-form">
           <div class="modal-header">
             <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
             <div style="display:flex;gap:6px;align-items:center;">
@@ -640,7 +640,7 @@
 
       <!-- Contacts Modal -->
       <div class="modal-overlay data-modal-overlay" id="contactsModal" hidden>
-        <div class="modal" style="max-width:520px;">
+        <div class="modal modal-form">
           <div class="modal-header">
             <h3 data-i18n="settings.contacts_title">People</h3>
             <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
@@ -691,8 +691,8 @@
       </div>
 
       <!-- Business Card Scan Modal -->
-      <div class="modal-overlay" id="cardScanModal" style="z-index:310;" hidden>
-        <div class="modal" style="max-width:480px;">
+      <div class="modal-overlay" id="cardScanModal" style="z-index:var(--z-modal-nested-2);" hidden>
+        <div class="modal">
           <div class="modal-header">
             <h3 data-i18n="settings.scan_card">Scan Business Card</h3>
             <button class="btn btn-icon" id="btnCloseCardScan" aria-label="Close">&times;</button>
@@ -730,7 +730,7 @@
 
       <!-- Locations Modal -->
       <div class="modal-overlay data-modal-overlay" id="locationsModal" hidden>
-        <div class="modal" style="max-width:420px;">
+        <div class="modal modal-md">
           <div class="modal-header">
             <h3 data-i18n="settings.locations">Locations</h3>
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
@@ -769,7 +769,7 @@
   <!-- Unsaved Settings Modal -->
   <div class="modal-overlay" id="settingsUnsavedModal" hidden>
     <div class="modal settings-unsaved-modal">
-      <div class="modal-body" style="padding:24px;">
+      <div class="modal-body modal-body-lg">
         <p class="settings-unsaved-modal-text" data-i18n="settings.unsaved_modal_text">You have unsaved changes. What would you like to do?</p>
         <div class="settings-unsaved-modal-actions">
           <button class="btn btn-sm" id="btnUnsavedDiscard" data-i18n="settings.discard">Don't Save</button>
@@ -872,12 +872,12 @@
 
   <!-- Minutes Model Selection Modal -->
   <div class="modal-overlay" id="minutesModelModal" hidden>
-    <div class="modal" style="max-width:360px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3 data-i18n="minutes_model.title">Select AI Model</h3>
         <button class="btn btn-icon modal-close" data-close="minutesModelModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px 16px;">
+      <div class="modal-body modal-body-compact">
         <button class="minutes-model-card" data-model="gemini-3.5-flash">
           <span class="minutes-model-card-icon">&#x26A1;</span>
           <div class="minutes-model-card-info">
@@ -1020,12 +1020,12 @@
 
   <!-- Compare Prompts Modal -->
   <div class="modal-overlay" id="compareModal" hidden>
-    <div class="modal" style="max-width:95vw;width:1800px;">
+    <div class="modal modal-wide">
       <div class="modal-header">
         <h3 data-i18n="compare.title">Prompt A/B Compare</h3>
         <button class="btn btn-icon modal-close" data-close="compareModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px;">
+      <div class="modal-body modal-body-sm">
         <div class="compare-layout">
           <!-- Column 1: Prompt A -->
           <div class="compare-col">
@@ -1242,7 +1242,7 @@
 
   <!-- Meeting Prep Form Modal -->
   <div class="modal-overlay" id="meetingPrepModal" hidden>
-    <div class="modal modal-large" style="max-width:640px;">
+    <div class="modal modal-large modal-xl">
       <div class="modal-header">
         <h3 data-i18n="prep.form_title">Listen Prep</h3>
         <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
@@ -1490,7 +1490,7 @@
 
   <!-- Camera Modal (for business card scan) -->
   <div class="modal-overlay" id="cameraModal" hidden>
-    <div class="modal" style="max-width:400px;padding:16px;">
+    <div class="modal modal-camera">
       <video id="cameraPreview" autoplay playsinline style="width:100%;border-radius:var(--radius-md);background:#000;"></video>
       <canvas id="cameraCanvas" hidden></canvas>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
@@ -1613,7 +1613,7 @@
 
   <!-- Preset Create Gateway Modal -->
   <div class="modal-overlay" id="presetCreateModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="preset_create.title">새 프리셋 만들기</h3>
         <button class="btn btn-icon modal-close" data-close="presetCreateModal">&times;</button>
@@ -1643,7 +1643,7 @@
 
   <!-- Preset Manual Form Modal -->
   <div class="modal-overlay" id="presetManualModal" hidden>
-    <div class="modal" style="max-width:520px;">
+    <div class="modal modal-form">
       <div class="modal-header">
         <h3 data-i18n="preset_manual.title">프리셋 직접 만들기</h3>
         <button class="btn btn-icon modal-close" data-close="presetManualModal">&times;</button>
@@ -1721,7 +1721,7 @@
 
   <!-- Style History Modal -->
   <div class="modal-overlay" id="styleHistoryModal" hidden>
-    <div class="modal modal-large" style="max-width:520px;">
+    <div class="modal modal-large modal-form">
       <div class="modal-header">
         <h3 data-i18n="sh.title">Style History</h3>
         <button class="btn btn-icon modal-close" id="shCloseBtn">&times;</button>
@@ -1736,7 +1736,7 @@
 
   <!-- Analysis Style Modal -->
   <div class="modal-overlay" id="analysisStyleModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.title">Change Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="asmCloseBtn">&times;</button>
@@ -1774,7 +1774,7 @@
 
   <!-- Analysis Style: Presets Sub-modal -->
   <div class="modal-overlay" id="asmPresetsModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.presets_title">Saved Analysis Styles</h3>
         <button class="btn btn-icon modal-close" id="asmPresetsCloseBtn">&times;</button>
@@ -1787,7 +1787,7 @@
 
   <!-- Analysis Style: Save Modal -->
   <div class="modal-overlay" id="asmSaveModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.save_title">이 분석 스타일 저장</h3>
         <button class="btn btn-icon modal-close" id="asmSaveCloseBtn">&times;</button>
@@ -1800,7 +1800,7 @@
 
   <!-- Analysis Style: History Sub-modal -->
   <div class="modal-overlay" id="asmHistoryModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.history_label">Analysis History</h3>
         <button class="btn btn-icon modal-close" id="asmHistoryCloseBtn">&times;</button>
@@ -1813,7 +1813,7 @@
 
   <!-- Prompt Adjuster Modal -->
   <div class="modal-overlay" id="promptAdjusterModal" hidden>
-    <div class="modal modal-large" style="max-width:520px;">
+    <div class="modal modal-large modal-form">
       <div class="modal-header">
         <h3 data-i18n="pa.title">Change Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="paCloseBtn">&times;</button>
@@ -2029,12 +2029,12 @@
 
   <!-- Regenerate Modal -->
   <div class="modal-overlay" id="regenModal" hidden>
-    <div class="modal" style="max-width:360px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3 data-i18n="minutes_preview.regen_title">Regenerate Minutes</h3>
         <button class="btn btn-icon modal-close" data-close="regenModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px 16px;">
+      <div class="modal-body modal-body-compact">
         <button class="minutes-model-card regen-model-card" data-regen-model="gemini-3.5-flash">
           <span class="minutes-model-card-icon">&#x26A1;</span>
           <div class="minutes-model-card-info">
