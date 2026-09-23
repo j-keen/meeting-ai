@@ -1143,6 +1143,39 @@ function loadDemoData2() {
     addMemoLine(memo);
   });
 
+  // UX: Demo2's button is labeled "with analysis history" but previously never
+  // populated state.analysisHistory, so #aiSections stayed stuck on its empty
+  // state. Seed a couple of past analyses (as if AI analysis ran mid-meeting)
+  // plus a current one, and render the latest so the panel reflects history.
+  const demoAnalyses = [
+    {
+      offset: 980,
+      markdown: '## 요약\n스프린트 목표 정리: REST API 5종 구현, 컴포넌트 라이브러리 Storybook 문서화, 접근성 수정 22건, lodash 업그레이드, SonarQube 코드 스멜 12건 처리.\n\n## 주요 논의\n- 인증 모듈 개선으로 에러 96% 감소, 응답 시간 75% 단축\n- WebSocket은 다음 스프린트로 연기\n- 클라이언트 데모(4/15) 준비: 스테이징에 제조업 KPI 더미 데이터 반영\n\n## 액션 아이템\n- [ ] axe-core CI 파이프라인 추가\n- [ ] 컬러 대비 3.2:1 → 4.5:1로 수정 (5곳)\n- [ ] 시니어 프론트엔드 코딩 테스트 이번 주 진행',
+      flow: '스프린트 목표 정리 및 접근성/채용 논의',
+    },
+    {
+      offset: 2600,
+      markdown: '## 요약\n장애 후속 조치, 성능 최적화, 보안 감사 준비, 팀 프로세스 개선까지 추가 논의 후 이번 스프린트를 총 14개 태스크로 확정.\n\n## 주요 논의\n- 지난주 DB 커넥션 풀 고갈 장애: 배치용 DataSource 분리 + Grafana 임계값 알림 예정\n- 대시보드 Lighthouse 점수 78→65점 하락, 이미지 WebP 변환을 1순위로 진행\n- SOC 2 Type II 대비: 주소 필드 암호화, API 전수 보안 검사 필요\n- 코드 리뷰 SLA 24시간 이내 1차 리뷰, CODEOWNERS 자동 배정 도입\n\n## 액션 아이템\n- [ ] 배치 전용 DB 커넥션 풀 분리\n- [ ] 히어로 배너 이미지 WebP 변환\n- [ ] 개인정보(주소) 필드 AES-256 암호화 마이그레이션\n- [ ] CODEOWNERS 설정 + PR 리뷰 SLA 적용\n\n## 이어서 볼 점\n- 보안 감사(다음 달) 준비 범위 최종 확정\n- 성능 개선 나머지 항목(moment→dayjs, 코드 스플리팅) 우선순위 재확인',
+      flow: '장애 후속·성능·보안 감사·프로세스 개선 종합 정리',
+    },
+  ];
+
+  demoAnalyses.forEach((a, i) => {
+    const analysis = {
+      markdown: a.markdown,
+      flow: a.flow,
+      summary: a.flow,
+      timestamp: state.meetingStartTime + a.offset * 1000,
+      transcriptLength: state.transcript.filter(l => l.timestamp <= state.meetingStartTime + a.offset * 1000).length,
+      blockMemos: [],
+    };
+    state.analysisHistory.push(analysis);
+    if (i === demoAnalyses.length - 1) {
+      state.currentAnalysis = analysis;
+      renderAnalysis(analysis);
+    }
+  });
+
   state.meetingStartTime = Date.now() - 90 * 60000;
   showToast('Demo 2 loaded — extended transcript (115 lines, ~90min)', 'success');
   updateInboxBadge();
