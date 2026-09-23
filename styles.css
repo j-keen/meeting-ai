@@ -1472,6 +1472,73 @@ body.kb-stt-active #transcriptList {
   background: var(--danger, #ef4444);
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
+
+/* === UX: Mobile bottom bar overflow menu ===
+   On narrow screens, secondary controls (high-accuracy toggle, STT status chip,
+   demo buttons) are moved by JS (ui.js: initBottomBarOverflow) out of .bottom-center
+   into #bottomOverflowMenu, behind a "⋯" toggle, so #btnRecord always stays large,
+   centered and fully visible, and #btnEndMeeting stays directly reachable. */
+@media (max-width: 768px) {
+  .bottom-bar {
+    position: relative;
+    padding: 0 8px;
+  }
+  .bottom-center {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+  }
+  .bottom-overflow-toggle {
+    grid-column: 1;
+    justify-self: start;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    line-height: 1;
+    border-radius: var(--radius-full);
+  }
+  #btnRecord {
+    grid-column: 2;
+    justify-self: center;
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+  #btnEndMeeting {
+    grid-column: 3;
+    justify-self: end;
+  }
+  .bottom-overflow-menu {
+    position: absolute;
+    left: 8px;
+    bottom: calc(100% + 8px);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    min-width: 180px;
+    z-index: 30;
+  }
+  .bottom-overflow-menu[hidden] { display: none; }
+  .bottom-overflow-menu .btn,
+  .bottom-overflow-menu .stt-status-chip {
+    width: 100%;
+    min-height: 40px;
+    justify-content: flex-start;
+  }
+  .bottom-overflow-menu .bottom-divider {
+    display: none; /* meaningless as a vertical rule once stacked */
+  }
+}
+
 /* ===== Settings Panel ===== */
 .settings-panel {
   position: fixed;
@@ -4804,7 +4871,15 @@ body.kb-stt-active #transcriptList {
 @media (max-width: 768px) {
   /* Header buttons: icons only on mobile */
   .header-btn-label { display: none; }
-  .header-right .btn-text { padding: 5px 8px; min-width: 0; font-size: 16px; }
+  .header-right .btn-text {
+    padding: 5px 8px;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
   .header-right #btnAuth { font-size: 12px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
 
   .panel-tabs { display: flex; position: relative; }
@@ -4818,7 +4893,20 @@ body.kb-stt-active #transcriptList {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 1px;
   }
-  .panel-tab { border-bottom-color: transparent !important; }
+  .panel-tab { border-bottom-color: transparent !important; min-height: 44px; }
+
+  /* Panel headers: the panel-tabs already show the title, so drop the duplicate h2;
+     let panel-actions fill the row and wrap/shrink so buttons never clip. */
+  .panel-header h2 { display: none; }
+  .panel-header-row { justify-content: flex-end; }
+  .panel-actions { flex-wrap: wrap; justify-content: flex-end; }
+  .panel-actions .btn {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+  }
+  /* Icon-only: hide the text label, keep the leading icon + existing title/aria for a11y */
+  .panel-actions .btn > span[data-i18n] { display: none; }
   .main-content { flex-direction: column; position: relative; overflow: hidden; }
   .panel {
     display: flex;
@@ -4861,6 +4949,28 @@ body.kb-stt-active #transcriptList {
 
   /* Welcome modal mobile */
   .welcome-modal-content { padding: 24px 16px 16px; }
+
+  /* Touch targets: transcript row actions, chat send, model select (>= ~40px) */
+  .transcript-actions {
+    opacity: 1; /* no hover on touch — keep reachable without a hover state */
+  }
+  .transcript-actions .btn-xs {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #btnChatSend {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .chat-model-select {
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 13px;
+  }
 }
 
 /* ===== Meeting Prep Wizard ===== */

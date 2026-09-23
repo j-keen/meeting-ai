@@ -222,6 +222,72 @@ export function initPanelTabs() {
   switchToPanel(0, false);
 }
 
+// ===== Mobile Bottom Bar Overflow Menu =====
+// Keeps #btnRecord (and #btnEndMeeting while it's visible) always reachable on
+// narrow screens by moving secondary controls into a "⋯" popover menu. Elements
+// are moved (not cloned), so their existing event listeners keep working.
+export function initBottomBarOverflow() {
+  const toggleBtn = document.getElementById('btnBottomOverflow');
+  const menu = document.getElementById('bottomOverflowMenu');
+  const bottomCenter = document.getElementById('bottomCenter');
+  const endBtn = document.getElementById('btnEndMeeting');
+  if (!toggleBtn || !menu || !bottomCenter || !endBtn) return;
+
+  // Kept directly reachable in .bottom-center: overflow toggle, record, end meeting.
+  const beforeEndMeeting = ['btnHighAccuracy', 'sttStatusChip'];
+  const afterEndMeeting = ['bottomDivider', 'btnLoadDemo', 'btnLoadDemo2'];
+
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  function closeMenu() {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function applyLayout(isMobile) {
+    if (isMobile) {
+      toggleBtn.hidden = false;
+      [...beforeEndMeeting, ...afterEndMeeting].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== menu) menu.appendChild(el);
+      });
+    } else {
+      toggleBtn.hidden = true;
+      closeMenu();
+      beforeEndMeeting.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== bottomCenter) bottomCenter.insertBefore(el, endBtn);
+      });
+      afterEndMeeting.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== bottomCenter) bottomCenter.appendChild(el);
+      });
+    }
+  }
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    toggleBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  // Close after acting on an item inside the menu, or on outside click / Escape.
+  menu.addEventListener('click', (e) => {
+    if (e.target.closest('button')) closeMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!menu.hidden && !menu.contains(e.target) && e.target !== toggleBtn) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) closeMenu();
+  });
+
+  applyLayout(mq.matches);
+  mq.addEventListener('change', (e) => applyLayout(e.matches));
+}
+
 // ===== Modal Helpers =====
 export function initModals() {
   document.querySelectorAll('.modal-close').forEach(btn => {
