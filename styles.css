@@ -1502,16 +1502,35 @@ body.kb-stt-active #transcriptList {
     position: relative;
     padding: 0 8px;
   }
+  /* One flex row for every state (idle / recording / paused / ended / loaded /
+     imported): "⋯" pinned left, a 40px ghost (::after) pinned right, and the
+     state's primary controls centered between them via auto margins. When the
+     row gets tight the ghost shrinks first, so the group slides right instead of
+     clipping; overflow-x is a last-resort safety net (never page-level scroll). */
   .bottom-center {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    display: flex;
     align-items: center;
+    justify-content: flex-start;
     width: 100%;
+    min-width: 0;
     gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .bottom-center::-webkit-scrollbar { display: none; }
+  .bottom-center > * { flex-shrink: 0; }
+  .bottom-center::after {
+    content: '';
+    order: 99;
+    flex: 0 1 40px;
+    min-width: 0;
+    margin-left: auto;
+  }
+  .bottom-center > .bottom-overflow-toggle {
+    order: -10;
+    margin-right: auto;
   }
   .bottom-overflow-toggle {
-    grid-column: 1;
-    justify-self: start;
     width: 40px;
     height: 40px;
     display: inline-flex;
@@ -1522,14 +1541,18 @@ body.kb-stt-active #transcriptList {
     border-radius: var(--radius-full);
   }
   #btnRecord {
-    grid-column: 2;
-    justify-self: center;
     padding: 10px 20px;
     font-size: 15px;
   }
-  #btnEndMeeting {
-    grid-column: 3;
-    justify-self: end;
+  /* Recording / paused: compact pause/resume so live timer + it + End fit at 360px+ */
+  body.is-recording #btnRecord,
+  body.is-paused #btnRecord { padding: 10px 14px; }
+  /* End Meeting and the post-end / loaded buttons: real touch targets */
+  .bottom-center > .btn-end-meeting,
+  .bottom-center > .btn-sm {
+    min-height: 40px;
+    padding: 4px 10px;
+    font-size: 12px;
   }
   .bottom-overflow-menu {
     position: absolute;
@@ -1556,6 +1579,15 @@ body.kb-stt-active #transcriptList {
   .bottom-overflow-menu .bottom-divider {
     display: none; /* meaningless as a vertical rule once stacked */
   }
+}
+/* Small phones (360-380px): tighten so paused (timer · 녹음 재개 · End) and
+   ended (REC · 재개 · AI 문서 · 새 회의) rows still fit without clipping. */
+@media (max-width: 380px) {
+  .bottom-center { gap: 4px; }
+  #btnRecord { padding: 10px 14px; }
+  .bottom-center > .btn-end-meeting,
+  .bottom-center > .btn-sm { padding: 4px 8px; }
+  .bottom-center > .rec-live { padding: 3px 8px 3px 6px; }
 }
 
 /* ===== Settings Panel ===== */
@@ -2857,6 +2889,12 @@ body.kb-stt-active #transcriptList {
   pointer-events: none;
 }
 .toast-container > * { pointer-events: auto; }
+/* ui/toast.js sets these while the settings panel / a modal is open so toasts
+   never sit on top of their header controls (close / save / tabs). */
+.toast-container {
+  top: var(--toast-top, calc(var(--header-height) + 8px + env(safe-area-inset-top, 0px)));
+  right: var(--toast-right, 16px);
+}
 .toast {
   display: flex;
   align-items: center;
@@ -8837,7 +8875,7 @@ body.is-paused .bottom-bar {
 }
 body.is-paused .rec-live {
   background: color-mix(in srgb, var(--warning) 16%, transparent);
-  color: color-mix(in srgb, var(--warning) 70%, var(--text-primary));
+  color: color-mix(in srgb, var(--warning) 45%, var(--text-primary)); /* AA on the amber tint */
 }
 body.is-paused .rec-live-dot {
   background: var(--warning);
@@ -8855,12 +8893,10 @@ body.is-paused .rec-live-timer { color: var(--text-secondary); }
 
 @media (max-width: 768px) {
   .rec-live { padding: 3px 10px 3px 8px; gap: 6px; }
-  .rec-live-timer { font-size: 17px; }
+  .rec-live-timer { font-size: 15px; }
   .rec-live-label { display: none; }
-  /* If the bar is too narrow, keep the live timer + pause/end (ordered first) on
-     screen instead of clipping them off the left edge. */
-  body.is-recording .bottom-bar,
-  body.is-paused .bottom-bar { justify-content: safe center; }
+  /* Row layout (⋯ | live timer · pause · End | ghost) lives in the
+     "Mobile bottom bar overflow menu" block. */
   /* Mobile toasts: full-width strip under the header */
   .toast-container {
     left: 12px;

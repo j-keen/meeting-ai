@@ -11,10 +11,17 @@
 //
 // Escape handling intentionally stays where it is (ui.js initKeyboardShortcuts
 // and the per-modal handlers); this module only reacts to open/close.
+//
+// Single owner rule: ui/dialogs.js (confirm/prompt/alert, .app-dialog-overlay)
+// owns its own semantics, initial focus, Tab trap and focus restoration. Here
+// such overlays are tracked only so they count as the topmost dialog (nothing
+// underneath grabs focus or traps Tab while they are open); this module never
+// moves focus for them and never records/restores an opener for them.
 
 import { t } from '../i18n.js';
 
 const OVERLAY = '.modal-overlay';
+const SELF_MANAGED = '.app-dialog-overlay';
 const OFFCANVAS = '#settingsPanel';
 const FOCUSABLE = [
   'a[href]', 'area[href]', 'button:not([disabled])',
@@ -95,14 +102,18 @@ function sync() {
   for (let i = stack.length - 1; i >= 0; i--) {
     if (!open.includes(stack[i].el)) {
       const [entry] = stack.splice(i, 1);
-      pendingRestore = entry.returnFocus || pendingRestore;
+      if (!entry.selfManaged) pendingRestore = entry.returnFocus || pendingRestore;
     }
   }
 
   // Newly opened dialogs
   for (const el of open) {
-    decorate(el);
     if (stack.some(s => s.el === el)) continue;
+    if (el.matches(SELF_MANAGED)) {
+      stack.push({ el, returnFocus: null, selfManaged: true });
+      continue;
+    }
+    decorate(el);
     const active = document.activeElement;
     const returnFocus = canFocus(active) && !el.contains(active) ? active : pendingRestore;
     pendingRestore = null;
@@ -111,7 +122,17 @@ function sync() {
 
   const top = stack[stack.length - 1];
   if (top) {
-    focusInitial(top.el);
+    // A dialog closed on top of another one: return to its opener when that
+    // opener lives in the dialog now on top, otherwise the default initial focus.
+    const restore = pendingRestore;
+    pendingRestore = null;
+    if (top.selfManaged) return;
+    if (restore && top.el.contains(restore) && canFocus(restore)
+      && !top.el.contains(document.activeElement)) {
+      restore.focus({ preventScroll: true });
+    } else {
+      focusInitial(top.el);
+    }
   } else if (pendingRestore) {
     const target = pendingRestore;
     pendingRestore = null;
@@ -152,7 +173,7 @@ function syncOffcanvas(panel, fromMutation) {
 function onKeydown(e) {
   if (e.key !== 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;
   const top = stack[stack.length - 1];
-  if (!top || !isOpen(top.el)) return;
+  if (!top || top.selfManaged || !isOpen(top.el)) return;
   const items = focusables(top.el);
   if (items.length === 0) { e.preventDefault(); top.el.focus({ preventScroll: true }); return; }
   const first = items[0];

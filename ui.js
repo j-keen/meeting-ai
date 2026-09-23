@@ -127,6 +127,13 @@ export function initPanelTabs() {
 
   const isMobile = () => window.innerWidth <= 768;
 
+  // On phones the non-active panels sit off-screen (translateX) but would still
+  // be Tab / screen-reader reachable: make them inert. Desktop shows all three.
+  function syncPanelInert() {
+    const mobile = isMobile();
+    panels.forEach((p, i) => p?.toggleAttribute('inert', mobile && i !== currentIndex));
+  }
+
   function switchToPanel(index, animate = true) {
     if (index < 0 || index > 2) return;
     currentIndex = index;
@@ -152,6 +159,7 @@ export function initPanelTabs() {
         p.classList.toggle('panel-active', i === index);
       });
     }
+    syncPanelInert();
   }
 
   // Tab click handlers
@@ -169,6 +177,7 @@ export function initPanelTabs() {
         p.style.transform = `translateX(${(i - currentIndex) * 100}%)`;
       });
     }
+    syncPanelInert();
   });
 
   // ===== Touch Swipe =====

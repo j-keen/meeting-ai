@@ -8,6 +8,40 @@ const $ = (sel) => document.querySelector(sel);
 const MAX_VISIBLE = 2;
 const TOAST_MS = 4000;
 
+// Keep toasts off the interactive header of whatever is open: beside the
+// settings panel on wide screens, and below the settings tabs / modal headers
+// otherwise. Values feed the --toast-top / --toast-right vars in styles.css.
+const GAP = 8;
+function placeContainer(container) {
+  container.style.removeProperty('--toast-top');
+  container.style.removeProperty('--toast-right');
+  const panel = document.querySelector('.settings-panel.open');
+  const wide = window.innerWidth > 768;
+  const avoid = [];
+  if (panel) {
+    if (wide && panel.offsetWidth < window.innerWidth - 240) {
+      container.style.setProperty('--toast-right', `${panel.offsetWidth + 16}px`);
+    } else {
+      const head = panel.querySelector('.settings-tabs') || panel.querySelector('.settings-header');
+      if (head) avoid.push(head);
+    }
+  }
+  document.querySelectorAll('.modal-overlay:not(.app-dialog-overlay)').forEach(o => {
+    if (o.hidden || getComputedStyle(o).display === 'none') return;
+    const head = o.querySelector('.modal-header');
+    if (head) avoid.push(head);
+  });
+  if (!avoid.length) return;
+  const box = container.getBoundingClientRect();
+  let top = box.top;
+  for (const el of avoid) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || r.left >= box.right || r.right <= box.left) continue;
+    if (r.bottom + GAP > top && r.top < box.bottom) top = r.bottom + GAP;
+  }
+  if (top !== box.top) container.style.setProperty('--toast-top', `${Math.round(top)}px`);
+}
+
 function liveToasts(container) {
   return [...container.querySelectorAll('.toast')].filter(el => !el.classList.contains('toast-out'));
 }
@@ -41,6 +75,7 @@ export function showToast(message, type = 'success') {
   el.querySelector('.toast-message').textContent = message;
   el.querySelector('.toast-close').addEventListener('click', () => removeToast(el));
   container.appendChild(el);
+  placeContainer(container);
   el._toastTimer = setTimeout(() => removeToast(el), TOAST_MS);
 }
 
@@ -92,6 +127,7 @@ export function showUndoToast(message, undoCallback, duration = 5000) {
 
   enforceLimit(container);
   container.appendChild(el);
+  placeContainer(container);
   setTimeout(() => {
     if (!undone) removeToast(el);
   }, duration);

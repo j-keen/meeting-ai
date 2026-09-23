@@ -342,6 +342,24 @@ describe('initPanelTabs', () => {
     document.querySelector('[data-panel="center"]').click();
     expect(document.getElementById('panelLeft').classList.contains('panel-active')).toBe(false);
   });
+
+  it('makes off-screen panels inert on mobile only', () => {
+    const orig = window.innerWidth;
+    try {
+      window.innerWidth = 390;
+      initPanelTabs();
+      expect(document.getElementById('panelLeft').hasAttribute('inert')).toBe(false);
+      expect(document.getElementById('panelCenter').hasAttribute('inert')).toBe(true);
+      document.querySelector('[data-panel="right"]').click();
+      expect(document.getElementById('panelRight').hasAttribute('inert')).toBe(false);
+      expect(document.getElementById('panelLeft').hasAttribute('inert')).toBe(true);
+      window.innerWidth = 1440;
+      window.dispatchEvent(new Event('resize'));
+      expect(document.querySelectorAll('.panel[inert]').length).toBe(0);
+    } finally {
+      window.innerWidth = orig;
+    }
+  });
 });
 
 describe('updateTranscriptLineUI / removeTranscriptLineUI', () => {
