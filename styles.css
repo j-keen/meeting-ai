@@ -4014,24 +4014,40 @@ body.kb-stt-active #transcriptList {
   display: none;
 }
 
-/* Draft recovery banner */
+/* Draft recovery banner — in flow directly under .header (recording.js), so it
+   pushes content down instead of covering the header controls. */
 .draft-recovery-banner {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: var(--z-dialog-top);
+  position: relative;
+  flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 10px 16px;
+  gap: 8px 12px;
+  padding: 8px 16px;
   background: var(--accent);
   color: #fff;
   font-size: 0.85rem;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  animation: slideDown 0.3s ease;
+  animation: fadeIn 0.2s ease-out;
+}
+.draft-recovery-banner > span { min-width: 0; }
+.draft-recovery-close {
+  background: none;
+  border: none;
+  color: #fff;
+  opacity: 0.85;
+  font-size: var(--fs-xl);
+  line-height: 1;
+  min-width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.draft-recovery-close:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+@media (max-width: 768px) {
+  .draft-recovery-banner { justify-content: flex-start; padding: 8px 12px; }
+  .draft-recovery-actions { margin-left: auto; }
 }
 .draft-recovery-banner .btn {
   color: #fff;
@@ -4050,11 +4066,8 @@ body.kb-stt-active #transcriptList {
 }
 .draft-recovery-actions {
   display: flex;
+  align-items: center;
   gap: 6px;
-}
-@keyframes slideDown {
-  from { transform: translateY(-100%); }
-  to { transform: translateY(0); }
 }
 
 /* End confirm overlay */
@@ -8970,6 +8983,58 @@ body.is-paused .rec-live-timer { color: var(--text-secondary); }
   .header-left .meeting-status,
   .header-left .meeting-pill-sep { display: none; }
   .meeting-title-input { flex: 1 1 auto; min-width: 0; max-width: none; width: 0; }
+  /* Title reads as a tappable chip (not an invisible input) and ellipsizes */
+  .header-left .meeting-title-input {
+    padding: 4px 8px;
+    border-color: var(--border-color);
+    background: var(--bg-secondary);
+    font-size: var(--fs-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header-left .meeting-title-input:focus { border-color: var(--accent); }
+  /* Compact timer pill: the recording-size badge keeps only its mic glyph */
+  .meeting-pill { padding: 3px 8px; gap: 5px; }
+  .meeting-pill #audioRecSize { display: none; }
+}
+
+/* Narrow header "⋯" menu (ui.js initHeaderOverflow moves theme / login — and
+   history at <=360px — in here so the pill + title never collide with them). */
+.header-right { position: relative; }
+/* While the menu is open, lift the header above toasts so they can't cover it */
+.header:has(.header-more-menu:not([hidden])) { z-index: calc(var(--z-toast) + 1); }
+.header-more-toggle[hidden],
+.header-more-menu[hidden] { display: none; }
+.header-more-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  padding: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown-lg);
+}
+.header-right .header-more-menu .btn-text {
+  width: 100%;
+  max-width: none;
+  min-height: 40px;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: var(--fs-sm);
+}
+.header-right .header-more-menu #btnAuth { max-width: none; }
+.header-more-menu .header-btn-label { display: inline; }
+[data-theme="light"] .header-more-menu .header-btn-label.icon-theme-dark,
+[data-theme="dark"] .header-more-menu .header-btn-label.icon-theme-light { display: none; }
+@media (max-width: 360px) {
+  .header { padding: 0 12px; gap: 6px; }
+  .header-right { gap: 6px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

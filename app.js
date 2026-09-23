@@ -13,7 +13,7 @@ import {
   getProUsageCount, incrementProUsage, addLocation,
 } from './storage.js';
 import {
-  initDragResizer, initPanelTabs, initBottomBarOverflow, addTranscriptLine,
+  initDragResizer, initPanelTabs, initBottomBarOverflow, initHeaderOverflow, addTranscriptLine,
   addMemoLine, renderAnalysis, renderHighlights,
   renderMeetingViewer, renderInboxPreview,
   initModals, initContextPopup, toggleTheme, initKeyboardShortcuts,
@@ -83,6 +83,7 @@ function init() {
   initDragResizer();
   initPanelTabs();
   initBottomBarOverflow();
+  initHeaderOverflow();
   initModals();
   initContextPopup();
   initKeyboardShortcuts();
@@ -131,7 +132,8 @@ function init() {
   checkDraftRecovery();
 
   // ===== Launcher Modal =====
-  if (!state.isRecording) {
+  // Not over a pending draft-recovery banner: its dismiss (×) opens the launcher.
+  if (!state.isRecording && !$('#draftRecoveryBanner')) {
     showLauncherModal();
   }
 
