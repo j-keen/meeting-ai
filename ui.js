@@ -85,7 +85,27 @@ export function initDragResizer() {
     resizer.addEventListener('pointerup', () => {
       isDragging = false;
       resizer.classList.remove('active');
+      updateAriaValue();
     });
+
+    // a11y: role="separator" is focusable, so expose its value and support arrow keys
+    function updateAriaValue() {
+      const l = leftPanel.getBoundingClientRect().width;
+      const total = l + rightPanel.getBoundingClientRect().width;
+      if (total > 0) resizer.setAttribute('aria-valuenow', String(Math.round((l / total) * 100)));
+    }
+    resizer.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const l = leftPanel.getBoundingClientRect().width;
+      const total = l + rightPanel.getBoundingClientRect().width;
+      const step = e.shiftKey ? 80 : 20;
+      const leftWidth = Math.max(200, Math.min(l + (e.key === 'ArrowLeft' ? -step : step), total - 200));
+      leftPanel.style.flex = `0 0 ${leftWidth}px`;
+      rightPanel.style.flex = `0 0 ${total - leftWidth}px`;
+      updateAriaValue();
+    });
+    requestAnimationFrame(updateAriaValue);
   });
 }
 

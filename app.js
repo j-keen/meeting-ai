@@ -52,6 +52,7 @@ import { initAudioDB, cleanupOldAudio, deleteRecording } from './audio-recorder.
 import { initAnalytics } from './analytics.js';
 import { CATEGORY_I18N_KEYS } from './usage-limiter.js';
 import { initStatusPanel } from './status-panel.js';
+import { initDialogA11y } from './ui/dialog-a11y.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -83,6 +84,7 @@ function init() {
   initModals();
   initContextPopup();
   initKeyboardShortcuts();
+  initDialogA11y();
   initChat();
   initFaq();
   initMeetingPrepForm();

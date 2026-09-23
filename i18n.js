@@ -11,6 +11,12 @@ const translations = {
     'header.settings': 'Settings',
     'header.history_tooltip': 'Meeting history',
     'header.settings_tooltip': 'Settings',
+    // Accessibility (dialogs, icon-only controls)
+    'a11y.close': 'Close',
+    'a11y.dialog': 'Dialog',
+    'a11y.resize_panels': 'Resize panels',
+    'a11y.chat_model': 'Chat AI model',
+    'a11y.attach_file': 'Attach file (.txt/.md, etc.)',
 
     // Transcript panel
     'panel.transcript': 'Transcript',
@@ -1139,6 +1145,12 @@ const translations = {
     'header.settings': '설정',
     'header.history_tooltip': '회의 기록',
     'header.settings_tooltip': '설정',
+    // Accessibility (dialogs, icon-only controls)
+    'a11y.close': '닫기',
+    'a11y.dialog': '대화상자',
+    'a11y.resize_panels': '패널 크기 조절',
+    'a11y.chat_model': '채팅 AI 모델',
+    'a11y.attach_file': '파일 첨부 (.txt/.md 등)',
 
     // Transcript panel
     'panel.transcript': '녹취록',
