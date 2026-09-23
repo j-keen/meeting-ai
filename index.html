@@ -68,7 +68,7 @@
       <div class="meeting-pill" id="meetingPill" hidden>
         <span class="meeting-pill-dot"></span>
         <span class="meeting-timer" id="meetingTimer">00:00:00</span>
-        <span class="audio-rec-badge" id="audioRecBadge" hidden>🎙 <span id="audioRecSize"></span></span>
+        <span class="audio-rec-badge" id="audioRecBadge" hidden><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <span id="audioRecSize"></span></span>
         <span class="meeting-pill-sep">&middot;</span>
         <span class="meeting-status" id="meetingStatus"></span>
       </div>
@@ -95,7 +95,7 @@
 
   <!-- Loaded Meeting Banner -->
   <div class="loaded-meeting-banner" id="loadedMeetingBanner" hidden>
-    <span class="loaded-banner-icon">📂</span>
+    <span class="loaded-banner-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
     <span id="loadedBannerTitle"></span>
     <span id="loadedBannerDate" class="loaded-banner-date"></span>
     <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서 녹음</button>
@@ -905,7 +905,7 @@
         <h3 data-i18n="history.title">Meeting History</h3>
         <div class="history-header-actions">
           <button class="btn btn-icon btn-trash-toggle" id="btnTrashToggle" title="Trash">
-            <span class="trash-icon">&#128465;</span>
+            <span class="trash-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
             <span class="trash-badge" id="trashBadge" hidden>0</span>
           </button>
           <button class="btn btn-icon modal-close" data-close="historyModal">&times;</button>
@@ -968,7 +968,7 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
-          <button class="btn btn-sm" id="btnViewerDocGen" data-i18n="dg.button_label">📄 AI Document</button>
+          <button class="btn btn-sm" id="btnViewerDocGen"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> <span data-i18n="dg.button_label">AI Document</span></button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -1109,7 +1109,7 @@
               <input type="text" class="settings-input end-meeting-title-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title" autofocus>
               <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
                 <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
-                <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
+                <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
                 <div class="ai-title-chips" id="aiTitleChips"></div>
               </div>
             </div>
@@ -1183,9 +1183,9 @@
         <!-- Audio Download -->
         <div class="end-meeting-audio-section" id="endMeetingAudioSection" hidden>
           <div class="end-meeting-audio-row">
-            <span class="end-meeting-audio-icon">🎙</span>
+            <span class="end-meeting-audio-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
             <div class="end-meeting-audio-info">
-              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload">⬇ <span data-i18n="end_meeting.download_audio">Download Recording</span></button>
+              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload"><svg class="icon-16" id="btnEndMeetingAudioDownloadIcon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> <span id="btnEndMeetingAudioDownloadLabel" data-i18n="end_meeting.download_audio">Download Recording</span></button>
               <small class="end-meeting-audio-warn" id="endMeetingAudioWarn" data-i18n="end_meeting.audio_warn">Download recommended — auto-deleted after 30 days</small>
               <small class="end-meeting-audio-auto" id="endMeetingAudioAuto" hidden></small>
             </div>
@@ -1514,19 +1514,19 @@
       <div class="launcher-actions-grid">
         <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
           <span class="launcher-card-badge">1</span>
-          <span class="launcher-card-icon">&#129302;</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
           <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
           <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Chat with AI to set your meeting goal</span>
         </button>
         <button class="launcher-card" id="btnLauncherDeepSetup">
           <span class="launcher-card-badge">2</span>
-          <span class="launcher-card-icon">&#127911;</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span>
           <span class="launcher-card-label" data-i18n="meeting.deep_setup">Meeting Prep</span>
           <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Enter attendees, materials and agenda ahead of time</span>
         </button>
         <button class="launcher-card" id="btnLauncherPreset">
           <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon">&#128203;</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
           <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets saved yet</span>
@@ -1744,7 +1744,7 @@
       <div class="modal-body">
         <div class="asm-card-grid">
           <button class="btn asm-card-btn" id="asmOpenPresets">
-            <div class="asm-card-icon">📋</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.presets_title">Saved Analysis Styles</span>
               <span class="asm-card-desc" data-i18n="asm.presets_desc">Switch between built-in and custom styles</span>
@@ -1752,7 +1752,7 @@
             <div class="asm-card-arrow">&#8250;</div>
           </button>
           <button class="btn asm-card-btn" id="asmOpenAiChat">
-            <div class="asm-card-icon">💬</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.ai_chat_label">Change direction with AI</span>
               <span class="asm-card-desc" data-i18n="asm.ai_chat_desc">Not happy with the current analysis?</span>
@@ -1760,7 +1760,7 @@
             <div class="asm-card-arrow">&#8250;</div>
           </button>
           <button class="btn asm-card-btn" id="asmOpenHistory">
-            <div class="asm-card-icon">🕐</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.history_label">Analysis History</span>
               <span class="asm-card-desc" data-i18n="asm.history_desc">Browse previous analysis results</span>

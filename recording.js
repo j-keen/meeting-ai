@@ -797,15 +797,16 @@ async function renderEndMeetingAudio(isEditMode) {
 
   // Download button
   const dlBtn = $('#btnEndMeetingAudioDownload');
+  const dlLabel = $('#btnEndMeetingAudioDownloadLabel') || dlBtn;
   if (dlBtn) {
     dlBtn.onclick = async () => {
       const title = $('#endMeetingTitle')?.value?.trim() || state.meetingTitle || 'recording';
       const ok = await downloadAudioFile(state.meetingId, title);
       if (!ok) { showToast(t('end_meeting.audio_not_found'), 'warning'); return; }
-      dlBtn.textContent = '✓ ' + t('end_meeting.audio_downloaded');
+      dlLabel.textContent = '✓ ' + t('end_meeting.audio_downloaded');
       dlBtn.disabled = true;
       setTimeout(() => {
-        dlBtn.innerHTML = '⬇ <span>' + t('end_meeting.download_audio') + '</span>';
+        dlLabel.textContent = t('end_meeting.download_audio');
         dlBtn.disabled = false;
       }, 3000);
     };
