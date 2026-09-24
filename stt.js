@@ -209,7 +209,7 @@ function createWebSpeechEngine(language, settings = {}) {
           dead = true;
           shouldRestart = false;
           onError(t('stt.mic_permission_denied_detail'));
-          onFatalError?.(this.variant);
+          onFatalError?.(this.variant, 'permanent');
           return;
         }
         if (e.error === 'aborted' && selfAbort) { selfAbort = false; return; } // our own watchdog
@@ -410,13 +410,13 @@ export function createSTT() {
       sttDebug(`[STT] engine=${which} platform=${isMobileUA() ? 'mobile' : 'desktop'}`);
 
       const safeFinal = (text) => { if (text && text.trim()) onFinal(text); };
-      const fatal = (variant) => {
+      const fatal = (variant, reason) => {
         sttDebug('[STT] fatal engine error — resetting');
         try { engine?.stop(); } catch { /* already torn down */ }
         isRunning = false;
         isPaused = false;
         engine = null;
-        onFatalError?.(variant || which);
+        onFatalError?.(variant || which, reason);
       };
 
       // Keyboard engine must focus its textarea inside the user gesture: no awaits before start().

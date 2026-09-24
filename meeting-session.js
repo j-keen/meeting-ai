@@ -177,8 +177,9 @@ export function buildSttCallbacks({ withStream }) {
       updateTranscriptLineUI(lastLine.id);
       hooks.onReplaceLine?.(lastLine);
     },
-    onError: (err) => showToast(err, 'error'),
-    onFatalError: (engineName) => recoverStt(engineName),
+    // In the slow-retry phase the same failure would toast every 30s; stay quiet there.
+    onError: (err) => { if (sttRecoverAttempts <= 5) showToast(err, 'error'); },
+    onFatalError: (engineName, reason) => recoverStt(engineName, reason),
     onConnecting: () => { if (!connectedShown) showTranscriptConnecting(); },
     onConnected: (engine) => {
       state.sttEngineName = engine;
@@ -192,21 +193,34 @@ export function buildSttCallbacks({ withStream }) {
   };
 }
 
-async function startStt({ withStream }) {
+let sttStarting = null;   // in-flight startStt(): concurrent callers share it
+
+function startStt(opts) {
+  // Recovery timer, background return and user actions can all ask for a start at the
+  // same moment; two parallel starts would leave two engines on the mic.
+  if (sttStarting) return sttStarting;
+  sttStarting = doStartStt(opts).finally(() => { sttStarting = null; });
+  return sttStarting;
+}
+
+async function doStartStt({ withStream }) {
+  recTimers.clear('sttRecover'); // whoever starts now supersedes a pending recovery
   if (stt) { stt.stop(); stt = null; }
-  stt = createSTT();
+  const mine = createSTT();
+  stt = mine;
   let started = false;
   try {
-    started = await stt.start(buildSttCallbacks({ withStream }));
+    started = await mine.start(buildSttCallbacks({ withStream }));
   } catch (err) {
     log(`stt.start threw: ${err.message}`);
     showToast(t('toast.record_fail') + err.message, 'error');
   }
   if (!started) {
-    stt?.stop();
-    stt = null;
+    mine.stop();
+    if (stt === mine) stt = null;
     return false;
   }
+  if (stt !== mine) { mine.stop(); return false; } // superseded while starting
   return true;
 }
 
@@ -222,8 +236,14 @@ function stopStt() {
  * backoff while the phase is still 'recording'. Only after repeated failures do we
  * tell the user and, on mobile, offer the keyboard engine.
  */
-function recoverStt(engineName) {
+function recoverStt(engineName, reason) {
   if (state.phase !== 'recording') return;
+  if (reason === 'permanent') {
+    // Mic permission denied / no key: retrying can't help and would only nag.
+    log(`stt recovery skipped: permanent failure (${engineName})`);
+    return;
+  }
+  if (recTimers.has('sttRecover')) return; // a retry is already scheduled
   sttRecoverAttempts++;
   if (sttRecoverAttempts === 6) {
     // Tell the user once, but keep trying slowly: the network usually comes back and a
@@ -237,6 +257,7 @@ function recoverStt(engineName) {
   recTimers.after('sttRecover', delay, async () => {
     if (state.phase !== 'recording') return;
     const ok = await startStt({ withStream: false });
+    // A failing start usually reported its own fatal (which already scheduled the next try).
     if (!ok) recoverStt(engineName);
   });
 }

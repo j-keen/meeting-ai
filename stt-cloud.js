@@ -32,6 +32,8 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
   let healthTimer = null;
   let lastChunkAt = 0;          // last PCM chunk from the capture node (flows even in silence)
   let dead = false;             // handed to the session for a full restart; ignore late events
+  let connectStartedAt = 0;
+  const CONNECT_TIMEOUT_MS = 15000; // a socket stuck in CONNECTING (Wi-Fi ↔ LTE switch)
 
   // Liveness thresholds. Audio chunks arrive every ~100 ms, so a gap this long means the
   // AudioContext was suspended/interrupted or the mic track died.
@@ -48,6 +50,7 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
     if (personal) return personal;
     const res = await fetch('/api/realtime-token', {
       method: 'POST',
+      signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: sttModel, language: lang }),
     });
@@ -77,8 +80,10 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
 
   async function connect() {
     const secret = await getSecret();
+    if (!active || dead) throw new Error('stopped');
     const socket = new WebSocket(WS_URL, ['realtime', `openai-insecure-api-key.${secret}`]);
     ws = socket;
+    connectStartedAt = Date.now();
 
     socket.onopen = () => {
       reconnects = 0;
@@ -182,7 +187,9 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
     if (stalledFor > AUDIO_STALL_FATAL_MS) { giveUp('audio stalled'); return; }
     if (stalledFor > AUDIO_STALL_RESUME_MS) { try { ctx?.resume?.()?.catch?.(() => {}); } catch { /* ignore */ } }
     if (!ws) scheduleReconnect();
-    else if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount > MAX_BUFFERED_BYTES) {
+    else if (ws.readyState === 0 && Date.now() - connectStartedAt > CONNECT_TIMEOUT_MS) {
+      try { ws.close(); } catch { /* ignore */ } // onclose → scheduleReconnect
+    } else if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount > MAX_BUFFERED_BYTES) {
       // Network is stalled: frames pile up locally. Drop the socket; onclose reconnects.
       try { ws.close(); } catch { /* ignore */ }
     }
@@ -237,26 +244,37 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (err) {
+        if (!active) return { started: false }; // stopped while asking for the mic
         active = false;
         onError?.(t('stt.cloud_mic_unavailable', { reason: err.name }));
-        onFatalError?.('cloud');
+        onFatalError?.('cloud', err.name === 'NotAllowedError' || err.name === 'SecurityError' ? 'permanent' : 'mic');
         return { started: false };
       }
+      // stop() may have been called while we awaited (session restarted STT meanwhile):
+      // never bring up a zombie engine that nobody can stop.
+      if (!active) { teardown(); return { started: false }; }
       try {
         await connect();
       } catch (err) {
+        if (!active) { teardown(); return { started: false }; }
         active = false;
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-        onError?.(t('stt.cloud_error', { message: err.message }));
-        onFatalError?.('cloud');
+        teardown();
+        const noKey = err.message === t('stt.cloud_no_key');
+        onError?.(noKey ? err.message : t('stt.cloud_error', { message: err.message }));
+        onFatalError?.('cloud', noKey ? 'permanent' : 'connect');
         return { started: false };
       }
+      if (!active) { teardown(); return { started: false }; }
       captureMode = await startAudio(stream);
+      if (!active) { teardown(); return { started: false }; }
       // The OS can take the mic away (another app, a call) — restart the engine.
       stream.getAudioTracks?.().forEach(tr => { tr.onended = () => giveUp('mic ended'); });
       // Suspended/interrupted audio (calls, other media, screen lock on some phones).
-      if (ctx) ctx.onstatechange = () => { if (active && !paused) resumeCtx(); };
+      if (ctx) ctx.onstatechange = () => {
+        if (!active || paused || !ctx) return;
+        if (ctx.state === 'running') lastChunkAt = Date.now(); // fresh grace period after a resume
+        else resumeCtx();
+      };
       lastChunkAt = Date.now();
       healthTimer = setInterval(checkHealth, 2000);
       return { started: true };
@@ -274,6 +292,9 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
     /** Called when the page becomes visible again: revive audio and the socket right away. */
     ensureAlive() {
       if (!active || dead || paused) return;
+      // Back from a freeze: wall-clock time jumped while no chunks could arrive. Give the
+      // resumed audio a fresh grace period instead of declaring an instant stall.
+      lastChunkAt = Date.now();
       resumeCtx();
       if (!ws) {
         if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }

@@ -386,7 +386,7 @@ describe('background return', () => {
 });
 
 describe('STT auto-recovery', () => {
-  it('silently restarts the engine after a fatal error while recording, then gives up after 5 tries', async () => {
+  it('silently restarts the engine after a fatal error, then slows to 30s retries after 5 fast tries', async () => {
     vi.useFakeTimers();
     try {
       await start();
@@ -403,10 +403,39 @@ describe('STT auto-recovery', () => {
         await vi.advanceTimersByTimeAsync(5100);
       }
       expect(createSTT).toHaveBeenCalledTimes(7);
-      fakeStt.cb.onFatalError('webspeech'); // 6th consecutive failure → stop trying
+      fakeStt.cb.onFatalError('webspeech'); // 6th consecutive failure → slow retries
       await vi.advanceTimersByTimeAsync(6000);
       expect(createSTT).toHaveBeenCalledTimes(7);
+      await vi.advanceTimersByTimeAsync(25000);
+      expect(createSTT).toHaveBeenCalledTimes(8); // keeps trying instead of dying for the meeting
       expect(state.phase).toBe('recording');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retry a permanent failure (mic denied / no key)', async () => {
+    vi.useFakeTimers();
+    try {
+      await start();
+      fakeStt.cb.onFatalError('cloud', 'permanent');
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(createSTT).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a duplicate fatal while a retry is pending does not double-schedule', async () => {
+    vi.useFakeTimers();
+    try {
+      await start();
+      fakeStt.cb.onFatalError('webspeech');
+      fakeStt.cb.onFatalError('webspeech');
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(createSTT).toHaveBeenCalledTimes(2); // attempt #1 at 1s, not #2 at 2s as well
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(createSTT).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
