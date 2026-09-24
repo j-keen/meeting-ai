@@ -68,7 +68,7 @@
       <div class="meeting-pill" id="meetingPill" hidden>
         <span class="meeting-pill-dot"></span>
         <span class="meeting-timer" id="meetingTimer">00:00:00</span>
-        <span class="audio-rec-badge" id="audioRecBadge" hidden>🎙 <span id="audioRecSize"></span></span>
+        <span class="audio-rec-badge" id="audioRecBadge" hidden><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg> <span id="audioRecSize"></span></span>
         <span class="meeting-pill-sep">&middot;</span>
         <span class="meeting-status" id="meetingStatus"></span>
       </div>
@@ -76,24 +76,34 @@
     </div>
     <div class="header-right">
       <button class="btn btn-text" id="btnThemeToggle" data-i18n-title="header.theme_tooltip" data-i18n-aria="header.theme_tooltip" title="Toggle theme (Ctrl+T)" aria-label="Toggle theme">
-        <span class="icon-theme-light">🌙</span>
-        <span class="icon-theme-dark">☀️</span>
+        <svg class="icon-16 icon-theme-light" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        <svg class="icon-16 icon-theme-dark" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
         <span class="header-btn-label icon-theme-light" data-i18n="header.theme_dark">Dark</span>
         <span class="header-btn-label icon-theme-dark" data-i18n="header.theme_light">Light</span>
       </button>
-      <button class="btn btn-text" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">🔍 <span class="header-btn-label" data-i18n="header.history">History</span></button>
-      <button class="btn btn-text" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">⚙️ <span class="header-btn-label" data-i18n="header.settings">Settings</span></button>
+      <button class="btn btn-text" id="btnHistory" data-i18n-title="header.history_tooltip" data-i18n-aria="header.history_tooltip" title="Meeting history" aria-label="Meeting history">
+        <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span class="header-btn-label" data-i18n="header.history">History</span>
+      </button>
+      <button class="btn btn-text" id="btnSettings" data-i18n-title="header.settings_tooltip" data-i18n-aria="header.settings_tooltip" title="Settings" aria-label="Settings">
+        <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="header-btn-label" data-i18n="header.settings">Settings</span>
+      </button>
       <button class="btn btn-text" id="btnAuth" title="Login" aria-label="Login">로그인</button>
+      <button class="btn btn-text header-more-toggle" id="btnHeaderMore" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="headerMoreMenu" data-i18n-title="header.more" data-i18n-aria="header.more" title="More" aria-label="More" hidden>
+        <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+      <div class="header-more-menu" id="headerMoreMenu" hidden></div>
     </div>
   </header>
 
   <!-- Loaded Meeting Banner -->
   <div class="loaded-meeting-banner" id="loadedMeetingBanner" hidden>
-    <span class="loaded-banner-icon">📂</span>
+    <span class="loaded-banner-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
     <span id="loadedBannerTitle"></span>
     <span id="loadedBannerDate" class="loaded-banner-date"></span>
     <button class="btn btn-sm loaded-banner-resume" id="loadedBannerResume" data-i18n="loaded.resume_recording">▶ 이어서 녹음</button>
-    <button class="loaded-banner-close" id="loadedBannerClose">&times;</button>
+    <button class="loaded-banner-close" id="loadedBannerClose" data-i18n-aria="a11y.close" aria-label="Close">&times;</button>
   </div>
 
   <!-- Mobile Panel Tabs -->
@@ -112,7 +122,10 @@
           <h2 data-i18n="panel.transcript">Transcript</h2>
           <div class="panel-actions">
             <div class="inbox-btn-wrap">
-              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">📥 <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span></button>
+              <button class="btn btn-sm inbox-btn" id="btnBookmarks" title="Inbox">
+                <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                <span data-i18n="panel.inbox">Inbox</span><span class="inbox-badge" id="inboxBadge" hidden>0</span>
+              </button>
               <div class="inbox-preview-dropdown" id="inboxPreviewDropdown" hidden>
                 <div class="inbox-preview-items" id="inboxPreviewItems"></div>
                 <div class="inbox-preview-footer">
@@ -121,8 +134,14 @@
                 </div>
               </div>
             </div>
-            <button class="btn btn-sm" id="btnImportTranscript" title="Import">&#128229; <span data-i18n="panel.import">Transcript Import</span></button>
-            <button class="btn btn-sm" id="btnExport" title="Export">&#128228; <span data-i18n="panel.export">Transcript Export</span></button>
+            <button class="btn btn-sm" id="btnImportTranscript" title="Import">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m17 8-5-5-5 5"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+              <span data-i18n="panel.import">Transcript Import</span>
+            </button>
+            <button class="btn btn-sm" id="btnExport" title="Export">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>
+              <span data-i18n="panel.export">Transcript Export</span>
+            </button>
           </div>
         </div>
       </div>
@@ -153,7 +172,7 @@
     </section>
 
     <!-- Drag Resizer 1 -->
-    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer1" data-left="panelLeft" data-right="panelCenter" role="separator" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" data-i18n-aria="a11y.resize_panels" aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Center Panel: AI Analysis -->
     <section class="panel panel-center" id="panelCenter">
@@ -161,10 +180,22 @@
         <div class="panel-header-row">
           <h2 data-i18n="panel.ai">AI Analysis</h2>
           <div class="panel-actions">
-            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">📋 <span data-i18n="panel.copy_md">Copy</span></button>
-            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">&#9889; <span data-i18n="panel.analyze">Analyze Now</span></button>
-            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">💾 <span data-i18n="asm.save_style">이 분석 스타일 저장</span></button>
-            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">🎯 <span data-i18n="panel.analysis_style">Change Analysis Style</span></button>
+            <button class="btn btn-sm" id="btnCopyAnalysis" data-i18n-title="panel.copy_md_title" title="Copy as Markdown" style="display:none">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+              <span data-i18n="panel.copy_md">Copy</span>
+            </button>
+            <button class="btn btn-sm" id="btnAnalyzeNow" data-i18n-title="panel.analyze_title" title="Analyze now">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+              <span id="btnAnalyzeNowLabel" data-i18n="panel.analyze">Analyze Now</span>
+            </button>
+            <button class="btn btn-sm btn-outline" id="asmSaveStyle" style="display:none" data-i18n-title="asm.save_style_tooltip" title="Save this analysis style">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+              <span data-i18n="asm.save_style">이 분석 스타일 저장</span>
+            </button>
+            <button class="btn btn-sm" id="btnPromptSettings" data-i18n-title="panel.analysis_style" title="Change Analysis Style">
+              <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              <span data-i18n="panel.analysis_style">Change Analysis Style</span>
+            </button>
           </div>
         </div>
         <!-- selectAnalysisStyle removed — label lookup now in style-history.js via i18n + loadCustomTypes -->
@@ -187,7 +218,7 @@
     </section>
 
     <!-- Drag Resizer 2 -->
-    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-label="Resize panels" tabindex="0"></div>
+    <div class="drag-resizer" id="dragResizer2" data-left="panelCenter" data-right="panelRight" role="separator" aria-orientation="vertical" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" data-i18n-aria="a11y.resize_panels" aria-label="Resize panels" tabindex="0"></div>
 
     <!-- Right Panel: AI Chat -->
     <section class="panel panel-right" id="panelRight">
@@ -196,7 +227,10 @@
           <h2 data-i18n="panel.chat">AI Chat</h2>
           <div class="panel-actions">
             <div class="faq-wrap">
-              <button class="btn btn-sm" id="btnFaq" data-i18n="chat.faq_btn" title="Saved Prompts">💡 프롬프트</button>
+              <button class="btn btn-sm" id="btnFaq" title="Saved Prompts">
+                <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                <span data-i18n="chat.faq_btn">프롬프트</span>
+              </button>
               <div class="faq-dropdown" id="faqPopover" hidden>
                 <div class="faq-search-wrap">
                   <input type="text" class="faq-search" id="faqSearch" data-i18n-placeholder="chat.faq_search_placeholder" placeholder="Search prompts..." autocomplete="off">
@@ -231,11 +265,11 @@
           <button class="btn btn-primary" id="btnChatSend" data-i18n="chat.send">Send</button>
         </div>
         <div class="chat-input-actions">
-          <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file">
-            &#128206;
-            <input type="file" id="chatFileInput" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat" hidden>
+          <label class="btn btn-xs chat-attach-btn" title="Attach .txt/.md file" data-i18n-title="a11y.attach_file">
+            <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <input type="file" id="chatFileInput" class="a11y-visually-hidden" data-i18n-aria="a11y.attach_file" aria-label="Attach file" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat">
           </label>
-          <select class="chat-model-select" id="chatModelSelect">
+          <select class="chat-model-select" id="chatModelSelect" data-i18n-aria="a11y.chat_model" aria-label="Chat AI model">
             <option value="gemini-3.5-flash-lite" selected>Flash 3.5 Lite</option>
             <option value="gemini-3.5-flash">Flash 3.5</option>
             <option value="gemini-3.1-pro-preview">Pro 3.1</option>
@@ -252,8 +286,9 @@
   </div>
 
   <!-- Bottom Bar -->
-  <footer class="bottom-bar">
-    <div class="bottom-center">
+  <footer class="bottom-bar" id="bottomBar">
+    <div class="bottom-center" id="bottomCenter">
+      <button class="btn btn-icon bottom-overflow-toggle" id="btnBottomOverflow" type="button" aria-haspopup="true" aria-expanded="false" data-i18n-title="bottom.more_controls" data-i18n-aria="bottom.more_controls" title="More controls" aria-label="More controls" hidden>&#8943;</button>
       <button class="btn btn-record" id="btnRecord" title="Start/Stop recording (Ctrl+R)" aria-label="Toggle recording">
         <span class="record-icon record-dot"></span>
         <span class="record-label">REC</span>
@@ -262,10 +297,11 @@
       <button class="btn btn-sm" id="btnHighAccuracy" title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
       <button class="stt-status-chip" id="sttStatusChip" type="button" title="Current STT / AI status">STT</button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
-      <span class="bottom-divider"></span>
-      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);">&#9654; Demo1</button>
-      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);">&#9654; Demo2</button>
+      <span class="bottom-divider" id="bottomDivider"></span>
+      <button class="btn btn-sm" id="btnLoadDemo" title="Load demo data" style="color:var(--accent);" hidden>&#9654; Demo1</button>
+      <button class="btn btn-sm" id="btnLoadDemo2" title="Load demo 2 (with analysis history)" style="color:var(--accent);" hidden>&#9654; Demo2</button>
     </div>
+    <div class="bottom-overflow-menu" id="bottomOverflowMenu" hidden></div>
   </footer>
 
   <!-- Settings Panel (Slide-in) -->
@@ -274,7 +310,8 @@
       <h2 data-i18n="settings.title">Settings</h2>
       <div class="settings-header-actions">
         <span class="settings-unsaved-dot" id="settingsUnsavedDot"></span>
-        <button class="btn btn-sm btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
+        <span class="settings-unsaved-label" id="settingsUnsavedLabel" data-i18n="settings.unsaved_changes">Unsaved changes</span>
+        <button class="btn btn-primary settings-header-save" id="btnSettingsSave" data-i18n="settings.save_settings" disabled title="Ctrl+S">Save</button>
         <button class="btn btn-icon settings-close" id="btnSettingsClose" aria-label="Close settings">&times;</button>
       </div>
     </div>
@@ -285,7 +322,7 @@
         <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
         <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
         <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
-        <button class="settings-tab" data-tab="account">Account</button>
+        <button class="settings-tab" data-tab="account" data-i18n="settings.tab_account">Account</button>
       </div>
 
       <!-- General Tab -->
@@ -557,6 +594,11 @@
             <span class="correction-dict-badge" id="correctionDictBadge"></span>
           </button>
         </section>
+        <section class="settings-section settings-danger-zone">
+          <h3 data-i18n="settings.danger_zone_title">Danger zone</h3>
+          <p class="settings-hint" data-i18n="settings.danger_zone_hint">Resets every setting below back to its default. This cannot be undone.</p>
+          <button class="btn btn-danger settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
+        </section>
       </div>
 
       <!-- Account Tab -->
@@ -577,7 +619,7 @@
 
       <!-- Correction Dictionary Modal -->
       <div class="modal-overlay correction-dict-modal-overlay" id="correctionDictModal" hidden>
-        <div class="modal" style="max-width:520px;">
+        <div class="modal modal-form">
           <div class="modal-header">
             <h3 data-i18n="settings.correction_dict">Correction Dictionary</h3>
             <div style="display:flex;gap:6px;align-items:center;">
@@ -602,7 +644,7 @@
 
       <!-- Contacts Modal -->
       <div class="modal-overlay data-modal-overlay" id="contactsModal" hidden>
-        <div class="modal" style="max-width:520px;">
+        <div class="modal modal-form">
           <div class="modal-header">
             <h3 data-i18n="settings.contacts_title">People</h3>
             <button class="btn btn-icon" id="btnCloseContacts" aria-label="Close">&times;</button>
@@ -653,8 +695,8 @@
       </div>
 
       <!-- Business Card Scan Modal -->
-      <div class="modal-overlay" id="cardScanModal" style="z-index:310;" hidden>
-        <div class="modal" style="max-width:480px;">
+      <div class="modal-overlay" id="cardScanModal" style="z-index:var(--z-modal-nested-2);" hidden>
+        <div class="modal">
           <div class="modal-header">
             <h3 data-i18n="settings.scan_card">Scan Business Card</h3>
             <button class="btn btn-icon" id="btnCloseCardScan" aria-label="Close">&times;</button>
@@ -692,7 +734,7 @@
 
       <!-- Locations Modal -->
       <div class="modal-overlay data-modal-overlay" id="locationsModal" hidden>
-        <div class="modal" style="max-width:420px;">
+        <div class="modal modal-md">
           <div class="modal-header">
             <h3 data-i18n="settings.locations">Locations</h3>
             <button class="btn btn-icon" id="btnCloseLocations" aria-label="Close">&times;</button>
@@ -723,9 +765,6 @@
       </div>
 
     </div>
-    <div class="settings-footer" id="settingsFooter">
-      <button class="btn btn-sm settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
-    </div>
   </aside>
 
   <!-- Settings Overlay -->
@@ -734,7 +773,7 @@
   <!-- Unsaved Settings Modal -->
   <div class="modal-overlay" id="settingsUnsavedModal" hidden>
     <div class="modal settings-unsaved-modal">
-      <div class="modal-body" style="padding:24px;">
+      <div class="modal-body modal-body-lg">
         <p class="settings-unsaved-modal-text" data-i18n="settings.unsaved_modal_text">You have unsaved changes. What would you like to do?</p>
         <div class="settings-unsaved-modal-actions">
           <button class="btn btn-sm" id="btnUnsavedDiscard" data-i18n="settings.discard">Don't Save</button>
@@ -837,12 +876,12 @@
 
   <!-- Minutes Model Selection Modal -->
   <div class="modal-overlay" id="minutesModelModal" hidden>
-    <div class="modal" style="max-width:360px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3 data-i18n="minutes_model.title">Select AI Model</h3>
         <button class="btn btn-icon modal-close" data-close="minutesModelModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px 16px;">
+      <div class="modal-body modal-body-compact">
         <button class="minutes-model-card" data-model="gemini-3.5-flash">
           <span class="minutes-model-card-icon">&#x26A1;</span>
           <div class="minutes-model-card-info">
@@ -870,7 +909,7 @@
         <h3 data-i18n="history.title">Meeting History</h3>
         <div class="history-header-actions">
           <button class="btn btn-icon btn-trash-toggle" id="btnTrashToggle" title="Trash">
-            <span class="trash-icon">&#128465;</span>
+            <span class="trash-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
             <span class="trash-badge" id="trashBadge" hidden>0</span>
           </button>
           <button class="btn btn-icon modal-close" data-close="historyModal">&times;</button>
@@ -933,7 +972,7 @@
           <button class="btn btn-icon btn-ghost viewer-nav-btn" id="btnViewerNext" title="Next meeting">›</button>
         </div>
         <div class="viewer-header-right">
-          <button class="btn btn-sm" id="btnViewerDocGen" data-i18n="dg.button_label">📄 AI Document</button>
+          <button class="btn btn-sm" id="btnViewerDocGen"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> <span data-i18n="dg.button_label">AI Document</span></button>
           <div class="viewer-load-wrapper">
             <button class="btn btn-sm btn-primary" id="btnViewerLoad" data-i18n="viewer.load">Load</button>
             <span class="viewer-load-hint" data-i18n="viewer.load_hint">Edit by loading</span>
@@ -985,12 +1024,12 @@
 
   <!-- Compare Prompts Modal -->
   <div class="modal-overlay" id="compareModal" hidden>
-    <div class="modal" style="max-width:95vw;width:1800px;">
+    <div class="modal modal-wide">
       <div class="modal-header">
         <h3 data-i18n="compare.title">Prompt A/B Compare</h3>
         <button class="btn btn-icon modal-close" data-close="compareModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px;">
+      <div class="modal-body modal-body-sm">
         <div class="compare-layout">
           <!-- Column 1: Prompt A -->
           <div class="compare-col">
@@ -1074,7 +1113,7 @@
               <input type="text" class="settings-input end-meeting-title-input" id="endMeetingTitle" data-i18n-placeholder="end_meeting.title_placeholder" placeholder="Enter meeting title" autofocus>
               <div class="ai-title-suggestions" id="aiTitleSuggestions" hidden>
                 <span class="ai-suggestions-label" data-i18n="end_meeting.title_hint">Select an AI suggestion or type your own</span>
-                <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate">🔄</button>
+                <button class="btn btn-xs" id="btnRegenerateTitles" title="Regenerate"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
                 <div class="ai-title-chips" id="aiTitleChips"></div>
               </div>
             </div>
@@ -1148,9 +1187,9 @@
         <!-- Audio Download -->
         <div class="end-meeting-audio-section" id="endMeetingAudioSection" hidden>
           <div class="end-meeting-audio-row">
-            <span class="end-meeting-audio-icon">🎙</span>
+            <span class="end-meeting-audio-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
             <div class="end-meeting-audio-info">
-              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload">⬇ <span data-i18n="end_meeting.download_audio">Download Recording</span></button>
+              <button class="btn btn-sm btn-accent" id="btnEndMeetingAudioDownload"><svg class="icon-16" id="btnEndMeetingAudioDownloadIcon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> <span id="btnEndMeetingAudioDownloadLabel" data-i18n="end_meeting.download_audio">Download Recording</span></button>
               <small class="end-meeting-audio-warn" id="endMeetingAudioWarn" data-i18n="end_meeting.audio_warn">Download recommended — auto-deleted after 30 days</small>
               <small class="end-meeting-audio-auto" id="endMeetingAudioAuto" hidden></small>
             </div>
@@ -1207,7 +1246,7 @@
 
   <!-- Meeting Prep Form Modal -->
   <div class="modal-overlay" id="meetingPrepModal" hidden>
-    <div class="modal modal-large" style="max-width:640px;">
+    <div class="modal modal-large modal-xl">
       <div class="modal-header">
         <h3 data-i18n="prep.form_title">Listen Prep</h3>
         <button class="btn btn-icon modal-close" id="btnClosePrepForm">&times;</button>
@@ -1455,7 +1494,7 @@
 
   <!-- Camera Modal (for business card scan) -->
   <div class="modal-overlay" id="cameraModal" hidden>
-    <div class="modal" style="max-width:400px;padding:16px;">
+    <div class="modal modal-camera">
       <video id="cameraPreview" autoplay playsinline style="width:100%;border-radius:var(--radius-md);background:#000;"></video>
       <canvas id="cameraCanvas" hidden></canvas>
       <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
@@ -1468,30 +1507,36 @@
   <!-- Launcher Modal -->
   <div class="modal-overlay" id="launcherModal" hidden>
     <div class="modal launcher-modal">
-      <!-- 3 action cards -->
       <p class="launcher-actions-title" data-i18n="meeting.quick_start_title">Start a new session</p>
+      <!-- Primary action: start recording immediately, no setup -->
+      <button class="launcher-record-btn" id="btnLauncherRecord" type="button">
+        <span class="launcher-record-dot" aria-hidden="true"></span>
+        <span data-i18n="meeting.launcher_record">Start recording now</span>
+      </button>
+      <p class="launcher-setup-label" data-i18n="meeting.setup_options_title">Or set up first</p>
+      <!-- 3 secondary setup cards -->
       <div class="launcher-actions-grid">
         <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
           <span class="launcher-card-badge">1</span>
-          <span class="launcher-card-icon">&#129302;</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
           <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
-          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">AI sets up for your situation</span>
+          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Chat with AI to set your meeting goal</span>
         </button>
         <button class="launcher-card" id="btnLauncherDeepSetup">
           <span class="launcher-card-badge">2</span>
-          <span class="launcher-card-icon">&#127911;</span>
-          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Listen Prep</span>
-          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Deep setup, step by step</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span>
+          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Meeting Prep</span>
+          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Enter attendees, materials and agenda ahead of time</span>
         </button>
         <button class="launcher-card" id="btnLauncherPreset">
           <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon">&#128203;</span>
+          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
           <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
           <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
-          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets</span>
+          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets saved yet</span>
         </button>
       </div>
-      <button class="launcher-close-btn" id="launcherCloseBtn">ESC</button>
+      <button class="launcher-close-btn" id="launcherCloseBtn" data-i18n="launcher.close">Close</button>
     </div>
   </div>
 
@@ -1572,7 +1617,7 @@
 
   <!-- Preset Create Gateway Modal -->
   <div class="modal-overlay" id="presetCreateModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="preset_create.title">새 프리셋 만들기</h3>
         <button class="btn btn-icon modal-close" data-close="presetCreateModal">&times;</button>
@@ -1602,7 +1647,7 @@
 
   <!-- Preset Manual Form Modal -->
   <div class="modal-overlay" id="presetManualModal" hidden>
-    <div class="modal" style="max-width:520px;">
+    <div class="modal modal-form">
       <div class="modal-header">
         <h3 data-i18n="preset_manual.title">프리셋 직접 만들기</h3>
         <button class="btn btn-icon modal-close" data-close="presetManualModal">&times;</button>
@@ -1680,7 +1725,7 @@
 
   <!-- Style History Modal -->
   <div class="modal-overlay" id="styleHistoryModal" hidden>
-    <div class="modal modal-large" style="max-width:520px;">
+    <div class="modal modal-large modal-form">
       <div class="modal-header">
         <h3 data-i18n="sh.title">Style History</h3>
         <button class="btn btn-icon modal-close" id="shCloseBtn">&times;</button>
@@ -1695,7 +1740,7 @@
 
   <!-- Analysis Style Modal -->
   <div class="modal-overlay" id="analysisStyleModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.title">Change Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="asmCloseBtn">&times;</button>
@@ -1703,7 +1748,7 @@
       <div class="modal-body">
         <div class="asm-card-grid">
           <button class="btn asm-card-btn" id="asmOpenPresets">
-            <div class="asm-card-icon">📋</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.presets_title">Saved Analysis Styles</span>
               <span class="asm-card-desc" data-i18n="asm.presets_desc">Switch between built-in and custom styles</span>
@@ -1711,7 +1756,7 @@
             <div class="asm-card-arrow">&#8250;</div>
           </button>
           <button class="btn asm-card-btn" id="asmOpenAiChat">
-            <div class="asm-card-icon">💬</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.ai_chat_label">Change direction with AI</span>
               <span class="asm-card-desc" data-i18n="asm.ai_chat_desc">Not happy with the current analysis?</span>
@@ -1719,7 +1764,7 @@
             <div class="asm-card-arrow">&#8250;</div>
           </button>
           <button class="btn asm-card-btn" id="asmOpenHistory">
-            <div class="asm-card-icon">🕐</div>
+            <div class="asm-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
             <div class="asm-card-text">
               <span class="asm-card-title" data-i18n="asm.history_label">Analysis History</span>
               <span class="asm-card-desc" data-i18n="asm.history_desc">Browse previous analysis results</span>
@@ -1733,7 +1778,7 @@
 
   <!-- Analysis Style: Presets Sub-modal -->
   <div class="modal-overlay" id="asmPresetsModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.presets_title">Saved Analysis Styles</h3>
         <button class="btn btn-icon modal-close" id="asmPresetsCloseBtn">&times;</button>
@@ -1746,7 +1791,7 @@
 
   <!-- Analysis Style: Save Modal -->
   <div class="modal-overlay" id="asmSaveModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.save_title">이 분석 스타일 저장</h3>
         <button class="btn btn-icon modal-close" id="asmSaveCloseBtn">&times;</button>
@@ -1759,7 +1804,7 @@
 
   <!-- Analysis Style: History Sub-modal -->
   <div class="modal-overlay" id="asmHistoryModal" hidden>
-    <div class="modal" style="max-width:420px;">
+    <div class="modal modal-md">
       <div class="modal-header">
         <h3 data-i18n="asm.history_label">Analysis History</h3>
         <button class="btn btn-icon modal-close" id="asmHistoryCloseBtn">&times;</button>
@@ -1772,7 +1817,7 @@
 
   <!-- Prompt Adjuster Modal -->
   <div class="modal-overlay" id="promptAdjusterModal" hidden>
-    <div class="modal modal-large" style="max-width:520px;">
+    <div class="modal modal-large modal-form">
       <div class="modal-header">
         <h3 data-i18n="pa.title">Change Analysis Style</h3>
         <button class="btn btn-icon modal-close" id="paCloseBtn">&times;</button>
@@ -1870,7 +1915,7 @@
         <button class="btn btn-sm" id="btnDsBack" hidden data-i18n="prep.btn_back">&#8592; Back</button>
         <div style="flex:1"></div>
         <button class="btn btn-sm btn-text" id="btnDsSkip" hidden data-i18n="ds.step2_skip">Skip</button>
-        <button class="btn btn-sm btn-primary" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
+        <button class="btn btn-primary ds-next-btn" id="btnDsNext" disabled data-i18n="prep.btn_next">Next &#8594;</button>
       </div>
     </div>
   </div>
@@ -1988,12 +2033,12 @@
 
   <!-- Regenerate Modal -->
   <div class="modal-overlay" id="regenModal" hidden>
-    <div class="modal" style="max-width:360px;">
+    <div class="modal modal-sm">
       <div class="modal-header">
         <h3 data-i18n="minutes_preview.regen_title">Regenerate Minutes</h3>
         <button class="btn btn-icon modal-close" data-close="regenModal">&times;</button>
       </div>
-      <div class="modal-body" style="padding:12px 16px;">
+      <div class="modal-body modal-body-compact">
         <button class="minutes-model-card regen-model-card" data-regen-model="gemini-3.5-flash">
           <span class="minutes-model-card-icon">&#x26A1;</span>
           <div class="minutes-model-card-info">

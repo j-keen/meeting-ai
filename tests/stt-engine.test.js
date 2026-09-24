@@ -161,4 +161,33 @@ describe('createSTT', () => {
     expect(getUserMedia).toHaveBeenCalled();
     expect(cbs.onError).toHaveBeenCalled();
   });
+
+  it('webspeech: a recognizer that goes silent (no events) is aborted, then handed to the session', async () => {
+    vi.useFakeTimers();
+    const instances = [];
+    class FakeSR {
+      constructor() { this.abort = vi.fn(); this.stop = vi.fn(); this.start = vi.fn(); instances.push(this); }
+    }
+    window.SpeechRecognition = FakeSR;
+    Object.defineProperty(navigator, 'userAgent', { configurable: true, get: () => 'Mozilla/5.0 (Linux; Android 14) Chrome/140 Mobile' });
+    const cbs = makeStartCallbacks({ settings: { sttEngine: 'webspeech', sttOnDevice: 'off' } });
+    const onFatalError = vi.fn();
+    const stt = createSTT();
+    expect(await stt.start({ ...cbs, onFatalError })).toBe(true);
+    const rec = instances[0];
+
+    // Normal Android churn keeps it alive: events well inside the window.
+    for (let i = 0; i < 6; i++) { await vi.advanceTimersByTimeAsync(10000); rec.onend?.(); }
+    expect(rec.abort).not.toHaveBeenCalled();
+
+    // Then total silence from the recognizer: abort first…
+    await vi.advanceTimersByTimeAsync(31000);
+    expect(rec.abort).toHaveBeenCalled();
+    expect(onFatalError).not.toHaveBeenCalled();
+    // …and if nothing comes back after the abort, the session gets a fatal to restart it.
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(onFatalError).toHaveBeenCalled();
+    expect(stt.isRunning).toBe(false);
+    vi.useRealTimers();
+  });
 });

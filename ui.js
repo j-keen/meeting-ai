@@ -85,7 +85,27 @@ export function initDragResizer() {
     resizer.addEventListener('pointerup', () => {
       isDragging = false;
       resizer.classList.remove('active');
+      updateAriaValue();
     });
+
+    // a11y: role="separator" is focusable, so expose its value and support arrow keys
+    function updateAriaValue() {
+      const l = leftPanel.getBoundingClientRect().width;
+      const total = l + rightPanel.getBoundingClientRect().width;
+      if (total > 0) resizer.setAttribute('aria-valuenow', String(Math.round((l / total) * 100)));
+    }
+    resizer.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const l = leftPanel.getBoundingClientRect().width;
+      const total = l + rightPanel.getBoundingClientRect().width;
+      const step = e.shiftKey ? 80 : 20;
+      const leftWidth = Math.max(200, Math.min(l + (e.key === 'ArrowLeft' ? -step : step), total - 200));
+      leftPanel.style.flex = `0 0 ${leftWidth}px`;
+      rightPanel.style.flex = `0 0 ${total - leftWidth}px`;
+      updateAriaValue();
+    });
+    requestAnimationFrame(updateAriaValue);
   });
 }
 
@@ -106,6 +126,13 @@ export function initPanelTabs() {
   }
 
   const isMobile = () => window.innerWidth <= 768;
+
+  // On phones the non-active panels sit off-screen (translateX) but would still
+  // be Tab / screen-reader reachable: make them inert. Desktop shows all three.
+  function syncPanelInert() {
+    const mobile = isMobile();
+    panels.forEach((p, i) => p?.toggleAttribute('inert', mobile && i !== currentIndex));
+  }
 
   function switchToPanel(index, animate = true) {
     if (index < 0 || index > 2) return;
@@ -132,6 +159,7 @@ export function initPanelTabs() {
         p.classList.toggle('panel-active', i === index);
       });
     }
+    syncPanelInert();
   }
 
   // Tab click handlers
@@ -149,6 +177,7 @@ export function initPanelTabs() {
         p.style.transform = `translateX(${(i - currentIndex) * 100}%)`;
       });
     }
+    syncPanelInert();
   });
 
   // ===== Touch Swipe =====
@@ -220,6 +249,169 @@ export function initPanelTabs() {
 
   // Initialize position without animation
   switchToPanel(0, false);
+}
+
+// ===== Mobile Bottom Bar Overflow Menu =====
+// Keeps #btnRecord (and #btnEndMeeting while it's visible) always reachable on
+// narrow screens by moving secondary controls into a "⋯" popover menu. Elements
+// are moved (not cloned), so their existing event listeners keep working.
+export function initBottomBarOverflow() {
+  const toggleBtn = document.getElementById('btnBottomOverflow');
+  const menu = document.getElementById('bottomOverflowMenu');
+  const bottomCenter = document.getElementById('bottomCenter');
+  const endBtn = document.getElementById('btnEndMeeting');
+  if (!toggleBtn || !menu || !bottomCenter || !endBtn) return;
+
+  // Kept directly reachable in .bottom-center: overflow toggle, record, end meeting.
+  const beforeEndMeeting = ['btnHighAccuracy', 'sttStatusChip'];
+  const afterEndMeeting = ['bottomDivider', 'btnLoadDemo', 'btnLoadDemo2'];
+
+  const mq = window.matchMedia('(max-width: 768px)');
+
+  function closeMenu() {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function applyLayout(compact) {
+    document.body.classList.toggle('bar-compact', compact);
+    if (compact) {
+      toggleBtn.hidden = false;
+      [...beforeEndMeeting, ...afterEndMeeting].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== menu) menu.appendChild(el);
+      });
+    } else {
+      toggleBtn.hidden = true;
+      closeMenu();
+      beforeEndMeeting.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== bottomCenter) bottomCenter.insertBefore(el, endBtn);
+      });
+      afterEndMeeting.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== bottomCenter) bottomCenter.appendChild(el);
+      });
+    }
+  }
+
+  /** Would the full (uncollapsed) bar clip? Measured synchronously, so nothing paints in between. */
+  function fullBarOverflows() {
+    applyLayout(false);
+    const bar = bottomCenter.parentElement;
+    const r = bottomCenter.getBoundingClientRect();
+    return r.left < 0 || r.right > window.innerWidth
+      || bottomCenter.scrollWidth > bottomCenter.clientWidth + 1
+      || (bar && bar.scrollWidth > bar.clientWidth + 1);
+  }
+
+  // Compact on narrow screens, and also whenever the full bar doesn't fit — e.g. a phone in
+  // landscape, or a long STT chip label — so REC is never pushed off-screen.
+  let observer = null;
+  let scheduled = false;
+  function relayout() {
+    scheduled = false;
+    const wasOpen = !menu.hidden;
+    const compact = mq.matches || fullBarOverflows();
+    applyLayout(compact);
+    if (compact && wasOpen) { menu.hidden = false; toggleBtn.setAttribute('aria-expanded', 'true'); }
+    observer?.takeRecords(); // our own node moves are not a reason to re-run
+  }
+  function scheduleRelayout() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(relayout);
+  }
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    toggleBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  // Close after acting on an item inside the menu, or on outside click / Escape.
+  menu.addEventListener('click', (e) => {
+    if (e.target.closest('button')) closeMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!menu.hidden && !menu.contains(e.target) && e.target !== toggleBtn) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) closeMenu();
+  });
+
+  relayout();
+  mq.addEventListener('change', scheduleRelayout);
+  window.addEventListener('resize', scheduleRelayout);
+  // State changes add/remove bar buttons (recording, post-end, loaded) and the chip label
+  // changes with the engine; re-check when any of that happens.
+  observer = new MutationObserver(scheduleRelayout);
+  observer.observe(bottomCenter, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+  observer.observe(menu, { childList: true, subtree: true, characterData: true });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+}
+
+// ===== Narrow Header Overflow Menu =====
+// On phones the header can't fit logo/timer pill + title + four icon buttons, so
+// secondary buttons move (not cloned — listeners and the auth label updates in
+// supabase-client.js keep working) into a "⋯" popover: theme + login at <=430px,
+// history too at <=360px. Settings stays in the bar.
+export function initHeaderOverflow() {
+  const toggleBtn = document.getElementById('btnHeaderMore');
+  const menu = document.getElementById('headerMoreMenu');
+  const settingsBtn = document.getElementById('btnSettings');
+  if (!toggleBtn || !menu || !settingsBtn) return;
+  const bar = settingsBtn.parentElement;
+  const narrow = window.matchMedia('(max-width: 430px)');
+  const tiny = window.matchMedia('(max-width: 360px)');
+
+  function closeMenu() {
+    if (menu.hidden) return;
+    menu.hidden = true;
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function place(id, inMenu, restore) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (inMenu) { if (el.parentElement !== menu) menu.appendChild(el); }
+    else if (el.parentElement !== bar) restore(el);
+  }
+
+  function applyLayout() {
+    const isNarrow = narrow.matches;
+    const isTiny = tiny.matches;
+    toggleBtn.hidden = !isNarrow;
+    if (!isNarrow) closeMenu();
+    // Menu order: history, theme, login. Bar order: theme, history, settings, login, ⋯
+    place('btnHistory', isTiny, el => bar.insertBefore(el, settingsBtn));
+    const history = document.getElementById('btnHistory');
+    place('btnThemeToggle', isNarrow, el => bar.insertBefore(el, history?.parentElement === bar ? history : settingsBtn));
+    place('btnAuth', isNarrow, el => bar.insertBefore(el, toggleBtn));
+    if (history?.parentElement === menu && menu.firstElementChild !== history) menu.prepend(history);
+  }
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    toggleBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+  menu.addEventListener('click', (e) => {
+    if (e.target.closest('button')) closeMenu();
+  });
+  document.addEventListener('click', (e) => {
+    if (!menu.hidden && !menu.contains(e.target) && !toggleBtn.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) { closeMenu(); toggleBtn.focus(); }
+  });
+
+  applyLayout();
+  narrow.addEventListener('change', applyLayout);
+  tiny.addEventListener('change', applyLayout);
 }
 
 // ===== Modal Helpers =====

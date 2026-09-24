@@ -22,6 +22,7 @@ import {
   showAiWaiting, showChatWaiting,
 } from './ui.js';
 import { t, getDateLocale } from './i18n.js';
+import { confirmDialog } from './ui/dialogs.js';
 import { showLauncherModal } from './launcher.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -77,7 +78,7 @@ session.configureSession({
 initSessionUI({
   onResume: async () => {
     if (state.source === 'loaded') {
-      if (!confirm(t('loaded.resume_confirm'))) return;
+      if (!(await confirmDialog({ message: t('loaded.resume_confirm'), confirmText: t('dialog.resume') }))) return;
       showToast(t('loaded.resumed'), 'info');
       await resumeFromLoaded();
     } else {
@@ -202,10 +203,21 @@ function showDraftRecoveryBanner(draft, source) {
     <span>${message}</span>
     <div class="draft-recovery-actions">
       <button class="btn btn-sm btn-primary" id="btnDraftRecover">${t('draft.recover')}</button>
-      ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd" style="border:1px solid var(--accent)">${t('draft.save_and_end')}</button>` : ''}
+      ${isCrashRecovery ? `<button class="btn btn-sm" id="btnDraftSaveEnd">${t('draft.save_and_end')}</button>` : ''}
+      <button class="draft-recovery-close" id="btnDraftDismiss" type="button" aria-label="${t('a11y.close')}" title="${t('a11y.close')}">&times;</button>
     </div>
   `;
-  document.body.prepend(banner);
+  // In normal flow right under the app header (pushes content down) so it never
+  // covers the logo / timer / header buttons. app.js holds back the start-up
+  // launcher while it's shown; dismissing hides the banner (the draft stays
+  // saved and is offered again on the next reload) and opens the launcher.
+  const header = document.querySelector('.header');
+  if (header) header.after(banner);
+  else document.body.prepend(banner);
+  $('#btnDraftDismiss').onclick = () => {
+    banner.remove();
+    if (!state.isRecording) showLauncherModal();
+  };
 
   $('#btnDraftRecover').onclick = () => {
     banner.remove();
@@ -242,7 +254,7 @@ export function getElapsedTimeStr() {
 function afterRecordingStarted() {
   showAiWaiting(state.settings.analysisCharThreshold || 1000);
   showChatWaiting();
-  showToast(t('toast.recording_started'), 'success');
+  // No "recording started" toast: the bottom bar's recording state says it.
 }
 
 /** Resume a meeting opened from history (source=loaded). */
@@ -280,7 +292,8 @@ export async function stopRecording() {
 }
 
 async function resumeMeeting() {
-  if (await session.resume()) showToast(t('toast.meeting_resumed'), 'success');
+  // The bottom bar switching back to its red recording state is the confirmation.
+  await session.resume();
 }
 
 function checkIdle() {
@@ -744,6 +757,8 @@ function updateAudioRecBadge() {
   const sizeEl = $('#audioRecSize');
   if (!badge || !sizeEl) return;
   const size = getCurrentRecordingSize();
+  // "0 B" is noise — keep the badge hidden until there is real audio.
+  badge.classList.toggle('is-empty', size <= 0);
   if (size < 1024) {
     sizeEl.textContent = size + ' B';
   } else if (size < 1024 * 1024) {
@@ -793,15 +808,16 @@ async function renderEndMeetingAudio(isEditMode) {
 
   // Download button
   const dlBtn = $('#btnEndMeetingAudioDownload');
+  const dlLabel = $('#btnEndMeetingAudioDownloadLabel') || dlBtn;
   if (dlBtn) {
     dlBtn.onclick = async () => {
       const title = $('#endMeetingTitle')?.value?.trim() || state.meetingTitle || 'recording';
       const ok = await downloadAudioFile(state.meetingId, title);
       if (!ok) { showToast(t('end_meeting.audio_not_found'), 'warning'); return; }
-      dlBtn.textContent = '✓ ' + t('end_meeting.audio_downloaded');
+      dlLabel.textContent = '✓ ' + t('end_meeting.audio_downloaded');
       dlBtn.disabled = true;
       setTimeout(() => {
-        dlBtn.innerHTML = '⬇ <span>' + t('end_meeting.download_audio') + '</span>';
+        dlLabel.textContent = t('end_meeting.download_audio');
         dlBtn.disabled = false;
       }, 3000);
     };

@@ -410,7 +410,7 @@ function renderStep1Form() {
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.datetime')}</label>
       <div class="ds-input-icon-wrapper">
-        <span class="ds-input-icon">📅</span>
+        <span class="ds-input-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg></span>
         <input type="datetime-local" class="ds-input-sm ds-datetime-input" id="dsDatetime" value="${nowDatetimeLocal()}">
       </div>
       <div class="ds-quick-chips">
@@ -425,7 +425,7 @@ function renderStep1Form() {
       <label class="ds-form-label">${t('ds.location')}</label>
       <div class="ds-location-select-wrapper">
         <div class="ds-input-icon-wrapper">
-          <span class="ds-input-icon">📍</span>
+          <span class="ds-input-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></span>
           <input type="text" class="ds-input-sm" id="dsLocation" placeholder="${t('ds.location_placeholder')}" autocomplete="off">
         </div>
         <div class="unified-dropdown ds-location-dropdown" id="dsLocationDropdown" hidden></div>
@@ -436,7 +436,7 @@ function renderStep1Form() {
     <div class="ds-form-section">
       <label class="ds-form-label">${t('ds.attendees')}</label>
       <div class="ds-participant-search-wrapper ds-input-icon-wrapper">
-        <span class="ds-input-icon">👤</span>
+        <span class="ds-input-icon"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
         <div class="ds-multi-select-wrap">
           <div class="ds-selected-badges" id="dsSelectedBadges"></div>
           <input type="text" class="ds-input-sm ds-multi-input" id="dsParticipantSearchInput" placeholder="${ko ? '이름 검색 및 추가...' : 'Search or add...'}" autocomplete="off">

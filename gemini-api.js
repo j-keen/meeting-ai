@@ -1,6 +1,7 @@
 // gemini-api.js - Client-side Gemini API via server proxy, with personal-key fallback
 
 import { emit } from './event-bus.js';
+import { t } from './i18n.js';
 import { MODEL, OPENAI, resolveModel, isProModel, toProviderModel, tierOf } from './models.js';
 import { toOpenAIRequest, fromOpenAIResponse, parseOpenAISSE } from './openai-adapter.js';
 import { canUse, incrementUsage, isModelAllowed, getUsage, getWarningLevel } from './usage-limiter.js';
@@ -335,8 +336,13 @@ async function _request(target, model, body, { stream = false, onChunk, signal, 
     if (!res.ok) {
       const errText = await res.text();
       const label = target === 'proxy' ? 'Proxy' : (openai ? 'OpenAI' : 'Gemini');
-      const err = new Error(`${label} API error (${res.status}): ${errText.slice(0, 200)}`);
+      const raw = `${label} API error (${res.status}): ${errText.slice(0, 200)}`;
+      // Server has no key configured: show a user-facing hint instead of raw proxy JSON.
+      const noKey = target === 'proxy' && res.status >= 500 && /not configured|API_KEY/i.test(errText);
+      const err = new Error(noKey ? `${t('status.problem_ai_no_key')} ${t('status.ai_key_hint')}` : raw);
       err.status = res.status;
+      err.detail = raw;
+      if (noKey) console.warn('[gemini-api]', raw);
       throw err;
     }
 

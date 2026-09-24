@@ -100,10 +100,16 @@ function createWebSpeechEngine(language, settings = {}) {
   let audioStartedOnce = false;
   let lastErrorToastAt = 0;
   let dead = false;               // fatal or stopped: late events from the old recognizer are ignored
+  let lastEventAt = 0;            // any recognizer event; a long silence means it hung
+  let hangTimer = null;
+  // Android Chrome fires start/end/error every few seconds; desktop fires no-speech + end
+  // at least every ~10 s of silence. Nothing at all for this long means a hung recognizer.
+  const HANG_MS = 30000;
 
   const clearWatchdog = () => {
     if (speechWatchdog) { clearTimeout(speechWatchdog); speechWatchdog = null; }
   };
+  const touch = () => { lastEventAt = Date.now(); };
 
   return {
     name: 'webspeech',
@@ -130,6 +136,7 @@ function createWebSpeechEngine(language, settings = {}) {
 
       recognition.onresult = (e) => {
         if (dead) return;
+        touch();
         noSpeechCount = 0;
         abortCount = 0;
         errorsSinceResult = 0;
@@ -196,12 +203,13 @@ function createWebSpeechEngine(language, settings = {}) {
       };
       recognition.onerror = (e) => {
         if (dead) return;
+        touch();
         sttDebug(`ERROR: ${e.error} ${e.message || ''}`);
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
           dead = true;
           shouldRestart = false;
           onError(t('stt.mic_permission_denied_detail'));
-          onFatalError?.(this.variant);
+          onFatalError?.(this.variant, 'permanent');
           return;
         }
         if (e.error === 'aborted' && selfAbort) { selfAbort = false; return; } // our own watchdog
@@ -227,6 +235,7 @@ function createWebSpeechEngine(language, settings = {}) {
       };
 
       recognition.onaudiostart = () => {
+        touch();
         audioStarted = true;
         hasResultInSession = false;
         sttDebug('🎤 Audio started');
@@ -238,7 +247,9 @@ function createWebSpeechEngine(language, settings = {}) {
         }
       };
 
+      recognition.onstart = () => touch();
       recognition.onspeechstart = () => {
+        touch();
         // Watchdog: speech detected but no result within 5s → force restart
         if (!hasResultInSession) {
           clearWatchdog();
@@ -256,6 +267,7 @@ function createWebSpeechEngine(language, settings = {}) {
 
       recognition.onend = () => {
         if (dead) return;
+        touch();
         const sessionDur = ((Date.now() - sessionStartTime) / 1000).toFixed(1);
         // Flush pending interim text as final before restarting
         if (lastInterimText && !hadFinalSinceLastInterim) {
@@ -300,6 +312,28 @@ function createWebSpeechEngine(language, settings = {}) {
         return { started: false };
       }
 
+      // Hang watchdog: no events at all → abort to force an onend/restart; if even that
+      // produces nothing, hand over to the session, which starts a fresh recognizer.
+      touch();
+      const variant = this.variant;
+      hangTimer = setInterval(() => {
+        if (dead || !shouldRestart) return;
+        const idle = Date.now() - lastEventAt;
+        if (idle < HANG_MS) return;
+        if (idle < HANG_MS + 5000) {
+          sttDebug(`⚠️ No recognizer events for ${Math.round(idle / 1000)}s — aborting`);
+          selfAbort = true;
+          try { recognition?.abort(); } catch { /* ignore */ }
+          return;
+        }
+        sttDebug('⚠️ Recognizer still silent after abort — handing over to the session');
+        dead = true;
+        shouldRestart = false;
+        clearInterval(hangTimer); hangTimer = null;
+        try { recognition?.abort(); } catch { /* ignore */ }
+        onFatalError?.(variant);
+      }, 5000);
+
       // Network timeout: if no audio input within 10s, notify
       setTimeout(() => {
         if (!audioStarted && shouldRestart) onError(t('stt.network_timeout'));
@@ -312,6 +346,7 @@ function createWebSpeechEngine(language, settings = {}) {
       dead = true;
       shouldRestart = false;
       clearWatchdog();
+      if (hangTimer) { clearInterval(hangTimer); hangTimer = null; }
       try { recognition?.stop(); } catch { /* ignore */ }
       recognition = null;
     },
@@ -375,12 +410,13 @@ export function createSTT() {
       sttDebug(`[STT] engine=${which} platform=${isMobileUA() ? 'mobile' : 'desktop'}`);
 
       const safeFinal = (text) => { if (text && text.trim()) onFinal(text); };
-      const fatal = (variant) => {
+      const fatal = (variant, reason) => {
         sttDebug('[STT] fatal engine error — resetting');
+        try { engine?.stop(); } catch { /* already torn down */ }
         isRunning = false;
         isPaused = false;
         engine = null;
-        onFatalError?.(variant || which);
+        onFatalError?.(variant || which, reason);
       };
 
       // Keyboard engine must focus its textarea inside the user gesture: no awaits before start().
@@ -443,6 +479,11 @@ export function createSTT() {
       if (!engine?.supportsPause || !isPaused) return;
       engine.resume();
       isPaused = false;
+    },
+
+    /** Page visible again: let the engine revive its audio/socket immediately. */
+    ensureAlive() {
+      if (isRunning && !isPaused) engine?.ensureAlive?.();
     },
 
     stop() {

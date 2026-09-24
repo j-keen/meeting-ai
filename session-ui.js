@@ -13,15 +13,6 @@ let actions = {};
 /** @type {string | null} */
 let statusOverride = null;
 
-const ENGINE_BADGE = {
-  native: { text: 'NT', title: 'Native (device) speech recognition' },
-  keyboard: { text: 'KB', title: 'Keyboard voice input' },
-  webspeech: { text: 'WS', title: 'Web Speech API' },
-  'webspeech-local': { text: 'WS·L', title: 'Web Speech API (on-device)' },
-  cloud: { text: 'HQ', title: 'High-accuracy cloud STT (OpenAI)' },
-  whisper: { text: 'WH', title: 'Whisper (in-browser)' },
-};
-
 /** Register click handlers for the dynamic post-end / loaded-mode buttons. */
 export function initSessionUI(handlers) {
   actions = { ...actions, ...handlers };
@@ -90,12 +81,9 @@ export function syncSessionUI() {
   if (status) status.textContent = statusText();
   statusOverride = null;
 
-  // Badges
-  if (engineBadge) {
-    const info = phase === 'recording' && state.sttEngineName ? ENGINE_BADGE[state.sttEngineName] : null;
-    engineBadge.hidden = !info;
-    if (info) { engineBadge.textContent = info.text; engineBadge.title = info.title; }
-  }
+  // Badges — the engine code ("WS", "HQ"…) is developer jargon; the engine is
+  // already shown in #sttStatusChip, so the record-button badge stays hidden.
+  if (engineBadge) engineBadge.hidden = true;
   if (audioBadge) audioBadge.hidden = !(phase === 'recording' && state._audioRecordingActive);
 
   // Title input
@@ -122,9 +110,9 @@ export function syncSessionUI() {
   endBtn.hidden = !(phase === 'recording' || phase === 'paused');
   if (phase === 'ended') {
     if (isLoaded) {
-      const btnResume = makeBtn('btnBottomResume', 'btn btn-end-meeting', `<span>▶</span> <span>${t('loaded.resume_recording')}</span>`);
+      const btnResume = makeBtn('btnBottomResume', 'btn btn-end-meeting', `<span>${t('loaded.resume_recording')}</span>`);
       btnResume.onclick = () => actions.onResume?.();
-      const btnEdit = makeBtn('btnEditSaveInfo', 'btn btn-end-meeting', `<span>📋</span> <span>${t('end_meeting.edit_info_btn')}</span>`);
+      const btnEdit = makeBtn('btnEditSaveInfo', 'btn btn-end-meeting', `<svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg> <span>${t('end_meeting.edit_info_btn')}</span>`);
       btnEdit.onclick = () => actions.onEditInfo?.();
       endBtn.after(btnResume, btnEdit);
     } else {
@@ -132,13 +120,15 @@ export function syncSessionUI() {
       btnResume.style.color = 'var(--accent)';
       btnResume.style.borderColor = 'var(--accent)';
       btnResume.onclick = () => actions.onResume?.();
-      const btnDocGen = makeBtn('btnPostDocGen', 'btn btn-sm', '📄 ' + t('dg.button_label'));
+      const btnDocGen = makeBtn('btnPostDocGen', 'btn btn-sm', '<svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> ' + t('dg.button_label'));
       btnDocGen.onclick = () => actions.onDocGen?.();
       const btnNew = makeBtn('btnNewMeeting', 'btn btn-sm', t('meeting.new'));
       btnNew.onclick = () => actions.onNew?.();
       endBtn.after(btnResume, btnDocGen, btnNew);
     }
   }
+
+  syncLiveRecordingState(phase);
 
   if (phase === 'idle') {
     const timer = $('#meetingTimer');
@@ -159,5 +149,46 @@ export function formatClock(ms) {
 
 export function renderClock(ms) {
   const el = $('#meetingTimer');
-  if (el) el.textContent = formatClock(ms);
+  const text = formatClock(ms);
+  if (el) el.textContent = text;
+  const live = $('#recLiveTimer');
+  if (live) live.textContent = text;
+}
+
+// ===== UX: recording state — live status in the bottom bar =====
+// A live-recording block (pulsing dot + big timer + label) sits in the bottom bar,
+// and body.is-recording / body.is-paused drive the red / amber bar styling.
+// The block is injected here (not in index.html) so the footer markup stays untouched.
+function ensureLiveStatus() {
+  let el = $('#recLiveStatus');
+  if (el) return el;
+  const center = document.querySelector('.bottom-bar .bottom-center');
+  if (!center) return null;
+  el = document.createElement('div');
+  el.id = 'recLiveStatus';
+  el.className = 'rec-live';
+  el.setAttribute('role', 'group'); // not a live region: the timer ticks every second
+  el.hidden = true;
+  el.innerHTML = '<span class="rec-live-dot" aria-hidden="true"></span>'
+    + '<span class="rec-live-timer" id="recLiveTimer">00:00:00</span>'
+    + '<span class="rec-live-label" id="recLiveLabel"></span>';
+  center.prepend(el);
+  return el;
+}
+
+function syncLiveRecordingState(phase) {
+  const live = phase === 'recording' || (phase === 'paused' && state.source !== 'imported');
+  const isRec = live && phase === 'recording';
+  const isPaused = live && phase === 'paused';
+  document.body.classList.toggle('is-recording', isRec);
+  document.body.classList.toggle('is-paused', isPaused);
+  const el = ensureLiveStatus();
+  if (!el) return;
+  el.hidden = !live;
+  el.setAttribute('aria-label', t('record.live_aria'));
+  const label = $('#recLiveLabel');
+  if (label) label.textContent = isPaused ? t('record.live_paused') : t('record.live_recording');
+  const timer = $('#recLiveTimer');
+  const headerTimer = $('#meetingTimer');
+  if (timer && headerTimer) timer.textContent = headerTimer.textContent;
 }

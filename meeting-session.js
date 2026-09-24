@@ -119,10 +119,16 @@ async function acquireWakeLock() {
   if (state.settings?.keepScreenAwake === false) return;
   if (!wakeLock.isSupported()) return;
   const ok = await wakeLock.acquire();
-  if (!ok && !wakeLockWarned) {
+  // Only phones/tablets need this warning — on desktop the screen timeout doesn't
+  // stop recording, so a toast there is just noise.
+  if (!ok && !wakeLockWarned && isTouchDevice()) {
     wakeLockWarned = true;
     showToast(t('toast.wake_lock_failed'), 'warning');
   }
+}
+function isTouchDevice() {
+  if (isMobileLike()) return true;
+  try { return !!window.matchMedia?.('(pointer: coarse)').matches; } catch { return false; }
 }
 async function releaseWakeLock() {
   await wakeLock.release();
@@ -171,36 +177,50 @@ export function buildSttCallbacks({ withStream }) {
       updateTranscriptLineUI(lastLine.id);
       hooks.onReplaceLine?.(lastLine);
     },
-    onError: (err) => showToast(err, 'error'),
-    onFatalError: (engineName) => recoverStt(engineName),
+    // In the slow-retry phase the same failure would toast every 30s; stay quiet there.
+    onError: (err) => { if (sttRecoverAttempts <= 5) showToast(err, 'error'); },
+    onFatalError: (engineName, reason) => recoverStt(engineName, reason),
     onConnecting: () => { if (!connectedShown) showTranscriptConnecting(); },
     onConnected: (engine) => {
       state.sttEngineName = engine;
       if (!connectedShown) {
         connectedShown = true;
         showTranscriptWaiting();
-        showToast(t('stt.connected'), 'success');
+        // No toast: the recording-state bar and #sttStatusChip already show it.
       }
       syncSessionUI();
     },
   };
 }
 
-async function startStt({ withStream }) {
+let sttStarting = null;   // in-flight startStt(): concurrent callers share it
+
+function startStt(opts) {
+  // Recovery timer, background return and user actions can all ask for a start at the
+  // same moment; two parallel starts would leave two engines on the mic.
+  if (sttStarting) return sttStarting;
+  sttStarting = doStartStt(opts).finally(() => { sttStarting = null; });
+  return sttStarting;
+}
+
+async function doStartStt({ withStream }) {
+  recTimers.clear('sttRecover'); // whoever starts now supersedes a pending recovery
   if (stt) { stt.stop(); stt = null; }
-  stt = createSTT();
+  const mine = createSTT();
+  stt = mine;
   let started = false;
   try {
-    started = await stt.start(buildSttCallbacks({ withStream }));
+    started = await mine.start(buildSttCallbacks({ withStream }));
   } catch (err) {
     log(`stt.start threw: ${err.message}`);
     showToast(t('toast.record_fail') + err.message, 'error');
   }
   if (!started) {
-    stt?.stop();
-    stt = null;
+    mine.stop();
+    if (stt === mine) stt = null;
     return false;
   }
+  if (stt !== mine) { mine.stop(); return false; } // superseded while starting
   return true;
 }
 
@@ -216,20 +236,28 @@ function stopStt() {
  * backoff while the phase is still 'recording'. Only after repeated failures do we
  * tell the user and, on mobile, offer the keyboard engine.
  */
-function recoverStt(engineName) {
+function recoverStt(engineName, reason) {
   if (state.phase !== 'recording') return;
-  sttRecoverAttempts++;
-  if (sttRecoverAttempts > 5) {
-    log(`stt recovery gave up after ${sttRecoverAttempts - 1} attempts`);
-    showToast(t('stt.connection_failed'), 'error');
-    if (engineName === 'webspeech' || engineName === 'webspeech-local') offerKeyboardSwitch();
+  if (reason === 'permanent') {
+    // Mic permission denied / no key: retrying can't help and would only nag.
+    log(`stt recovery skipped: permanent failure (${engineName})`);
     return;
   }
-  const delay = Math.min(1000 * sttRecoverAttempts, 5000);
+  if (recTimers.has('sttRecover')) return; // a retry is already scheduled
+  sttRecoverAttempts++;
+  if (sttRecoverAttempts === 6) {
+    // Tell the user once, but keep trying slowly: the network usually comes back and a
+    // meeting that silently stops transcribing is worse than a late recovery.
+    log('stt recovery: fast retries exhausted, continuing every 30s');
+    showToast(t('stt.connection_failed'), 'error');
+    if (engineName === 'webspeech' || engineName === 'webspeech-local') offerKeyboardSwitch();
+  }
+  const delay = sttRecoverAttempts > 5 ? 30000 : Math.min(1000 * sttRecoverAttempts, 5000);
   log(`stt recovery #${sttRecoverAttempts} in ${delay}ms`);
   recTimers.after('sttRecover', delay, async () => {
     if (state.phase !== 'recording') return;
     const ok = await startStt({ withStream: false });
+    // A failing start usually reported its own fatal (which already scheduled the next try).
     if (!ok) recoverStt(engineName);
   });
 }
@@ -530,7 +558,7 @@ document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
   if (state.phase !== 'recording') return;
   acquireWakeLock();
-  if (stt && stt.isRunning) return;
+  if (stt && stt.isRunning) { stt.ensureAlive?.(); return; }
   log('page visible — STT died in background, restarting');
   const ok = await startStt({ withStream: false });
   if (ok) showToast(t('stt.reconnected'), 'success');

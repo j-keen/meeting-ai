@@ -141,6 +141,23 @@ describe('showToast', () => {
     const container = document.getElementById('toastContainer');
     expect(container.querySelectorAll('.toast').length).toBe(2);
   });
+
+  it('keeps at most 2 visible toasts, dismissing the oldest', () => {
+    showToast('First');
+    showToast('Second');
+    showToast('Third');
+    const live = [...document.querySelectorAll('#toastContainer .toast:not(.toast-out)')];
+    expect(live.map(el => el.querySelector('.toast-message').textContent)).toEqual(['Second', 'Third']);
+    const first = [...document.querySelectorAll('#toastContainer .toast')]
+      .find(el => el.querySelector('.toast-message').textContent === 'First');
+    expect(first.classList.contains('toast-out')).toBe(true);
+  });
+
+  it('dedupes an identical message that is already showing', () => {
+    showToast('Same', 'warning');
+    showToast('Same', 'warning');
+    expect(document.querySelectorAll('#toastContainer .toast').length).toBe(1);
+  });
 });
 
 describe('addTranscriptLine', () => {
@@ -324,6 +341,24 @@ describe('initPanelTabs', () => {
     document.getElementById('panelLeft').classList.add('panel-active');
     document.querySelector('[data-panel="center"]').click();
     expect(document.getElementById('panelLeft').classList.contains('panel-active')).toBe(false);
+  });
+
+  it('makes off-screen panels inert on mobile only', () => {
+    const orig = window.innerWidth;
+    try {
+      window.innerWidth = 390;
+      initPanelTabs();
+      expect(document.getElementById('panelLeft').hasAttribute('inert')).toBe(false);
+      expect(document.getElementById('panelCenter').hasAttribute('inert')).toBe(true);
+      document.querySelector('[data-panel="right"]').click();
+      expect(document.getElementById('panelRight').hasAttribute('inert')).toBe(false);
+      expect(document.getElementById('panelLeft').hasAttribute('inert')).toBe(true);
+      window.innerWidth = 1440;
+      window.dispatchEvent(new Event('resize'));
+      expect(document.querySelectorAll('.panel[inert]').length).toBe(0);
+    } finally {
+      window.innerWidth = orig;
+    }
   });
 });
 

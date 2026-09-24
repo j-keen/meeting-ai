@@ -91,7 +91,34 @@ export function chipText(status) {
   return `${stt.ok ? '' : '⚠ '}STT: ${stt.label}${model}`;
 }
 
-export function renderStatusHtml(status) {
+/** Which key sources are in play, condensed into one user-facing phrase ("서버 제공 / 개인 키 설정됨"). */
+function keySummary(status) {
+  const auths = [status.stt.auth, status.ai.auth];
+  const hasServer = auths.includes('server');
+  const hasPersonal = auths.includes('personal');
+  const hasNone = auths.includes('none');
+  const parts = [];
+  if (hasServer) parts.push(t('status.summary_key_server'));
+  if (hasPersonal) parts.push(t('status.summary_key_personal'));
+  if (!parts.length) return { text: hasNone ? t('status.summary_key_missing') : t('status.summary_key_none_needed'), bad: hasNone };
+  return { text: parts.join(' / '), bad: hasNone };
+}
+
+/** Plain-language summary shown by default: "음성 인식: ...", "AI: ...", "API 키: ...". */
+function renderSummaryHtml(status) {
+  const { stt, ai } = status;
+  const keys = keySummary(status);
+  const aiLabel = ai.provider === 'openai' ? 'OpenAI (GPT)' : 'Google Gemini';
+  return `
+    <div class="status-summary">
+      <div class="status-summary-row${stt.ok ? '' : ' status-bad'}">${escapeHtml(t('status.summary_stt', { label: stt.label }))}</div>
+      <div class="status-summary-row${ai.ok ? '' : ' status-bad'}">${escapeHtml(t('status.summary_ai', { provider: aiLabel }))}</div>
+      <div class="status-summary-row${keys.bad ? ' status-bad' : ''}">${escapeHtml(t('status.summary_keys', { keys: keys.text }))}</div>
+    </div>`;
+}
+
+/** Full engine/model/key table, tucked behind a collapsed "고급 정보" disclosure. */
+function renderAdvancedHtml(status) {
   const { stt, ai, keys } = status;
   const row = (k, v, bad = false) => `<div class="status-row${bad ? ' status-bad' : ''}"><span class="status-k">${escapeHtml(k)}</span><span class="status-v">${escapeHtml(v)}</span></div>`;
   const tierRows = ['light', 'standard', 'heavy'].map(tier => {
@@ -122,6 +149,20 @@ export function renderStatusHtml(status) {
     </div>`;
 }
 
+/**
+ * Shared renderer for both the Settings "General" tab and the #sttStatusChip modal:
+ * a compact, jargon-free summary up top, with the full engine/model/key table collapsed
+ * behind a "고급 정보" (advanced info) disclosure so neither surface duplicates a dev-style table.
+ */
+export function renderStatusHtml(status) {
+  return `
+    ${renderSummaryHtml(status)}
+    <details class="status-advanced">
+      <summary>${t('status.advanced_info')}</summary>
+      <div class="status-advanced-body">${renderAdvancedHtml(status)}</div>
+    </details>`;
+}
+
 export async function refreshStatusUI() {
   const status = await getRuntimeStatus();
   const chip = $('#sttStatusChip');
@@ -130,6 +171,8 @@ export async function refreshStatusUI() {
     chip.classList.toggle('status-bad', !status.stt.ok);
     chip.title = status.stt.problem || t('status.chip_hint');
   }
+  // On phones the chip lives in the ⋯ menu: flag the toggle so a warning stays visible.
+  $('#btnBottomOverflow')?.classList.toggle('has-warning', !status.stt.ok);
   const panel = $('#runtimeStatus');
   if (panel) panel.innerHTML = renderStatusHtml(status);
   return status;

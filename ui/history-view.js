@@ -4,6 +4,7 @@
 
 import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
+import { confirmDialog, promptDialog } from './dialogs.js';
 import { renderMarkdown } from '../chat.js';
 import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings } from '../storage.js';
 import { formatTime, escapeHtml } from '../utils.js';
@@ -331,6 +332,31 @@ function parseDurationMs(dur) {
 export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', filterTag = '', filterRating = '', dateFrom = '', dateTo = '', sortBy = 'newest' } = {}) {
   const grid = $('#historyGrid');
   grid.innerHTML = '';
+
+  // Fully empty (no meetings recorded at all, not merely no filter matches):
+  // hide the filter toolbar (search/type/stars/sort/tag/date — nothing to filter yet)
+  // and show a friendly empty state that offers to start a new session instead.
+  const toolbar = $('.history-toolbar');
+  if (meetings.length === 0) {
+    if (toolbar) toolbar.style.display = 'none';
+    viewerMeetingList = [];
+    const empty = document.createElement('div');
+    empty.className = 'history-empty-state';
+    empty.innerHTML = `
+      <div class="history-empty-icon">&#128203;</div>
+      <div class="history-empty-title">${escapeHtml(t('history.empty_title'))}</div>
+      <div class="history-empty-desc">${escapeHtml(t('history.empty_desc'))}</div>
+      <button class="btn btn-primary history-empty-cta" id="btnHistoryEmptyStart">${escapeHtml(t('history.empty_cta'))}</button>
+    `;
+    grid.appendChild(empty);
+    $('#btnHistoryEmptyStart')?.addEventListener('click', () => {
+      $('#historyModal').hidden = true;
+      emit('launcher:open');
+    });
+    return;
+  }
+  if (toolbar) toolbar.style.display = '';
+
   let filtered = meetings;
 
   if (searchTerm) {
@@ -513,9 +539,9 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     const addTagBtn = document.createElement('button');
     addTagBtn.className = 'history-tag-add';
     addTagBtn.textContent = t('history.add_tag');
-    addTagBtn.addEventListener('click', (e) => {
+    addTagBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
-      const tag = prompt(t('history.enter_tag'));
+      const tag = await promptDialog({ label: t('history.enter_tag'), confirmText: t('dialog.add') });
       if (tag) emit('meeting:addTag', { id: meeting.id, tag: tag.trim() });
     });
     tagsContainer.appendChild(addTagBtn);
@@ -862,9 +888,9 @@ export function renderMeetingViewer(meeting) {
   const btnViewerLoad = $('#btnViewerLoad');
   if (btnViewerLoad) {
     btnViewerLoad.textContent = t('viewer.load');
-    btnViewerLoad.onclick = () => {
+    btnViewerLoad.onclick = async () => {
       if (state.transcript.length > 0 || state.isRecording) {
-        if (!confirm(t('viewer.load_confirm'))) return;
+        if (!(await confirmDialog({ message: t('viewer.load_confirm'), confirmText: t('dialog.load') }))) return;
       }
       emit('meeting:load', { id: meeting.id });
       $('#viewerModal').hidden = true;
