@@ -28,6 +28,17 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
   let interim = '';
   let captureMode = 'none';
   let cb = /** @type {any} */ ({});
+  let reconnectTimer = null;
+  let healthTimer = null;
+  let lastChunkAt = 0;          // last PCM chunk from the capture node (flows even in silence)
+  let dead = false;             // handed to the session for a full restart; ignore late events
+
+  // Liveness thresholds. Audio chunks arrive every ~100 ms, so a gap this long means the
+  // AudioContext was suspended/interrupted or the mic track died.
+  const AUDIO_STALL_RESUME_MS = 4000;
+  const AUDIO_STALL_FATAL_MS = 12000;
+  const MAX_BUFFERED_BYTES = 2 * 1024 * 1024; // ~40 s of audio stuck in the socket → reconnect
+  const MAX_RECONNECTS = 5;
 
   const lang = ['ko', 'en', 'ja', 'zh'].includes(language) ? language : 'ko';
   const sttModel = CLOUD_STT_MODELS.includes(model) ? model : CLOUD_STT_MODELS[0];
@@ -115,15 +126,33 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
     socket.onclose = () => {
       if (ws !== socket) return; // superseded
       ws = null;
-      if (!active) return;
-      if (reconnects >= 3) {
-        cb.onError?.('Cloud STT: connection lost');
-        cb.onFatalError?.('cloud');
-        return;
-      }
-      reconnects++;
-      setTimeout(() => { if (active && !ws) connect().catch(err => cb.onError?.(`Cloud STT: ${err.message}`)); }, 1000 * reconnects);
+      scheduleReconnect();
     };
+  }
+
+  /**
+   * Reconnect with backoff. A failed attempt (e.g. the token fetch fails while the phone
+   * is between networks) schedules the next one instead of silently leaving the engine
+   * without a socket; after MAX_RECONNECTS the session restarts the whole engine.
+   */
+  function scheduleReconnect(delayMs) {
+    if (!active || dead || ws || reconnectTimer) return;
+    if (reconnects >= MAX_RECONNECTS) { giveUp('connection lost'); return; }
+    reconnects++;
+    const delay = delayMs ?? Math.min(1000 * reconnects, 5000);
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (!active || dead || ws) return;
+      connect().catch(() => scheduleReconnect());
+    }, delay);
+  }
+
+  /** Hand over to the session (meeting-session.js recoverStt), which starts a fresh engine. */
+  function giveUp(reason) {
+    if (dead || !active) return;
+    dead = true;
+    teardown();
+    cb.onFatalError?.('cloud', reason);
   }
 
   function bytesToBase64(bytes) {
@@ -135,8 +164,42 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
   }
 
   function sendPcm(base64) {
+    lastChunkAt = Date.now();
     if (paused || !ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: base64 }));
+  }
+
+  function resumeCtx() {
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return;
+    try { ctx.resume?.()?.catch?.(() => {}); } catch { /* ignore */ }
+  }
+
+  /** Periodic liveness check: suspended audio, dead mic, missing or stalled socket. */
+  function checkHealth() {
+    if (!active || dead || paused) return;
+    const stalledFor = Date.now() - lastChunkAt;
+    resumeCtx();
+    if (stalledFor > AUDIO_STALL_FATAL_MS) { giveUp('audio stalled'); return; }
+    if (stalledFor > AUDIO_STALL_RESUME_MS) { try { ctx?.resume?.()?.catch?.(() => {}); } catch { /* ignore */ } }
+    if (!ws) scheduleReconnect();
+    else if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount > MAX_BUFFERED_BYTES) {
+      // Network is stalled: frames pile up locally. Drop the socket; onclose reconnects.
+      try { ws.close(); } catch { /* ignore */ }
+    }
+  }
+
+  function teardown() {
+    if (healthTimer) { clearInterval(healthTimer); healthTimer = null; }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (worklet) { try { worklet.port.onmessage = null; worklet.disconnect(); } catch { /* ignore */ } worklet = null; }
+    if (processor) { try { processor.onaudioprocess = null; processor.disconnect(); } catch { /* ignore */ } processor = null; }
+    if (ctx) { ctx.close().catch(() => {}); ctx = null; }
+    if (stream) { stream.getTracks().forEach(tr => { tr.onended = null; tr.stop(); }); stream = null; }
+    if (ws) {
+      const s = ws; ws = null;
+      try { s.close(); } catch { /* ignore */ }
+    }
+    interim = '';
   }
 
   async function startAudio(mediaStream) {
@@ -168,6 +231,8 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
       cb = { onInterim, onFinal, onError, onFatalError, onConnected: onAudioStart };
       active = true;
       paused = false;
+      dead = false;
+      reconnects = 0;
       interim = '';
       try {
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -188,25 +253,38 @@ export function createCloudEngine({ language = 'ko', model = CLOUD_STT_MODELS[0]
         return { started: false };
       }
       captureMode = await startAudio(stream);
+      // The OS can take the mic away (another app, a call) — restart the engine.
+      stream.getAudioTracks?.().forEach(tr => { tr.onended = () => giveUp('mic ended'); });
+      // Suspended/interrupted audio (calls, other media, screen lock on some phones).
+      if (ctx) ctx.onstatechange = () => { if (active && !paused) resumeCtx(); };
+      lastChunkAt = Date.now();
+      healthTimer = setInterval(checkHealth, 2000);
       return { started: true };
     },
 
     get captureMode() { return captureMode; },
     pause() { paused = true; worklet?.port.postMessage('pause'); },
-    resume() { paused = false; worklet?.port.postMessage('resume'); },
+    resume() {
+      paused = false;
+      lastChunkAt = Date.now();
+      worklet?.port.postMessage('resume');
+      resumeCtx();
+    },
+
+    /** Called when the page becomes visible again: revive audio and the socket right away. */
+    ensureAlive() {
+      if (!active || dead || paused) return;
+      resumeCtx();
+      if (!ws) {
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+        scheduleReconnect(0);
+      }
+    },
 
     stop() {
       active = false;
       paused = false;
-      if (worklet) { try { worklet.port.onmessage = null; worklet.disconnect(); } catch { /* ignore */ } worklet = null; }
-      if (processor) { try { processor.disconnect(); } catch { /* ignore */ } processor = null; }
-      if (ctx) { ctx.close().catch(() => {}); ctx = null; }
-      if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-      if (ws) {
-        const s = ws; ws = null;
-        try { s.close(); } catch { /* ignore */ }
-      }
-      interim = '';
+      teardown();
     },
   };
 }

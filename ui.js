@@ -274,8 +274,9 @@ export function initBottomBarOverflow() {
     toggleBtn.setAttribute('aria-expanded', 'false');
   }
 
-  function applyLayout(isMobile) {
-    if (isMobile) {
+  function applyLayout(compact) {
+    document.body.classList.toggle('bar-compact', compact);
+    if (compact) {
       toggleBtn.hidden = false;
       [...beforeEndMeeting, ...afterEndMeeting].forEach(id => {
         const el = document.getElementById(id);
@@ -293,6 +294,34 @@ export function initBottomBarOverflow() {
         if (el && el.parentElement !== bottomCenter) bottomCenter.appendChild(el);
       });
     }
+  }
+
+  /** Would the full (uncollapsed) bar clip? Measured synchronously, so nothing paints in between. */
+  function fullBarOverflows() {
+    applyLayout(false);
+    const bar = bottomCenter.parentElement;
+    const r = bottomCenter.getBoundingClientRect();
+    return r.left < 0 || r.right > window.innerWidth
+      || bottomCenter.scrollWidth > bottomCenter.clientWidth + 1
+      || (bar && bar.scrollWidth > bar.clientWidth + 1);
+  }
+
+  // Compact on narrow screens, and also whenever the full bar doesn't fit — e.g. a phone in
+  // landscape, or a long STT chip label — so REC is never pushed off-screen.
+  let observer = null;
+  let scheduled = false;
+  function relayout() {
+    scheduled = false;
+    const wasOpen = !menu.hidden;
+    const compact = mq.matches || fullBarOverflows();
+    applyLayout(compact);
+    if (compact && wasOpen) { menu.hidden = false; toggleBtn.setAttribute('aria-expanded', 'true'); }
+    observer?.takeRecords(); // our own node moves are not a reason to re-run
+  }
+  function scheduleRelayout() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(relayout);
   }
 
   toggleBtn.addEventListener('click', (e) => {
@@ -313,8 +342,15 @@ export function initBottomBarOverflow() {
     if (e.key === 'Escape' && !menu.hidden) closeMenu();
   });
 
-  applyLayout(mq.matches);
-  mq.addEventListener('change', (e) => applyLayout(e.matches));
+  relayout();
+  mq.addEventListener('change', scheduleRelayout);
+  window.addEventListener('resize', scheduleRelayout);
+  // State changes add/remove bar buttons (recording, post-end, loaded) and the chip label
+  // changes with the engine; re-check when any of that happens.
+  observer = new MutationObserver(scheduleRelayout);
+  observer.observe(bottomCenter, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
+  observer.observe(menu, { childList: true, subtree: true, characterData: true });
+  observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
 }
 
 // ===== Narrow Header Overflow Menu =====

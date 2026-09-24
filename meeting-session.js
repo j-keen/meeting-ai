@@ -225,13 +225,14 @@ function stopStt() {
 function recoverStt(engineName) {
   if (state.phase !== 'recording') return;
   sttRecoverAttempts++;
-  if (sttRecoverAttempts > 5) {
-    log(`stt recovery gave up after ${sttRecoverAttempts - 1} attempts`);
+  if (sttRecoverAttempts === 6) {
+    // Tell the user once, but keep trying slowly: the network usually comes back and a
+    // meeting that silently stops transcribing is worse than a late recovery.
+    log('stt recovery: fast retries exhausted, continuing every 30s');
     showToast(t('stt.connection_failed'), 'error');
     if (engineName === 'webspeech' || engineName === 'webspeech-local') offerKeyboardSwitch();
-    return;
   }
-  const delay = Math.min(1000 * sttRecoverAttempts, 5000);
+  const delay = sttRecoverAttempts > 5 ? 30000 : Math.min(1000 * sttRecoverAttempts, 5000);
   log(`stt recovery #${sttRecoverAttempts} in ${delay}ms`);
   recTimers.after('sttRecover', delay, async () => {
     if (state.phase !== 'recording') return;
@@ -536,7 +537,7 @@ document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible') return;
   if (state.phase !== 'recording') return;
   acquireWakeLock();
-  if (stt && stt.isRunning) return;
+  if (stt && stt.isRunning) { stt.ensureAlive?.(); return; }
   log('page visible — STT died in background, restarting');
   const ok = await startStt({ withStream: false });
   if (ok) showToast(t('stt.reconnected'), 'success');

@@ -1525,89 +1525,90 @@ body.kb-stt-active #transcriptList {
    demo buttons) are moved by JS (ui.js: initBottomBarOverflow) out of .bottom-center
    into #bottomOverflowMenu, behind a "⋯" toggle, so #btnRecord always stays large,
    centered and fully visible, and #btnEndMeeting stays directly reachable. */
-@media (max-width: 768px) {
-  .bottom-bar {
-    position: relative;
-    padding: 0 8px;
-  }
-  /* One flex row for every state (idle / recording / paused / ended / loaded /
-     imported): "⋯" pinned left, a 40px ghost (::after) pinned right, and the
-     state's primary controls centered between them via auto margins. When the
-     row gets tight the ghost shrinks first, so the group slides right instead of
-     clipping; overflow-x is a last-resort safety net (never page-level scroll). */
-  .bottom-center {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    width: 100%;
-    min-width: 0;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .bottom-center::-webkit-scrollbar { display: none; }
-  .bottom-center > * { flex-shrink: 0; }
-  .bottom-center::after {
-    content: '';
-    order: 99;
-    flex: 0 1 40px;
-    min-width: 0;
-    margin-left: auto;
-  }
-  .bottom-center > .bottom-overflow-toggle {
-    order: -10;
-    margin-right: auto;
-  }
-  .bottom-overflow-toggle {
-    width: 40px;
-    height: 40px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--fs-2xl);
-    line-height: 1;
-    border-radius: var(--radius-full);
-  }
-  #btnRecord {
-    padding: 10px 20px;
-    font-size: 15px;
-  }
-  /* Recording / paused: compact pause/resume so live timer + it + End fit at 360px+ */
-  body.is-recording #btnRecord,
-  body.is-paused #btnRecord { padding: 10px 14px; }
-  /* End Meeting and the post-end / loaded buttons: real touch targets */
-  .bottom-center > .btn-end-meeting,
-  .bottom-center > .btn-sm {
-    min-height: 40px;
-    padding: 4px 10px;
-    font-size: var(--fs-sm);
-  }
-  .bottom-overflow-menu {
-    position: absolute;
-    left: 8px;
-    bottom: calc(100% + 8px);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 8px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    min-width: 180px;
-    z-index: var(--z-dropdown-lg);
-  }
-  .bottom-overflow-menu[hidden] { display: none; }
-  .bottom-overflow-menu .btn,
-  .bottom-overflow-menu .stt-status-chip {
-    width: 100%;
-    min-height: 40px;
-    justify-content: flex-start;
-  }
-  .bottom-overflow-menu .bottom-divider {
-    display: none; /* meaningless as a vertical rule once stacked */
-  }
+/* Compact bar: applied by ui.js (body.bar-compact) on narrow screens AND whenever the
+   full bar would overflow (e.g. a phone in landscape with a long STT chip label). */
+body.bar-compact .bottom-bar {
+  position: relative;
+  padding: 0 8px;
 }
+/* One flex row for every state (idle / recording / paused / ended / loaded /
+   imported): "⋯" pinned left, a 40px ghost (::after) pinned right, and the
+   state's primary controls centered between them via auto margins. When the
+   row gets tight the ghost shrinks first, so the group slides right instead of
+   clipping; overflow-x is a last-resort safety net (never page-level scroll). */
+body.bar-compact .bottom-center {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+body.bar-compact .bottom-center::-webkit-scrollbar { display: none; }
+body.bar-compact .bottom-center > * { flex-shrink: 0; }
+body.bar-compact .bottom-center::after {
+  content: '';
+  order: 99;
+  flex: 0 1 40px;
+  min-width: 0;
+  margin-left: auto;
+}
+body.bar-compact .bottom-center > .bottom-overflow-toggle {
+  order: -10;
+  margin-right: auto;
+}
+body.bar-compact .bottom-overflow-toggle {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-2xl);
+  line-height: 1;
+  border-radius: var(--radius-full);
+}
+body.bar-compact #btnRecord {
+  padding: 10px 20px;
+  font-size: 15px;
+}
+/* Recording / paused: compact pause/resume so live timer + it + End fit at 360px+ */
+body.bar-compact.is-recording #btnRecord,
+body.bar-compact.is-paused #btnRecord { padding: 10px 14px; }
+/* End Meeting and the post-end / loaded buttons: real touch targets */
+body.bar-compact .bottom-center > .btn-end-meeting,
+body.bar-compact .bottom-center > .btn-sm {
+  min-height: 40px;
+  padding: 4px 10px;
+  font-size: var(--fs-sm);
+}
+body.bar-compact .bottom-overflow-menu {
+  position: absolute;
+  left: 8px;
+  bottom: calc(100% + 8px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 180px;
+  z-index: var(--z-dropdown-lg);
+}
+body.bar-compact .bottom-overflow-menu[hidden] { display: none; }
+body.bar-compact .bottom-overflow-menu .btn,
+body.bar-compact .bottom-overflow-menu .stt-status-chip {
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+}
+body.bar-compact .bottom-overflow-menu .bottom-divider {
+  display: none; /* meaningless as a vertical rule once stacked */
+}
+
 /* Small phones (360-380px): tighten so paused (timer · 녹음 재개 · End) and
    ended (REC · 재개 · AI 문서 · 새 회의) rows still fit without clipping. */
 @media (max-width: 380px) {
