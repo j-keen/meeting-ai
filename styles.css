@@ -9056,3 +9056,25 @@ body.is-paused .rec-live-timer { color: var(--text-secondary); }
   .meeting-pill.recording .meeting-pill-dot,
   .meeting-pill.paused .meeting-pill-dot { animation: none; }
 }
+
+/* === UX: "저장하지 않고 취소" — a real (secondary, destructive) button, not bare text === */
+.btn-discard {
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+  font-weight: 600;
+}
+.btn-discard:hover { background: var(--danger-bg); }
+.btn-discard:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
+/* In the end-meeting footer keep it apart from the save actions (left side). */
+.end-meeting-footer-actions > .btn-discard { margin-right: auto; }
+@media (max-width: 768px) {
+  .btn-discard { min-height: 40px; }
+}
+@media (max-width: 768px) {
+  /* Footer stacks on phones; stretched buttons should keep their label centred */
+  .end-meeting-footer .btn { justify-content: center; }
+}

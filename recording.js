@@ -598,7 +598,7 @@ function showEndConfirmDialog(onConfirm) {
           <button class="btn" id="btnEndConfirmCancel">${t('end_confirm.cancel')}</button>
           <button class="btn btn-primary" id="btnEndConfirmOk">${t('end_confirm.confirm')}</button>
         </div>
-        <button class="btn btn-text btn-danger" id="btnEndConfirmDiscard" style="margin-top:12px;">${t('discard.button')}</button>
+        <button class="btn btn-discard" id="btnEndConfirmDiscard" style="margin-top:12px;"><svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>${t('discard.button')}</span></button>
       </div>
     </div>
   `;
@@ -906,9 +906,10 @@ function resetFooterToDefault(isEditMode = false) {
   // Discard (delete everything, no save) — only for the live meeting, not for editing a saved one
   if (!isEditMode) {
     const discardBtn = document.createElement('button');
-    discardBtn.className = 'btn btn-text btn-danger';
+    discardBtn.className = 'btn btn-discard';
     discardBtn.id = 'btnDiscardMeeting';
-    discardBtn.textContent = t('discard.button');
+    discardBtn.innerHTML = '<svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+    discardBtn.append(Object.assign(document.createElement('span'), { textContent: t('discard.button') }));
     discardBtn.onclick = () => discardMeeting();
     actions.append(discardBtn);
   }
