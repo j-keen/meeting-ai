@@ -41,8 +41,9 @@ describe('toOpenAIRequest', () => {
     expect(req.messages.some(m => /json/i.test(JSON.stringify(m.content)))).toBe(true);
   });
 
-  it('uses medium reasoning for the heavy tier', () => {
-    expect(toOpenAIRequest('gpt-5.5', { contents: [] }, { tier: 'heavy' }).reasoning_effort).toBe('medium');
+  it('keeps reasoning low on every tier (heavy uses HEAVY_EFFORT)', () => {
+    expect(toOpenAIRequest('gpt-5.6-sol', { contents: [] }, { tier: 'heavy' }).reasoning_effort).toBe('low');
+    expect(toOpenAIRequest('gpt-5.6-luna', { contents: [] }, { tier: 'light' }).reasoning_effort).toBe('low');
   });
 });
 
@@ -80,12 +81,25 @@ describe('parseOpenAISSE', () => {
 });
 
 describe('models: tiers and provider mapping', () => {
-  it('routes light tasks to light models and minutes to the user model', () => {
+  it('routes frequent tasks (incl. live analysis) light, setup standard, minutes/docs heavy', () => {
     expect(modelFor('correction')).toBe(GEMINI.light);
-    expect(modelFor('analysis')).toBe(GEMINI.standard);
-    expect(modelFor('minutes', { userModel: GEMINI.heavy })).toBe(GEMINI.heavy);
-    expect(modelFor('minutes', { userModel: GEMINI.heavy, provider: 'openai' })).toBe(OPENAI.heavy);
-    expect(modelFor('chat', { provider: 'openai' })).toBe(OPENAI.light);
+    expect(modelFor('analysis', { provider: 'openai' })).toBe('gpt-5.6-luna');
+    expect(modelFor('chat', { provider: 'openai' })).toBe('gpt-5.6-luna');
+    expect(modelFor('prompt_builder', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('deep_setup', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('compare', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('minutes', { provider: 'openai' })).toBe('gpt-5.6-sol');
+    // No user choice anymore: a stored flash pick no longer downgrades minutes.
+    expect(modelFor('minutes', { userModel: GEMINI.standard, provider: 'openai' })).toBe(OPENAI.heavy);
+    expect(modelFor('docs', { provider: 'openai' })).toBe('gpt-5.6-sol');
+  });
+
+  it('maps previous OpenAI ids onto the new tiers', () => {
+    expect(resolveModel('gpt-5.4-nano')).toBe('gpt-5.6-luna');
+    expect(resolveModel('gpt-5.5')).toBe('gpt-5.6-sol');
+    expect(toProviderModel('gemini-3.5-flash-lite', 'openai')).toBe('gpt-5.6-luna');
+    expect(toProviderModel('gemini-3.1-pro-preview', 'openai')).toBe('gpt-5.6-sol');
+    expect(tierOf('gpt-5.6-sol')).toBe('heavy');
   });
 
   it('converts between providers by tier and keeps same-provider ids', () => {

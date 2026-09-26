@@ -133,7 +133,7 @@ export async function analyzeTranscript({
   memos = [],
   chatHistory = [],
   userProfile = '',
-  model = 'gemini-3.5-flash',
+  model = modelFor('analysis'),
   userCorrections = [],
   blockMemos = [],
   onStream = null,
@@ -337,7 +337,7 @@ export async function analyzeTranscript({
 }
 
 // Auto-generate tags from analysis
-export async function generateTags({ summary, transcript, model = 'gemini-3.5-flash-lite' }) {
+export async function generateTags({ summary, transcript, model = modelFor('tags') }) {
   if (!isAiAvailable() || !summary) return [];
 
   const transcriptSnippet = (transcript || []).slice(0, 10).map(l => l.text).join(' ').slice(0, 500);
@@ -393,7 +393,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGeminiGuarded('gemini-3.5-flash-lite', {
+    const data = await callGeminiGuarded(modelFor('title'), {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.4 }
     }, { category: 'tags' });
@@ -424,7 +424,7 @@ export async function generateFinalMinutes({
   elapsedTime,
   memos = [],
   userProfile = '',
-  model = 'gemini-3.5-flash',
+  model = modelFor('minutes'),
   template = '',
   referenceDoc = '',
   basePromptOverride = '',
@@ -599,7 +599,7 @@ Return ONLY valid JSON:
 }`;
 
   try {
-    const data = await callGeminiGuarded('gemini-3.5-flash-lite', {
+    const data = await callGeminiGuarded(modelFor('metadata'), {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
     }, { category: 'tags' });
@@ -744,7 +744,7 @@ ${instruction}`;
 }
 
 // AI-powered sentence correction
-export async function correctSentences({ lines, model = 'gemini-3.5-flash', correctionDict = [] }) {
+export async function correctSentences({ lines, model = modelFor('correction'), correctionDict = [] }) {
   if (!isAiAvailable() || !lines || lines.length === 0) return [];
 
   const lang = getAiLanguage();

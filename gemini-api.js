@@ -1,4 +1,7 @@
-// gemini-api.js - Client-side Gemini API via server proxy, with personal-key fallback
+// gemini-api.js - Client-side AI request layer. Callers speak Gemini-shaped requests; the app
+// runs on OpenAI only (server key via /api/openai), so requests are converted to the OpenAI
+// model of the same tier. The Gemini proxy / personal-key paths remain for tests and a
+// possible revival, but the app never enables them.
 
 import { emit } from './event-bus.js';
 import { t } from './i18n.js';
@@ -21,9 +24,10 @@ let _proxyAvailable = null;
 // ─── 사용자 개인 API 키 ──────────────────────────────────────────────────────
 let _userApiKeyProvider = () => '';
 let _openaiKeyProvider = () => '';
-let _provider = 'gemini'; // 'gemini' | 'openai'
+let _provider = 'openai'; // 'gemini' | 'openai' — the app fixes this to 'openai'
 let _openaiProxyAvailable = null;
 let _realtimeTokenAvailable = null;
+let _probeComplete = false;
 let _keyMode = 'fallback'; // 'proxy' | 'fallback' | 'direct'
 let _fallbackNotified = false; // emit gemini:fallback once per page load
 
@@ -39,7 +43,7 @@ export function setOpenAIKeyProvider(fn) {
   _openaiKeyProvider = typeof fn === 'function' ? fn : () => '';
 }
 
-/** Active provider: 'gemini' (default) or 'openai'. Callers keep sending Gemini-shaped requests. */
+/** Active provider: 'openai' (app default) or 'gemini' (dormant). Callers keep sending Gemini-shaped requests. */
 export function setProvider(p) {
   _provider = p === 'openai' ? 'openai' : 'gemini';
 }
@@ -184,10 +188,18 @@ export async function checkProxyAvailable() {
       return false;
     }
   };
+  // The Gemini proxy is only probed when that (dormant) provider is active.
   [_proxyAvailable, _openaiProxyAvailable, _realtimeTokenAvailable] = await Promise.all([
-    probe('/api/gemini'), probe('/api/openai'), probeRealtime(),
+    _provider === 'gemini' ? probe('/api/gemini') : Promise.resolve(false), probe('/api/openai'), probeRealtime(),
   ]);
+  _probeComplete = true;
+  emit('ai:probed');
   return _proxyAvailable;
+}
+
+/** Whether checkProxyAvailable() has finished at least once (status UI shows "checking" until then). */
+export function isProbeComplete() {
+  return _probeComplete;
 }
 
 export function isRealtimeTokenAvailable() {

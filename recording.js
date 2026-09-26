@@ -13,7 +13,6 @@ import {
   loadContacts, loadLocations, addLocation,
   getLocationFrequency, linkMeetings,
   loadCorrectionDict,
-  getProUsageCount,
 } from './storage.js';
 import {
   showToast, showCenterToast, showWhisperToast,
@@ -452,7 +451,7 @@ export async function runAnalysis() {
       memos: state.memos,
       chatHistory: state.chatHistory,
       userProfile: buildFullProfile(),
-      model: modelFor('analysis'), // live analysis: standard tier, never the heavy model
+      model: modelFor('analysis'), // live analysis: light tier (runs every ~1000 chars)
       userCorrections: corrections,
       blockMemos,
       metadata: {
@@ -841,7 +840,7 @@ function resetFooterToDefault(isEditMode = false) {
     else cancelEndMeeting();
   };
 
-  // Generate Minutes button (opens model selection modal)
+  // Generate Minutes button (minutes always run on the heavy tier — no model picker)
   const genBtn = document.createElement('button');
   genBtn.className = 'btn btn-purple';
   genBtn.id = 'btnGenerateMinutes';
@@ -853,24 +852,11 @@ function resetFooterToDefault(isEditMode = false) {
       saveEditMeeting();
       emit('meeting:load', { id: editMeetingId });
       $('#viewerModal').hidden = true;
-      // Open minutes model modal after a tick (to allow state to settle)
-      setTimeout(() => {
-        const modelModal = $('#minutesModelModal');
-        if (modelModal) modelModal.hidden = false;
-      }, 100);
+      // Start generation after a tick (to allow state to settle)
+      setTimeout(() => emit('minutes:generate'), 100);
     };
   } else {
-    genBtn.onclick = () => {
-      const modelModal = $('#minutesModelModal');
-      modelModal.hidden = false;
-      // Update Pro usage count
-      const proCount = getProUsageCount();
-      const proUsageEl = $('#modelModalProUsage');
-      if (proUsageEl && proCount > 0) {
-        proUsageEl.textContent = t('minutes.pro_usage', { n: proCount });
-        proUsageEl.hidden = false;
-      }
-    };
+    genBtn.onclick = () => emit('minutes:generate');
   }
 
   // Determine transcript for checking
@@ -1427,7 +1413,7 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
     elapsedTime: getElapsedTimeStr(),
     memos: state.memos,
     userProfile: buildFullProfile(),
-    model: modelFor('minutes', { userModel: state.settings.geminiModel }),
+    model: modelFor('minutes'),
     template: template || '',
     referenceDoc: promptConfig.referenceDoc || '',
     basePromptOverride: promptConfig.basePromptOverride || '',
@@ -1465,8 +1451,8 @@ export async function generateFinalMeetingMinutes(template, promptConfig = {}) {
   emit('analysis:complete', result);
 }
 
+// `model` is kept for callers; minutes always run on the heavy tier (models.js).
 export async function regenerateMinutes(model, template, promptConfig = {}) {
-  state.settings.geminiModel = model;
   await generateFinalMeetingMinutes(template, promptConfig);
 }
 
