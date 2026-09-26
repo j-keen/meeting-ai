@@ -2,6 +2,9 @@
 // openai-adapter.js - Translate the app's Gemini-shaped requests/responses to and from the
 // OpenAI Chat Completions API, so every caller keeps speaking "Gemini" regardless of provider.
 
+/** Reasoning effort for the heavy tier (final minutes, generated documents). */
+export const HEAVY_EFFORT = 'low';
+
 function partsToText(parts) {
   return (parts || []).map(p => (typeof p === 'string' ? p : p?.text || '')).filter(Boolean).join('\n');
 }
@@ -44,7 +47,10 @@ export function toOpenAIRequest(model, body, opts = {}) {
     if (!mentionsJson(messages)) messages.push({ role: 'system', content: 'Respond with valid JSON only.' });
   }
   // GPT-5 family: temperature/max_tokens are rejected; reasoning effort is the cost/latency knob.
-  req.reasoning_effort = opts.tier === 'heavy' ? 'medium' : 'low';
+  // 'low' on every tier, heavy included: the heavy model runs once per meeting (minutes/docs)
+  // and 'medium' roughly doubles-to-triples its billed reasoning tokens for little visible gain.
+  // Raise HEAVY_EFFORT to 'medium' if minutes quality ever needs it (≈ +$0.02–0.05 per meeting).
+  req.reasoning_effort = opts.tier === 'heavy' ? HEAVY_EFFORT : 'low';
   return req;
 }
 

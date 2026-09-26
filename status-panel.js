@@ -1,166 +1,52 @@
 // @ts-check
-// status-panel.js - "What is running right now?" — STT engine/model/key source and AI provider/models.
-// Shown as a chip next to the REC button (tap → detail modal) and at the top of Settings.
+// status-panel.js - One plain line: is speech recognition + AI ready?
+// The app runs on OpenAI only (server key): cloud STT (gpt-4o-mini-transcribe) + GPT models.
+// Shown as a small chip next to the REC button (tap → short modal). On phones the chip lives in
+// the ⋯ menu, and the ⋯ toggle gets a warning dot while something is wrong.
 
 import { state, on } from './event-bus.js';
 import { t } from './i18n.js';
-import { getProvider, getUserApiKey, isProxyAvailableFor, isRealtimeTokenAvailable } from './gemini-api.js';
-import { GEMINI, OPENAI, TASK_TIER, toProviderModel } from './models.js';
+import { isProxyAvailableFor, isRealtimeTokenAvailable, isProbeComplete } from './gemini-api.js';
 import { resolveEngine } from './stt.js';
-import { CLOUD_STT_MODELS } from './stt-cloud.js';
-import { WHISPER_MODELS, getWhisperModelStatus, isWhisperSupported } from './stt-whisper.js';
 import { escapeHtml } from './utils.js';
 
 const $ = (sel) => document.querySelector(sel);
 
-const ENGINE_LABEL = {
-  cloud: 'status.engine_cloud',
-  whisper: 'status.engine_whisper',
-  webspeech: 'status.engine_webspeech',
-  'webspeech-local': 'status.engine_webspeech_local',
-  keyboard: 'status.engine_keyboard',
-  native: 'status.engine_native',
-};
-
 /** Structured snapshot used by both the chip and the modal. */
 export async function getRuntimeStatus() {
   const s = state.settings || {};
-  const configured = resolveEngine(s);
-  const live = state.phase === 'recording' && state.sttEngineName ? state.sttEngineName : null;
-  const engine = live || configured;
+  const checking = !safe(() => isProbeComplete(), true);
+  const live = state.phase === 'recording' && !!state.sttEngineName;
+  const engine = live ? state.sttEngineName : resolveEngine(s);
+  const cloud = engine === 'cloud' || safe(() => isRealtimeTokenAvailable(), false);
+  const aiOk = safe(() => isProxyAvailableFor('openai'), false);
 
-  const openaiKey = !!getUserApiKey('openai');
-  const geminiKey = !!getUserApiKey('gemini');
-  const serverToken = isRealtimeTokenAvailable();
-
-  const stt = { engine, live: !!live, label: t(ENGINE_LABEL[engine] || 'status.engine_webspeech'), model: '', auth: 'n/a', ok: true, problem: '' };
-  if (engine === 'cloud') {
-    stt.model = CLOUD_STT_MODELS.includes(s.cloudSttModel) ? s.cloudSttModel : CLOUD_STT_MODELS[0];
-    stt.auth = openaiKey ? 'personal' : serverToken ? 'server' : 'none';
-    if (stt.auth === 'none') { stt.ok = false; stt.problem = t('status.problem_cloud_no_key'); }
-  } else if (engine === 'whisper') {
-    stt.model = s.whisperModel || WHISPER_MODELS[0].id;
-    stt.auth = 'local';
-    if (!isWhisperSupported()) { stt.ok = false; stt.problem = t('settings.whisper_unsupported'); }
-    else {
-      const st = await getWhisperModelStatus(stt.model).catch(() => ({ downloaded: false }));
-      if (!st.downloaded) { stt.ok = false; stt.problem = t('status.problem_whisper_not_downloaded'); }
-    }
-  } else if (engine === 'webspeech' || engine === 'webspeech-local') {
-    stt.model = t('status.model_browser');
-    stt.auth = 'free';
-  } else if (engine === 'keyboard') {
-    stt.model = t('status.model_keyboard');
-    stt.auth = 'free';
-  } else if (engine === 'native') {
-    stt.model = t('status.model_native');
-    stt.auth = 'free';
+  const problems = [];
+  if (!checking) {
+    if (!cloud) problems.push(t('status.problem_stt_fallback'));
+    if (!aiOk) problems.push(t('status.problem_ai_no_key'));
   }
-
-  const provider = getProvider();
-  const table = provider === 'openai' ? OPENAI : GEMINI;
-  const ai = {
-    provider,
-    proxy: isProxyAvailableFor(provider),
-    personalKey: provider === 'openai' ? openaiKey : geminiKey,
-    models: {
-      light: table.light,
-      standard: table.standard,
-      heavy: toProviderModel(s.geminiModel || GEMINI.standard, provider),
-    },
-    ok: true,
-    problem: '',
-  };
-  ai.auth = ai.proxy ? 'server' : ai.personalKey ? 'personal' : 'none';
-  if (ai.auth === 'none') { ai.ok = false; ai.problem = t('status.problem_ai_no_key'); }
-
-  return { stt, ai, keys: { gemini: geminiKey, openai: openaiKey, serverToken } };
+  return { checking, live, engine, sttOk: checking || cloud, aiOk: checking || aiOk, ok: problems.length === 0, problems };
 }
 
-function authLabel(auth) {
-  return t({
-    personal: 'status.auth_personal', server: 'status.auth_server', none: 'status.auth_none',
-    local: 'status.auth_local', free: 'status.auth_free', 'n/a': 'status.auth_free',
-  }[auth] || 'status.auth_free');
+function safe(fn, fallback) {
+  try { return fn(); } catch { return fallback; }
 }
 
 /** Short text for the chip next to the REC button. */
 export function chipText(status) {
-  const stt = status.stt;
-  const model = stt.model && stt.engine === 'cloud' ? ` · ${stt.model.replace('gpt-4o-', '')}` : '';
-  return `${stt.ok ? '' : '⚠ '}STT: ${stt.label}${model}`;
+  if (status.checking) return t('status.chip_checking');
+  if (!status.ok) return `⚠ ${t('status.chip_problem')}`;
+  return status.live ? t('status.chip_live') : t('status.chip_ready');
 }
 
-/** Which key sources are in play, condensed into one user-facing phrase ("서버 제공 / 개인 키 설정됨"). */
-function keySummary(status) {
-  const auths = [status.stt.auth, status.ai.auth];
-  const hasServer = auths.includes('server');
-  const hasPersonal = auths.includes('personal');
-  const hasNone = auths.includes('none');
-  const parts = [];
-  if (hasServer) parts.push(t('status.summary_key_server'));
-  if (hasPersonal) parts.push(t('status.summary_key_personal'));
-  if (!parts.length) return { text: hasNone ? t('status.summary_key_missing') : t('status.summary_key_none_needed'), bad: hasNone };
-  return { text: parts.join(' / '), bad: hasNone };
-}
-
-/** Plain-language summary shown by default: "음성 인식: ...", "AI: ...", "API 키: ...". */
-function renderSummaryHtml(status) {
-  const { stt, ai } = status;
-  const keys = keySummary(status);
-  const aiLabel = ai.provider === 'openai' ? 'OpenAI (GPT)' : 'Google Gemini';
-  return `
-    <div class="status-summary">
-      <div class="status-summary-row${stt.ok ? '' : ' status-bad'}">${escapeHtml(t('status.summary_stt', { label: stt.label }))}</div>
-      <div class="status-summary-row${ai.ok ? '' : ' status-bad'}">${escapeHtml(t('status.summary_ai', { provider: aiLabel }))}</div>
-      <div class="status-summary-row${keys.bad ? ' status-bad' : ''}">${escapeHtml(t('status.summary_keys', { keys: keys.text }))}</div>
-    </div>`;
-}
-
-/** Full engine/model/key table, tucked behind a collapsed "고급 정보" disclosure. */
-function renderAdvancedHtml(status) {
-  const { stt, ai, keys } = status;
-  const row = (k, v, bad = false) => `<div class="status-row${bad ? ' status-bad' : ''}"><span class="status-k">${escapeHtml(k)}</span><span class="status-v">${escapeHtml(v)}</span></div>`;
-  const tierRows = ['light', 'standard', 'heavy'].map(tier => {
-    const tasks = Object.entries(TASK_TIER).filter(([, v]) => v === tier || (tier === 'heavy' && v === 'user')).map(([k]) => t(`status.task_${k}`)).join(', ');
-    return row(t(`status.tier_${tier}`), `${ai.models[tier]} — ${tasks}`);
-  }).join('');
-  return `
-    <div class="status-block">
-      <div class="status-title">${t('status.stt_title')}${stt.live ? ` <span class="status-live">${t('status.live')}</span>` : ''}</div>
-      ${row(t('status.engine'), stt.label)}
-      ${stt.model ? row(t('status.model'), stt.model) : ''}
-      ${row(t('status.auth'), authLabel(stt.auth), stt.auth === 'none')}
-      ${stt.problem ? `<div class="status-problem">${escapeHtml(stt.problem)}</div>` : ''}
-    </div>
-    <div class="status-block">
-      <div class="status-title">${t('status.ai_title')}</div>
-      ${row(t('status.provider'), ai.provider === 'openai' ? 'OpenAI (GPT)' : 'Google Gemini')}
-      ${row(t('status.auth'), authLabel(ai.auth), ai.auth === 'none')}
-      ${tierRows}
-      ${ai.problem ? `<div class="status-problem">${escapeHtml(ai.problem)}</div>` : ''}
-    </div>
-    <div class="status-block">
-      <div class="status-title">${t('status.keys_title')}</div>
-      ${row(t('status.key_gemini'), keys.gemini ? t('status.key_set') : t('status.key_missing'))}
-      ${row(t('status.key_openai'), keys.openai ? t('status.key_set') : t('status.key_missing'))}
-      ${row(t('status.key_server'), keys.serverToken ? t('status.key_set') : t('status.key_missing'))}
-      <div class="status-note">${t('status.keys_note')}</div>
-    </div>`;
-}
-
-/**
- * Shared renderer for both the Settings "General" tab and the #sttStatusChip modal:
- * a compact, jargon-free summary up top, with the full engine/model/key table collapsed
- * behind a "고급 정보" (advanced info) disclosure so neither surface duplicates a dev-style table.
- */
+/** One human sentence (plus problem lines when something is wrong). */
 export function renderStatusHtml(status) {
-  return `
-    ${renderSummaryHtml(status)}
-    <details class="status-advanced">
-      <summary>${t('status.advanced_info')}</summary>
-      <div class="status-advanced-body">${renderAdvancedHtml(status)}</div>
-    </details>`;
+  const line = status.checking
+    ? t('status.summary_checking')
+    : status.ok ? t('status.summary_ok') : t('status.summary_problem');
+  const problems = status.problems.map(p => `<div class="status-problem">${escapeHtml(p)}</div>`).join('');
+  return `<div class="status-summary"><div class="status-summary-row${status.ok ? '' : ' status-bad'}">${escapeHtml(line)}</div>${problems}</div>`;
 }
 
 export async function refreshStatusUI() {
@@ -168,13 +54,11 @@ export async function refreshStatusUI() {
   const chip = $('#sttStatusChip');
   if (chip) {
     chip.textContent = chipText(status);
-    chip.classList.toggle('status-bad', !status.stt.ok);
-    chip.title = status.stt.problem || t('status.chip_hint');
+    chip.classList.toggle('status-bad', !status.ok);
+    chip.title = status.problems.join(' ') || t('status.chip_hint');
   }
   // On phones the chip lives in the ⋯ menu: flag the toggle so a warning stays visible.
-  $('#btnBottomOverflow')?.classList.toggle('has-warning', !status.stt.ok);
-  const panel = $('#runtimeStatus');
-  if (panel) panel.innerHTML = renderStatusHtml(status);
+  $('#btnBottomOverflow')?.classList.toggle('has-warning', !status.ok);
   return status;
 }
 
@@ -184,11 +68,10 @@ export async function openStatusModal() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay status-overlay';
   overlay.innerHTML = `
-    <div class="modal" style="max-width:460px;">
-      <div class="modal-header"><h3>${t('status.title')}</h3><button class="modal-close" aria-label="close">&times;</button></div>
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header"><h3>${t('status.title')}</h3><button class="modal-close" aria-label="${escapeHtml(t('status.close'))}">&times;</button></div>
       <div class="modal-body status-body">${renderStatusHtml(status)}</div>
       <div class="modal-footer" style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;">
-        <button class="btn" id="btnStatusSettings">${t('status.open_settings')}</button>
         <button class="btn btn-primary" id="btnStatusClose">${t('status.close')}</button>
       </div>
     </div>`;
@@ -196,7 +79,6 @@ export async function openStatusModal() {
   const close = () => overlay.remove();
   overlay.querySelector('.modal-close').onclick = close;
   overlay.querySelector('#btnStatusClose').onclick = close;
-  overlay.querySelector('#btnStatusSettings').onclick = () => { close(); import('./settings.js').then(m => m.openSettings()); };
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
@@ -205,14 +87,9 @@ export function initStatusPanel() {
   if (initialized) return;
   initialized = true;
   $('#sttStatusChip')?.addEventListener('click', () => openStatusModal());
-  $('#btnRuntimeStatusRefresh')?.addEventListener('click', () => refreshStatusUI());
   on('session:transition', () => refreshStatusUI());
   on('stt:engine-changed', () => refreshStatusUI());
-  $('#btnSettingsSave')?.addEventListener('click', () => setTimeout(refreshStatusUI, 0));
-  $('#selectSttEngine')?.addEventListener('change', () => setTimeout(refreshStatusUI, 0));
-  $('#selectAiProvider')?.addEventListener('change', () => setTimeout(refreshStatusUI, 0));
-  on('settings:opened', () => refreshStatusUI());
-  refreshStatusUI();
   // The proxy/token probes finish shortly after load; re-render once they have.
-  setTimeout(refreshStatusUI, 2500);
+  on('ai:probed', () => refreshStatusUI());
+  refreshStatusUI();
 }

@@ -14,7 +14,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 const $ = (sel) => document.querySelector(sel);
 
 // Documents are a deliverable: use the model the user picked in settings.
-const docModel = () => modelFor('docs', { userModel: state.settings.geminiModel });
+const docModel = () => modelFor('docs');
 const DOC_START = '---DOCUMENT_START---';
 const DOC_END = '---DOCUMENT_END---';
 

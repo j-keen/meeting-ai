@@ -54,9 +54,12 @@ function sseFramesFor(texts) {
 
 // ===== Module reload helper (module-level singletons need a fresh instance per test) =====
 
+// The app fixes the provider to OpenAI; these tests cover the dormant Gemini proxy/key path.
 async function loadGeminiApi() {
   vi.resetModules();
-  return import('../gemini-api.js');
+  const api = await import('../gemini-api.js');
+  api.setProvider('gemini');
+  return api;
 }
 
 describe('gemini-api.js — proxy-first, personal-key-fallback', () => {

@@ -4,13 +4,14 @@ import { state, on, emit } from './event-bus.js';
 export { state, on, emit }; // re-export for backward compatibility
 
 import { checkProxyAvailable } from './gemini-api.js';
+import { modelFor } from './models.js';
 import {
   getMeeting, deleteMeeting, softDeleteMeeting, restoreMeeting,
   updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   addContact,
   addCorrectionEntry,
-  getProUsageCount, incrementProUsage, addLocation,
+  getProUsageCount, addLocation,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, initBottomBarOverflow, initHeaderOverflow, addTranscriptLine,
@@ -1372,7 +1373,7 @@ function startMinutesBlockEdit(blockEl, block, index, blocks, containerDiv) {
 function saveMinutesVersion() {
   const markdown = state.currentAnalysis?.markdown;
   if (!markdown) return;
-  const model = state.settings.geminiModel || 'gemini-3.5-flash';
+  const model = modelFor('minutes');
   state.minutesVersions.push({ markdown, timestamp: Date.now(), model });
   if (state.minutesVersions.length > 10) state.minutesVersions.shift();
 }
@@ -1476,86 +1477,64 @@ function renderMinutesInViewer() {
   updateVersionBadge();
 }
 
+// Final minutes always run on the heavy tier (models.js) — no model picker. The save modal's
+// "Generate minutes" button (recording.js) emits 'minutes:generate'.
 function initMinutesModelModal() {
-  const modelModal = $('#minutesModelModal');
-  if (!modelModal) return;
+  on('minutes:generate', () => { startMinutesGeneration(); });
+}
 
-  // Close button
-  modelModal.querySelector('[data-close]').onclick = () => {
-    modelModal.hidden = true;
-  };
+async function startMinutesGeneration() {
+  // 1. Collect metadata from save modal
+  state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
+  state.meetingLocation = ($('#endMeetingLocation')?.value || '').trim();
+  if (state.meetingLocation) addLocation(state.meetingLocation);
+  const dtVal = $('#endMeetingDatetime')?.value;
+  if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
 
-  // Overlay click closes
-  modelModal.addEventListener('click', (e) => {
-    if (e.target === modelModal) modelModal.hidden = true;
-  });
+  // 2. Check content
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) {
+    $('#endMeetingModal').hidden = true;
+    showToast(t('toast.empty_meeting'), 'warning');
+    resetMeeting();
+    return;
+  }
 
-  // Model card click handlers
-  modelModal.querySelectorAll('.minutes-model-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      const model = card.dataset.model;
+  // 3. Open viewer with loading (early, before async ops)
+  openMinutesPreviewWithLoading();
 
-      // 1. Close model modal
-      modelModal.hidden = true;
+  // 4. Run correction if needed
+  const hasUncorrected = state.transcript.some(l => !l.originalText);
+  if (hasUncorrected && state.transcript.length > 0) {
+    await runCorrection(false);
+  }
 
-      // 2. Set model
-      state._selectedMinutesModel = model;
-      state.settings.geminiModel = model;
-      try { if (model.includes('pro')) incrementProUsage(); } catch { /* ignore */ }
+  // 5. Save state
+  markEnded();
+  try { autoSave(); } catch { /* ignore save error */ }
+  clearDraftRecovery();
 
-      // 3. Collect metadata from save modal
-      state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
-      state.meetingLocation = ($('#endMeetingLocation')?.value || '').trim();
-      if (state.meetingLocation) addLocation(state.meetingLocation);
-      const dtVal = $('#endMeetingDatetime')?.value;
-      if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
+  // 6. Disable save modal form
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.add('disabled-form');
 
-      // 4. Check content
-      const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
-      if (!hasContent) {
-        $('#endMeetingModal').hidden = true;
-        showToast(t('toast.empty_meeting'), 'warning');
-        resetMeeting();
-        return;
-      }
-
-      // 5. Open viewer with loading (early, before async ops)
-      openMinutesPreviewWithLoading();
-
-      // 6. Run correction if needed
-      const hasUncorrected = state.transcript.some(l => !l.originalText);
-      if (hasUncorrected && state.transcript.length > 0) {
-        await runCorrection(false);
-      }
-
-      // 7. Save state
-      markEnded();
-      try { autoSave(); } catch { /* ignore save error */ }
-      clearDraftRecovery();
-
-      // 8. Disable save modal form
-      const body = $('#endMeetingModal .modal-body');
-      if (body) body.classList.add('disabled-form');
-
-      // 9. Generate minutes
-      try {
-        await generateFinalMeetingMinutes('', state.minutesPromptConfig || {});
-        renderMinutesInViewer();
-      } catch (err) {
-        // Show error in viewer
-        const content = $('#minutesPreviewContent');
-        content.innerHTML = `
-          <div style="padding:24px;text-align:center;color:var(--danger);">
-            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
-          </div>
-        `;
-        // Re-enable toolbar
-        const toolbar = $('#minutesPreviewModal .minutes-preview-toolbar');
-        if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
-      }
-    });
-  });
+  // 7. Generate minutes (heavy tier)
+  try {
+    await generateFinalMeetingMinutes('', state.minutesPromptConfig || {});
+    renderMinutesInViewer();
+  } catch (err) {
+    // Show error in viewer
+    const content = $('#minutesPreviewContent');
+    content.innerHTML = `
+      <div style="padding:24px;text-align:center;color:var(--danger);">
+        <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
+      </div>
+    `;
+    // Re-enable toolbar
+    const toolbar = $('#minutesPreviewModal .minutes-preview-toolbar');
+    if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
+  }
 }
 
 function onMinutesPreviewClose() {
@@ -1592,76 +1571,48 @@ function initMinutesPreview() {
     }
   });
 
-  // ── Regenerate button (opens modal) ──
+  // ── Regenerate button: confirm, keep the current version, regenerate on the heavy tier ──
   const regenBtn = $('#btnMinutesRegenerate');
-  const regenModal = $('#regenModal');
 
-  regenBtn.addEventListener('click', () => {
+  regenBtn.addEventListener('click', async () => {
     // Close export popover if open
     const existingExport = modal.querySelector('.export-popover');
     if (existingExport) { existingExport.remove(); }
 
-    // Apply i18n
-    regenModal.querySelectorAll('[data-i18n]').forEach(el => {
-      el.textContent = t(el.getAttribute('data-i18n'));
-    });
+    if (!(await confirmDialog({ message: t('minutes_preview.regen_confirm'), confirmText: t('minutes_preview.regen_title') }))) return;
 
-    // Pre-select current model
-    const currentModel = state.settings.geminiModel || 'gemini-3.5-flash';
-    regenModal.querySelectorAll('.regen-model-card').forEach(card => {
-      card.classList.toggle('active', card.dataset.regenModel === currentModel);
-    });
+    saveMinutesVersion();
 
-    regenModal.hidden = false;
-  });
+    // Show loading skeleton inline in viewer
+    content.innerHTML = `
+      <div class="minutes-preview-loading">
+        <div class="minutes-preview-progress">
+          <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
+          <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
+        </div>
+        <div class="minutes-skeleton-line heading"></div>
+        <div class="minutes-skeleton-line wide"></div>
+        <div class="minutes-skeleton-line medium"></div>
+        <div class="minutes-skeleton-line short"></div>
+        <div class="minutes-skeleton-line wide"></div>
+      </div>
+    `;
+    modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = true);
 
-  // Model card click → execute regeneration
-  regenModal.querySelectorAll('.regen-model-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      const model = card.dataset.regenModel || 'gemini-3.5-flash';
-      regenModal.hidden = true;
-
-      saveMinutesVersion();
-
-      // Show loading skeleton inline in viewer
+    try {
+      await regenerateMinutes(modelFor('minutes'), '', state.minutesPromptConfig);
+      renderMinutesInViewer();
+      showToast(t('toast.final_minutes_done'), 'success');
+    } catch (err) {
       content.innerHTML = `
-        <div class="minutes-preview-loading">
-          <div class="minutes-preview-progress">
-            <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
-            <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
-          </div>
-          <div class="minutes-skeleton-line heading"></div>
-          <div class="minutes-skeleton-line wide"></div>
-          <div class="minutes-skeleton-line medium"></div>
-          <div class="minutes-skeleton-line short"></div>
-          <div class="minutes-skeleton-line wide"></div>
+        <div style="padding:24px;text-align:center;color:var(--danger);">
+          <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+          <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
         </div>
       `;
-      modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = true);
-
-      try {
-        await regenerateMinutes(model, '', state.minutesPromptConfig);
-        renderMinutesInViewer();
-        showToast(t('toast.final_minutes_done'), 'success');
-      } catch (err) {
-        content.innerHTML = `
-          <div style="padding:24px;text-align:center;color:var(--danger);">
-            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
-          </div>
-        `;
-        modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = false);
-        showToast(t('toast.final_minutes_fail') + err.message, 'error');
-      }
-    });
-  });
-
-  // Close regen modal on overlay click or close button
-  regenModal.addEventListener('click', (e) => {
-    if (e.target === regenModal) regenModal.hidden = true;
-  });
-  regenModal.querySelector('[data-close="regenModal"]').addEventListener('click', () => {
-    regenModal.hidden = true;
+      modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = false);
+      showToast(t('toast.final_minutes_fail') + err.message, 'error');
+    }
   });
 
   // ── Export button ──
@@ -1669,9 +1620,6 @@ function initMinutesPreview() {
   let currentExportPopover = null;
   exportBtn.addEventListener('click', () => {
     if (currentExportPopover) { currentExportPopover.remove(); currentExportPopover = null; return; }
-
-    // Close regen modal if open
-    regenModal.hidden = true;
 
     const tmpl = document.getElementById('tmplExportPopover');
     const popover = tmpl.content.cloneNode(true).firstElementChild;

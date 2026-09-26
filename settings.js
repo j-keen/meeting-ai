@@ -12,14 +12,12 @@ import {
 import { getDefaultPrompt, getPromptForType } from './ai.js';
 import { t, setLanguage, setAiLanguage } from './i18n.js';
 import { confirmDialog, promptDialog } from './ui/dialogs.js';
-import {
-  setUserApiKeyProvider, setKeyMode, testUserApiKey,
-  setProvider, setOpenAIKeyProvider,
-} from './gemini-api.js';
+import { setProvider } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
 import { setAnalyticsOptOut, isAnalyticsEnabled } from './analytics.js';
 import { openPromptBuilder } from './prompt-builder.js';
 import { escapeHtml } from './utils.js';
+import { downloadBackup, readBackup, applyBackup } from './backup.js';
 import {
   WHISPER_MODELS, isWhisperSupported, getWhisperModelStatus,
   downloadWhisperModel, deleteWhisperModel,
@@ -119,17 +117,6 @@ export function initSettings() {
   // Load saved values
   loadSavedSettings();
 
-  // Settings tab switching
-  document.querySelectorAll('.settings-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.remove('active'));
-      tab.classList.add('active');
-      const content = document.querySelector(`.settings-tab-content[data-tab="${tab.dataset.tab}"]`);
-      if (content) content.classList.add('active');
-    });
-  });
-
   // UI Language
   $('#selectUiLanguage').addEventListener('change', (e) => {
     state.settings.uiLanguage = e.target.value;
@@ -177,16 +164,6 @@ export function initSettings() {
 
   // btnPromptSettings now handled by analysis-style-modal.js
 
-  // Chat model select
-  const chatModelSelect = $('#chatModelSelect');
-  if (chatModelSelect) {
-    chatModelSelect.value = state.settings.chatModel || 'gemini-3.5-flash-lite';
-    chatModelSelect.addEventListener('change', (e) => {
-      state.settings.chatModel = e.target.value;
-      markDirty();
-    });
-  }
-
   // ===== Audio Recording =====
   initAudioRecordingSettings();
 
@@ -199,117 +176,52 @@ export function initSettings() {
   // ===== Correction Dictionary (modal, immediate save) =====
   initCorrectionDict();
 
-  // ===== Gemini personal API key / STT & power prefs =====
-  safeGemini(() => setUserApiKeyProvider?.(() => state.settings.geminiApiKey || ''));
-  safeGemini(() => setKeyMode?.(state.settings.geminiKeyMode || 'fallback'));
-  safeGemini(() => setProvider?.(state.settings.aiProvider || 'gemini'));
-  safeGemini(() => setOpenAIKeyProvider?.(() => state.settings.openaiApiKey || ''));
-  initAiProviderSettings();
-  initGeminiKeySettings();
-  initOpenaiKeySettings();
+  // ===== AI: OpenAI only, server key only =====
+  // Stored aiProvider / personal Gemini & OpenAI keys from older versions are ignored:
+  // no key provider is registered, so every request goes through the server proxy.
+  safeGemini(() => setProvider?.('openai'));
+  initBackup();
   initSttPrefsSettings();
   initWhisperSettings();
   initHighAccuracyButton();
 
 }
 
-// ===== AI provider =====
+// ===== Backup (export / restore every meeting + setting as one JSON file) =====
 
-function initAiProviderSettings() {
-  const select = $('#selectAiProvider');
-  if (!select) return;
-  select.value = state.settings.aiProvider || 'gemini';
-  select.addEventListener('change', (e) => {
-    state.settings.aiProvider = e.target.value;
-    safeGemini(() => setProvider?.(e.target.value));
-    markDirty();
-  });
-}
-
-// ===== Gemini API key (proxy-first, personal-key fallback) =====
-
-function initGeminiKeySettings() {
-  const input = $('#inputGeminiKey');
-  const toggleBtn = $('#btnToggleGeminiKey');
-  const modeSelect = $('#selectGeminiKeyMode');
-  const testBtn = $('#btnTestGeminiKey');
-  const status = $('#geminiKeyStatus');
-
-  if (input) {
-    input.value = state.settings.geminiApiKey || '';
-    input.addEventListener('input', (e) => {
-      state.settings.geminiApiKey = e.target.value;
-      if (status) status.textContent = '';
-      markDirty();
-    });
-  }
-
-  toggleBtn?.addEventListener('click', () => {
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-
-  if (modeSelect) {
-    modeSelect.value = state.settings.geminiKeyMode || 'fallback';
-    modeSelect.addEventListener('change', (e) => {
-      state.settings.geminiKeyMode = e.target.value;
-      safeGemini(() => setKeyMode?.(e.target.value));
-      markDirty();
-    });
-  }
-
-  testBtn?.addEventListener('click', async () => {
-    const key = input ? input.value : state.settings.geminiApiKey || '';
-    testBtn.disabled = true;
-    if (status) status.textContent = '';
+function initBackup() {
+  $('#btnBackupExport')?.addEventListener('click', () => {
     try {
-      const ok = await safeGemini(() => testUserApiKey?.(key));
-      if (status) {
-        status.textContent = ok ? t('settings.gemini_key_ok') : t('settings.gemini_key_invalid');
-        status.classList.toggle('error', !ok);
-        status.classList.toggle('success', !!ok);
-      }
-    } finally {
-      testBtn.disabled = false;
+      const backup = downloadBackup();
+      const n = (() => {
+        try { return (JSON.parse(backup.data['meeting-ai-data'] || '{}').meetings || []).length; } catch { return 0; }
+      })();
+      emit('toast', { message: t('settings.backup_exported', { n }), type: 'success' });
+    } catch {
+      emit('toast', { message: t('settings.backup_error'), type: 'error' });
     }
   });
-}
 
-// ===== OpenAI personal API key =====
-
-function initOpenaiKeySettings() {
-  const input = $('#inputOpenaiKey');
-  const toggleBtn = $('#btnToggleOpenaiKey');
-  const testBtn = $('#btnTestOpenaiKey');
-  const status = $('#openaiKeyStatus');
-
-  if (input) {
-    input.value = state.settings.openaiApiKey || '';
-    input.addEventListener('input', (e) => {
-      state.settings.openaiApiKey = e.target.value;
-      if (status) status.textContent = '';
-      markDirty();
-    });
-  }
-
-  toggleBtn?.addEventListener('click', () => {
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-
-  testBtn?.addEventListener('click', async () => {
-    const key = input ? input.value : state.settings.openaiApiKey || '';
-    testBtn.disabled = true;
-    if (status) status.textContent = '';
+  const fileInput = $('#backupImportFile');
+  $('#btnBackupImport')?.addEventListener('click', () => fileInput?.click());
+  fileInput?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    let data = null;
     try {
-      const ok = await safeGemini(() => testUserApiKey?.(key, 'openai'));
-      if (status) {
-        status.textContent = ok ? t('settings.openai_key_ok') : t('settings.openai_key_invalid');
-        status.classList.toggle('error', !ok);
-        status.classList.toggle('success', !!ok);
-      }
-    } finally {
-      testBtn.disabled = false;
+      data = readBackup(JSON.parse(await file.text()));
+    } catch { /* not JSON */ }
+    if (!data) {
+      emit('toast', { message: t('settings.backup_invalid'), type: 'error' });
+      return;
+    }
+    if (!(await confirmDialog({ message: t('settings.backup_import_confirm'), confirmText: t('settings.backup_import'), danger: true }))) return;
+    try {
+      applyBackup(data);
+      location.reload();
+    } catch {
+      emit('toast', { message: t('settings.backup_error'), type: 'error' });
     }
   });
 }
@@ -751,7 +663,6 @@ function saveAllSettings() {
   saveSettings({
     uiLanguage: s.uiLanguage,
     aiLanguage: s.aiLanguage,
-    chatModel: s.chatModel,
     language: s.language,
     customPrompt: s.customPrompt,
     chatSystemPrompt: s.chatSystemPrompt,
@@ -762,10 +673,6 @@ function saveAllSettings() {
     audioRecording: s.audioRecording,
     audioRetentionDays: s.audioRetentionDays,
     audioAutoDownload: s.audioAutoDownload,
-    geminiApiKey: s.geminiApiKey,
-    geminiKeyMode: s.geminiKeyMode,
-    aiProvider: s.aiProvider,
-    openaiApiKey: s.openaiApiKey,
     sttEngine: s.sttEngine,
     sttOnDevice: s.sttOnDevice,
     keepScreenAwake: s.keepScreenAwake,
@@ -824,8 +731,6 @@ async function resetAllSettings() {
   const s = state.settings;
   s.uiLanguage = 'auto';
   s.aiLanguage = 'auto';
-  s.geminiModel = 'gemini-3.5-flash';
-  s.chatModel = 'gemini-3.5-flash-lite';
   s.language = 'ko';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
@@ -860,25 +765,9 @@ function applySettingsToForm() {
   refreshCustomPresetList();
   $('#textChatPrompt').value = s.chatSystemPrompt;
 
-  const chatModelSelect = $('#chatModelSelect');
-  if (chatModelSelect) chatModelSelect.value = s.chatModel;
-
   renderChatPresets();
 
-  // Gemini key / STT & power prefs (markup may not exist yet)
-  const geminiKeyInput = $('#inputGeminiKey');
-  if (geminiKeyInput) geminiKeyInput.value = s.geminiApiKey || '';
-  const geminiKeyModeSelect = $('#selectGeminiKeyMode');
-  if (geminiKeyModeSelect) geminiKeyModeSelect.value = s.geminiKeyMode || 'fallback';
-  const geminiKeyStatus = $('#geminiKeyStatus');
-  if (geminiKeyStatus) geminiKeyStatus.textContent = '';
-  const aiProviderSelect = $('#selectAiProvider');
-  if (aiProviderSelect) aiProviderSelect.value = s.aiProvider || 'gemini';
-  const openaiKeyInput = $('#inputOpenaiKey');
-  if (openaiKeyInput) openaiKeyInput.value = s.openaiApiKey || '';
-  const openaiKeyStatus = $('#openaiKeyStatus');
-  if (openaiKeyStatus) openaiKeyStatus.textContent = '';
-  safeGemini(() => setProvider?.(s.aiProvider || 'gemini'));
+  // STT & power prefs (hidden engine controls may not exist)
   const sttEngineSelect = $('#selectSttEngine');
   if (sttEngineSelect) sttEngineSelect.value = s.sttEngine || 'auto';
   const sttOnDeviceCheck = $('#checkSttOnDevice');
@@ -891,7 +780,6 @@ function applySettingsToForm() {
   if (thresholdRange) thresholdRange.value = String(Math.min(5000, s.analysisCharThreshold || 1000));
   const thresholdInput = $('#inputAnalysisThreshold');
   if (thresholdInput) thresholdInput.value = String(s.analysisCharThreshold || 1000);
-  safeGemini(() => setKeyMode?.(s.geminiKeyMode || 'fallback'));
   const cloudSttModelSelect = $('#selectCloudSttModel');
   if (cloudSttModelSelect) cloudSttModelSelect.value = s.cloudSttModel || 'gpt-4o-mini-transcribe';
   const whisperModelSelect = $('#selectWhisperModel');
@@ -910,8 +798,6 @@ function loadSavedSettings() {
   const saved = loadSettings();
   const s = state.settings;
 
-  s.geminiModel = saved.geminiModel || 'gemini-3.5-flash';
-  s.chatModel = saved.chatModel || 'gemini-3.5-flash-lite';
   s.language = saved.language || 'ko';
   s.autoAnalysis = true;
   s.analysisInterval = 180;
@@ -931,17 +817,14 @@ function loadSavedSettings() {
   s.audioRecording = saved.audioRecording !== undefined ? saved.audioRecording : true;
   s.audioRetentionDays = saved.audioRetentionDays || 30;
   s.audioAutoDownload = !!saved.audioAutoDownload;
-  s.geminiApiKey = saved.geminiApiKey || '';
-  s.geminiKeyMode = saved.geminiKeyMode || 'fallback';
-  s.aiProvider = saved.aiProvider || 'gemini';
-  s.openaiApiKey = saved.openaiApiKey || '';
+  s.aiProvider = 'openai'; // fixed; old stored values (and personal keys) are ignored
   s.sttEngine = saved.sttEngine || 'auto';
   s.sttOnDevice = saved.sttOnDevice !== undefined ? saved.sttOnDevice : true;
   s.keepScreenAwake = saved.keepScreenAwake !== undefined ? saved.keepScreenAwake : true;
   s.autoAnalysis = saved.autoAnalysis !== undefined ? saved.autoAnalysis : true;
   s.analysisCharThreshold = Number(saved.analysisCharThreshold) || 1000;
   s.keyboardCommitMs = saved.keyboardCommitMs || 2500;
-  s.cloudSttModel = saved.cloudSttModel || 'gpt-4o-mini-transcribe';
+  s.cloudSttModel = 'gpt-4o-mini-transcribe'; // fixed; no picker
   s.whisperModel = saved.whisperModel || 'onnx-community/whisper-base';
 
   applySettingsToForm();
@@ -1392,8 +1275,6 @@ function initDataTab() {
   // Listen for openContactsModal event (from contact groups)
   on('openContactsModal', () => {
     openSettings();
-    const dataTab = document.querySelector('.settings-tab[data-tab="data"]');
-    if (dataTab) dataTab.click();
     setTimeout(() => {
       $('#contactsModal').hidden = false;
       contactSearchQuery = '';

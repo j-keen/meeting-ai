@@ -15,7 +15,7 @@
 
 import { t } from './i18n.js';
 import { createKeyboardEngine } from './stt-keyboard.js';
-import { createCloudEngine } from './stt-cloud.js';
+import { createCloudEngine, CLOUD_STT_MODELS } from './stt-cloud.js';
 import { getUserApiKey, isCloudSttAvailable } from './gemini-api.js';
 
 const DEBUG_KEY = 'meeting-ai-stt-debug';
@@ -38,21 +38,20 @@ export function isMobileUA() {
 
 /**
  * Pick the engine for the current device + settings. Pure; unit-testable.
- * An explicit cloud/whisper/keyboard choice wins even on the native app.
+ * The cloud engine (OpenAI Realtime gpt-4o-mini-transcribe, server token) is THE engine on
+ * every platform whenever it is available — the engine picker is hidden and stored prefs are
+ * ignored. Only when the server token is missing do the hidden engines act as a fallback
+ * (old explicit whisper/keyboard prefs still apply there).
  * @returns {'native'|'keyboard'|'webspeech'|'cloud'|'whisper'}
  */
 export function resolveEngine(settings = {}, env = {}) {
   const hasNative = env.hasNative ?? !!window.__nativeBridge?.isNative;
   const hasSpeech = env.hasSpeech ?? !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  const isMobile = env.isMobile ?? isMobileUA();
   const hasCloud = env.hasCloud ?? isCloudSttAvailable();
+  if (hasCloud) return 'cloud';
   const pref = settings.sttEngine;
-  if (pref === 'cloud' || pref === 'whisper' || pref === 'keyboard') return pref;
-  if (pref && pref !== 'auto') return hasNative ? 'native' : 'webspeech';
-  // 'auto': phones get the cloud engine when it is available — the browser recognizer on
-  // Android restarts every few seconds and dies with the screen off; the cloud engine
-  // (mic capture + WebSocket) keeps running in the background.
-  if (isMobile && hasCloud) return 'cloud';
+  if (pref === 'whisper' || pref === 'keyboard') return pref;
+  if (pref && pref !== 'auto' && pref !== 'cloud') return hasNative ? 'native' : 'webspeech';
   if (hasNative) return 'native';
   if (!hasSpeech) return 'keyboard';
   return 'webspeech';
@@ -423,7 +422,8 @@ export function createSTT() {
       if (which === 'keyboard') {
         engine = loadKeyboardEngine(cfg);
       } else if (which === 'cloud') {
-        engine = createCloudEngine({ language, model: cfg.cloudSttModel, getPersonalKey: () => getUserApiKey('openai') });
+        // Fixed to gpt-4o-mini-transcribe ($0.003/min; silence is not billed, only VAD speech).
+        engine = createCloudEngine({ language, model: CLOUD_STT_MODELS[0], getPersonalKey: () => getUserApiKey('openai') });
       } else if (which === 'whisper') {
         try {
           const spec = './stt-whisper.js';

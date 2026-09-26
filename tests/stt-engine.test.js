@@ -43,39 +43,31 @@ function makeStartCallbacks(overrides = {}) {
 }
 
 describe('resolveEngine', () => {
-  it('returns native when env.hasNative is true unless the user explicitly picked another engine', () => {
-    // An explicit keyboard / cloud / whisper choice wins even on the native app
-    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: true })).toBe('keyboard');
-    expect(resolveEngine({ sttEngine: 'cloud' }, { hasNative: true })).toBe('cloud');
-    expect(resolveEngine({ sttEngine: 'whisper' }, { hasNative: false, hasSpeech: true })).toBe('whisper');
-    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: true, hasSpeech: false })).toBe('native');
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: true, hasSpeech: true })).toBe('native');
-    expect(resolveEngine({}, { hasNative: true })).toBe('native');
-  });
-
-  it('returns keyboard when native and speech are both unavailable', () => {
-    expect(resolveEngine({}, { hasNative: false, hasSpeech: false })).toBe('keyboard');
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: false })).toBe('keyboard');
-  });
-
-  it("returns keyboard when settings.sttEngine is 'keyboard'", () => {
-    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: false, hasSpeech: true })).toBe('keyboard');
-    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: false, hasSpeech: false })).toBe('keyboard');
-  });
-
-  it("returns webspeech when settings.sttEngine is 'webspeech'", () => {
-    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: true })).toBe('webspeech');
-    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: false })).toBe('webspeech');
-  });
-
-  it("returns webspeech for 'auto' when speech is available", () => {
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true })).toBe('webspeech');
-    // phones: 'auto' prefers the cloud engine when it is available (Android's recognizer flaps / dies with the screen off)
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('cloud');
+  it('returns cloud on every platform whenever the cloud engine is available, ignoring stored prefs', () => {
+    expect(resolveEngine({}, { hasNative: false, hasSpeech: true, isMobile: false, hasCloud: true })).toBe('cloud');
     expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: true, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('cloud');
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: false })).toBe('webspeech');
-    expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, isMobile: false, hasCloud: true })).toBe('webspeech');
-    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: true, isMobile: true, hasCloud: true })).toBe('webspeech');
+    expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: true, hasCloud: true })).toBe('cloud');
+    expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: false, hasSpeech: false, hasCloud: true })).toBe('cloud');
+    expect(resolveEngine({ sttEngine: 'whisper' }, { hasNative: false, hasSpeech: true, hasCloud: true })).toBe('cloud');
+  });
+
+  describe('fallback when the cloud engine is unavailable', () => {
+    it('prefers native, then web speech, then keyboard', () => {
+      expect(resolveEngine({}, { hasNative: true, hasCloud: false })).toBe('native');
+      expect(resolveEngine({ sttEngine: 'auto' }, { hasNative: false, hasSpeech: true, hasCloud: false })).toBe('webspeech');
+      expect(resolveEngine({}, { hasNative: false, hasSpeech: false, hasCloud: false })).toBe('keyboard');
+    });
+
+    it('does not pick cloud for an old stored cloud pref', () => {
+      expect(resolveEngine({ sttEngine: 'cloud' }, { hasNative: false, hasSpeech: true, hasCloud: false })).toBe('webspeech');
+    });
+
+    it('still honors an old explicit keyboard / whisper / webspeech pref', () => {
+      expect(resolveEngine({ sttEngine: 'keyboard' }, { hasNative: true, hasCloud: false })).toBe('keyboard');
+      expect(resolveEngine({ sttEngine: 'whisper' }, { hasNative: false, hasSpeech: true, hasCloud: false })).toBe('whisper');
+      expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: true, hasSpeech: false, hasCloud: false })).toBe('native');
+      expect(resolveEngine({ sttEngine: 'webspeech' }, { hasNative: false, hasSpeech: false, hasCloud: false })).toBe('webspeech');
+    });
   });
 });
 

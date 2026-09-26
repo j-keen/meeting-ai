@@ -236,7 +236,7 @@ async function handleSend() {
 }
 
 function getChatModel() {
-  return state.settings.chatModel || modelFor('chat');
+  return modelFor('chat'); // light tier; the old per-chat model picker is gone
 }
 
 async function sendChatMessage(userText) {

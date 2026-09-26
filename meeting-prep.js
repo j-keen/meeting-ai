@@ -8,6 +8,7 @@ import {
   loadCustomTypes,
 } from './storage.js';
 import { callGeminiGuarded, UsageLimitError } from './gemini-api.js';
+import { modelFor } from './models.js';
 import { t } from './i18n.js';
 import { promptDialog } from './ui/dialogs.js';
 import { showToast } from './ui.js';
@@ -1124,7 +1125,7 @@ ${analysisText.slice(0, 3000)}`
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 }
     };
 
-    const res = await callGeminiGuarded('gemini-3.5-flash-lite', body, { category: 'prep' });
+    const res = await callGeminiGuarded(modelFor('prep'), body, { category: 'prep' });
     const text = res.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
     let items;
     try { items = JSON.parse(text); } catch { items = []; }
@@ -1208,7 +1209,7 @@ export async function ocrBusinessCard(base64) {
     }
   };
 
-  const response = await callGeminiGuarded('gemini-3.5-flash-lite', body, { category: 'prep' });
+  const response = await callGeminiGuarded(modelFor('ocr'), body, { category: 'prep' });
   const text = response.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
   try {
