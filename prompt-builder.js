@@ -9,6 +9,7 @@ import { showToast } from './ui.js';
 import { renderMarkdown } from './chat.js';
 import { escapeHtml } from './utils.js';
 import { getRoleIntro, getAppFeatureDescription, getJsonSchema, getPromptWritingPrinciples, getToneGuidance } from './prompt-templates.js';
+import { getQuickPreset, localizePreset } from './quick-presets.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -34,13 +35,10 @@ function getConversationFlow(lang) {
 }
 
 // ===== Scenario Chips =====
-const SCENARIO_CHIPS = [
-  { ko: '업무 미팅', en: 'Work Meeting' },
-  { ko: '상담/컨설팅', en: 'Consultation' },
-  { ko: '발표/면접 연습', en: 'Presentation/Interview' },
-  { ko: '브레인스토밍', en: 'Brainstorming' },
-  { ko: '배움/강의', en: 'Learning/Lecture' },
-];
+// Each chip is a ready-made quick preset (quick-presets.js): tapping one opens the
+// prefilled confirm sheet instead of starting a from-scratch AI conversation.
+// Free-text input still runs the conversational builder for custom cases.
+const SCENARIO_CHIPS = ['lecture', 'one_on_one', 'work', 'consult', 'practice', 'brainstorm', 'study'];
 
 // ===== JSON Extraction =====
 function extractJSON(text) {
@@ -116,14 +114,16 @@ function renderScenarioChips() {
   const container = $('#pbScenarioChips');
   if (!container) return;
   container.innerHTML = '';
-  const ko = isKorean();
-  SCENARIO_CHIPS.forEach(chip => {
+  const lang = getAiLanguage();
+  SCENARIO_CHIPS.forEach(id => {
+    const preset = getQuickPreset(id);
+    if (!preset) return;
     const btn = document.createElement('button');
     btn.className = 'pb-chip';
-    btn.textContent = ko ? chip.ko : chip.en;
+    btn.textContent = localizePreset(preset, lang).name;
     btn.addEventListener('click', () => {
-      container.style.display = 'none';
-      sendUserMessage(btn.textContent);
+      closeModal();
+      emit('quickPreset:open', id);
     });
     container.appendChild(btn);
   });
@@ -399,7 +399,8 @@ function handleStart() {
 }
 
 // ===== Exported Functions =====
-export function openPromptBuilder() {
+/** @param {{ prefill?: string }} [opts] prefill: text placed in the input box (not sent) */
+export function openPromptBuilder({ prefill = '' } = {}) {
   const modal = $('#promptBuilderModal');
   if (!modal) return;
 
@@ -430,7 +431,7 @@ export function openPromptBuilder() {
   // Focus input
   const input = $('#pbInput');
   if (input) {
-    input.value = '';
+    input.value = prefill;
     setTimeout(() => input.focus(), 100);
   }
 }

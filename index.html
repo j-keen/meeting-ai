@@ -1513,30 +1513,66 @@
         <span class="launcher-record-dot" aria-hidden="true"></span>
         <span data-i18n="meeting.launcher_record">Start recording now</span>
       </button>
-      <p class="launcher-setup-label" data-i18n="meeting.setup_options_title">Or set up first</p>
-      <!-- 3 secondary setup cards -->
-      <div class="launcher-actions-grid">
-        <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
-          <span class="launcher-card-badge">1</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
-          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Chat with AI to set your meeting goal</span>
+      <p class="launcher-current-style" id="launcherCurrentStyle" hidden></p>
+      <!-- Quick Start: built-in + saved presets. Tap → confirm sheet (#quickPresetModal) → start. -->
+      <div class="launcher-presets-head">
+        <p class="launcher-setup-label" data-i18n="launcher.presets_title">Start with a preset</p>
+        <span class="launcher-presets-hint" data-i18n="launcher.presets_hint">Tap, check, start</span>
+      </div>
+      <div class="qp-grid" id="launcherPresetGrid"></div>
+      <!-- Slower, deeper setup paths -->
+      <p class="launcher-more-label" data-i18n="launcher.more_title">More ways to set up</p>
+      <div class="launcher-more-row">
+        <button class="launcher-more-btn" id="btnLauncherQuickStart" type="button">
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span data-i18n="launcher.ai_custom">Custom setup with AI</span>
         </button>
-        <button class="launcher-card" id="btnLauncherDeepSetup">
-          <span class="launcher-card-badge">2</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Meeting Prep</span>
-          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Enter attendees, materials and agenda ahead of time</span>
+        <button class="launcher-more-btn" id="btnLauncherDeepSetup" type="button">
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+          <span data-i18n="meeting.deep_setup">Meeting Prep</span>
         </button>
-        <button class="launcher-card" id="btnLauncherPreset">
-          <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
-          <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
-          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets saved yet</span>
+        <button class="launcher-more-btn" id="btnLauncherPreset" type="button" hidden>
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+          <span data-i18n="launcher.saved_prep">Saved meeting prep</span>
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn" data-i18n="launcher.close">Close</button>
+    </div>
+  </div>
+
+  <!-- Quick preset confirm sheet: prefilled + editable, one tap to start -->
+  <div class="modal-overlay" id="quickPresetModal" hidden>
+    <div class="modal qp-sheet">
+      <div class="qp-sheet-head">
+        <span class="qp-sheet-icon" id="qpIcon" aria-hidden="true"></span>
+        <div class="qp-sheet-titles">
+          <h2 class="qp-sheet-title" id="qpTitle" data-dialog-title></h2>
+          <p class="qp-sheet-desc" id="qpDesc"></p>
+        </div>
+        <button class="btn btn-icon modal-close" id="qpCloseBtn" type="button" data-i18n-aria="qp.close" aria-label="Close">&times;</button>
+      </div>
+      <div class="qp-sheet-body">
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.subject">Title / topic</span> <span class="qp-label-sub" data-i18n="qp.subject_optional">(optional)</span></span>
+          <input type="text" class="qp-input" id="qpSubject" maxlength="120" autocomplete="off">
+        </label>
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.focus">What the AI should watch for</span> <span class="qp-label-sub" data-i18n="qp.one_per_line">One per line</span></span>
+          <textarea class="qp-textarea" id="qpFocus" rows="3"></textarea>
+        </label>
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.questions">Suggested questions</span> <span class="qp-label-sub" data-i18n="qp.one_per_line">One per line</span></span>
+          <textarea class="qp-textarea" id="qpQuestions" rows="3"></textarea>
+        </label>
+        <button class="qp-reset" id="qpReset" type="button" hidden data-i18n="qp.reset">Reset to defaults</button>
+      </div>
+      <div class="qp-sheet-actions">
+        <button class="btn btn-outline qp-ai-btn" id="qpAiCustom" type="button" data-i18n="qp.ai_custom">Customize with AI</button>
+        <button class="btn btn-primary qp-start-btn" id="qpStart" type="button">
+          <span class="launcher-record-dot" aria-hidden="true"></span>
+          <span data-i18n="qp.start">Start now</span>
+        </button>
+      </div>
     </div>
   </div>
 
