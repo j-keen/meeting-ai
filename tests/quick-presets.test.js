@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { QUICK_PRESETS, localizePreset, customTypeAsPreset, buildQuickPresetConfig, getQuickPreset } from '../quick-presets.js';
-import { getTypeDefaultPrompt, getDefaultChatPresets, setLanguage } from '../i18n.js';
+import { getTypeDefaultPrompt, getDefaultChatPresets, setLanguage, t, setTermVariantResolver } from '../i18n.js';
 
 const FIELDS = ['name', 'description', 'summary', 'focusPoints', 'chatSystemPrompt', 'chatPresets', 'memoHint', 'context', 'subjectPlaceholder'];
 
@@ -37,6 +37,17 @@ describe('quick presets', () => {
     expect(cfg.title).toBe('');
   });
 
+  it('every preset chat persona carries the no-LaTeX formatting rule (ko + en)', () => {
+    for (const p of QUICK_PRESETS) {
+      for (const lang of ['ko', 'en']) {
+        const cfg = buildQuickPresetConfig(localizePreset(p, lang), lang);
+        expect(cfg.chatSystemPrompt, `${p.id}.${lang}`).toMatch(/LaTeX/);
+        expect(cfg.chatSystemPrompt).toContain('\\(');
+        expect(cfg.chatSystemPrompt).toContain('KL(q‖p)');
+      }
+    }
+  });
+
   it('applies edits: subject to title/context, custom focus and questions', () => {
     const preset = localizePreset(getQuickPreset('one_on_one'), 'en');
     const cfg = buildQuickPresetConfig(preset, 'en', {
@@ -63,6 +74,21 @@ describe('quick presets', () => {
     expect(cfg.meetingType).toBe('custom_x');
     expect(cfg.analysisPrompt).toBe('P');
     expect(cfg.chatPresets).toEqual(['a']);
+  });
+});
+
+describe('lecture wording (P2-2)', () => {
+  it('t() switches meeting wording to lecture wording only while the resolver says lecture', () => {
+    setLanguage('ko');
+    let variant = null;
+    setTermVariantResolver(() => variant);
+    expect(t('end_meeting.generate_minutes')).toBe('회의록 생성하기');
+    variant = 'lecture';
+    expect(t('end_meeting.generate_minutes')).toBe('강의 노트 생성하기');
+    expect(t('chat.placeholder')).toBe('강의에 대해 AI에게 질문하세요...');
+    expect(t('end_meeting.save')).toBe(t('end_meeting.save')); // keys without a variant unchanged
+    setTermVariantResolver(null);
+    expect(t('minutes_preview.title')).toBe('회의록');
   });
 });
 

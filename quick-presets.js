@@ -15,10 +15,12 @@ import { getTypeDefaultPrompt } from './i18n.js';
 const CHAT_TOOL_RULES = {
   ko: `사용 가능한 도구: add_context (맥락 추가), add_memo (메모 추가), rerun_analysis (재분석 실행)
 중요: 사용자의 질문에는 항상 텍스트로 직접 답하세요. 도구는 사용자가 "메모해줘", "맥락에 추가해줘", "다시 분석해줘"처럼 명시적으로 요청할 때만 사용하세요.
-짧고 바로 쓸 수 있게 답하세요. 한국어로 답변하세요.`,
+짧고 바로 쓸 수 있게 답하세요. 한국어로 답변하세요.
+형식: 수식은 LaTeX 없이 일반 텍스트로 쓰세요(\\( \\), \\[ \\], $, \\frac, \\mathbb 같은 표기 금지; 예: KL(q‖p), z = μ + σ·ε, p(z|x)). 표 대신 목록을 쓰고, 구분선(---)은 쓰지 마세요.`,
   en: `Available tools: add_context, add_memo, rerun_analysis
 Important: always answer the user's question directly in text. Use a tool only when the user explicitly asks to add a memo, add context, or re-run analysis.
-Keep answers short and immediately usable. Respond in English.`,
+Keep answers short and immediately usable. Respond in English.
+Format: write formulas as plain text, never LaTeX (no \\( \\), \\[ \\], $, \\frac, \\mathbb; e.g. KL(q‖p), z = μ + σ·ε, p(z|x)). Use lists instead of tables and no horizontal rules (---).`,
 };
 
 const FOCUS_HEADER = {

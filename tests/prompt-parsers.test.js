@@ -24,7 +24,7 @@ vi.mock('../style-history.js', () => ({ pushStyleHistory: vi.fn() }));
 vi.mock('../export-doc.js', () => ({ exportPDF: vi.fn(), exportWord: vi.fn() }));
 vi.mock('../export-md.js', () => ({ downloadFile: vi.fn() }));
 
-const { buildContents, capTranscriptLines, renderMarkdown } = await import('../chat.js');
+const { buildContents, capTranscriptLines, renderMarkdown, latexToPlain } = await import('../chat.js');
 const { extractPrompt, lostParsedHeadings } = await import('../prompt-adjuster.js');
 const { getSystemPrompt, buildMeetingContext } = await import('../doc-generator.js');
 const { extractJSON } = await import('../prompt-builder.js');
@@ -64,6 +64,23 @@ describe('renderMarkdown', () => {
   it('keeps ordered-list numbering when sub-bullets split the list', () => {
     const html = renderMarkdown('1. 가정\n   - 독립\n2. 결론');
     expect(html).toBe('<ol><li value="1">가정</li></ol><ul><li class="md-sub">독립</li></ul><ol><li value="2">결론</li></ol>');
+  });
+});
+
+describe('latexToPlain', () => {
+  it('turns LaTeX math from chat answers into readable plain text', () => {
+    expect(latexToPlain(String.raw`사후분포 \(p(z\mid x)\)를 구하기 어렵다`)).toBe('사후분포 p(z|x)를 구하기 어렵다');
+    expect(latexToPlain(String.raw`\[ \log p(x) = \log \int p(x,z)\,dz \]`)).toBe(' log p(x) = log ∫ p(x,z) dz ');
+    expect(latexToPlain(String.raw`\mathbb{E}_{q(z)}[\log p(x|z)] - \mathrm{KL}(q\|p)`)).toBe('E_q(z)[log p(x|z)] - KL(q‖p)');
+    expect(latexToPlain(String.raw`\boxed{z = \mu + \sigma \cdot \epsilon}`)).toBe('z = μ + σ · ε');
+    expect(latexToPlain(String.raw`\frac{1}{2}\sigma^{2}`)).toBe('1/2σ^2');
+  });
+
+  it('leaves plain text and code blocks alone', () => {
+    expect(latexToPlain('KL(q‖p), z = μ + σ·ε')).toBe('KL(q‖p), z = μ + σ·ε');
+    const code = '```\n' + String.raw`\frac{a}{b}` + '\n```';
+    expect(latexToPlain(code)).toBe(code);
+    expect(renderMarkdown(String.raw`\(\alpha\)`)).toBe('α');
   });
 });
 

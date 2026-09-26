@@ -519,7 +519,7 @@ Rules:
 - Never invent decisions, owners or deadlines that are not in the transcript or memos. Unclear owner → [TBD].
 - Numbers, dates, names and technical terms exactly as heard.
 - Write actual content, not abstractions like "discussed X".
-- There is no speaker attribution: do not assert who said what; mention names only when stated, tagged "(estimated)".
+- There is no speaker attribution: do not assert who said what. But an owner or deadline assigned by name ("Minsu takes the 4 auth items") is confirmed: write it without "(estimated)". Use "(estimated)" only for owners inferred from context.
 - If memos are provided, fold the user's memos into the related agenda item.
 - No tables, no horizontal rules, no indented sub-bullets; use one-level lists.`,
 
@@ -568,7 +568,7 @@ Rules:
 - 트랜스크립트·메모에 없는 결정, 담당자, 기한을 만들지 마세요. 담당자가 불명확하면 [미정].
 - 수치·날짜·이름·기술 용어는 들린 그대로.
 - "~에 대해 논의함" 같은 추상 표현 대신 실제 내용을 쓰세요.
-- 화자 구분이 없으므로 발언자를 단정하지 말고, 이름이 명시된 경우에만 "(추정)"을 붙여 언급하세요.
+- 화자 구분이 없으므로 누가 말했는지는 단정하지 마세요. 단, "민수 씨가 인증 4개"처럼 이름을 들어 직접 배정한 담당자·기한은 확정 정보이니 "(추정)" 없이 그대로 쓰세요. "(추정)"은 맥락으로만 짐작한 담당자에만 붙이세요.
 - 메모가 제공되면 사용자의 메모를 관련 안건에 반영하세요.
 - 표, 구분선(---), 들여쓴 하위 목록은 쓰지 말고 한 단계 목록을 쓰세요.`
 };
@@ -898,6 +898,31 @@ export function parseCorrections(parsed, lineCount = Infinity) {
     && typeof c.corrected === 'string' && c.corrected.trim());
 }
 
+/**
+ * Guard for the correction contract: keep a correction only when it is a small, real edit —
+ * roughly the same length, not a spacing-only change, and (for lines of 5+ words) with at most
+ * 40% of the words changed (LCS over whitespace tokens).
+ */
+export function isMinimalCorrection(orig, corrected) {
+  if (!corrected || corrected === orig) return false;
+  if (corrected.length < orig.length * 0.4 || corrected.length > orig.length * 1.6 + 10) return false;
+  if (corrected.replace(/\s+/g, '') === orig.replace(/\s+/g, '')) return false;
+  const a = orig.split(/\s+/).filter(Boolean);
+  const b = corrected.split(/\s+/).filter(Boolean);
+  if (a.length < 5) return true;
+  const dp = Array(b.length + 1).fill(0);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = 0;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev + 1 : Math.max(dp[j], dp[j - 1]);
+      prev = tmp;
+    }
+  }
+  const changed = 1 - dp[b.length] / Math.max(a.length, b.length);
+  return changed <= 0.4;
+}
+
 export async function correctSentences({ lines, model = modelFor('correction'), correctionDict = [], domainHint = '' }) {
   if (!isAiAvailable() || !lines || lines.length === 0) return [];
 
@@ -913,10 +938,10 @@ export async function correctSentences({ lines, model = modelFor('correction'), 
   }
 
   const examples = ko
-    ? `- acronyms and symbols that STT spelled out letter by letter → their written form ("케이엘" → "KL", "피 오브 엑스" → "p(x)", "엠에스이" → "MSE", "브이에이이" → "VAE", "제트" as a variable → "z")
-- spacing, obvious typos, wrong particles/endings ("까지에요" → "까지예요")`
+    ? `- Latin acronyms and variable letters that STT spelled out letter by letter → their written form ("케이엘" → "KL", "피 오브 엑스" → "p(x)", "엠에스이" → "MSE", "브이에이이" → "VAE", "제트" as a variable → "z")
+- obvious typos, wrong particles/endings ("까지에요" → "까지예요")`
     : `- acronyms and symbols that STT spelled out ("kay ell" → "KL", "p of x" → "p(x)", "em ess ee" → "MSE")
-- obvious typos, spacing and grammar slips`;
+- obvious typos and grammar slips`;
   const loanwords = ko
     ? 'Do NOT translate: Korean transliterations of loanwords stay Korean ("가우시안", "베르누이", "리파라미터라이제이션", "인트랙터블", "젠슨" stay as they are).'
     : 'Do NOT translate or respell names and loanwords that are already understandable.';
@@ -927,6 +952,7 @@ Fix ONLY:
 - misheard words (similar pronunciation)
 ${examples}
 Do NOT: rephrase, change meaning or register, merge or split lines, add or remove words. Every word that is not an error stays exactly as it is.
+Do NOT turn spoken math into symbols: Greek letter names, operators and numbers stay as spoken words ("뮤", "시그마 제곱", "마이너스 이분의 일", "sigma squared" stay as they are). Do NOT change spacing alone.
 ${loanwords}
 When unsure, leave the line unchanged.
 ${domainHint ? `\nDomain / topic hint (use it to resolve ambiguous terms): ${String(domainHint).slice(0, 300)}\n` : ''}${dictSection}
@@ -939,15 +965,12 @@ Include only lines that actually change. If nothing needs correction return {"co
   try {
     const data = await callGeminiGuarded(model, {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
+      // A JSON copy-edit: no reasoning (thinkingBudget 0 → reasoning_effort 'none' on OpenAI)
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.2, thinkingConfig: { thinkingBudget: 0 } }
     }, { category: 'correction' });
     const parsed = parseGeminiResponse(responseText(data));
     return parseCorrections(parsed, lines.length)
-      // Guard against rewrites: a correction keeps roughly the line's length
-      .filter(c => {
-        const orig = lines[c.index].text || '';
-        return c.corrected.length >= orig.length * 0.4 && c.corrected.length <= orig.length * 1.6 + 10;
-      });
+      .filter(c => isMinimalCorrection(lines[c.index].text || '', c.corrected));
   } catch {
     return [];
   }

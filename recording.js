@@ -20,7 +20,7 @@ import {
   updateTranscriptLineUI,
   showAiWaiting, showChatWaiting,
 } from './ui.js';
-import { t, getDateLocale } from './i18n.js';
+import { t, getDateLocale, refreshTermVariants } from './i18n.js';
 import { confirmDialog } from './ui/dialogs.js';
 import { showLauncherModal } from './launcher.js';
 
@@ -32,12 +32,17 @@ export function buildFullProfile() {
 
 // ===== Core Logic =====
 let isAnalyzing = false;
+// A rerun requested while an analysis is streaming (chat "다시 분석해줘", 즉시 분석, context
+// change) runs once right after it instead of being dropped.
+let pendingAnalysis = false;
 let isCorrecting = false;
 let charsSinceLastAnalysis = 0;
 let linesSinceLastAnalysis = 0;
 let charsSinceLastCorrection = 0;
-// Transcript lines an auto-correction pass has already sent (not persisted with the meeting)
-const correctionChecked = new WeakSet();
+// In-flight correction pass; later callers wait for it instead of being dropped.
+let correctionRun = null;
+const CORRECTION_BATCH = 20;
+const CORRECTION_CONCURRENCY = 4;
 
 // Guard: idle detection (max duration lives in meeting-session.js)
 const IDLE_WARNING_MS = 15 * 60 * 1000;
@@ -335,7 +340,7 @@ function checkCharThreshold(newLineText) {
   }
 
   // Correction trigger: every 2000 chars
-  if (charsSinceLastCorrection >= 2000 && state.settings.autoCorrection) {
+  if (charsSinceLastCorrection >= 2000 && state.settings.autoCorrection && !isCorrecting) {
     charsSinceLastCorrection = 0;
     runCorrection(true);
   }
@@ -351,29 +356,46 @@ function startAiCorrection() {
   charsSinceLastCorrection = 0;
 }
 
-export async function runCorrection(uncorrectedOnly) {
-  if (isCorrecting || !isAiAvailable()) return;
-  isCorrecting = true;
-  try {
-    // Auto runs only send lines no earlier run has looked at (otherwise every run would resend
-    // the whole unchanged transcript); a manual run re-checks everything.
-    const lines = uncorrectedOnly
-      ? state.transcript.filter(l => !l.originalText && !correctionChecked.has(l))
-      : state.transcript;
-    if (lines.length === 0) return;
+/** Lines no correction pass has reviewed yet (the flag is saved with the meeting). */
+export function uncheckedLines() {
+  return state.transcript.filter(l => !l.corrChecked);
+}
 
-    const correctionDict = loadCorrectionDict();
-    const domainHint = [state.meetingTitle, state.settings.meetingContext].filter(Boolean).join(' — ');
-    const batchSize = 20;
-    for (let i = 0; i < lines.length; i += batchSize) {
-      const batch = lines.slice(i, i + batchSize);
+/**
+ * STT correction pass. By default only lines no earlier pass reviewed (`corrChecked`, persisted
+ * on the line) are sent, so the end-of-session pass after live auto-correction — and a save
+ * right after "generate notes" — costs nothing extra. uncheckedOnly=false re-checks everything.
+ * Batches run in parallel (small pool); `onProgress(done, total)` reports batches finished.
+ */
+export async function runCorrection(uncheckedOnly = true, { onProgress } = {}) {
+  if (!isAiAvailable()) return;
+  // A pass (e.g. live auto-correction) may be in flight: wait for it, then send what is left.
+  while (correctionRun) await correctionRun;
+  correctionRun = correctLines(uncheckedOnly ? uncheckedLines() : [...state.transcript], onProgress)
+    .catch(() => { /* silent */ });
+  try { await correctionRun; } finally { correctionRun = null; }
+}
+
+async function correctLines(lines, onProgress) {
+  if (lines.length === 0) return;
+  isCorrecting = true;
+  const correctionDict = loadCorrectionDict();
+  const domainHint = [state.meetingTitle, state.settings.meetingContext].filter(Boolean).join(' — ');
+  const batches = [];
+  for (let i = 0; i < lines.length; i += CORRECTION_BATCH) batches.push(lines.slice(i, i + CORRECTION_BATCH));
+  let next = 0;
+  let done = 0;
+  onProgress?.(0, batches.length);
+  const worker = async () => {
+    while (next < batches.length) {
+      const batch = batches[next++];
       const corrections = await correctSentences({
         lines: batch,
         model: modelFor('correction'),
         correctionDict,
         domainHint,
-      });
-      batch.forEach(l => correctionChecked.add(l));
+      }).catch(() => []);
+      batch.forEach(l => { l.corrChecked = true; });
       for (const c of corrections) {
         const line = batch[c.index];
         if (!line || c.corrected === line.text) continue;
@@ -381,13 +403,22 @@ export async function runCorrection(uncorrectedOnly) {
         line.text = c.corrected;
         updateTranscriptLineUI(line.id);
       }
+      onProgress?.(++done, batches.length);
     }
-  } catch { /* silent */ }
-  finally { isCorrecting = false; }
+  };
+  try {
+    await Promise.all(Array.from({ length: Math.min(CORRECTION_CONCURRENCY, batches.length) }, worker));
+  } finally {
+    isCorrecting = false;
+  }
+}
+
+export function isAnalysisRunning() {
+  return isAnalyzing;
 }
 
 export async function runAnalysis() {
-  if (isAnalyzing) return;
+  if (isAnalyzing) { pendingAnalysis = true; return; }
   if (!isAiAvailable()) {
     showToast(t('toast.ai_unavailable'), 'warning');
     return;
@@ -398,6 +429,7 @@ export async function runAnalysis() {
   }
 
   isAnalyzing = true;
+  state.analysisInFlight = true;
   if (state.currentAnalysis) {
     // Keep previous result visible, just dim it
     const container = document.querySelector('#aiSections');
@@ -525,7 +557,12 @@ export async function runAnalysis() {
     }
   } finally {
     isAnalyzing = false;
+    state.analysisInFlight = false;
     onAnalysisComplete();
+    if (pendingAnalysis) {
+      pendingAnalysis = false;
+      setTimeout(() => runAnalysis(), 0);
+    }
   }
 }
 
@@ -632,6 +669,8 @@ export function showEndMeetingModal(editMeeting) {
   const isEditMode = !!editMeeting;
   state._editMode = isEditMode;
   state._editMeetingId = editMeeting?.id || null;
+  state._editPreset = editMeeting?.preset || null;
+  refreshTermVariants(); // lecture vs meeting wording for the modal's static labels
 
   // If editing a saved meeting, load its data into state temporarily
   if (isEditMode) {
@@ -686,7 +725,9 @@ export function showEndMeetingModal(editMeeting) {
       if (bookmarkCount > 0) stats.push(`${t('end_meeting.stat_bookmarks')}: ${bookmarkCount}`);
       if (state.memos.length > 0) stats.push(`${t('end_meeting.stat_memos')}: ${state.memos.length}`);
       if (state.analysisHistory.length > 0) stats.push(`${t('end_meeting.stat_analyses')}: ${state.analysisHistory.length}`);
-      if (state.chatHistory.length > 0) stats.push(`${t('end_meeting.stat_chats')}: ${state.chatHistory.length}`);
+      // "[add_memo: …]" etc. are tool bookkeeping in chatHistory, not conversation turns
+      const chatTurns = state.chatHistory.filter(m => !/^\[(?:add_context:|add_memo:|rerun_analysis\])/.test(m.text || '')).length;
+      if (chatTurns > 0) stats.push(`${t('end_meeting.stat_chats')}: ${chatTurns}`);
     }
     statsEl.textContent = stats.join('  ·  ');
   }
@@ -1356,14 +1397,22 @@ export async function finalizeEndMeeting() {
   const body = $('#endMeetingModal .modal-body');
   if (body) body.classList.add('disabled-form');
 
-  const hasUncorrected = state.transcript.some(l => !l.originalText);
-  if (isAiAvailable() && hasUncorrected && state.transcript.length > 0) {
-    await runCorrection(false);
-  }
-
+  // Persist first: the meeting is saved and the crash-recovery draft cleared before any AI
+  // work, so closing the tab during the correction pass cannot leave an "interrupted meeting".
   session.markEnded();
   autoSave();
   clearDraftRecovery();
+
+  // Only lines no pass has reviewed yet (none when "generate notes" already ran the pass).
+  if (isAiAvailable() && uncheckedLines().length > 0) {
+    const progressText = actions.querySelector('.save-progress-text');
+    await runCorrection(true, {
+      onProgress: (done, total) => {
+        if (progressText && total > 1) progressText.textContent = t('end_meeting.correcting', { done, total });
+      },
+    });
+    autoSave();
+  }
 
   // Auto-download audio if enabled
   if (state.settings.audioAutoDownload && (state._audioRecordingActive || state._audioRecorded)) {

@@ -5,12 +5,12 @@ const NAME_HANDLING_RULES = {
 - 이 트랜스크립트에는 화자 구분이 없습니다. 발언자를 확정적으로 귀속하지 마세요.
 - 비슷한 이름은 동일인으로 추정하세요 (STT 오인식 가능).
 - "~라는 의견이 제시됨", "~하기로 논의됨" 형태로 서술하세요.
-- 이름이 명확히 지명된 경우에만 언급하되 "(추정)" 표기를 붙이세요.`,
+- 이름은 트랜스크립트에 나온 경우에만 쓰세요. "민수 씨가 인증 4개"처럼 이름을 들어 직접 배정한 담당·기한은 확정이므로 "(추정)" 없이 쓰고, 맥락으로만 짐작한 담당자에만 "(추정)"을 붙이세요.`,
   en: `[Speaker Handling Rules]
 - This transcript has no speaker attribution. Do NOT definitively assign statements to specific speakers.
 - Similar names likely refer to the same person (STT misrecognition possible).
 - Use passive forms: "It was suggested that...", "It was discussed that..."
-- Only mention names when explicitly stated in the transcript, with "(estimated)" notation.`,
+- Only mention names that appear in the transcript. An owner or deadline assigned by name ("Minsu takes the 4 auth items") is confirmed: write it without "(estimated)"; add "(estimated)" only for owners inferred from context.`,
 };
 
 // Built-in category prompt definitions

@@ -116,6 +116,8 @@ export function toOpenAIRequest(model, body, opts = {}) {
   // and 'medium' roughly doubles-to-triples its billed reasoning tokens for little visible gain.
   // Raise HEAVY_EFFORT to 'medium' if minutes quality ever needs it (≈ +$0.02–0.05 per meeting).
   req.reasoning_effort = opts.tier === 'heavy' ? HEAVY_EFFORT : 'low';
+  // Gemini-style "no thinking" (thinkingBudget 0) for mechanical tasks such as STT correction.
+  if (gc.thinkingConfig?.thinkingBudget === 0) req.reasoning_effort = 'none';
   // Chat Completions rejects function tools combined with reasoning on gpt-5.6-luna (HTTP 400:
   // "Function tools with reasoning_effort are not supported … set reasoning_effort to 'none'",
   // verified 2026-09-26). Tool-carrying requests (the side chat) therefore run without reasoning.

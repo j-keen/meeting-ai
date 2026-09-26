@@ -26,7 +26,7 @@ import { refreshHistoryGrid, refreshHistoryGridDebounced, resetHistorySort } fro
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown, initFaq } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
-import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
+import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, setTermVariantResolver, refreshTermVariants } from './i18n.js';
 import { confirmDialog, promptDialog } from './ui/dialogs.js';
 import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
 import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
@@ -46,7 +46,7 @@ import {
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting, showEndMeetingModal,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   updateParticipantDropdown, updateTagDropdown, updateLocationDropdown,
-  runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
+  runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes, isAnalysisRunning,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
   clearDraftRecovery, saveActiveSession, loadMeeting, adoptImport, markEnded,
 } from './recording.js';
@@ -78,6 +78,12 @@ function updateInboxBadge() {
 // ===== Init =====
 function init() {
   const savedSettings = loadSettings();
+  // Lecture sessions say "강의 노트 / 강의 저장" instead of "회의록 / 회의 저장" (i18n TERM_VARIANTS).
+  // The save modal in edit mode follows the edited meeting's type.
+  setTermVariantResolver(() => {
+    const preset = state._editMode ? state._editPreset : state.settings?.meetingPreset;
+    return preset === 'learning' ? 'lecture' : null;
+  });
   setLanguage(savedSettings.uiLanguage || 'auto');
   setAiLanguage(savedSettings.aiLanguage || 'auto');
 
@@ -186,6 +192,7 @@ function init() {
         btnAnalyzeNowLabel.textContent = `${remaining}s`;
       }
     }, 1000);
+    if (isAnalysisRunning()) showToast(t('toast.analysis_queued'), 'info');
     runAnalysis();
   });
 
@@ -826,6 +833,7 @@ function init() {
   // as the builder, but every channel is applied (also clearing a previous preset's
   // chat persona/questions) so no earlier style leaks into this session.
   let sessionScopedContext = null; // { live, base } while a quick-preset subject is in the context
+  on('session:transition', () => refreshTermVariants());
   on('session:transition', ({ to }) => {
     if (to !== 'idle' || !sessionScopedContext) return;
     if (state.settings.meetingContext === sessionScopedContext.live) {
@@ -919,10 +927,12 @@ function init() {
   });
 
   // beforeunload auto-save + crash recovery (skip in loaded mode to avoid overwriting)
+  // An ended (saved) meeting is not a crash-recovery candidate: writing the active-session
+  // record there made the next load offer "중단된 회의가 있습니다" for a meeting already saved.
   window.addEventListener('beforeunload', () => {
     if (state.meetingId && !state.loadedMeetingId) {
       autoSave();
-      saveActiveSession();
+      if (state.phase !== 'ended') saveActiveSession();
     }
   });
 
@@ -968,6 +978,15 @@ function demoUpdateTimer() {
 }
 
 function loadDemoData() {
+  // The demo is a team meeting: run it with the meeting-minutes style for this page session
+  // only (not saved), so a lecture preset chosen earlier does not turn it into lecture notes.
+  state.settings.meetingPreset = 'minutes';
+  state.settings.customPrompt = getPromptForType('minutes');
+  state.settings.chatSystemPrompt = '';
+  state.settings.chatPresets = null;
+  state.settings.activeQuickPreset = null;
+  state.settings.meetingContext = '';
+  refreshTermVariants();
   const now = Date.now();
   state.meetingStartTime = now - 55 * 60000;
   state.meetingId = generateId();
@@ -1437,8 +1456,7 @@ function openMinutesPreview({ highlightBadge = false } = {}) {
   const badge = $('#minutesGeneratedBadge');
   const genModel = state.currentAnalysis?.generatedModel;
   if (genModel) {
-    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
-    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.textContent = t('minutes_preview.generated_with');
     badge.hidden = false;
     if (highlightBadge) {
       badge.classList.remove('highlight');
@@ -1503,8 +1521,7 @@ function renderMinutesInViewer() {
   const badge = $('#minutesGeneratedBadge');
   const genModel = state.currentAnalysis?.generatedModel;
   if (genModel) {
-    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
-    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.textContent = t('minutes_preview.generated_with');
     badge.hidden = false;
   } else {
     badge.hidden = true;
@@ -1543,11 +1560,14 @@ async function startMinutesGeneration() {
   // 3. Open viewer with loading (early, before async ops)
   openMinutesPreviewWithLoading();
 
-  // 4. Run correction if needed
-  const hasUncorrected = state.transcript.some(l => !l.originalText);
-  if (hasUncorrected && state.transcript.length > 0) {
-    await runCorrection(false);
-  }
+  // 4. Correction pass over lines no earlier pass reviewed (parallel batches, with progress)
+  const progressLabel = $('#minutesPreviewContent .minutes-preview-progress span');
+  await runCorrection(true, {
+    onProgress: (done, total) => {
+      if (progressLabel && total > 1) progressLabel.textContent = t('end_meeting.correcting', { done, total });
+    },
+  });
+  if (progressLabel) progressLabel.textContent = t('end_meeting.generating_minutes');
 
   // 5. Save state
   markEnded();
@@ -1842,8 +1862,7 @@ function initMinutesPreview() {
       const item = document.createElement('div');
       item.className = 'version-item';
       const time = new Date(ver.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-      const modelLabel = ver.model.includes('pro') ? 'Pro' : 'Flash';
-      item.innerHTML = `<span>${time} — ${modelLabel}</span>`;
+      item.innerHTML = `<span>${time}</span>`;
       const restoreBtn = document.createElement('button');
       restoreBtn.className = 'btn btn-xs';
       restoreBtn.textContent = t('minutes_preview.version_restore');

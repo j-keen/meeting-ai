@@ -41,6 +41,11 @@ describe('toOpenAIRequest', () => {
     expect(req.messages.some(m => /json/i.test(JSON.stringify(m.content)))).toBe(true);
   });
 
+  it('maps thinkingBudget 0 (STT correction) to reasoning_effort none', () => {
+    const req = toOpenAIRequest('gpt-5.6-luna', { contents: [], generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }, { tier: 'light' });
+    expect(req.reasoning_effort).toBe('none');
+  });
+
   it('keeps reasoning low on every tier (heavy uses HEAVY_EFFORT)', () => {
     expect(toOpenAIRequest('gpt-5.6-sol', { contents: [] }, { tier: 'heavy' }).reasoning_effort).toBe('low');
     expect(toOpenAIRequest('gpt-5.6-luna', { contents: [] }, { tier: 'light' }).reasoning_effort).toBe('low');

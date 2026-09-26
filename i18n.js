@@ -461,8 +461,10 @@ const translations = {
     'chat.error': 'Chat error',
     'chat.file_attached': 'File attached: {name}',
     'chat.context_added': 'Context added to analysis.',
-    'chat.memo_added': 'Memo added to transcript.',
+    'chat.memo_added': 'Memo added.',
     'chat.rerunning_analysis': 'Re-running analysis with updated context...',
+    'chat.rerun_queued': 'An analysis is in progress; it will run again with the updated context right after.',
+    'toast.analysis_queued': 'Analysis in progress — it will run again right after.',
     'chat.waiting_hint': 'Ask questions about the meeting in progress.',
     'chat.regenerate': 'Regenerate',
     'chat.edit': 'Edit',
@@ -894,6 +896,7 @@ const translations = {
     'end_meeting.minutes_error': 'Minutes generation failed',
     'end_meeting.close': 'Close',
     'end_meeting.saving': 'Saving...',
+    'end_meeting.correcting': 'Checking the transcript... ({done}/{total})',
     'end_meeting.edit_saved': 'Meeting info updated!',
     'end_meeting.last_modified': 'Last modified',
     'end_meeting.save_complete': 'Meeting saved!',
@@ -942,7 +945,7 @@ const translations = {
     'minutes_preview.regen_confirm': 'Regenerate the minutes? The current version is kept in the version history.',
     'minutes_preview.regen_flash_desc': 'Fast and lightweight',
     'minutes_preview.regen_pro_desc': 'Detailed and precise',
-    'minutes_preview.generated_with': 'Generated with {model}',
+    'minutes_preview.generated_with': 'Generated with the final model',
     'toast.minutes_generating_bg': 'Generating minutes in the background',
     'toast.minutes_still_generating': 'Still generating...',
 
@@ -1676,8 +1679,10 @@ const translations = {
     'chat.error': '채팅 오류',
     'chat.file_attached': '파일 첨부됨: {name}',
     'chat.context_added': '맥락이 분석에 추가되었습니다.',
-    'chat.memo_added': '메모가 회의록에 추가되었습니다.',
+    'chat.memo_added': '메모가 추가되었습니다.',
     'chat.rerunning_analysis': '업데이트된 맥락으로 재분석 중...',
+    'chat.rerun_queued': '지금 분석이 진행 중이에요. 끝나는 대로 업데이트된 맥락으로 한 번 더 분석합니다.',
+    'toast.analysis_queued': '분석이 진행 중이라, 끝나는 대로 한 번 더 분석합니다.',
     'chat.waiting_hint': '진행 중인 회의에 대해 질문해보세요.',
     'chat.regenerate': '다시 생성',
     'chat.edit': '수정',
@@ -2108,6 +2113,7 @@ const translations = {
     'end_meeting.minutes_error': '회의록 생성 실패',
     'end_meeting.close': '닫기',
     'end_meeting.saving': '저장 중...',
+    'end_meeting.correcting': '받아쓰기 교정 중... ({done}/{total})',
     'end_meeting.edit_saved': '회의 정보가 수정되었습니다!',
     'end_meeting.last_modified': '마지막 수정',
     'end_meeting.save_complete': '회의가 저장되었습니다!',
@@ -2156,7 +2162,7 @@ const translations = {
     'minutes_preview.regen_confirm': '회의록을 다시 생성할까요? 지금 버전은 버전 기록에 남습니다.',
     'minutes_preview.regen_flash_desc': '빠르고 가벼운 생성',
     'minutes_preview.regen_pro_desc': '정밀하고 상세한 분석',
-    'minutes_preview.generated_with': '{model}로 생성됨',
+    'minutes_preview.generated_with': '최종 모델로 생성됨',
     'toast.minutes_generating_bg': '회의록을 백그라운드에서 작성 중입니다',
     'toast.minutes_still_generating': '아직 작성 중입니다',
 
@@ -2702,6 +2708,90 @@ const AI_PRESET_CONTEXTS = {
 let currentLang = 'en';
 let currentAiLang = null; // null = same as UI lang
 
+/**
+ * Session-dependent wording: a lecture session says "강의 노트 / 강의 저장" where a meeting says
+ * "회의록 / 회의 저장". t() prefers the active variant's string; the app registers the resolver
+ * (setTermVariantResolver) and calls refreshTermVariants() when the session type may have changed.
+ */
+const TERM_VARIANTS = {
+  lecture: {
+    ko: {
+      'chat.placeholder': '강의에 대해 AI에게 질문하세요...',
+      'chat.empty': '강의 내용을 묻거나, 메모를 남기거나, 분석을 요청하세요.',
+      'chat.memo_added': '메모가 노트에 추가되었습니다.',
+      'meeting.end_short': '강의 종료',
+      'meeting.end': '강의 종료',
+      'meeting.new': '새 세션',
+      'record.status_ended': '강의 종료됨 - 재개하거나 새 세션을 시작하세요',
+      'end_confirm.message': '강의 기록을 종료하시겠습니까?',
+      'end_meeting.title': '강의 저장',
+      'end_meeting.meeting_title': '강의 제목',
+      'end_meeting.title_placeholder': '강의 제목을 입력하세요',
+      'end_meeting.datetime': '강의 일시',
+      'end_meeting.generate_minutes': '강의 노트 생성하기',
+      'end_meeting.view_minutes': '강의 노트 보기',
+      'end_meeting.post_view_minutes': '강의 노트 보기',
+      'end_meeting.post_new': '새 세션',
+      'end_meeting.generating_minutes': '강의 노트 생성 중...',
+      'end_meeting.minutes_error': '강의 노트 생성 실패',
+      'end_meeting.save_complete': '강의가 저장되었습니다!',
+      'minutes_preview.title': '강의 노트',
+      'minutes_preview.prompt_edit': '노트 스타일 변경',
+      'minutes_preview.regenerate': '노트 재생성',
+      'minutes_preview.regen_title': '강의 노트 재생성',
+    },
+    en: {
+      'chat.placeholder': 'Ask AI about this lecture...',
+      'chat.empty': 'Ask about the lecture, save a memo, or request analysis.',
+      'chat.memo_added': 'Memo added to your notes.',
+      'meeting.end_short': 'End Lecture',
+      'meeting.end': 'End Lecture',
+      'meeting.new': 'New Session',
+      'record.status_ended': 'Lecture ended - Resume or start a new session',
+      'end_confirm.message': 'End this lecture recording?',
+      'end_meeting.title': 'Save Lecture',
+      'end_meeting.meeting_title': 'Lecture Title',
+      'end_meeting.title_placeholder': 'Enter lecture title',
+      'end_meeting.generate_minutes': 'Generate Lecture Notes',
+      'end_meeting.view_minutes': 'View Lecture Notes',
+      'end_meeting.post_view_minutes': 'View Lecture Notes',
+      'end_meeting.post_new': 'New Session',
+      'end_meeting.generating_minutes': 'Generating lecture notes...',
+      'end_meeting.minutes_error': 'Lecture notes generation failed',
+      'end_meeting.save_complete': 'Lecture saved!',
+      'minutes_preview.title': 'Lecture Notes',
+      'minutes_preview.prompt_edit': 'Change Notes Style',
+      'minutes_preview.regenerate': 'Regenerate',
+      'minutes_preview.regen_title': 'Regenerate Lecture Notes',
+    },
+  },
+};
+const VARIANT_KEYS = new Set(Object.values(TERM_VARIANTS).flatMap(v => Object.values(v).flatMap(Object.keys)));
+let termVariantResolver = null;
+
+/** fn() → a TERM_VARIANTS id ('lecture') or null for the default (meeting) wording. */
+export function setTermVariantResolver(fn) {
+  termVariantResolver = fn;
+}
+
+function activeTermVariant() {
+  try { return termVariantResolver?.() || null; } catch { return null; }
+}
+
+/** Re-apply only the session-dependent strings in static markup (safe mid-session). */
+export function refreshTermVariants() {
+  if (typeof document === 'undefined') return;
+  for (const [attr, apply] of [
+    ['data-i18n', (el, v) => { el.textContent = v; }],
+    ['data-i18n-placeholder', (el, v) => { el.placeholder = v; }],
+  ]) {
+    document.querySelectorAll(`[${attr}]`).forEach(el => {
+      const key = el.getAttribute(attr);
+      if (VARIANT_KEYS.has(key)) apply(el, t(key));
+    });
+  }
+}
+
 export function detectLanguage() {
   const nav = navigator.language || navigator.userLanguage || 'en';
   return nav.startsWith('ko') ? 'ko' : 'en';
@@ -2728,7 +2818,8 @@ export function getAiLanguage() {
 
 export function t(key, params) {
   const lang = translations[currentLang] || translations.en;
-  let text = lang[key] || translations.en[key] || key;
+  const variant = VARIANT_KEYS.has(key) ? activeTermVariant() : null;
+  let text = (variant && TERM_VARIANTS[variant]?.[currentLang]?.[key]) || lang[key] || translations.en[key] || key;
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       text = text.replace(`{${k}}`, v);

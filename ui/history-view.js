@@ -6,8 +6,20 @@ import { state, emit } from '../event-bus.js';
 import { t, getDateLocale } from '../i18n.js';
 import { confirmDialog, promptDialog } from './dialogs.js';
 import { renderMarkdown } from '../chat.js';
-import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings } from '../storage.js';
+import { getLinkedMeetings, linkMeetings, unlinkMeetings, listMeetings as storageListMeetings, listDeletedMeetings, loadCustomTypes } from '../storage.js';
 import { formatTime, escapeHtml } from '../utils.js';
+
+/** Display name for a stored preset id (copilot / minutes / learning / custom_…), never the raw id. */
+export function presetLabel(presetId) {
+  const builtIn = { copilot: 'settings.preset_copilot', minutes: 'settings.preset_minutes', learning: 'settings.preset_learning' };
+  if (!presetId) return t('settings.preset_copilot');
+  if (builtIn[presetId]) return t(builtIn[presetId]);
+  try {
+    const ct = loadCustomTypes().find(c => c.id === presetId);
+    if (ct?.name) return ct.name;
+  } catch { /* storage unavailable */ }
+  return presetId.replace(/^custom_/, '');
+}
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -440,7 +452,7 @@ export function renderHistoryGrid(meetings, { searchTerm = '', filterType = '', 
     relSpan.className = 'history-card-relative-time';
     relSpan.textContent = relTime;
     dateEl.appendChild(relSpan);
-    card.querySelector('.history-card-type').textContent = meeting.preset || t('settings.preset_copilot');
+    card.querySelector('.history-card-type').textContent = presetLabel(meeting.preset);
     card.querySelector('.history-card-duration').textContent = meeting.duration || '';
     card.querySelector('.history-card-location').textContent = meeting.location || '';
 
@@ -605,7 +617,7 @@ export function renderMeetingViewer(meeting) {
 
     const typeBadge = document.createElement('span');
     typeBadge.className = 'viewer-badge viewer-badge-type';
-    typeBadge.textContent = meeting.preset || t('settings.preset_copilot');
+    typeBadge.textContent = presetLabel(meeting.preset);
     badgesEl.appendChild(typeBadge);
 
     // Import type badge
@@ -671,7 +683,7 @@ export function renderMeetingViewer(meeting) {
   const metaItems = [
     { label: t('viewer.meta_date'), value: new Date(meeting.startTime || meeting.createdAt).toLocaleString(getDateLocale()) },
     { label: t('viewer.meta_duration'), value: meeting.duration || '' },
-    { label: t('viewer.meta_type'), value: meeting.preset || t('settings.preset_copilot') },
+    { label: t('viewer.meta_type'), value: presetLabel(meeting.preset) },
     { label: t('viewer.meta_location'), value: meeting.location || '' },
   ];
   if (meeting.meetingContext) {
@@ -1311,7 +1323,7 @@ function renderTrashGrid(grid) {
 
     const type = document.createElement('span');
     type.className = 'history-card-type';
-    type.textContent = meeting.preset || t('settings.preset_copilot');
+    type.textContent = presetLabel(meeting.preset);
     meta.appendChild(type);
 
     if (meeting.duration) {

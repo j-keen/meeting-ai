@@ -6432,6 +6432,8 @@ body.bar-compact .bottom-overflow-menu .bottom-divider {
 .minutes-generated-badge {
   display: inline-block;
   width: fit-content;
+  white-space: nowrap;
+  flex-shrink: 0;
   padding: 3px 10px;
   font-size: var(--fs-xs);
   font-weight: 600;

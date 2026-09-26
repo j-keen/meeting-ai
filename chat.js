@@ -327,7 +327,7 @@ async function sendChatMessage(userText) {
       parts = second.parts || [];
     }
 
-    if (fullText) {
+    if (fullText.trim()) {
       // Finalize the streamed message
       streamEl.dataset.text = fullText;
       streamContent.innerHTML = renderMarkdown(fullText);
@@ -341,9 +341,11 @@ async function sendChatMessage(userText) {
       actions.appendChild(btn);
 
       state.chatHistory.push({ role: 'model', text: fullText, timestamp: Date.now() });
-    } else if (!hasFunctionCall) {
+    } else {
+      // No text at all: drop the empty bubble. After a tool call the tool's own system line
+      // ("메모가 추가되었습니다" etc.) is the visible confirmation.
       streamEl.remove();
-      throw new Error('No response from AI');
+      if (!hasFunctionCall) throw new Error('No response from AI');
     }
   } catch (err) {
     typingEl.remove();
@@ -383,6 +385,14 @@ const CHAT_TOOL_RULES = {
   en: `Tools: add_memo (save a memo), add_context (add context for the analysis), rerun_analysis (re-run the analysis). Call them only when the user explicitly asks to take a memo, add context, or re-analyze. Answer ordinary questions in text without tools. After using a tool, say in one sentence what you did. rerun_analysis only starts a re-run: say it has started and do not claim to know the result.`,
 };
 
+// A custom chatSystemPrompt (prompt builder / presets) replaces DEFAULT_CHAT_PROMPT wholesale;
+// re-add its formatting rule when the custom text does not carry one (chat bubbles have no math
+// rendering). Quick presets already include it (quick-presets.js CHAT_TOOL_RULES).
+const CHAT_FORMAT_RULE = {
+  ko: '수식은 LaTeX 없이 일반 텍스트로 쓰고(예: KL(q‖p), z = μ + σ·ε), 표 대신 목록을 쓰세요.',
+  en: 'Write formulas as plain text, never LaTeX (e.g. KL(q‖p), z = μ + σ·ε), and use lists instead of tables.',
+};
+
 function hhmm(ts) {
   return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
@@ -409,6 +419,7 @@ export function buildChatSystemPrompt() {
   // Use custom prompt if set, otherwise default
   const customPrompt = state.settings.chatSystemPrompt;
   let prompt = customPrompt ? customPrompt : DEFAULT_CHAT_PROMPT[L];
+  if (customPrompt && !/LaTeX/i.test(customPrompt)) prompt += '\n' + CHAT_FORMAT_RULE[L];
   // Tools are always sent with the request, so the rule for using them always applies.
   prompt += '\n\n' + CHAT_TOOL_RULES[L];
 
@@ -497,16 +508,59 @@ async function handleFunctionCall(fc) {
     renderSystemMessage(t('chat.memo_added'));
     state.chatHistory.push({ role: 'model', text: `[add_memo: ${text}]`, timestamp: Date.now() });
   } else if (name === 'rerun_analysis') {
-    renderSystemMessage(t('chat.rerunning_analysis'));
+    renderSystemMessage(t(state.analysisInFlight ? 'chat.rerun_queued' : 'chat.rerunning_analysis'));
     state.chatHistory.push({ role: 'model', text: '[rerun_analysis]', timestamp: Date.now() });
     emit('analysis:rerun');
   }
 }
 
 // ===== Markdown Renderer =====
+const LATEX_SYMBOLS = {
+  mid: '|', cdot: '·', times: '×', div: '÷', pm: '±', le: '≤', leq: '≤', ge: '≥', geq: '≥',
+  neq: '≠', ne: '≠', approx: '≈', sim: '~', propto: '∝', equiv: '≡', infty: '∞', to: '→',
+  rightarrow: '→', leftarrow: '←', Rightarrow: '⇒', iff: '⇔', in: '∈', notin: '∉', subset: '⊂',
+  subseteq: '⊆', cup: '∪', cap: '∩', forall: '∀', exists: '∃', partial: '∂', nabla: '∇',
+  sum: 'Σ', prod: 'Π', int: '∫', oint: '∮', parallel: '‖', Vert: '‖', lVert: '‖', rVert: '‖',
+  ldots: '…', cdots: '⋯', dots: '…', circ: '∘', top: 'ᵀ', star: '*', ast: '*', langle: '⟨', rangle: '⟩',
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε', varepsilon: 'ε', zeta: 'ζ', eta: 'η',
+  theta: 'θ', vartheta: 'θ', kappa: 'κ', lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ',
+  sigma: 'σ', tau: 'τ', phi: 'φ', varphi: 'φ', chi: 'χ', psi: 'ψ', omega: 'ω',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Sigma: 'Σ', Phi: 'Φ', Psi: 'Ψ', Omega: 'Ω', Pi: 'Π',
+};
+
+/**
+ * Safety net for models that ignore the "no LaTeX" rule: turn common inline/display math into
+ * readable plain text (\(p(z\mid x)\) → p(z|x), \frac{a}{b} → (a)/(b), \mathbb{E} → E).
+ * Code blocks are left alone; text without LaTeX markers is returned unchanged.
+ */
+export function latexToPlain(text) {
+  if (!text || !/\\[a-zA-Z()[\]{}]|\$\$/.test(text)) return text;
+  return text.split(/(```[\s\S]*?```)/).map((seg, i) => {
+    if (i % 2 === 1) return seg;
+    let s = seg
+      .replace(/\$\$([\s\S]+?)\$\$/g, '$1')
+      .replace(/\\\[([\s\S]+?)\\\]/g, '$1')
+      .replace(/\\\(([\s\S]+?)\\\)/g, '$1');
+    for (let n = 0; n < 3; n++) {
+      s = s
+        .replace(/\\[dt]?frac\{([^{}]*)\}\{([^{}]*)\}/g, (_, a, b) => `${/^\w+$/.test(a) ? a : `(${a})`}/${/^\w+$/.test(b) ? b : `(${b})`}`)
+        .replace(/\\sqrt\{([^{}]*)\}/g, '√($1)')
+        .replace(/\\(?:mathbb|mathcal|mathbf|mathrm|mathit|boldsymbol|bm|text|textbf|textit|operatorname|boxed|hat|bar|tilde|vec|overline)\{([^{}]*)\}/g, '$1');
+    }
+    return s
+      .replace(/\\(?:left|right|big|Big|bigg|Bigg)\b\s*/g, '')
+      .replace(/\s*\\mid\b\s*/g, '|')
+      .replace(/\\([|{}])/g, (_, c) => (c === '|' ? '‖' : c))
+      .replace(/\\[,;:!]|\\q?quad\b/g, ' ')
+      .replace(/\\([a-zA-Z]+)/g, (m, name) => LATEX_SYMBOLS[name] ?? name)
+      .replace(/\^\{([^{}]*)\}/g, '^$1')
+      .replace(/_\{([^{}]*)\}/g, '_$1');
+  }).join('');
+}
+
 export function renderMarkdown(text) {
   // HTML escape first (XSS prevention)
-  let html = text
+  let html = latexToPlain(text)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');

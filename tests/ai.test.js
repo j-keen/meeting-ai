@@ -11,7 +11,7 @@ import { setAiLanguage, getPromptPresets, getAiPrompt } from '../i18n.js';
 import {
   extractHeadline, extractWhispers, parseCorrections, correctSentences, normalizeRefinedSection,
   selectTranscript, isLectureSession, generateFinalMinutes, getDefaultMinutesPrompt, analyzeTranscript,
-  suggestTitleAndMetadata, refineSectionContent, AUTO_FULL_CHARS, carryChecklist,
+  suggestTitleAndMetadata, refineSectionContent, AUTO_FULL_CHARS, carryChecklist, isMinimalCorrection,
 } from '../ai.js';
 import { parseMarkdownBlocks } from '../ui/analysis.js';
 
@@ -96,6 +96,31 @@ describe('correctSentences', () => {
   it('returns [] on API failure', async () => {
     callGeminiGuarded.mockRejectedValue(new Error('boom'));
     expect(await correctSentences({ lines })).toEqual([]);
+  });
+
+  it('asks for no reasoning and forbids symbolising spoken math', async () => {
+    callGeminiGuarded.mockResolvedValue(reply('{"corrections":[]}'));
+    await correctSentences({ lines });
+    expect(lastBody().generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 });
+    expect(userText(lastBody())).toContain('Do NOT turn spoken math into symbols');
+  });
+});
+
+describe('isMinimalCorrection (P2-6 guard)', () => {
+  it('keeps small real fixes', () => {
+    expect(isMinimalCorrection('케이엘 항은 항상 0 이상이에요 그래서 하한이 됩니다', 'KL 항은 항상 0 이상이에요 그래서 하한이 됩니다')).toBe(true);
+    expect(isMinimalCorrection('범위는 오늘까지에요', '범위는 오늘까지예요')).toBe(true);
+  });
+
+  it('rejects spacing-only edits, no-ops and symbolised formulas', () => {
+    expect(isMinimalCorrection('z 를 샘플링해요', 'z를 샘플링해요')).toBe(false);
+    expect(isMinimalCorrection('같은 문장', '같은 문장')).toBe(false);
+    expect(isMinimalCorrection(
+      '마이너스 이분의 일 곱하기 합 1 플러스 로그 시그마 제곱 마이너스 뮤 제곱 마이너스 시그마 제곱',
+      '−½ × ∑(1 + log σ² − μ² − σ²)')).toBe(false);
+    expect(isMinimalCorrection(
+      '여기서 뮤 는 평균이고 시그마 는 표준편차 입니다 그리고 엡실론 은 노이즈예요',
+      '여기서 μ는 평균이고 σ는 표준편차입니다 그리고 ε은 노이즈예요')).toBe(false);
   });
 });
 
