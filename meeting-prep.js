@@ -9,7 +9,7 @@ import {
 } from './storage.js';
 import { callGeminiGuarded, UsageLimitError } from './gemini-api.js';
 import { modelFor } from './models.js';
-import { t } from './i18n.js';
+import { t, getAiLanguage } from './i18n.js';
 import { promptDialog } from './ui/dialogs.js';
 import { showToast } from './ui.js';
 import { escapeHtml } from './utils.js';
@@ -1109,16 +1109,45 @@ function clearReference() {
 }
 
 // ===== Auto Agenda Suggestions =====
+const AGENDA_FIELDS = new Set(['goal', 'topics', 'outcomes']);
+
+/**
+ * Parse the follow-up agenda reply. JSON mode (OpenAI response_format json_object) can only
+ * return an object, so the prompt asks for {"items":[…]}; a bare array (Gemini) or a fenced
+ * block is accepted too. Returns [{ text, field }] with field defaulting to 'topics'.
+ * @param {string} text
+ * @returns {{ text: string, field: string }[]}
+ */
+export function parseAgendaSuggestions(text) {
+  if (!text) return [];
+  let data = null;
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  for (const candidate of [text, fence?.[1], text.match(/[[{][\s\S]*[\]}]/)?.[0]]) {
+    if (!candidate) continue;
+    try { data = JSON.parse(candidate.trim()); break; } catch { /* try next */ }
+  }
+  let list = Array.isArray(data) ? data : null;
+  if (!list && data && typeof data === 'object') {
+    list = Array.isArray(data.items) ? data.items : Object.values(data).find(Array.isArray) || null;
+  }
+  return (list || [])
+    .map(it => (typeof it === 'string' ? { text: it, field: 'topics' } : it))
+    .filter(it => it && typeof it.text === 'string' && it.text.trim())
+    .map(it => ({ text: it.text.trim(), field: AGENDA_FIELDS.has(it.field) ? it.field : 'topics' }))
+    .slice(0, 5);
+}
+
 async function suggestFollowUpAgenda(analysisText) {
   const el = $('#prepAgendaSuggestions');
   el.hidden = false;
   el.innerHTML = `<span class="text-muted">${t('prep.ref_suggest_loading')}</span>`;
 
   try {
+    const langName = getAiLanguage() === 'ko' ? 'Korean' : 'English';
     const body = {
       contents: [{ role: 'user', parts: [{ text:
-        `Based on this meeting analysis, suggest 3-5 follow-up agenda items.
-Return JSON: [{"text":"...","field":"goal|topics|outcomes"}]
+        `From this previous-meeting analysis, suggest 3-5 follow-up agenda items for the NEXT meeting. Write the items in ${langName}, each under 40 characters, concrete (carry over open items, deadlines that were set, decisions to verify).
+Return a JSON object: {"items":[{"text":"...","field":"goal|topics|outcomes"}]}
 
 ${analysisText.slice(0, 3000)}`
       }] }],
@@ -1126,9 +1155,7 @@ ${analysisText.slice(0, 3000)}`
     };
 
     const res = await callGeminiGuarded(modelFor('prep'), body, { category: 'prep' });
-    const text = res.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-    let items;
-    try { items = JSON.parse(text); } catch { items = []; }
+    const items = parseAgendaSuggestions(res.candidates?.[0]?.content?.parts?.[0]?.text || '');
 
     el.innerHTML = '';
     if (!items.length) { el.hidden = true; return; }

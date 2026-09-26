@@ -40,54 +40,70 @@ function isKorean() {
   return getAiLanguage() === 'ko';
 }
 
-function getSystemPrompt() {
-  const context = buildMeetingContext();
-  const ko = isKorean();
+// Context budget (chars). The heavy model reads this on every turn of the document chat.
+const CTX_TRANSCRIPT_MAX = 30000; // most recent part of the transcript
+const CTX_ANALYSIS_MAX = 8000;
+const CTX_MINUTES_MAX = 15000;
+const CTX_CHAT_MAX = 3000;       // side-chat is only included when short
 
-  if (ko) {
-    return `당신은 비즈니스 문서 작성 전문가입니다. 사용자의 미팅 데이터를 바탕으로 요청된 문서를 작성합니다.
-
-## 미팅 컨텍스트
-${context}
-
-## 규칙
-1. 사용자가 요청한 형식의 문서를 마크다운으로 작성하세요.
-2. 문서를 출력할 때 반드시 아래 마커로 감싸세요:
-${DOC_START}
-(마크다운 문서 내용)
-${DOC_END}
-3. 대화 2~3턴 이내에 문서를 완성하세요. 필요한 정보가 부족하면 간단히 물어보세요.
-4. 수정 요청 시 전체 문서를 마커 포함하여 다시 출력하세요.
-5. 문서의 첫 줄은 # 제목으로 시작하세요.
-6. 톤: 전문적이되 읽기 쉽게, 불필요한 장황함 없이.`;
-  }
-
-  return `You are a business document writing expert. You create documents based on the user's meeting data.
-
-## Meeting Context
-${context}
-
-## Rules
-1. Write the requested document in markdown format.
-2. Always wrap the document output with these markers:
-${DOC_START}
-(markdown document content)
-${DOC_END}
-3. Complete the document within 2-3 conversation turns. If info is missing, ask briefly.
-4. When revision is requested, output the full document again with markers.
-5. Start the document with a # heading.
-6. Tone: professional yet readable, no unnecessary verbosity.`;
+function tail(text, max) {
+  if (text.length <= max) return text;
+  return '[…]\n' + text.slice(text.length - max);
 }
 
-function buildMeetingContext() {
-  const src = targetMeeting || state;
+function head(text, max) {
+  if (text.length <= max) return text;
+  return text.slice(0, max) + '\n[…]';
+}
+
+export function getSystemPrompt(context = buildMeetingContext(), ko = isKorean()) {
+  if (ko) {
+    return `당신은 비즈니스 문서 작성 전문가입니다. 아래 미팅 데이터만 근거로 사용자가 요청한 문서를 작성합니다.
+
+## 규칙
+1. 첫 요청에 바로 초안을 쓰세요. 정보가 부족하면 문서 안에 [확인 필요: …] 표시를 넣고 계속 쓰세요. 질문으로 턴을 끝내지 마세요.
+2. 문서는 마크다운으로, 반드시 아래 마커 사이에만:
+${DOC_START}
+# 제목
+(본문)
+${DOC_END}
+마커 밖에는 한두 문장의 안내만.
+3. 수정 요청 시 전체 문서를 마커 포함해 다시 출력하세요.
+4. 미팅 데이터에 없는 수치·날짜·약속·이름을 만들지 마세요. 필요하면 [확인 필요]로 남기세요.
+5. 표·LaTeX·수평선 대신 제목과 목록을 쓰세요.
+6. 톤: 전문적이되 읽기 쉽게, 장황하지 않게. 한국어로 쓰세요.
+
+## 미팅 데이터
+${context}`;
+  }
+
+  return `You are a business document writer. Write the document the user asks for using ONLY the meeting data below.
+
+## Rules
+1. Draft on the first request. If information is missing, insert [TO CONFIRM: …] inside the document and keep writing; never end a turn with only questions.
+2. The document is Markdown and must sit between these markers only:
+${DOC_START}
+# Title
+(body)
+${DOC_END}
+Outside the markers, at most one or two sentences of guidance.
+3. On a revision request, output the whole document again with markers.
+4. Never invent numbers, dates, commitments or names that are not in the meeting data; leave [TO CONFIRM] instead.
+5. Use headings and lists, not tables, LaTeX or horizontal rules.
+6. Tone: professional, readable, not verbose. Write in English.
+
+## Meeting data
+${context}`;
+}
+
+export function buildMeetingContext(src = targetMeeting || state) {
   const parts = [];
 
-  // Transcript
+  // Transcript (most recent part)
   const transcript = src.transcript || [];
   if (transcript.length > 0) {
     const lines = transcript.map(l => l.text).join('\n');
-    parts.push(`[Transcript]\n${lines}`);
+    parts.push(`[Transcript]\n${tail(lines, CTX_TRANSCRIPT_MAX)}`);
   }
 
   // Analysis
@@ -95,9 +111,9 @@ function buildMeetingContext() {
   if (analysisHistory.length > 0) {
     const latest = analysisHistory[analysisHistory.length - 1];
     if (latest.markdown) {
-      parts.push(`[Analysis]\n${latest.markdown}`);
+      parts.push(`[Analysis]\n${head(latest.markdown, CTX_ANALYSIS_MAX)}`);
     } else if (latest.summary) {
-      parts.push(`[Analysis Summary]\n${latest.summary}`);
+      parts.push(`[Analysis Summary]\n${head(String(latest.summary), CTX_ANALYSIS_MAX)}`);
     }
   }
 
@@ -108,18 +124,18 @@ function buildMeetingContext() {
     parts.push(`[Memos]\n${memoText}`);
   }
 
-  // Chat history
-  const chatHist = src.chatHistory || [];
+  // Side-chat: only when short (tool bookkeeping lines dropped)
+  const chatHist = (src.chatHistory || []).filter(c => !/^\[(?:add_context|add_memo):|^\[rerun_analysis\]$/.test(c.text || ''));
   if (chatHist.length > 0) {
     const chatText = chatHist.map(c => `${c.role}: ${c.text || c.content || ''}`).join('\n');
-    parts.push(`[Chat]\n${chatText}`);
+    if (chatText.length <= CTX_CHAT_MAX) parts.push(`[Chat]\n${chatText}`);
   }
 
   // Minutes
   if (src.minutesVersions?.length > 0) {
     const latest = src.minutesVersions[src.minutesVersions.length - 1];
     if (latest.content) {
-      parts.push(`[Minutes]\n${latest.content}`);
+      parts.push(`[Minutes]\n${head(latest.content, CTX_MINUTES_MAX)}`);
     }
   }
 
@@ -220,28 +236,17 @@ function renderPreview() {
 }
 
 // ===== AI Communication =====
-function buildContents(userText) {
-  const systemPrompt = getSystemPrompt();
-  const ko = isKorean();
-  const greeting = t('dg.greeting');
-
-  const contents = [
-    { role: 'user', parts: [{ text: systemPrompt }] },
-    { role: 'model', parts: [{ text: greeting }] },
-  ];
-
-  chatHistory.forEach(msg => {
-    contents.push({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    });
-  });
-
-  if (userText) {
-    contents.push({ role: 'user', parts: [{ text: userText }] });
-  }
-
-  return contents;
+/**
+ * System prompt (rules + meeting data) as the system role, then the conversation. The greeting
+ * shown in the UI is not replayed as a model turn, and chatHistory already ends with the new
+ * user message (sendUserMessage pushes it first), so it is not appended again.
+ */
+function buildRequest() {
+  const contents = chatHistory.map(msg => ({
+    role: msg.role === 'user' ? 'user' : 'model',
+    parts: [{ text: msg.text }],
+  }));
+  return { systemInstruction: { parts: [{ text: getSystemPrompt() }] }, contents };
 }
 
 async function sendUserMessage(text) {
@@ -268,9 +273,8 @@ async function sendUserMessage(text) {
   const typingEl = showTypingIndicator();
 
   try {
-    const contents = buildContents(text);
     const body = {
-      contents,
+      ...buildRequest(),
       generationConfig: { temperature: 0.7 },
     };
 

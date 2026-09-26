@@ -22,37 +22,32 @@ let isStreaming = false;
 let lastExtractedPrompt = null;
 
 // ===== Meta Prompts =====
-const META_PROMPT_KO = `당신은 분석 스타일 변경 도우미입니다.
-
-## 역할
-사용자가 현재 사용 중인 회의 분석 프롬프트를 보여주면, 사용자가 원하는 스타일로 수정합니다.
+// The analysis output is parsed by the app: ai.js extractHeadline reads the first bullet under
+// the `## 🎯` heading, extractWhispers strips the `## 🔔 귓속말` / `## 🔔 Whisper` section into
+// toasts. The editor must keep those (when the prompt has them) or the live panel breaks.
+const META_PROMPT_KO = `당신은 분석 스타일 변경 도우미입니다. 사용자가 현재 쓰는 회의/강의 분석 프롬프트를 보여주면, 요청한 부분만 고쳐서 돌려줍니다.
 
 ## 규칙
-1. 사용자의 요청을 듣고 프롬프트를 수정하세요
-2. 수정된 전체 프롬프트를 \`\`\`prompt ... \`\`\` 코드블록으로 출력하세요
-3. 변경한 부분을 간단히 설명하세요 (1-2문장)
-4. 프롬프트의 전체 구조는 유지하되, 요청된 부분만 변경하세요
-5. 최대 2턴 내에 완료하세요. 질문하지 말고 바로 수정하세요.
+1. 요청된 부분만 바꾸고 나머지 문장은 그대로 두세요.
+2. 절대 바꾸거나 지우지 말 것 (현재 프롬프트에 있다면): \`## 🎯\`로 시작하는 첫 섹션 제목과 그 위치(첫 섹션), \`## 🔔 귓속말\` 제목과 "각 50자 이내·없으면 생략" 규칙, 추천 줄의 \`- 🔍 "문장"\` 형식, 마지막 "반드시 한국어" 규칙. 이것들은 앱이 파싱합니다. "더 간결하게"·"핵심만" 요청에도 이 섹션들은 남기고 다른 섹션을 줄이세요.
+3. 섹션을 줄이거나 늘릴 때도 \`## \` 제목 형식을 유지하고, 표·LaTeX·수평선(---)을 요구하지 마세요.
+4. 수정된 전체 프롬프트를 \`\`\`prompt … \`\`\` 코드블록 하나로 출력하고, 그 위에 무엇을 바꿨는지 1~2문장.
+5. 질문하지 말고 바로 수정하세요. 요청이 모호하면 가장 보수적인 변경을 하세요.
 
 ## 톤
-- 친근하고 자연스럽게
-- "~해봤어요!", "~바꿔드렸어요!" 스타일`;
+친근하고 짧게. "~로 바꿨어요!" 스타일.`;
 
-const META_PROMPT_EN = `You are an analysis style change assistant.
-
-## Role
-The user shows their current meeting analysis prompt, and you modify it to match their preferred style.
+const META_PROMPT_EN = `You are an analysis-style editor. The user shows the meeting/lecture analysis prompt they use now; return it with only the requested change.
 
 ## Rules
-1. Listen to the user's request and modify the prompt
-2. Output the full modified prompt in a \`\`\`prompt ... \`\`\` code block
-3. Briefly explain what you changed (1-2 sentences)
-4. Preserve the overall structure, only change what's requested
-5. Complete within 2 turns max. Don't ask questions, just modify.
+1. Change only what was asked; leave every other sentence as is.
+2. Never change or remove (when the current prompt has them): the first section heading starting with \`## 🎯\` and its position as the first section, the \`## 🔔 Whisper\` heading and its "under 50 chars / omit if none" rule, the \`- 🔍 "sentence"\` line format, and the final "MUST be in English" rule. The app parses these. For "more concise" or "key points only" requests, keep these sections and trim the others.
+3. When adding or removing sections keep the \`## \` heading style; never ask for tables, LaTeX or horizontal rules (---).
+4. Output the full modified prompt in one \`\`\`prompt … \`\`\` code block, preceded by 1-2 sentences saying what changed.
+5. Do not ask questions; make the most conservative edit if the request is ambiguous.
 
 ## Tone
-- Friendly and conversational
-- "Done!", "Here you go!" style`;
+Friendly and brief. "Done — changed X!" style.`;
 
 // ===== Suggestion Chips =====
 const SUGGESTION_CHIPS = [
@@ -72,9 +67,29 @@ function getCurrentPrompt() {
   return state.settings.customPrompt || getPromptForType(state.settings.analysisPreset || 'copilot');
 }
 
-function extractPrompt(text) {
-  const match = text.match(/```prompt\s*([\s\S]*?)```/);
-  return match ? match[1].trim() : null;
+/**
+ * Pull the edited prompt out of the reply. Models label the fence ```prompt as asked, but
+ * also ```markdown / ```md / ```text or leave it bare; take the longest fenced block.
+ */
+export function extractPrompt(text) {
+  if (!text) return null;
+  let best = null;
+  for (const m of text.matchAll(/```(?:prompt|markdown|md|text)?[ \t]*\r?\n([\s\S]*?)```/g)) {
+    const body = m[1].trim();
+    if (body && (!best || body.length > best.length)) best = body;
+  }
+  return best;
+}
+
+/**
+ * Headings the app parses that the original had but the edit lost ('🎯' / '🔔').
+ * @returns {string[]}
+ */
+export function lostParsedHeadings(original, edited) {
+  const lost = [];
+  if (/^##\s*🎯/m.test(original) && !/^##\s*🎯/m.test(edited)) lost.push('🎯');
+  if (/^## 🔔\s*(?:Whisper|귓속말)/m.test(original) && !/^## 🔔\s*(?:Whisper|귓속말)/m.test(edited)) lost.push('🔔');
+  return lost;
 }
 
 // ===== Render Helpers =====
@@ -189,29 +204,27 @@ function applyPrompt(promptText, reanalyze) {
 }
 
 // ===== AI Communication =====
-function buildContents(userText) {
+/**
+ * Meta prompt as the system role; the prompt being edited as the first user turn; then the
+ * conversation. chatHistory already ends with the new user message (sendUserMessage pushes it
+ * first), so it is not appended again.
+ */
+function buildRequest() {
   const metaPrompt = isKorean() ? META_PROMPT_KO : META_PROMPT_EN;
   const currentPrompt = getCurrentPrompt();
+  const label = isKorean() ? '현재 프롬프트' : 'Current prompt';
 
   const contents = [
-    { role: 'user', parts: [{ text: `${metaPrompt}\n\n---\n\n현재 프롬프트 / Current prompt:\n\`\`\`\n${currentPrompt}\n\`\`\`` }] },
-    { role: 'model', parts: [{ text: isKorean()
-      ? '네, 어떤 부분이 마음에 안 드시나요? 자유롭게 말씀해주세요!'
-      : 'Sure! What would you like to change? Just tell me!' }] },
+    { role: 'user', parts: [{ text: `${label}:\n\`\`\`prompt\n${currentPrompt}\n\`\`\`` }] },
   ];
-
-  chatHistory.forEach(msg => {
-    contents.push({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    });
+  chatHistory.forEach((msg, i) => {
+    const role = msg.role === 'user' ? 'user' : 'model';
+    // Merge the first request into the turn that carries the prompt (keeps user/model alternation).
+    if (i === 0 && role === 'user') contents[0].parts.push({ text: msg.text });
+    else contents.push({ role, parts: [{ text: msg.text }] });
   });
 
-  if (userText) {
-    contents.push({ role: 'user', parts: [{ text: userText }] });
-  }
-
-  return contents;
+  return { systemInstruction: { parts: [{ text: metaPrompt }] }, contents };
 }
 
 async function sendUserMessage(text) {
@@ -241,9 +254,8 @@ async function sendUserMessage(text) {
   const typingEl = showTypingIndicator();
 
   try {
-    const contents = buildContents(text);
     const body = {
-      contents,
+      ...buildRequest(),
       generationConfig: { temperature: 0.7 },
     };
 
@@ -276,6 +288,10 @@ async function sendUserMessage(text) {
     if (extracted) {
       lastExtractedPrompt = extracted;
       renderActionButtons(extracted);
+      // The live panel parses these headings; warn before the user applies a prompt without them.
+      if (lostParsedHeadings(getCurrentPrompt(), extracted).length) {
+        showToast(isKorean() ? '주의: 수정본에 🎯/🔔 섹션이 없어 실시간 요약·귓속말이 표시되지 않을 수 있어요.' : 'Heads up: the edit dropped the 🎯/🔔 section, so the live headline or whispers may stop showing.', 'warning');
+      }
     }
   } catch (err) {
     if (typingEl && typingEl.parentNode) typingEl.remove();

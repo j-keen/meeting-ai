@@ -1,9 +1,8 @@
-// chat.js - AI Chat module with Gemini function calling + model selection
+// chat.js - AI chat panel with function calling (add_memo / add_context / rerun_analysis)
 
 import { state, emit } from './event-bus.js';
 import { modelFor } from './models.js';
 import { getAiLanguage, t } from './i18n.js';
-import { confirmDialog } from './ui/dialogs.js';
 import { callGeminiGuarded, UsageLimitError, isAiAvailable } from './gemini-api.js';
 import { getCategoryGuidance } from './category-prompts.js';
 import { loadCategories, loadSettings, saveSettings } from './storage.js';
@@ -52,6 +51,13 @@ const FUNCTION_DECLARATIONS = [
     }
   }
 ];
+
+/** What each tool actually did, fed back to the model so its reply does not overclaim. */
+const TOOL_RESULTS = {
+  add_context: 'saved; applies from the next analysis',
+  add_memo: 'memo saved to the session',
+  rerun_analysis: 'analysis re-run started; the new result appears in the analysis panel in a few seconds (not available to you yet)',
+};
 
 let attachedFileContent = null;
 let attachedFileName = null;
@@ -222,15 +228,8 @@ async function handleSend() {
   attachedFileContent = null;
   attachedFileName = null;
 
-  // Guard 5: confirm before sending large transcripts
-  const totalChars = state.transcript.reduce((sum, l) => sum + l.text.length, 0);
-  if (totalChars > 80000) {
-    if (!(await confirmDialog({ message: t('guard.chat_large_confirm', { lines: state.transcript.length }), confirmText: t('dialog.send') }))) {
-      input.value = text;
-      return;
-    }
-  }
-
+  // No large-transcript confirm: the chat context is capped (CHAT_TRANSCRIPT_MAX_CHARS),
+  // so a long session no longer means a huge request.
   state.chatHistory.push({ role: 'user', text: fullText, timestamp: Date.now() });
   sendChatMessage(fullText);
 }
@@ -246,8 +245,9 @@ async function sendChatMessage(userText) {
   }
 
   const model = getChatModel();
-  const systemPrompt = buildChatSystemPrompt();
-  const contents = buildContents(systemPrompt, userText);
+  const systemInstruction = { parts: [{ text: buildChatSystemPrompt() }] };
+  const contents = buildContents(userText);
+  const tools = [{ function_declarations: FUNCTION_DECLARATIONS }];
 
   // Show typing indicator
   const container = $('#chatMessages');
@@ -259,8 +259,9 @@ async function sendChatMessage(userText) {
 
   try {
     const body = {
+      systemInstruction,
       contents,
-      tools: [{ function_declarations: FUNCTION_DECLARATIONS }],
+      tools,
       generationConfig: { temperature: 0.5 }
     };
 
@@ -286,15 +287,16 @@ async function sendChatMessage(userText) {
 
     // Check for function calls in parts
     let hasFunctionCall = false;
-    const calls = parts.filter(p => p.functionCall);
+    const calls = (parts || []).filter(p => p.functionCall);
     for (const part of calls) {
       hasFunctionCall = true;
       await handleFunctionCall(part.functionCall);
     }
 
-    // The model chose a tool instead of answering (e.g. it filed the question as "context").
+    // The model chose a tool instead of answering (OpenAI tool calls usually carry no text).
     // Feed the tool results back and ask for the actual answer, so the user never gets
-    // only "[context added]" as a reply.
+    // only "[memo added]" as a reply. Tools stay declared (the provider needs them to read
+    // the earlier tool_calls) but calling is disabled, so this turn can only answer in text.
     if (hasFunctionCall && !fullText.trim()) {
       const followUp = [
         ...contents,
@@ -302,13 +304,19 @@ async function sendChatMessage(userText) {
         {
           role: 'user',
           parts: [
-            ...calls.map(c => ({ functionResponse: { name: c.functionCall.name, response: { result: 'ok' } } })),
+            ...calls.map(c => ({ functionResponse: { name: c.functionCall.name, ...(c.functionCall.id ? { id: c.functionCall.id } : {}), response: { result: TOOL_RESULTS[c.functionCall.name] || 'ok' } } })),
             { text: t('chat.answer_after_tool') },
           ],
         },
       ];
       streamContent.textContent = '';
-      const second = await callGeminiGuarded(model, { contents: followUp, generationConfig: { temperature: 0.5 } }, {
+      const second = await callGeminiGuarded(model, {
+        systemInstruction,
+        contents: followUp,
+        tools,
+        toolConfig: { functionCallingConfig: { mode: 'NONE' } },
+        generationConfig: { temperature: 0.5 },
+      }, {
         category: 'chat',
         onStream: (chunk, fullSoFar) => {
           streamContent.innerHTML = renderMarkdown(fullSoFar);
@@ -346,22 +354,63 @@ async function sendChatMessage(userText) {
   }
 }
 
-function buildChatSystemPrompt() {
+/** Transcript budget for chat context: the most recent ~30k chars (about 15k tokens), not the whole session. */
+const CHAT_TRANSCRIPT_MAX_CHARS = 30000;
+/** Latest analysis is a full markdown note; cap it so it can't dominate the context. */
+const CHAT_ANALYSIS_MAX_CHARS = 6000;
+/** Chat turns re-sent as conversation history. */
+const CHAT_HISTORY_TURNS = 10;
+
+const DEFAULT_CHAT_PROMPT = {
+  ko: `당신은 회의·강의 중 옆에서 돕는 AI 비서입니다. 아래에 현재 세션의 트랜스크립트, 메모, 최신 분석이 있습니다.
+- 질문에는 먼저 결론 한 줄, 그다음 근거. 트랜스크립트에 근거할 때는 시각([HH:MM])을 붙이세요.
+- 트랜스크립트에 없는 내용은 "트랜스크립트에는 없지만"이라고 밝히고 답하세요.
+- 짧게. 목록은 5개 이내. 사용자가 더 요구하면 그때 늘리세요.
+- 수식은 LaTeX 없이 일반 텍스트로 쓰고, 표 대신 목록을 쓰세요.
+- 화자 구분이 없으므로 발언자를 단정하지 마세요.
+- 한국어로 답하세요.`,
+  en: `You are an AI assistant helping during a meeting or lecture. The current session's transcript, memos and latest analysis follow.
+- Answer with the conclusion first, then evidence. When citing the transcript, add the time ([HH:MM]).
+- If something is not in the transcript, say so ("not in the transcript, but...") before answering.
+- Keep it short; lists of at most 5 items unless asked for more.
+- Write formulas as plain text (no LaTeX) and use lists instead of tables.
+- There is no speaker attribution; do not assert who said what.
+- Respond in English.`,
+};
+
+const CHAT_TOOL_RULES = {
+  ko: `도구: add_memo(메모 저장), add_context(분석 맥락 추가), rerun_analysis(재분석). 사용자가 명시적으로 "메모해줘 / 맥락에 추가해줘 / 다시 분석해줘"라고 할 때만 호출하세요. 평범한 질문에는 도구 없이 텍스트로 답하세요. 도구를 쓴 뒤에는 한 문장으로 한 일만 알리세요. rerun_analysis는 재분석을 "시작"만 하므로 "재분석을 시작했어요"라고 하고 결과를 아는 척하지 마세요.`,
+  en: `Tools: add_memo (save a memo), add_context (add context for the analysis), rerun_analysis (re-run the analysis). Call them only when the user explicitly asks to take a memo, add context, or re-analyze. Answer ordinary questions in text without tools. After using a tool, say in one sentence what you did. rerun_analysis only starts a re-run: say it has started and do not claim to know the result.`,
+};
+
+function hhmm(ts) {
+  return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+/** Keep the most recent lines that fit in maxChars; note how many earlier lines were dropped. */
+export function capTranscriptLines(lines, maxChars, lang = 'ko') {
+  const text = lines.join('\n');
+  if (text.length <= maxChars) return text;
+  let startIdx = lines.length;
+  let charCount = 0;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    charCount += lines[i].length + 1;
+    if (charCount > maxChars) break;
+    startIdx = i;
+  }
+  const note = lang === 'ko' ? `[... 앞부분 ${startIdx}줄 생략 ...]` : `[... ${startIdx} earlier lines omitted ...]`;
+  return note + '\n' + lines.slice(startIdx).join('\n');
+}
+
+export function buildChatSystemPrompt() {
   const lang = getAiLanguage();
+  const L = lang === 'ko' ? 'ko' : 'en';
 
   // Use custom prompt if set, otherwise default
   const customPrompt = state.settings.chatSystemPrompt;
-  let prompt = customPrompt
-    ? customPrompt
-    : lang === 'ko'
-      ? `당신은 AI 비서입니다. 현재 회의 맥락이 제공되지만, 어떤 주제든 자유롭게 대화할 수 있습니다.
-사용 가능한 도구: add_context (맥락 추가), add_memo (메모 추가), rerun_analysis (재분석 실행)
-중요: 사용자의 질문에는 항상 텍스트로 직접 답하세요. 도구는 사용자가 "메모해줘", "맥락에 추가해줘", "다시 분석해줘"처럼 명시적으로 요청할 때만 사용하고, 도구를 썼더라도 반드시 답변 문장을 함께 제공하세요.
-한국어로 답변하세요.`
-      : `You are an AI assistant. Meeting context is provided below, but you can discuss any topic freely.
-Available tools: add_context, add_memo, rerun_analysis
-Important: always answer the user's question directly in text. Use a tool only when the user explicitly asks to add a memo, add context, or re-run analysis, and even then include an answer.
-Respond in English.`;
+  let prompt = customPrompt ? customPrompt : DEFAULT_CHAT_PROMPT[L];
+  // Tools are always sent with the request, so the rule for using them always applies.
+  prompt += '\n\n' + CHAT_TOOL_RULES[L];
 
   // Inject category-specific persona and name handling rules
   if (state.categories && state.categories.length > 0) {
@@ -382,80 +431,54 @@ Respond in English.`;
     }
   }
 
-  if (state.transcript.length > 0) {
-    const MAX_CHARS = 100000;
-    const lines = state.transcript.map(l => {
-      const t = new Date(l.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      return `[${t}] ${l.text}`;
-    });
-    let text = lines.join('\n');
-    if (text.length > MAX_CHARS) {
-      // Keep the end (most recent), trim the beginning
-      let kept = 0;
-      let startIdx = lines.length;
-      let charCount = 0;
-      for (let i = lines.length - 1; i >= 0; i--) {
-        charCount += lines[i].length + 1;
-        if (charCount > MAX_CHARS) break;
-        startIdx = i;
-        kept++;
-      }
-      const skipped = lines.length - kept;
-      text = `[... 이전 ${skipped}줄 생략 ...]\n` + lines.slice(startIdx).join('\n');
-    }
-    prompt += `\n\n[Full Transcript]\n${text}`;
-  }
-
-  if (state.memos?.length > 0) {
-    const memoLines = state.memos.map(m => {
-      const t = new Date(m.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      return `- [${t}] ${m.text}`;
-    });
-    prompt += `\n\n[User Memos]\n${memoLines.join('\n')}`;
-  }
-
-  if (state.currentAnalysis) {
-    prompt += `\n\n[Current Analysis Summary]\n${state.currentAnalysis.summary || 'N/A'}`;
-  }
-
-  if (state.userInsights?.length > 0) {
-    prompt += `\n\n[User Insights]\n${state.userInsights.map(i => '- ' + i).join('\n')}`;
+  if (state.settings.meetingContext) {
+    prompt += `\n\n[Meeting Context]\n${state.settings.meetingContext}`;
   }
 
   if (state.settings.userProfile) {
     prompt += `\n\n[User Profile - one of the meeting participants]\n${state.settings.userProfile}`;
   }
 
-  if (state.settings.meetingContext) {
-    prompt += `\n\n[Meeting Context]\n${state.settings.meetingContext}`;
+  if (state.transcript.length > 0) {
+    const lines = state.transcript.map(l => `[${hhmm(l.timestamp)}] ${l.text}`);
+    prompt += `\n\n[Full Transcript]\n${capTranscriptLines(lines, CHAT_TRANSCRIPT_MAX_CHARS, L)}`;
+  }
+
+  if (state.memos?.length > 0) {
+    const memoLines = state.memos.map(m => `- [${hhmm(m.timestamp)}] ${m.text}`);
+    prompt += `\n\n[User Memos]\n${memoLines.join('\n')}`;
+  }
+
+  if (state.currentAnalysis) {
+    const summary = String(state.currentAnalysis.summary || 'N/A');
+    prompt += `\n\n[Current Analysis Summary]\n${summary.length > CHAT_ANALYSIS_MAX_CHARS ? summary.slice(0, CHAT_ANALYSIS_MAX_CHARS) + '\n…' : summary}`;
+  }
+
+  if (state.userInsights?.length > 0) {
+    prompt += `\n\n[User Insights]\n${state.userInsights.map(i => '- ' + i).join('\n')}`;
   }
 
   return prompt;
 }
 
-function buildContents(systemPrompt, userText) {
-  const contents = [];
-  const recentHistory = state.chatHistory.slice(-10);
+/** Tool bookkeeping entries ("[add_memo: …]") live in chatHistory but are not conversation turns. */
+function isToolMarker(text) {
+  return typeof text === 'string' && (text.startsWith('[add_context:') || text.startsWith('[add_memo:') || text === '[rerun_analysis]');
+}
 
-  if (recentHistory.length > 0) {
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt + '\n\n---\n\n' + recentHistory[0].text }]
-    });
-    for (let i = 1; i < recentHistory.length; i++) {
-      contents.push({
-        role: recentHistory[i].role === 'user' ? 'user' : 'model',
-        parts: [{ text: recentHistory[i].text }]
-      });
-    }
+/**
+ * Conversation turns for the request. chatHistory already ends with the current user
+ * message (handleSend / regenerate push it first), so it is not appended a second time.
+ */
+export function buildContents(userText, history = state.chatHistory) {
+  const turns = (history || []).filter(m => !isToolMarker(m.text)).slice(-CHAT_HISTORY_TURNS);
+  const contents = turns.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] }));
+  const last = contents[contents.length - 1];
+  if (!last || last.role !== 'user' || last.parts[0].text !== userText) {
     contents.push({ role: 'user', parts: [{ text: userText }] });
-  } else {
-    contents.push({
-      role: 'user',
-      parts: [{ text: systemPrompt + '\n\n---\n\n' + userText }]
-    });
   }
-
+  // Start on a user turn (Gemini requires it; harmless for OpenAI).
+  while (contents.length > 1 && contents[0].role !== 'user') contents.shift();
   return contents;
 }
 
@@ -496,10 +519,12 @@ export function renderMarkdown(text) {
   // Inline code (`)
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
 
-  // Headers (## and ###)
+  // Headers (#, ##, ###, ####)
   html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  // Documents (doc generator) start with a "# Title" line; .dg-preview-content styles h1.
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
   // Bold and italic
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
@@ -507,11 +532,12 @@ export function renderMarkdown(text) {
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
   // Numbered lists
-  html = html.replace(/^(\d+)\. (.+)$/gm, '<li data-num>$2</li>');
+  html = html.replace(/^[ \t]*(\d+)\. (.+)$/gm, '<li data-num>$2</li>');
   html = html.replace(/((?:<li data-num>.*<\/li>\n?)+)/g, '<ol>$1</ol>');
 
   // Unordered lists
-  html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  // Indented (nested) bullets are flattened into the same list rather than shown as literal "- ".
+  html = html.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
   html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
   // Clean up data-num attributes
@@ -520,8 +546,8 @@ export function renderMarkdown(text) {
   // Line breaks (but not inside block elements)
   html = html.replace(/\n/g, '<br>');
   // Clean up extra <br> around block elements
-  html = html.replace(/<br>\s*(<\/?(?:h[2-4]|pre|ul|ol|li))/g, '$1');
-  html = html.replace(/(<\/(?:h[2-4]|pre|ul|ol|li)>)\s*<br>/g, '$1');
+  html = html.replace(/<br>\s*(<\/?(?:h[1-4]|pre|ul|ol|li))/g, '$1');
+  html = html.replace(/(<\/(?:h[1-4]|pre|ul|ol|li)>)\s*<br>/g, '$1');
 
   return html;
 }
@@ -614,9 +640,17 @@ function handleEdit(messageEl) {
     else if (msg.classList.contains('model')) modelCount++;
   }
 
-  // Simpler approach: just count non-system messages before this one
-  if (historyIdx >= 0 && historyIdx < state.chatHistory.length) {
-    state.chatHistory.splice(historyIdx);
+  // historyIdx counts rendered turns; tool markers sit in chatHistory without a bubble,
+  // so map the turn count onto the real chatHistory index.
+  if (historyIdx >= 0) {
+    let seen = 0;
+    let realIdx = -1;
+    for (let i = 0; i < state.chatHistory.length; i++) {
+      if (isToolMarker(state.chatHistory[i].text)) continue;
+      if (seen === historyIdx) { realIdx = i; break; }
+      seen++;
+    }
+    if (realIdx >= 0) state.chatHistory.splice(realIdx);
   }
 
   // Remove this message and all after from DOM
@@ -644,7 +678,7 @@ function renderSystemMessage(text) {
 export function loadChatHistory() {
   if (!state.chatHistory || state.chatHistory.length === 0) return;
   state.chatHistory.forEach(msg => {
-    if (msg.text.startsWith('[add_context:') || msg.text.startsWith('[add_memo:') || msg.text === '[rerun_analysis]') return;
+    if (isToolMarker(msg.text)) return;
     renderChatMessage(msg.role, msg.text);
   });
 }
