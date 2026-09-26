@@ -51,14 +51,19 @@ describe('chat buildContents', () => {
 });
 
 describe('renderMarkdown', () => {
-  it('renders a document H1 and flattens indented bullets instead of printing "- "', () => {
+  it('renders a document H1 and indented bullets as sub-items instead of printing "- "', () => {
     const html = renderMarkdown('# 후속 메일\n\n## 과제\n- 접근성 개선\n  - aria-label 22건\n  - 대비 5건\n1. 첫째\n   2. 둘째');
     expect(html).toContain('<h1>후속 메일</h1>');
     expect(html).toContain('<h2>과제</h2>');
-    expect(html).toContain('<li>aria-label 22건</li>');
-    expect(html).toContain('<li>둘째</li>');
+    expect(html).toContain('<ul><li>접근성 개선</li><li class="md-sub">aria-label 22건</li>');
+    expect(html).toContain('<li class="md-sub">둘째</li>');
     expect(html).not.toMatch(/(^|>)\s*- /);
     expect(html).not.toContain('# ');
+  });
+
+  it('keeps ordered-list numbering when sub-bullets split the list', () => {
+    const html = renderMarkdown('1. 가정\n   - 독립\n2. 결론');
+    expect(html).toBe('<ol><li value="1">가정</li></ol><ul><li class="md-sub">독립</li></ul><ol><li value="2">결론</li></ol>');
   });
 });
 

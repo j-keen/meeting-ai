@@ -46,6 +46,7 @@ vi.mock('../i18n.js', () => ({
   setAiLanguage: vi.fn(),
   getAiLanguage: vi.fn(),
   getTypeDefaultPrompt: vi.fn(() => 'default prompt'),
+  getDefaultChatPresets: vi.fn(() => ['chat.suggestion_1', 'chat.suggestion_2', 'chat.suggestion_3']),
 }));
 
 vi.mock('../gemini-api.js', () => ({

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { QUICK_PRESETS, localizePreset, customTypeAsPreset, buildQuickPresetConfig, getQuickPreset } from '../quick-presets.js';
-import { getTypeDefaultPrompt } from '../i18n.js';
+import { getTypeDefaultPrompt, getDefaultChatPresets, setLanguage } from '../i18n.js';
 
 const FIELDS = ['name', 'description', 'summary', 'focusPoints', 'chatSystemPrompt', 'chatPresets', 'memoHint', 'context', 'subjectPlaceholder'];
 
@@ -63,5 +63,17 @@ describe('quick presets', () => {
     expect(cfg.meetingType).toBe('custom_x');
     expect(cfg.analysisPrompt).toBe('P');
     expect(cfg.chatPresets).toEqual(['a']);
+  });
+});
+
+describe('default chat suggestion chips', () => {
+  it('are student-oriented for lecture/learning sessions and meeting-oriented otherwise', () => {
+    setLanguage('ko');
+    const learning = getDefaultChatPresets('learning');
+    expect(learning).toHaveLength(4);
+    expect(learning.join(' ')).toMatch(/시험/);
+    expect(learning.join(' ')).toMatch(/교수님/);
+    expect(getDefaultChatPresets('minutes').join(' ')).toMatch(/액션 아이템/);
+    expect(getDefaultChatPresets(undefined)).toEqual(getDefaultChatPresets('copilot'));
   });
 });

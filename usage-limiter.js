@@ -7,11 +7,11 @@ const STORAGE_KEY = 'meeting_daily_usage';
 
 // ─── 카테고리별 일일 한도 ─────────────────────────────────────────────────────
 export const DAILY_LIMITS = {
-  analysis:  150,   // analyzeTranscript, reanalyzeWithAdjustment — live analysis fires every ~1000 chars (≈18/hour on luna ≈ $0.05)
+  analysis:  150,   // analyzeTranscript — live analysis fires every ~1000 chars (≈18/hour on luna ≈ $0.05)
   chat:       50,   // sendChatMessage
   minutes:     5,   // generateFinalMinutes
-  docgen:     10,   // generateDocument
-  tags:       30,   // generateTags, generateMeetingTitle, suggestMeetingMetadata
+  docgen:     10,   // doc-generator.js (문서 생성 채팅)
+  tags:       30,   // suggestTitleAndMetadata (end-of-session title chips + tags/category, one request)
   prep:       15,   // meeting-prep, deep-setup AI 호출
   pro_model:  20,   // heavy 모델 (회의록·문서, gpt-5.6-sol ≈ $0.03/회)
   correction: 200,  // correctSentences (20-line batches; a long lecture needs 15+ at the end)

@@ -262,11 +262,11 @@ describe('carryChecklist (R6 windowed refresh keeps earlier notes)', () => {
 });
 
 describe('parseMarkdownBlocks renders what the model writes', () => {
-  it('keeps nested bullets inside the list (flattened) and makes "# title" a heading block', () => {
+  it('keeps nested bullets (with indent) inside the list and makes "# title" a heading block', () => {
     const blocks = parseMarkdownBlocks('# 강의 노트: VAE\n\n## 핵심 개념\n- 정의: a\n  - 세부 b\n  1. 세부 c\n- 수식: d');
     expect(blocks[0]).toEqual({ type: 'heading', raw: '# 강의 노트: VAE' });
     expect(blocks[2].type).toBe('ul');
-    expect(blocks[2].raw).toBe('- 정의: a\n- 세부 b\n- 세부 c\n- 수식: d');
+    expect(blocks[2].raw).toBe('- 정의: a\n  - 세부 b\n  1. 세부 c\n- 수식: d');
   });
 });
 

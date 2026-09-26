@@ -523,7 +523,8 @@ export function renderMarkdown(text) {
   html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  // Documents (doc generator) start with a "# Title" line; .dg-preview-content styles h1.
+  // Documents, final minutes and lecture notes start with a "# Title" line (h1 styled in
+  // chat bubbles, .ai-markdown-content and .dg-preview-content).
   html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
 
   // Bold and italic
@@ -531,14 +532,17 @@ export function renderMarkdown(text) {
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-  // Numbered lists
-  html = html.replace(/^[ \t]*(\d+)\. (.+)$/gm, '<li data-num>$2</li>');
-  html = html.replace(/((?:<li data-num>.*<\/li>\n?)+)/g, '<ol>$1</ol>');
+  // Indented (nested) items, bulleted or numbered: shown one level in (li.md-sub) instead of a
+  // literal "- ". Runs first so the top-level rules below only see unindented lines.
+  html = html.replace(/^[ \t]+(?:[-*]|\d+\.) (.+)$/gm, '<li class="md-sub">$1</li>');
 
-  // Unordered lists
-  // Indented (nested) bullets are flattened into the same list rather than shown as literal "- ".
-  html = html.replace(/^[ \t]*[-*] (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+  // Numbered lists (value= keeps the numbering when sub-items split the <ol>)
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li data-num value="$1">$2</li>');
+  html = html.replace(/((?:<li data-num[^>]*>.*<\/li>\n?)+)/g, '<ol>$1</ol>');
+
+  // Unordered lists (and sub-items)
+  html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/((?:<li(?: class="md-sub")?>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
 
   // Clean up data-num attributes
   html = html.replace(/ data-num/g, '');

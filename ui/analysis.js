@@ -3,7 +3,7 @@
 // from the application's own analysis engine, matching the original ui.js implementation.
 
 import { state, emit } from '../event-bus.js';
-import { t, getDateLocale } from '../i18n.js';
+import { t, getDateLocale, getDefaultChatPresets } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -61,10 +61,10 @@ export function parseMarkdownBlocks(markdown) {
       continue;
     }
 
-    // Indented (nested) list item: the markdown renderer only knows top-level lists, so keep it in
-    // the current list and flatten it instead of letting it fall into a paragraph as a literal "- ".
+    // Indented (nested) list item: keep it, indent included, in the current list block so
+    // renderMarkdown shows it as a sub-item (li.md-sub) instead of starting a paragraph.
     if (/^\s{1,8}(?:[-*]|\d+\.)\s/.test(line) && currentBlock && (currentBlock.type === 'ul' || currentBlock.type === 'ol')) {
-      currentBlock.raw += '\n' + line.trim().replace(/^\d+\.\s/, '- ');
+      currentBlock.raw += '\n' + line;
       continue;
     }
 
@@ -118,8 +118,7 @@ function renderMarkdownAnalysis(container, analysis) {
     const blockEl = document.createElement('div');
     blockEl.className = 'ai-block';
     blockEl.dataset.blockIndex = index;
-    // renderMarkdown has no h1: show a '# title' block (final minutes / lecture notes) as a heading
-    blockEl.innerHTML = renderMarkdown(block.type === 'heading' ? block.raw.replace(/^# /, '## ') : block.raw);
+    blockEl.innerHTML = renderMarkdown(block.raw);
 
     // Show existing memo if any
     const existingMemo = analysis.blockMemos.find(m => m.blockIndex === index);
@@ -625,12 +624,7 @@ export function showChatWaiting() {
   const container = $('#chatSuggestions');
   if (container) {
     container.innerHTML = '';
-    const defaultPresets = [
-      t('chat.suggestion_1'),
-      t('chat.suggestion_2'),
-      t('chat.suggestion_3'),
-    ];
-    const suggestions = state.settings.chatPresets || defaultPresets;
+    const suggestions = state.settings.chatPresets || getDefaultChatPresets(state.settings.meetingPreset);
     suggestions.forEach(text => {
       const chip = document.createElement('button');
       chip.className = 'chat-suggestion-chip';

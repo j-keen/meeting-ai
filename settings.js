@@ -10,7 +10,7 @@ import {
   loadCustomTypes, addCustomType, deleteCustomType,
 } from './storage.js';
 import { getDefaultPrompt, getPromptForType } from './ai.js';
-import { t, setLanguage, setAiLanguage } from './i18n.js';
+import { t, setLanguage, setAiLanguage, getDefaultChatPresets as getDefaultChatPresetsFor } from './i18n.js';
 import { confirmDialog, promptDialog } from './ui/dialogs.js';
 import { setProvider } from './gemini-api.js';
 import { ocrBusinessCard } from './meeting-prep.js';
@@ -927,11 +927,7 @@ async function updateAudioStorageInfo(el) {
 
 // ===== Chat Presets =====
 function getDefaultChatPresets() {
-  return [
-    t('chat.suggestion_1'),
-    t('chat.suggestion_2'),
-    t('chat.suggestion_3'),
-  ];
+  return getDefaultChatPresetsFor(state.settings.meetingPreset);
 }
 
 function initChatPresets() {

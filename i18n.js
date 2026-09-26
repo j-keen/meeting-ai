@@ -476,6 +476,11 @@ const translations = {
     'chat.suggestion_1': 'Summarize the discussion so far',
     'chat.suggestion_2': 'List action items',
     'chat.suggestion_3': 'What are the key decisions?',
+    // Lecture/learning sessions (meetingPreset 'learning') get student-oriented chips
+    'chat.suggestion_learning_1': 'Re-explain the concept just covered in simple terms',
+    'chat.suggestion_learning_2': 'Give me an example for this part',
+    'chat.suggestion_learning_3': 'What here is likely to be on the exam?',
+    'chat.suggestion_learning_4': 'Suggest questions to ask the professor',
 
     // Settings tabs
     'settings.tab_general': 'General',
@@ -1686,6 +1691,10 @@ const translations = {
     'chat.suggestion_1': '지금까지 논의를 요약해줘',
     'chat.suggestion_2': '액션 아이템을 정리해줘',
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
+    'chat.suggestion_learning_1': '방금 개념 쉽게 다시 설명해줘',
+    'chat.suggestion_learning_2': '이 부분 예시 들어줘',
+    'chat.suggestion_learning_3': '시험에 나올 만한 포인트 정리해줘',
+    'chat.suggestion_learning_4': '교수님께 할 질문 추천해줘',
 
     // Settings tabs
     'settings.tab_general': '일반',
@@ -2726,6 +2735,17 @@ export function t(key, params) {
     });
   }
   return text;
+}
+
+/**
+ * Default chat suggestion chips when no preset supplied its own (state.settings.chatPresets):
+ * student-oriented for lecture/learning sessions, meeting-oriented otherwise.
+ */
+export function getDefaultChatPresets(meetingType) {
+  const keys = meetingType === 'learning'
+    ? ['chat.suggestion_learning_1', 'chat.suggestion_learning_2', 'chat.suggestion_learning_3', 'chat.suggestion_learning_4']
+    : ['chat.suggestion_1', 'chat.suggestion_2', 'chat.suggestion_3'];
+  return keys.map(k => t(k));
 }
 
 export function getAiPrompt() {
