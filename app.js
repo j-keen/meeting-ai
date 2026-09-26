@@ -35,6 +35,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initPromptBuilder } from './prompt-builder.js';
+import { initQuickStart } from './quick-start.js';
 import { initDocGenerator, openDocGenerator } from './doc-generator.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
@@ -93,6 +94,7 @@ function init() {
   initFaq();
   initMeetingPrepForm();
   initPromptBuilder();
+  initQuickStart();
   initDocGenerator();
   initDeepSetup();
   initPromptAdjuster();
@@ -818,6 +820,44 @@ function init() {
     }
     // Start recording
     await startRecording();
+  });
+
+  // Quick preset (launcher card / builder chip → confirm sheet) — same config shape
+  // as the builder, but every channel is applied (also clearing a previous preset's
+  // chat persona/questions) so no earlier style leaks into this session.
+  let sessionScopedContext = null; // { live, base } while a quick-preset subject is in the context
+  on('session:transition', ({ to }) => {
+    if (to !== 'idle' || !sessionScopedContext) return;
+    if (state.settings.meetingContext === sessionScopedContext.live) {
+      state.settings.meetingContext = sessionScopedContext.base;
+    }
+    sessionScopedContext = null;
+  });
+  on('quickPreset:start', async (config) => {
+    pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'builder');
+    state.settings.meetingPreset = config.meetingType;
+    state.settings.customPrompt = config.analysisPrompt;
+    state.settings.chatSystemPrompt = config.chatSystemPrompt || '';
+    state.settings.chatPresets = config.chatPresets?.length ? config.chatPresets : null;
+    // The per-session subject goes into the live context only; the persisted
+    // context stays generic so the next "바로 녹음 시작" doesn't inherit a topic.
+    state.settings.meetingContext = config.context || '';
+    state.settings.activeQuickPreset = { id: config.presetId, name: config.name, prompt: config.analysisPrompt };
+    saveSettings({
+      meetingPreset: config.meetingType,
+      customPrompt: config.analysisPrompt,
+      chatSystemPrompt: state.settings.chatSystemPrompt,
+      chatPresets: state.settings.chatPresets,
+      meetingContext: config.baseContext || '',
+      activeQuickPreset: state.settings.activeQuickPreset,
+    });
+    sessionScopedContext = config.context !== (config.baseContext || '')
+      ? { live: config.context, base: config.baseContext || '' } : null;
+    const ph = $('#memoPlaceholder');
+    if (ph && config.memoHint) ph.textContent = config.memoHint;
+    if (state.phase === 'idle' && config.title) state.meetingTitle = config.title;
+    await startRecording();
+    if (state.phase === 'recording') showToast(t('qp.applied', { name: config.name }), 'success');
   });
 
   // Deep Setup complete — merge prompt-builder + meeting-prep config and start

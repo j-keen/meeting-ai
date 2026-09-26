@@ -9078,3 +9078,212 @@ body.is-paused .rec-live-timer { color: var(--text-secondary); }
   /* Footer stacks on phones; stretched buttons should keep their label centred */
   .end-meeting-footer .btn { justify-content: center; }
 }
+
+/* === Quick Start presets: launcher grid + confirm sheet (#quickPresetModal) === */
+.launcher-modal { overflow-y: auto; max-height: 90vh; }
+.launcher-current-style {
+  margin: -8px 0 14px;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.launcher-current-style[hidden] { display: none; }
+.launcher-presets-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.launcher-presets-head .launcher-setup-label { margin: 0; text-align: left; }
+.launcher-presets-hint { font-size: var(--fs-xs); color: var(--text-muted); }
+.icon-20 { width: 20px; height: 20px; flex-shrink: 0; vertical-align: middle; }
+.qp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.qp-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.qp-card:hover { border-color: var(--accent); background: var(--accent-bg); }
+.qp-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.qp-card-custom .qp-card-icon { background: var(--bg-tertiary); color: var(--text-secondary); }
+.qp-card-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.qp-card-name { font-size: var(--fs-md); font-weight: 600; line-height: 1.25; }
+.qp-card-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qp-card-edited {
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--accent);
+  margin-left: 2px;
+}
+.qp-card-key {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.launcher-more-label {
+  margin: 16px 0 8px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.launcher-more-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.launcher-more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.launcher-more-btn:hover { border-color: var(--accent); color: var(--accent); }
+.launcher-more-btn[hidden] { display: none; }
+.launcher-modal .launcher-preset-list {
+  position: static;
+  transform: none;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-top: 8px;
+  text-align: left;
+}
+.launcher-modal .launcher-preset-item {
+  width: 100%;
+  border: none;
+  background: none;
+  font-family: var(--font-sans);
+  text-align: left;
+  white-space: normal;
+}
+.launcher-modal .launcher-preset-item:hover { background: var(--bg-hover); }
+
+.qp-sheet { max-width: 460px; max-height: 90vh; overflow: hidden; }
+.qp-sheet-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.qp-sheet-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.qp-sheet-titles { flex: 1; min-width: 0; }
+.qp-sheet-title { margin: 0; font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
+.qp-sheet-desc { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.4; }
+.qp-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.qp-field { display: flex; flex-direction: column; gap: 5px; }
+.qp-label { font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); }
+.qp-label-sub { font-weight: 400; color: var(--text-muted); font-size: var(--fs-xs); }
+.qp-input,
+.qp-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 16px; /* >=16px: no iOS zoom on focus */
+  line-height: 1.45;
+}
+.qp-textarea { resize: vertical; min-height: 56px; }
+.qp-input:focus,
+.qp-textarea:focus { outline: none; border-color: var(--accent); }
+.qp-reset {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.qp-reset[hidden] { display: none; }
+.qp-sheet-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border-light);
+}
+.qp-ai-btn { flex: 0 0 auto; }
+.qp-start-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  background: var(--record-color);
+  border-color: var(--record-color);
+  color: #fff;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+.qp-start-btn:hover { background: var(--record-color); filter: brightness(1.08); }
+@media (max-width: 600px) {
+  .launcher-modal { padding: 20px 16px 16px; }
+  .qp-grid { gap: 6px; }
+  .qp-card { padding: 8px 10px; gap: 8px; }
+  .qp-card-icon { width: 30px; height: 30px; }
+  .qp-card-key { display: none; }
+  .qp-card-desc { white-space: normal; word-break: keep-all; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+  #quickPresetModal { align-items: flex-end; padding-left: 0; padding-right: 0; padding-bottom: 0; }
+  .qp-sheet { max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
