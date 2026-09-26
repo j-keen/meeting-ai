@@ -6,7 +6,7 @@ import { hasRecording, getCurrentRecordingSize, deleteRecording } from './audio-
 import * as session from './meeting-session.js';
 import { initSessionUI } from './session-ui.js';
 import { escapeHtml } from './utils.js';
-import { analyzeTranscript, correctSentences, generateMeetingTitle, generateFinalMinutes, suggestMeetingMetadata } from './ai.js';
+import { analyzeTranscript, correctSentences, suggestTitleAndMetadata, generateFinalMinutes } from './ai.js';
 import { isAiAvailable } from './gemini-api.js';
 import {
   saveMeeting, getMeeting, deleteMeeting,
@@ -36,6 +36,8 @@ let isCorrecting = false;
 let charsSinceLastAnalysis = 0;
 let linesSinceLastAnalysis = 0;
 let charsSinceLastCorrection = 0;
+// Transcript lines an auto-correction pass has already sent (not persisted with the meeting)
+const correctionChecked = new WeakSet();
 
 // Guard: idle detection (max duration lives in meeting-session.js)
 const IDLE_WARNING_MS = 15 * 60 * 1000;
@@ -353,12 +355,15 @@ export async function runCorrection(uncorrectedOnly) {
   if (isCorrecting || !isAiAvailable()) return;
   isCorrecting = true;
   try {
+    // Auto runs only send lines no earlier run has looked at (otherwise every run would resend
+    // the whole unchanged transcript); a manual run re-checks everything.
     const lines = uncorrectedOnly
-      ? state.transcript.filter(l => !l.originalText)
+      ? state.transcript.filter(l => !l.originalText && !correctionChecked.has(l))
       : state.transcript;
     if (lines.length === 0) return;
 
     const correctionDict = loadCorrectionDict();
+    const domainHint = [state.meetingTitle, state.settings.meetingContext].filter(Boolean).join(' — ');
     const batchSize = 20;
     for (let i = 0; i < lines.length; i += batchSize) {
       const batch = lines.slice(i, i + batchSize);
@@ -366,7 +371,9 @@ export async function runCorrection(uncorrectedOnly) {
         lines: batch,
         model: modelFor('correction'),
         correctionDict,
+        domainHint,
       });
+      batch.forEach(l => correctionChecked.add(l));
       for (const c of corrections) {
         const line = batch[c.index];
         if (!line || c.corrected === line.text) continue;
@@ -400,9 +407,7 @@ export async function runAnalysis() {
   }
 
   try {
-    const lastAnalysis = state.analysisHistory.length > 0
-      ? state.analysisHistory[state.analysisHistory.length - 1]
-      : null;
+    const lastAnalysis = [...state.analysisHistory].reverse().find(a => !a.isFinalMinutes) || null;
 
     const previousSummary = lastAnalysis
       ? (lastAnalysis.markdown
@@ -444,9 +449,12 @@ export async function runAnalysis() {
       meetingContext: combinedContext,
       meetingPreset: state.settings.meetingPreset,
       elapsedTime: getElapsedTimeStr(),
-      strategy: 'full',
-      recentMinutes: 5,
+      // Full transcript while it is short, then [previous analysis] + the lines since it
+      // (at least the last N minutes) — keeps per-refresh cost flat on long lectures.
+      strategy: 'auto',
+      recentMinutes: state.settings.meetingPreset === 'learning' ? 8 : 5,
       previousSummary,
+      previousAt: lastAnalysis?.timestamp || 0,
       userInsights: state.userInsights,
       memos: state.memos,
       chatHistory: state.chatHistory,
@@ -723,7 +731,7 @@ export function showEndMeetingModal(editMeeting) {
     $('#btnRegenerateTitles').onclick = () => {
       state.aiTitleCached = null;
       chipsEl.innerHTML = '';
-      fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
+      fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl, true);
     };
 
     // AI metadata suggestions (parallel with title)
@@ -907,8 +915,30 @@ function resetFooterToDefault(isEditMode = false) {
   if (body) body.classList.remove('disabled-form');
 }
 
+// Title chips and tag/category suggestions come from ONE light request (ai.js
+// suggestTitleAndMetadata). Both consumers share the in-flight promise for the current
+// transcript; `force` (regenerate / retry) starts a fresh request.
+let titleMetaRequest = null; // { transcript, length, promise }
+function requestTitleAndMetadata(force = false) {
+  const reusable = titleMetaRequest
+    && titleMetaRequest.transcript === state.transcript
+    && titleMetaRequest.length === state.transcript.length;
+  if (!force && reusable) return titleMetaRequest.promise;
+  const promise = suggestTitleAndMetadata({
+    transcript: state.transcript,
+    meetingContext: state.settings.meetingContext || '',
+    existingTitle: state.meetingTitle,
+    existingTags: state.tags,
+  });
+  const entry = { transcript: state.transcript, length: state.transcript.length, promise };
+  titleMetaRequest = entry;
+  // A failed request (null) must not be served to the other consumer's retry
+  promise.then(r => { if (!r && titleMetaRequest === entry) titleMetaRequest = null; }, () => {});
+  return promise;
+}
+
 // AI metadata suggestion rendering — auto-fill into badges
-function fetchAndCacheMetadata() {
+function fetchAndCacheMetadata(force = false) {
   const tagLoading = $('#aiTagLoading');
   if (state.aiMetadataCached) {
     applyAiMetadata(state.aiMetadataCached);
@@ -925,16 +955,12 @@ function fetchAndCacheMetadata() {
       tagLoading.querySelector('#btnRetryTags').onclick = () => {
         tagLoading.innerHTML = `<span class="ai-loading-spinner"></span><span>${t('end_meeting.tags_generating')}</span>`;
         state.aiMetadataCached = null;
-        fetchAndCacheMetadata();
+        fetchAndCacheMetadata(true);
       };
     }
   }, 10000);
 
-  suggestMeetingMetadata({
-    transcript: state.transcript,
-    meetingContext: state.settings.meetingContext || '',
-    existingTags: state.tags,
-  }).then(result => {
+  requestTitleAndMetadata(force).then(result => {
     clearTimeout(spinnerTimeout);
     if (tagLoading) tagLoading.hidden = true;
     if (!result) return;
@@ -949,7 +975,7 @@ function fetchAndCacheMetadata() {
       tagLoading.querySelector('#btnRetryTags').onclick = () => {
         tagLoading.innerHTML = `<span class="ai-loading-spinner"></span><span>${t('end_meeting.tags_generating')}</span>`;
         state.aiMetadataCached = null;
-        fetchAndCacheMetadata();
+        fetchAndCacheMetadata(true);
       };
     }
   });
@@ -1017,7 +1043,7 @@ function renderTitleChips(titles, container, titleInput) {
   });
 }
 
-function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
+function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl, force = false) {
   const label = suggestionsEl.querySelector('.ai-suggestions-label');
   label.classList.remove('ai-error');
   label.innerHTML = `<span class="ai-loading-spinner"></span>${t('end_meeting.title_generating')}`;
@@ -1025,16 +1051,13 @@ function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
   const oldRetry = suggestionsEl.querySelector('.ai-retry-btn');
   if (oldRetry) oldRetry.remove();
 
-  generateMeetingTitle({
-    transcript: state.transcript,
-    existingTitle: state.meetingTitle,
-  }).then(result => {
-    if (!result) { suggestionsEl.hidden = true; return; }
+  requestTitleAndMetadata(force).then(result => {
+    if (!result || !result.title) { suggestionsEl.hidden = true; return; }
     label.innerHTML = '';
     label.textContent = t('end_meeting.title_hint');
 
     state.aiTitleCached = {
-      titles: [result.title, ...(result.alternatives || [])].filter(Boolean),
+      titles: [...new Set([result.title, ...(result.alternatives || [])].filter(Boolean))],
       tags: result.tags || [],
     };
     renderTitleChips(state.aiTitleCached.titles, chipsEl, titleInput);
@@ -1046,7 +1069,7 @@ function fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl) {
     const retryBtn = document.createElement('button');
     retryBtn.className = 'ai-retry-btn';
     retryBtn.textContent = t('end_meeting.retry');
-    retryBtn.onclick = () => fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl);
+    retryBtn.onclick = () => fetchAndCacheTitles(chipsEl, titleInput, suggestionsEl, true);
     label.after(retryBtn);
   });
 }

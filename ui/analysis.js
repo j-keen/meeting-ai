@@ -54,10 +54,17 @@ export function parseMarkdownBlocks(markdown) {
       continue;
     }
 
-    // Heading
-    if (/^#{2,4}\s/.test(line)) {
+    // Heading (a document title '# …' is its own block too, e.g. "# 강의 노트: …")
+    if (/^#{1,4}\s/.test(line)) {
       flushBlock();
       blocks.push({ type: 'heading', raw: line });
+      continue;
+    }
+
+    // Indented (nested) list item: the markdown renderer only knows top-level lists, so keep it in
+    // the current list and flatten it instead of letting it fall into a paragraph as a literal "- ".
+    if (/^\s{1,8}(?:[-*]|\d+\.)\s/.test(line) && currentBlock && (currentBlock.type === 'ul' || currentBlock.type === 'ol')) {
+      currentBlock.raw += '\n' + line.trim().replace(/^\d+\.\s/, '- ');
       continue;
     }
 
@@ -111,7 +118,8 @@ function renderMarkdownAnalysis(container, analysis) {
     const blockEl = document.createElement('div');
     blockEl.className = 'ai-block';
     blockEl.dataset.blockIndex = index;
-    blockEl.innerHTML = renderMarkdown(block.raw);
+    // renderMarkdown has no h1: show a '# title' block (final minutes / lecture notes) as a heading
+    blockEl.innerHTML = renderMarkdown(block.type === 'heading' ? block.raw.replace(/^# /, '## ') : block.raw);
 
     // Show existing memo if any
     const existingMemo = analysis.blockMemos.find(m => m.blockIndex === index);
@@ -294,8 +302,24 @@ function startBlockMemo(blockEl, block, index, analysis, containerDiv, existingT
   });
 }
 
-// Extract headline from markdown (mirror of ai.js logic)
+// Stored flows from before the ai.js extractHeadline fix can be a lone UTF-16 surrogate or a bare
+// variation selector ("\udd0d", "\ufe0f"): treat those as missing so the row recomputes a headline.
+function usableFlow(flow) {
+  const cleaned = String(flow || '')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+    .replace(/^[\s\uFE0F"“”]+/, '')
+    .replace(/[\s"“”]+$/, '')
+    .trim();
+  return cleaned.length >= 2 ? cleaned : '';
+}
+
+// Extract headline from markdown (mirror of ai.js extractHeadline — keep the two in sync)
 function extractHeadlineFromMarkdown(markdown) {
+  const suggestedMatch = markdown.match(/^##\s+🎯[^\n]*\n+[-*]\s*(?:[\p{Extended_Pictographic}\u{FE0F}\u{200D}]+\s*)?["“]?([^"”\n]+)/mu);
+  if (suggestedMatch) {
+    const line = suggestedMatch[1].replace(/["”]\s*$/, '').trim();
+    if (line) return line.slice(0, 80);
+  }
   const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
   if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
   const firstH2 = markdown.match(/^##\s+(.+)/m);
@@ -413,7 +437,9 @@ export function renderAnalysisHistory() {
     const item = document.createElement('div');
     item.className = 'analysis-history-item' + (analysis.bookmarked ? ' bookmarked' : '');
     const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-    const flowText = analysis.flow || (analysis.summary || '').slice(0, 60) + ((analysis.summary || '').length > 60 ? '...' : '');
+    const flowText = usableFlow(analysis.flow)
+      || (analysis.markdown ? extractHeadlineFromMarkdown(analysis.markdown) : '')
+      || (analysis.summary || '').slice(0, 60) + ((analysis.summary || '').length > 60 ? '...' : '');
 
     // Build the row
     const row = document.createElement('div');

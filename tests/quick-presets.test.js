@@ -25,7 +25,10 @@ describe('quick presets', () => {
     const preset = localizePreset(getQuickPreset('lecture'), 'ko');
     const cfg = buildQuickPresetConfig(preset, 'ko');
     expect(cfg.meetingType).toBe('learning');
-    expect(cfg.analysisPrompt).toContain('## 📐 정의 · 공식 · 정리');
+    // One-tap lecture uses the lecture-notes default prompt (🎯 questions first, 🔔 whisper) + focus points
+    expect(cfg.analysisPrompt.startsWith(getTypeDefaultPrompt('learning'))).toBe(true);
+    expect(cfg.analysisPrompt).toMatch(/^## 🎯 /m);
+    expect(cfg.analysisPrompt).toMatch(/^## 🔔 /m);
     expect(cfg.analysisPrompt).toContain('이번 세션에서 특히 챙길 것');
     for (const fp of preset.focusPoints) expect(cfg.analysisPrompt).toContain(`- ${fp}`);
     expect(cfg.chatPresets).toEqual(preset.chatPresets);

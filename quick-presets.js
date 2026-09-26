@@ -51,34 +51,7 @@ export const QUICK_PRESETS = [
         '강사가 반복하거나 "중요", "시험"이라고 한 부분 표시',
         '이해 안 된 채 넘어간 부분은 질문 후보로',
       ],
-      analysisPrompt: `당신은 대학원 수준 강의를 듣는 학생 옆의 조교입니다. 강의를 실시간으로 구조화된 노트로 정리합니다. 한국어 마크다운으로 응답하세요.
-
-## 📍 지금 다루는 내용
-현재 소주제 한 줄 + 강의 흐름에서의 위치 (예: "정의 → 정리 → 예제 중 예제 단계").
-
-## 📚 핵심 개념
-- **개념**: 한두 줄 설명 (강사의 표현을 살려서)
-- 선행 개념과의 연결이 언급되면 "← 선행: ..." 으로 표시
-
-## 📐 정의 · 공식 · 정리
-- 정의/공식은 기호, 조건, 단위를 빠짐없이 (수식은 \`인라인 코드\` 또는 LaTeX 표기)
-- 정리는 가정 → 결론 형태로
-- STT가 기호를 잘못 알아들었을 가능성이 있으면 "(확인 필요)" 표시
-
-## 🧪 예제 · 적용
-강의 중 풀이한 예제, 반례, 직관적 비유를 단계별로 짧게.
-
-## ⭐ 강사가 강조한 것
-반복 설명, "중요하다", "시험에 나온다", "자주 틀린다" 등 강조 신호가 있었던 부분만. 없으면 생략.
-
-## ❓ 열린 질문
-강의에서 설명이 생략됐거나 논리 비약이 있는 부분, 학생이 물어볼 만한 질문 1~3개. 없으면 생략.
-
-규칙:
-- 누적형으로 작성: 이전 노트를 보존하면서 새 내용을 이어 붙이기
-- 용어, 기호, 수치, 고유명사는 강의에서 쓴 그대로 (영문 용어는 원어 병기)
-- 설명을 지어내지 말 것 — 강의에 나온 내용과 당신의 보충 설명을 구분하고, 보충은 "(보충)" 표시
-- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.`,
+      analysisPrompt: null, // the lecture-notes prompt (i18n AI_PROMPT_PRESETS.learning): 🎯 questions, concepts, reasoning, emphasis, whisper
       chatSystemPrompt: '당신은 이 강의 내용을 함께 듣고 있는 유능한 조교입니다. 강의 녹취록에 근거해 개념을 쉽게 풀어주고, 공식의 의미와 유도 과정을 설명하고, 선행 지식이 필요한 부분을 짚어주세요. 강의에 없는 내용을 보충할 때는 보충이라고 밝히세요.',
       chatPresets: [
         '방금 설명한 개념 쉽게 다시 설명해줘',
@@ -87,7 +60,7 @@ export const QUICK_PRESETS = [
         '이 부분 이해하려면 어떤 선행 지식이 필요해?',
       ],
       memoHint: '헷갈리는 부분이나 질문을 적어두면 노트와 질문 후보에 반영돼요',
-      context: '대학·대학원 수준 심화 강의/세미나. 청중은 학생. 최종 노트는 [개요 → 핵심 개념 → 정의·공식 → 예제 → 강조점 → 남은 질문 → 복습 체크리스트] 순서로 정리.',
+      context: '대학·대학원 수준 심화 강의/세미나. 청중은 학생. 수식은 기호와 조건까지 정확히 적을 것.',
     },
     en: {
       name: 'Lecture / Seminar',
@@ -99,34 +72,7 @@ export const QUICK_PRESETS = [
         'Flag what the lecturer repeated or called important / on the exam',
         'Turn skipped or unclear steps into question candidates',
       ],
-      analysisPrompt: `You are a teaching assistant sitting next to a student in a graduate-level lecture. Turn the lecture into live, structured notes. Respond in English using Markdown.
-
-## 📍 Now Covering
-Current sub-topic in one line + where it sits in the lecture flow (e.g. "definition → theorem → example: at example").
-
-## 📚 Key Concepts
-- **Concept**: one or two lines, keeping the lecturer's framing
-- Mark prerequisite links as "← builds on: ..."
-
-## 📐 Definitions · Formulas · Theorems
-- Definitions/formulas with every symbol, condition and unit (use \`inline code\` or LaTeX)
-- Theorems as assumptions → conclusion
-- Mark "(verify)" where speech-to-text may have garbled a symbol
-
-## 🧪 Examples · Applications
-Worked examples, counterexamples and intuitions from the lecture, step by step and brief.
-
-## ⭐ Lecturer Emphasis
-Only parts with a clear emphasis signal: repetition, "this is important", "on the exam", "common mistake". Omit if none.
-
-## ❓ Open Questions
-Skipped explanations, logical jumps, or 1-3 questions a student could ask. Omit if none.
-
-Rules:
-- Write CUMULATIVELY: keep previous notes and append new material
-- Keep terms, symbols, numbers and names exactly as used in the lecture
-- Do not invent explanations — mark your own additions as "(supplement)"
-- CRITICAL: All output MUST be in English.`,
+      analysisPrompt: null,
       chatSystemPrompt: 'You are a capable teaching assistant attending this lecture. Ground answers in the lecture transcript: explain concepts plainly, unpack formulas and derivations, and point out required background. Label anything not from the lecture as a supplement.',
       chatPresets: [
         'Re-explain the concept just covered in simple terms',
@@ -135,7 +81,7 @@ Rules:
         'What background do I need to follow this part?',
       ],
       memoHint: 'Jot down confusing parts or questions — they feed the notes and question list',
-      context: 'Advanced university/graduate lecture or seminar; the listener is a student. Final notes order: overview → key concepts → definitions & formulas → examples → lecturer emphasis → open questions → review checklist.',
+      context: 'Advanced university/graduate lecture or seminar; the listener is a student. Keep formulas exact, with symbols and conditions.',
     },
   },
   {
