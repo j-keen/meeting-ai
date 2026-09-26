@@ -11,6 +11,7 @@ import { pushStyleHistory } from './style-history.js';
 import { createPresetSaveForm } from './preset-save.js';
 import { renderAnalysis } from './ui/analysis.js';
 import { escapeHtml } from './utils.js';
+import { QUICK_PRESETS } from './quick-presets.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -130,12 +131,24 @@ function renderPresets() {
   }
 }
 
+function isQuickPresetChatList(list) {
+  if (!list?.length) return false;
+  const key = JSON.stringify(list);
+  return QUICK_PRESETS.some(p => JSON.stringify(p.ko.chatPresets) === key || JSON.stringify(p.en.chatPresets) === key);
+}
+
 function selectPreset(presetId) {
   pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'dropdown');
 
   state.settings.meetingPreset = presetId;
   state.settings.customPrompt = getPromptForType(presetId);
   emit('customPrompt:change');
+
+  // Chips that a built-in quick preset set (e.g. 1:1 questions) would outlive the style change;
+  // drop them so the style's own defaults show (student chips for 'learning'). User-edited lists stay.
+  if (!presetId.startsWith('custom_') && isQuickPresetChatList(state.settings.chatPresets)) {
+    state.settings.chatPresets = null;
+  }
 
   if (presetId.startsWith('custom_')) {
     const customTypes = loadCustomTypes();

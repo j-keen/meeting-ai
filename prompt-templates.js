@@ -10,30 +10,27 @@ export function getRoleIntro(lang) {
 }
 
 /**
- * App feature description — 6 copilot features with detail
+ * App feature description — the live analysis styles as the current prompts define them
+ * (i18n.js AI_PROMPTS = conversation coach, AI_PROMPT_PRESETS.minutes / .learning).
  */
 export function getAppFeatureDescription(lang) {
   return lang === 'ko'
     ? `## 앱이 하는 일
-1. **실시간 코파일럿 분석**: 대화를 듣고 AI가 주기적으로 "대화 코치" 역할을 합니다:
-   - 🎯 추천 멘트 (지금 말할 문장 3~5개 — 가장 먼저 표시됨)
-   - 💡 맥락과 근거 (왜 지금 이걸 해야 하는지)
-   - 🔔 귓속말 (긴급 알림 1~3개 — 토스트로 표시됨)
-   - 📋 논의 트래커 (확정 ✅ / 미정 ⏳ / 충돌 ⚠️)
-   - 📌 아직 안 다룬 주제 (미팅 목적 대비)
-   - 💬 메모 대조 (메모에 적었지만 아직 안 나온 것)
-2. **AI 채팅**: 대화 중 궁금한 걸 AI에게 바로 물어볼 수 있습니다.
-3. **메모**: 실시간 메모를 남기면 다음 분석에 반영됩니다.`
+1. **실시간 분석**: 대화를 들으며 AI가 주기적으로 마크다운 분석을 갱신합니다. 스타일별 섹션:
+   - 대화 코치: 🎯 추천 멘트 (지금 말할 문장 1~3개 — 맨 위에 표시) → 💡 근거 → 🔔 귓속말 (긴급 알림 0~3개 — 토스트로 표시) → 📋 논의 트래커 (✅ 확정 / ⏳ 미정 / ⚠️ 충돌) → 📌 아직 안 다룬 주제
+   - 회의록: 요약 → 📋 주요 논의 → ✅ 결정 사항 → 📌 액션 아이템 → 📝 기타 메모
+   - 강의 노트: 🎯 지금 물어볼 질문 → 📚 핵심 개념 → 🧩 논리 흐름 → ⚠️ 강조·주의 → 🔔 귓속말 → 📝 용어
+2. **AI 채팅**: 대화 중 궁금한 걸 AI에게 바로 물어볼 수 있습니다 (추천 질문 칩 제공).
+3. **메모**: 실시간 메모를 남기면 다음 분석에 반영됩니다.
+4. **최종 정리**: 세션이 끝나면 회의록 또는 강의 노트 문서를 만듭니다.`
     : `## What the app does
-1. **Real-time Copilot Analysis**: Listens to conversations and AI acts as a "conversation coach":
-   - 🎯 Suggested Lines (3-5 speakable sentences for right now — shown first)
-   - 💡 Context & Reasoning (why each suggestion matters now)
-   - 🔔 Whisper (1-3 urgent nudges — shown as toast alerts)
-   - 📋 Discussion Tracker (Decided ✅ / Pending ⏳ / Conflict ⚠️)
-   - 📌 Not Yet Covered (vs. meeting purpose)
-   - 💬 Memo Check (memos not yet addressed)
-2. **AI Chat**: Users can ask AI questions on the spot during conversations.
-3. **Memo**: Real-time notes get reflected in the next analysis.`;
+1. **Live analysis**: While listening, AI periodically refreshes a markdown analysis. Sections by style:
+   - Conversation coach: 🎯 Suggested Lines (1-3 sentences to say now — shown on top) → 💡 Why → 🔔 Whisper (0-3 urgent nudges — shown as toasts) → 📋 Discussion Tracker (✅ Decided / ⏳ Open / ⚠️ Conflict) → 📌 Not Yet Covered
+   - Meeting minutes: Summary → 📋 Key Discussions → ✅ Decisions Made → 📌 Action Items → 📝 Notes
+   - Lecture notes: 🎯 Questions to Ask Now → 📚 Key Concepts → 🧩 Line of Reasoning → ⚠️ Emphasis & Warnings → 🔔 Whisper → 📝 Terms
+2. **AI Chat**: Users can ask AI questions on the spot (with suggested-question chips).
+3. **Memo**: Real-time notes get reflected in the next analysis.
+4. **Final write-up**: When the session ends, the app produces meeting minutes or lecture notes.`;
 }
 
 /**
@@ -70,21 +67,21 @@ After hearing their answers, output this JSON in a code block (\`\`\`json ... \`
 }
 
 /**
- * Prompt writing principles — 6-lens structure, per-field guide
+ * Prompt writing principles — per-field guide
  */
 export function getPromptWritingPrinciples(lang) {
   return lang === 'ko'
     ? `## 프롬프트 작성 원칙
 - summary: 사용자의 상황을 한 문장으로 요약 (예: "투자 유치 미팅 — 시리즈A 조건 협상")
 - focusPoints: AI가 이 대화에서 특히 잡아줄 것 2~3개 (예: ["밸류에이션 조건 변경 감지", "투자자 우려사항 정리"])
-- analysisPrompt: 코파일럿의 "대화 코파일럿 (6렌즈 분석 + 추천 멘트)" 구조를 기본으로 하되, 이 상황에 맞게 변형. 상단: 🎯 추천 멘트 (6가지 렌즈 → 임팩트 필터링 → 1~5개, 톤 미러링), 중단: 💡 맥락과 근거 + 🔔 귓속말, 하단: 📋 논의 트래커 + 📌 빠진 주제 + 💬 메모. 6가지 렌즈(빠진 질문, 전제 의심, 의외의 연결, 반례, 스케일 전환, 부재자 시선)의 비중을 상황에 맞게 커스텀.
+- analysisPrompt: 상황에 맞는 스타일(대화 코치 / 회의록 / 강의 노트)의 섹션 구조를 기본으로 하되 이 상황에 맞게 변형. "## 이모지 제목" 마크다운 섹션만 사용. 대화 코치형이면 첫 섹션을 "## 🎯 추천 멘트"로 하고 각 줄을 - 🔍 "그대로 말할 문장" 형식으로(맨 위에 표시됨), 긴급 알림은 "## 🔔 귓속말" 섹션에(토스트로 표시됨). 섹션은 짧게, 항목당 한 줄.
 - chatSystemPrompt: 해당 분야의 "유능한 동료" 톤
 - chatPresets: 이 상황에서 사용자가 대화 중 물어볼 법한 것
 - memoHint: 이 상황에서 메모해둘 만한 것`
     : `## Prompt writing principles
 - summary: One-sentence summary of the user's situation (e.g., "Series A negotiation — term sheet review meeting")
 - focusPoints: 2-3 things AI should especially watch for (e.g., ["Detect valuation term changes", "Track investor concerns"])
-- analysisPrompt: Use the copilot's "conversation copilot (6-lens analysis + suggested lines)" structure as base, customized for this situation. Top: 🎯 Suggested Lines (6 lenses → impact filtering → 1-5, tone-mirrored), Middle: 💡 Context & Reasoning + 🔔 Whisper, Bottom: 📋 Discussion Tracker + 📌 Not Covered + 💬 Memo Check. Weight the 6 lenses (blind spot, hidden assumption, cross-domain link, stress test, zoom in/out, missing stakeholder) to fit the scenario.
+- analysisPrompt: Start from the section structure of the matching style (conversation coach / meeting minutes / lecture notes) and adapt it to this situation. Use only markdown "## emoji Title" sections. For a coach-style prompt the first section must be "## 🎯 Suggested Lines" with each line as - 🔍 "sentence to say as-is" (shown on top); urgent nudges go in a "## 🔔 Whisper" section (shown as toasts). Keep sections short, one line per item.
 - chatSystemPrompt: "Capable teammate" tone in the relevant field
 - chatPresets: Things the user would likely ask mid-conversation
 - memoHint: What's worth noting in this situation`;

@@ -5,12 +5,12 @@ const NAME_HANDLING_RULES = {
 - 이 트랜스크립트에는 화자 구분이 없습니다. 발언자를 확정적으로 귀속하지 마세요.
 - 비슷한 이름은 동일인으로 추정하세요 (STT 오인식 가능).
 - "~라는 의견이 제시됨", "~하기로 논의됨" 형태로 서술하세요.
-- 이름이 명확히 지명된 경우에만 언급하되 "(추정)" 표기를 붙이세요.`,
+- 이름은 트랜스크립트에 나온 경우에만 쓰세요. "민수 씨가 인증 4개"처럼 이름을 들어 직접 배정한 담당·기한은 확정이므로 "(추정)" 없이 쓰고, 맥락으로만 짐작한 담당자에만 "(추정)"을 붙이세요.`,
   en: `[Speaker Handling Rules]
 - This transcript has no speaker attribution. Do NOT definitively assign statements to specific speakers.
 - Similar names likely refer to the same person (STT misrecognition possible).
 - Use passive forms: "It was suggested that...", "It was discussed that..."
-- Only mention names when explicitly stated in the transcript, with "(estimated)" notation.`,
+- Only mention names that appear in the transcript. An owner or deadline assigned by name ("Minsu takes the 4 auth items") is confirmed: write it without "(estimated)"; add "(estimated)" only for owners inferred from context.`,
 };
 
 // Built-in category prompt definitions
@@ -49,8 +49,8 @@ const CATEGORY_PROMPTS = {
       en: '[Client Meeting Analysis]\n- Extract client requirements and expectations precisely.\n- Track ALL commitments (timelines, deliverables).\n- Capture shifts in client sentiment/satisfaction.',
     },
     minutes: {
-      ko: '[고객미팅 회의록 구조]\n- 요구사항-대응 매핑 테이블을 포함하세요.\n- 약속 사항과 기한을 별도 섹션으로 정리하세요.',
-      en: '[Client Meeting Minutes Structure]\n- Include a requirements-response mapping table.\n- List commitments and deadlines in a separate section.',
+      ko: '[고객미팅 회의록 구조]\n- 요구사항 → 대응을 한 줄씩 목록으로 정리하세요 (표 금지).\n- 약속 사항과 기한을 별도 섹션으로 정리하세요.',
+      en: '[Client Meeting Minutes Structure]\n- List requirement → response pairs, one per line (no tables).\n- List commitments and deadlines in a separate section.',
     },
     chat: {
       ko: '당신은 어카운트 매니저입니다. 고객 요구사항 정리, 약속 사항 확인, 후속 조치 계획에 집중하세요.',
@@ -77,8 +77,8 @@ const CATEGORY_PROMPTS = {
       en: '[Project Meeting Analysis]\n- Track milestone progress and blockers.\n- Identify risks and dependencies.\n- Note resource allocation or bottlenecks.',
     },
     minutes: {
-      ko: '[프로젝트 회의록 구조]\n- 진행현황 섹션 + 리스크 매트릭스를 포함하세요.\n- 의존성과 블로커를 별도로 정리하세요.',
-      en: '[Project Minutes Structure]\n- Include progress status section + risk matrix.\n- List dependencies and blockers separately.',
+      ko: '[프로젝트 회의록 구조]\n- 진행현황 섹션 + 리스크 목록(리스크 — 영향·대응)을 포함하세요.\n- 의존성과 블로커를 별도로 정리하세요.',
+      en: '[Project Minutes Structure]\n- Include a progress status section + a risk list (risk — impact / response).\n- List dependencies and blockers separately.',
     },
     chat: {
       ko: '당신은 프로젝트 코디네이터입니다. 일정 추적, 리스크 관리, 의존성 파악에 집중하세요.',
@@ -87,16 +87,16 @@ const CATEGORY_PROMPTS = {
   },
   '교육': {
     analysis: {
-      ko: '[교육/세미나 분석 관점]\n- 핵심 개념과 주요 내용을 체계적으로 정리하세요.\n- Q&A 내용을 질문-답변 쌍으로 정리하세요.\n- 학습 포인트와 실습 과제를 추출하세요.',
-      en: '[Training/Seminar Analysis]\n- Systematically organize key concepts and content.\n- Structure Q&A as question-answer pairs.\n- Extract learning points and practical exercises.',
+      ko: '[강의/세미나 관점]\n- 새로 나온 개념과 용어를 나온 순서대로 누적하세요.\n- 강사가 강조한 것(시험·과제·주의)을 놓치지 마세요.\n- 질문-답변은 Q/A 쌍으로 목록에 적으세요 (표 금지).',
+      en: '[Lecture/Seminar]\n- Accumulate new concepts and terms in the order they appear.\n- Never miss what the lecturer flags (exam, homework, warnings).\n- Record Q&A as Q/A pairs in a list (no tables).',
     },
     minutes: {
-      ko: '[교육 회의록 구조]\n- 학습 내용 요약 + Q&A 테이블을 포함하세요.\n- 핵심 개념을 목록으로 정리하세요.',
-      en: '[Training Minutes Structure]\n- Include learning summary + Q&A table.\n- List key concepts in bullet points.',
+      ko: '[강의 노트 구조]\n- 개념별 소제목(###)으로 정리하고, 강조·과제·시험 범위를 별도 섹션에 그대로 적으세요.\n- Q/A는 목록으로, 표는 쓰지 마세요.',
+      en: '[Lecture Notes Structure]\n- One ### subsection per concept; emphasis, homework and exam scope in their own section, verbatim.\n- Q/A as a list, never a table.',
     },
     chat: {
-      ko: '당신은 학습 도우미입니다. 개념 설명, 궁금한 점 해소, 학습 내용 복습에 도움을 주세요.',
-      en: 'You are a learning assistant. Help explain concepts, answer questions, and review learned material.',
+      ko: '당신은 이 강의의 조교입니다. 개념 재설명, 수식 풀어쓰기, 강사에게 할 질문 만들기, 복습 문제 내기를 도와주세요. 강의에 없는 내용은 "(보충)"이라고 밝히세요.',
+      en: 'You are the TA for this lecture. Help re-explain concepts, spell out formulas, craft questions for the lecturer and make review questions. Mark anything not said in the lecture as "(supplement)".',
     },
   },
   '리뷰': {
@@ -105,8 +105,8 @@ const CATEGORY_PROMPTS = {
       en: '[Review Analysis]\n- Classify feedback by severity (Critical/Major/Minor).\n- Track approval/rejection/conditional decisions.\n- List specific improvement recommendations.',
     },
     minutes: {
-      ko: '[리뷰 회의록 구조]\n- 피드백 매트릭스(항목×심각도) + 최종 판정 섹션을 포함하세요.\n- 수정 필요 항목을 우선순위로 정리하세요.',
-      en: '[Review Minutes Structure]\n- Include feedback matrix (item × severity) + final verdict section.\n- Prioritize items requiring revision.',
+      ko: '[리뷰 회의록 구조]\n- 피드백을 심각도별 목록(Critical/Major/Minor) + 최종 판정 섹션으로 정리하세요.\n- 수정 필요 항목을 우선순위로 정리하세요.',
+      en: '[Review Minutes Structure]\n- Group feedback in lists by severity (Critical/Major/Minor) + a final verdict section.\n- Prioritize items requiring revision.',
     },
     chat: {
       ko: '당신은 QA 파트너입니다. 리뷰 피드백 정리, 우선순위 판단, 개선 방안 제안에 집중하세요.',
@@ -119,8 +119,8 @@ const CATEGORY_PROMPTS = {
       en: '[Report Analysis]\n- Extract KPIs, figures, and statistics precisely.\n- Map issues to their response status.\n- Note trends and changes.',
     },
     minutes: {
-      ko: '[보고 회의록 구조]\n- 수치 데이터 테이블 + 이슈-대응 매핑을 포함하세요.\n- 핵심 지표를 한눈에 볼 수 있게 정리하세요.',
-      en: '[Report Minutes Structure]\n- Include data tables + issue-response mapping.\n- Present key metrics at a glance.',
+      ko: '[보고 회의록 구조]\n- 수치는 "지표: 값" 목록으로, 이슈 → 대응은 한 줄씩 정리하세요 (표 금지).\n- 핵심 지표를 한눈에 볼 수 있게 정리하세요.',
+      en: '[Report Minutes Structure]\n- List figures as "metric: value" and issue → response one per line (no tables).\n- Present key metrics at a glance.',
     },
     chat: {
       ko: '당신은 데이터 분석가입니다. 수치 해석, 트렌드 분석, 데이터 기반 인사이트 제공에 집중하세요.',

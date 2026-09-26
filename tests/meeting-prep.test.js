@@ -4,6 +4,7 @@ import {
   openMeetingPrepForm,
   isMeetingPrepActive,
   ocrBusinessCard,
+  parseAgendaSuggestions,
 } from '../meeting-prep.js';
 
 // ===== Mocks =====
@@ -34,6 +35,7 @@ vi.mock('../gemini-api.js', () => ({
 
 vi.mock('../i18n.js', () => ({
   t: vi.fn(k => k),
+  getAiLanguage: vi.fn(() => 'ko'),
 }));
 
 vi.mock('../ui.js', () => ({
@@ -375,5 +377,32 @@ describe('ocrBusinessCard', () => {
       }),
       expect.objectContaining({ category: 'prep' })
     );
+  });
+});
+
+describe('parseAgendaSuggestions', () => {
+  it('reads the object-wrapped items list that JSON mode returns', () => {
+    const text = JSON.stringify({ items: [
+      { text: '결제 모듈 일정 재확인', field: 'topics' },
+      { text: '베타 출시 목표 확정', field: 'goal' },
+      { text: '담당자 지정', field: 'weird' },
+    ] });
+    expect(parseAgendaSuggestions(text)).toEqual([
+      { text: '결제 모듈 일정 재확인', field: 'topics' },
+      { text: '베타 출시 목표 확정', field: 'goal' },
+      { text: '담당자 지정', field: 'topics' },
+    ]);
+  });
+
+  it('still accepts a bare array, a fenced block, or another array key', () => {
+    expect(parseAgendaSuggestions('[{"text":"A","field":"outcomes"}]')).toEqual([{ text: 'A', field: 'outcomes' }]);
+    expect(parseAgendaSuggestions('```json\n{"items":[{"text":"B"}]}\n```')).toEqual([{ text: 'B', field: 'topics' }]);
+    expect(parseAgendaSuggestions('{"agenda":["C"]}')).toEqual([{ text: 'C', field: 'topics' }]);
+  });
+
+  it('returns [] for garbage or a single non-list object', () => {
+    expect(parseAgendaSuggestions('nope')).toEqual([]);
+    expect(parseAgendaSuggestions('{"text":"x"}')).toEqual([]);
+    expect(parseAgendaSuggestions('')).toEqual([]);
   });
 });

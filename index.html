@@ -269,11 +269,6 @@
             <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
             <input type="file" id="chatFileInput" class="a11y-visually-hidden" data-i18n-aria="a11y.attach_file" aria-label="Attach file" accept=".txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,.yaml,.yml,.toml,.ini,.cfg,.env,.sh,.bat">
           </label>
-          <select class="chat-model-select" id="chatModelSelect" data-i18n-aria="a11y.chat_model" aria-label="Chat AI model">
-            <option value="gemini-3.5-flash-lite" selected>Flash 3.5 Lite</option>
-            <option value="gemini-3.5-flash">Flash 3.5</option>
-            <option value="gemini-3.1-pro-preview">Pro 3.1</option>
-          </select>
         </div>
       </div>
     </section>
@@ -294,7 +289,7 @@
         <span class="record-label">REC</span>
         <span class="stt-engine-badge" id="sttEngineBadge" hidden></span>
       </button>
-      <button class="btn btn-sm" id="btnHighAccuracy" title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
+      <button class="btn btn-sm" id="btnHighAccuracy" hidden title="Switch to cloud high-accuracy STT" data-i18n-title="stt.high_accuracy_hint"><span data-i18n="stt.high_accuracy">고정확도 STT</span></button>
       <button class="stt-status-chip" id="sttStatusChip" type="button" title="Current STT / AI status">STT</button>
       <button class="btn btn-end-meeting" id="btnEndMeeting" title="End meeting" hidden><span class="stop-icon"></span><span data-i18n="meeting.end_short">End Meeting</span></button>
       <span class="bottom-divider" id="bottomDivider"></span>
@@ -316,37 +311,21 @@
       </div>
     </div>
     <div class="settings-body">
-      <!-- Settings Tabs -->
-      <div class="settings-tabs" id="settingsTabs">
-        <button class="settings-tab active" data-tab="general" data-i18n="settings.tab_general">General</button>
-        <button class="settings-tab" data-tab="analysis" data-i18n="settings.tab_analysis">Analysis</button>
-        <button class="settings-tab" data-tab="chat" data-i18n="settings.tab_chat">Chat</button>
-        <button class="settings-tab" data-tab="data" data-i18n="settings.tab_data">Data</button>
-        <button class="settings-tab" data-tab="account" data-i18n="settings.tab_account">Account</button>
-      </div>
-
-      <!-- General Tab -->
-      <div class="settings-tab-content active" data-tab="general">
-        <section class="settings-section settings-status-section">
-          <h3><span data-i18n="status.title">Current engines</span> <button class="btn btn-sm" id="btnRuntimeStatusRefresh" type="button" data-i18n="status.refresh">Refresh</button></h3>
-          <div id="runtimeStatus" class="status-body"></div>
-        </section>
+      <!-- One short page, no tabs. Everything here is saved with the Save button, except the
+           data tools (backup / people / places / dictionary), which act immediately. -->
+      <div class="settings-page">
         <section class="settings-section">
           <h3 data-i18n="settings.language">Language</h3>
           <label class="settings-label">
-              <span data-i18n="settings.ui_language">UI Language</span>
-              <small class="settings-hint" data-i18n="settings.ui_language_hint">Language shown in menus and buttons</small>
-              <select class="settings-select" id="selectUiLanguage">
-                <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
-                <option value="en" data-i18n="settings.ui_lang_en">English</option>
-                <option value="ko" data-i18n="settings.ui_lang_ko">Korean</option>
-              </select>
-            </label>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.stt">STT Settings <span class="settings-hint" data-i18n="settings.stt_hint">Converts your speech to text</span></h3>
+            <span data-i18n="settings.ui_language">UI Language</span>
+            <select class="settings-select" id="selectUiLanguage">
+              <option value="auto" data-i18n="settings.ui_lang_auto">Auto (Browser)</option>
+              <option value="en" data-i18n="settings.ui_lang_en">English</option>
+              <option value="ko" data-i18n="settings.ui_lang_ko">Korean</option>
+            </select>
+          </label>
           <label class="settings-label">
-            <span data-i18n="settings.language">Language</span>
+            <span data-i18n="settings.meeting_language">Meeting language</span>
             <small class="settings-hint" data-i18n="settings.stt_language_hint">Language spoken in the meeting</small>
             <select class="settings-select" id="selectLanguage">
               <option value="ko" data-i18n="settings.lang_ko">Korean</option>
@@ -356,46 +335,33 @@
             </select>
           </label>
           <label class="settings-label">
-            <span data-i18n="settings.stt_engine">STT engine</span>
-            <small class="settings-hint" data-i18n="settings.stt_engine_hint">Auto picks the best available option. Browser uses Web Speech in this tab. Keyboard voice input uses your phone's built-in dictation.</small>
-            <select class="settings-select" id="selectSttEngine">
-              <option value="auto" data-i18n="settings.stt_engine_auto">Auto</option>
-              <option value="webspeech" data-i18n="settings.stt_engine_webspeech">Browser (Web Speech)</option>
-              <option value="keyboard" data-i18n="settings.stt_engine_keyboard">Keyboard voice input (phone's own STT)</option>
-              <option value="cloud" data-i18n="settings.stt_engine_cloud">Cloud high-accuracy (OpenAI)</option>
-              <option value="whisper" data-i18n="settings.stt_engine_whisper">Local Whisper (browser)</option>
+            <span data-i18n="settings.ai_language">AI Analysis Language</span>
+            <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results in</small>
+            <select class="settings-select" id="selectAiLanguage">
+              <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
+              <option value="en" data-i18n="settings.ai_lang_en">English</option>
+              <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
             </select>
           </label>
-          <label class="settings-label settings-toggle-label">
-            <span data-i18n="settings.stt_on_device">Prefer on-device recognition</span>
-            <input type="checkbox" id="checkSttOnDevice">
-          </label>
         </section>
+
         <section class="settings-section">
-          <h3 data-i18n="settings.stt_engine_cloud">Cloud high-accuracy (OpenAI)</h3>
-          <label class="settings-label">
-            <span data-i18n="settings.cloud_stt_model">Cloud STT model</span>
-            <select class="settings-select" id="selectCloudSttModel">
-              <option value="gpt-4o-mini-transcribe" data-i18n="settings.cloud_stt_model_mini">표준 (약 $0.003/분)</option>
-              <option value="gpt-4o-transcribe" data-i18n="settings.cloud_stt_model_full">고정확도 (약 $0.006/분)</option>
-            </select>
+          <h3 data-i18n="settings.trigger_title">Live analysis trigger</h3>
+          <label class="settings-label settings-checkbox-label">
+            <input type="checkbox" id="checkAutoAnalysis" checked>
+            <span data-i18n="settings.trigger_auto">Analyze automatically while recording</span>
           </label>
-          <small class="settings-hint" data-i18n="settings.cloud_stt_hint">OpenAI 실시간 전사. 설정의 OpenAI 키 또는 서버의 OPENAI_API_KEY를 사용. 1시간 회의 ≈ $0.18–0.36</small>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.stt_engine_whisper">Local Whisper (browser)</h3>
           <label class="settings-label">
-            <span data-i18n="settings.whisper_model">Whisper model</span>
-            <select class="settings-select" id="selectWhisperModel"></select>
+            <span data-i18n="settings.trigger_chars">Run an analysis every N new characters</span>
+            <div class="threshold-row">
+              <input type="range" class="settings-range" id="rangeAnalysisThreshold" min="200" max="5000" step="50" value="1000">
+              <input type="number" class="settings-input threshold-number" id="inputAnalysisThreshold" min="100" max="20000" step="50" value="1000" title="Click to type a value">
+              <span data-i18n="settings.trigger_unit">chars</span>
+            </div>
+            <small class="settings-hint" id="analysisThresholdHint" data-i18n="settings.trigger_hint">Also needs at least 5 new transcript lines. If nothing triggered for 10 minutes and 3+ lines arrived, it runs anyway. Smaller = more frequent, more API cost.</small>
           </label>
-          <small class="settings-hint" data-i18n="settings.whisper_hint">브라우저에서 실행되는 로컬 모델. 한 번 내려받으면 오프라인에서도 동작하고 음성이 외부로 나가지 않습니다. 데스크톱 권장.</small>
-          <div class="whisper-model-actions">
-            <button type="button" class="btn btn-sm" id="btnWhisperDownload" data-i18n="settings.whisper_download">모델 다운로드</button>
-            <button type="button" class="btn btn-sm btn-danger" id="btnWhisperDelete" data-i18n="settings.whisper_delete">삭제</button>
-            <span id="whisperStatus" class="whisper-status"></span>
-          </div>
-          <progress id="whisperProgress" class="whisper-progress" value="0" max="100" hidden></progress>
         </section>
+
         <section class="settings-section">
           <h3 data-i18n="settings.audio_recording">Audio Recording</h3>
           <label class="settings-label settings-toggle-label">
@@ -426,94 +392,99 @@
         </section>
 
         <section class="settings-section">
+          <h3 data-i18n="settings.data_title">Data</h3>
+          <div class="settings-button-row">
+            <button class="btn btn-sm" id="btnBackupExport" type="button" data-i18n="settings.backup_export">Export backup</button>
+            <button class="btn btn-sm" id="btnBackupImport" type="button" data-i18n="settings.backup_import">Restore from backup</button>
+            <input type="file" id="backupImportFile" accept=".json,application/json" hidden>
+          </div>
+          <small class="settings-hint" data-i18n="settings.backup_hint">One file with every meeting, person, place, preset and setting. Audio recordings are not included.</small>
+          <div class="settings-button-row">
+            <button class="btn btn-sm btn-data-modal-open" id="btnOpenContacts">
+              <span data-i18n="settings.open_contacts">Manage People</span>
+              <span class="data-modal-badge" id="contactsBadge"></span>
+            </button>
+            <button class="btn btn-sm btn-data-modal-open" id="btnOpenLocations">
+              <span data-i18n="settings.open_locations">Manage Locations</span>
+              <span class="data-modal-badge" id="locationsBadge"></span>
+            </button>
+            <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
+              <span data-i18n="settings.correction_dict">Correction Dictionary</span>
+              <span class="correction-dict-badge" id="correctionDictBadge"></span>
+            </button>
+          </div>
+        </section>
+
+        <details class="settings-section settings-more">
+          <summary data-i18n="settings.chat_custom">AI chat customization</summary>
+          <h3><span data-i18n="settings.chat_presets">Chat Preset Questions</span> <span class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</span></h3>
+          <div class="chat-presets-list" id="chatPresetsList"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
+            <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
+          </div>
+          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
+          <h3 style="margin-top:16px"><span data-i18n="settings.chat_prompt">Chat System Prompt</span> <span class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</span></h3>
+          <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
+          <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
+        </details>
+
+        <section class="settings-section">
+          <h3 data-i18n="settings.account_title">Account &amp; sync</h3>
+          <div id="accountInfo" style="margin-bottom:12px;">
+            <p class="text-muted">Google 로그인하면 모바일 앱과 회의록이 자동 동기화됩니다.</p>
+          </div>
+          <div class="settings-button-row">
+            <button class="btn btn-sm" id="btnAccountLogin" onclick="window.supabaseSignIn()">Google로 로그인</button>
+            <button class="btn btn-sm" id="btnManualSync" onclick="window.loadFromCloud && window.loadFromCloud()" data-i18n="settings.manual_sync">Sync now</button>
+          </div>
+          <p class="settings-hint" id="syncStatus"></p>
+        </section>
+
+        <section class="settings-section settings-danger-zone">
+          <h3 data-i18n="settings.danger_zone_title">Danger zone</h3>
+          <p class="settings-hint" data-i18n="settings.danger_zone_hint">Resets every setting back to its default. This cannot be undone.</p>
+          <button class="btn btn-danger settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
+        </section>
+      </div>
+
+      <!-- Hidden features, kept for a possible revival: the app runs on OpenAI cloud STT only,
+           and analysis presets are chosen from the quick start / analysis style menu. -->
+      <div class="settings-hidden-features" hidden>
+        <section class="settings-section">
           <label class="settings-label">
-            <span data-i18n="settings.ai_provider">AI provider</span>
-            <small class="settings-hint" data-i18n="settings.ai_provider_hint">Gemini uses the server proxy or your Gemini key; OpenAI uses your OpenAI key or the server's OPENAI_API_KEY.</small>
-            <select class="settings-select" id="selectAiProvider">
-              <option value="gemini" data-i18n="settings.ai_provider_gemini">Google Gemini</option>
-              <option value="openai" data-i18n="settings.ai_provider_openai">OpenAI (GPT)</option>
+            <span data-i18n="settings.stt_engine">STT engine</span>
+            <select class="settings-select" id="selectSttEngine">
+              <option value="auto" data-i18n="settings.stt_engine_auto">Auto</option>
+              <option value="webspeech" data-i18n="settings.stt_engine_webspeech">Browser (Web Speech)</option>
+              <option value="keyboard" data-i18n="settings.stt_engine_keyboard">Keyboard voice input (phone's own STT)</option>
+              <option value="cloud" data-i18n="settings.stt_engine_cloud">Cloud high-accuracy (OpenAI)</option>
+              <option value="whisper" data-i18n="settings.stt_engine_whisper">Local Whisper (browser)</option>
             </select>
           </label>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.gemini_key">Gemini API key — for Gemini analysis</h3>
-          <div class="gemini-key-row">
-            <input type="password" class="settings-input" id="inputGeminiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.gemini_placeholder" placeholder="Enter API key">
-            <button type="button" class="btn btn-icon btn-sm" id="btnToggleGeminiKey" aria-label="Show API key" title="Show">&#128065;</button>
-          </div>
-          <label class="settings-label">
-            <span data-i18n="settings.gemini_key_mode">Gemini key mode</span>
-            <select class="settings-select" id="selectGeminiKeyMode">
-              <option value="proxy" data-i18n="settings.gemini_key_mode_proxy">Server proxy only</option>
-              <option value="fallback" selected data-i18n="settings.gemini_key_mode_fallback">Proxy first, personal key as fallback</option>
-              <option value="direct" data-i18n="settings.gemini_key_mode_direct">Personal key only</option>
-            </select>
+          <label class="settings-label settings-toggle-label">
+            <span data-i18n="settings.stt_on_device">Prefer on-device recognition</span>
+            <input type="checkbox" id="checkSttOnDevice">
           </label>
-          <div class="gemini-key-actions">
-            <button type="button" class="btn btn-sm" id="btnTestGeminiKey" data-i18n="settings.gemini_key_test">Test key</button>
-            <span id="geminiKeyStatus"></span>
+          <label class="settings-label">
+            <span data-i18n="settings.whisper_model">Whisper model</span>
+            <select class="settings-select" id="selectWhisperModel"></select>
+          </label>
+          <div class="whisper-model-actions">
+            <button type="button" class="btn btn-sm" id="btnWhisperDownload" data-i18n="settings.whisper_download">Download model</button>
+            <button type="button" class="btn btn-sm btn-danger" id="btnWhisperDelete" data-i18n="settings.whisper_delete">Delete</button>
+            <span id="whisperStatus" class="whisper-status"></span>
           </div>
-          <small class="settings-hint" data-i18n="settings.gemini_key_hint">Stored unencrypted in this browser only. Used when the server proxy is unavailable or rate-limited.</small>
+          <progress id="whisperProgress" class="whisper-progress" value="0" max="100" hidden></progress>
         </section>
-
         <section class="settings-section">
-          <h3 data-i18n="settings.openai_key">OpenAI API key — for GPT analysis and high-accuracy STT</h3>
-          <div class="gemini-key-row">
-            <input type="password" class="settings-input" id="inputOpenaiKey" autocomplete="off" spellcheck="false" data-i18n-placeholder="settings.openai_key" placeholder="Enter API key">
-            <button type="button" class="btn btn-icon btn-sm" id="btnToggleOpenaiKey" aria-label="Show API key" title="Show">&#128065;</button>
-          </div>
-          <div class="gemini-key-actions">
-            <button type="button" class="btn btn-sm" id="btnTestOpenaiKey" data-i18n="settings.openai_key_test">Test key</button>
-            <span id="openaiKeyStatus"></span>
-          </div>
-          <small class="settings-hint" data-i18n="settings.openai_key_hint">Stored unencrypted in this browser only.</small>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.analytics">Usage Analytics</h3>
           <label class="settings-label settings-toggle-label">
             <span data-i18n="settings.analytics_toggle">Share anonymous usage data</span>
             <input type="checkbox" id="checkAnalytics" checked>
           </label>
-          <small class="settings-hint" data-i18n="settings.analytics_hint">Anonymous feature usage only. No personal data collected.</small>
         </section>
-      </div>
-
-      <!-- Analysis Tab -->
-      <div class="settings-tab-content" data-tab="analysis">
         <section class="settings-section">
-          <h3 data-i18n="settings.trigger_title">Live analysis trigger</h3>
-          <label class="settings-label settings-checkbox-label">
-            <input type="checkbox" id="checkAutoAnalysis" checked>
-            <span data-i18n="settings.trigger_auto">Analyze automatically while recording</span>
-          </label>
-          <label class="settings-label">
-            <span data-i18n="settings.trigger_chars">Run an analysis every N new characters</span>
-            <div class="threshold-row">
-              <input type="range" class="settings-range" id="rangeAnalysisThreshold" min="200" max="5000" step="50" value="1000">
-              <input type="number" class="settings-input threshold-number" id="inputAnalysisThreshold" min="100" max="20000" step="50" value="1000" title="Click to type a value">
-              <span data-i18n="settings.trigger_unit">chars</span>
-            </div>
-            <small class="settings-hint" id="analysisThresholdHint" data-i18n="settings.trigger_hint">Also needs at least 5 new transcript lines. If nothing triggered for 10 minutes and 3+ lines arrived, it runs anyway. Smaller = more frequent, more API cost.</small>
-          </label>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.ai_analysis">AI Analysis</h3>
-          <label class="settings-label">
-              <span data-i18n="settings.ai_language">AI Analysis Language</span>
-              <small class="settings-hint" data-i18n="settings.ai_language_hint">Language AI writes analysis results in</small>
-              <select class="settings-select" id="selectAiLanguage">
-                <option value="auto" data-i18n="settings.ai_lang_auto">Auto (Browser)</option>
-                <option value="en" data-i18n="settings.ai_lang_en">English</option>
-                <option value="ko" data-i18n="settings.ai_lang_ko">Korean</option>
-              </select>
-            </label>
-        </section>
-
-        <section class="settings-section">
-          <h3 data-i18n="settings.preset_section">Analysis Presets <span class="settings-hint" data-i18n="settings.preset_section_hint">Choose how AI analyzes your conversations</span></h3>
+          <h3 data-i18n="settings.preset_section">Analysis Presets</h3>
           <div class="preset-cards" id="presetCards">
             <label class="preset-card selected" data-preset="copilot">
               <span class="preset-card-radio"></span>
@@ -529,7 +500,7 @@
               <div class="preset-card-body">
                 <span class="preset-card-icon">📋</span>
                 <span class="preset-card-name" data-i18n="settings.preset_minutes">Meeting Minutes</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Organizes decisions & action items</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_minutes_desc">Organizes decisions &amp; action items</span>
                 <span class="preset-card-fit" data-i18n="settings.preset_minutes_fit">Team meetings, weekly syncs, kickoffs</span>
               </div>
             </label>
@@ -538,82 +509,13 @@
               <div class="preset-card-body">
                 <span class="preset-card-icon">📚</span>
                 <span class="preset-card-name" data-i18n="settings.preset_learning">Lecture Notes</span>
-                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Captures key concepts & review points</span>
+                <span class="preset-card-desc" data-i18n="settings.preset_learning_desc">Captures key concepts &amp; review points</span>
                 <span class="preset-card-fit" data-i18n="settings.preset_learning_fit">Lectures, seminars, mentoring sessions</span>
               </div>
             </label>
           </div>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.custom_presets">Custom Presets</h3>
-          <div class="custom-preset-list" id="customPresetList">
-            <p class="text-muted" style="font-size:12px;" data-i18n="settings.custom_presets_empty">No custom presets yet. Create one with AI!</p>
-          </div>
-          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset" style="margin-top:8px;">+ 새 프리셋 만들기</button>
-        </section>
-      </div>
-
-      <!-- Chat Tab -->
-      <div class="settings-tab-content" data-tab="chat">
-        <section class="settings-section">
-          <h3 data-i18n="settings.chat_prompt">Chat System Prompt <span class="settings-hint" data-i18n="settings.chat_prompt_hint">Defines AI chat's role and behavior</span></h3>
-          <textarea class="settings-textarea" id="textChatPrompt" rows="5" data-i18n-placeholder="settings.chat_prompt_placeholder" placeholder="Custom chat system prompt..."></textarea>
-          <button class="btn btn-sm" id="btnResetChatPrompt" data-i18n="settings.reset_chat_prompt">Reset to Default</button>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.chat_presets">Chat Preset Questions <span class="settings-hint" data-i18n="settings.chat_presets_hint">Quick question buttons shown in chat</span></h3>
-          <div class="chat-presets-list" id="chatPresetsList"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <input type="text" class="settings-input" id="inputNewChatPreset" data-i18n-placeholder="settings.chat_preset_placeholder" placeholder="Enter preset question...">
-            <button class="btn btn-sm" id="btnAddChatPreset" data-i18n="settings.add">Add</button>
-          </div>
-          <button class="btn btn-sm" id="btnResetChatPresets" style="margin-top:8px" data-i18n="settings.reset_defaults">Reset Defaults</button>
-        </section>
-      </div>
-
-      <!-- Data Tab -->
-      <div class="settings-tab-content" data-tab="data">
-        <section class="settings-section">
-          <h3 data-i18n="settings.contacts_title">People <span class="settings-hint" data-i18n="settings.contacts_hint">People you can select as meeting participants</span></h3>
-          <button class="btn btn-sm btn-data-modal-open" id="btnOpenContacts">
-            <span data-i18n="settings.open_contacts">Manage People</span>
-            <span class="data-modal-badge" id="contactsBadge"></span>
-          </button>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.locations">Locations <span class="settings-hint" data-i18n="settings.locations_hint">Places available for meeting location</span></h3>
-          <button class="btn btn-sm btn-data-modal-open" id="btnOpenLocations">
-            <span data-i18n="settings.open_locations">Manage Locations</span>
-            <span class="data-modal-badge" id="locationsBadge"></span>
-          </button>
-        </section>
-        <section class="settings-section">
-          <h3 data-i18n="settings.correction_dict">Correction Dictionary <span class="settings-hint" data-i18n="settings.correction_dict_section_hint">Auto-corrects speech recognition errors</span></h3>
-          <button class="btn btn-sm btn-correction-dict-open" id="btnOpenCorrectionDict">
-            <span data-i18n="settings.correction_dict_open">Open Correction Dictionary</span>
-            <span class="correction-dict-badge" id="correctionDictBadge"></span>
-          </button>
-        </section>
-        <section class="settings-section settings-danger-zone">
-          <h3 data-i18n="settings.danger_zone_title">Danger zone</h3>
-          <p class="settings-hint" data-i18n="settings.danger_zone_hint">Resets every setting below back to its default. This cannot be undone.</p>
-          <button class="btn btn-danger settings-footer-reset" id="btnSettingsReset" data-i18n="settings.reset_all">Reset All</button>
-        </section>
-      </div>
-
-      <!-- Account Tab -->
-      <div class="settings-tab-content" data-tab="account">
-        <section class="settings-section">
-          <h3>계정</h3>
-          <div id="accountInfo" style="margin-bottom:12px;">
-            <p class="text-muted">Google 로그인하면 모바일 앱과 회의록이 자동 동기화됩니다.</p>
-          </div>
-          <button class="btn btn-sm" id="btnAccountLogin" onclick="window.supabaseSignIn()">Google로 로그인</button>
-        </section>
-        <section class="settings-section">
-          <h3>동기화</h3>
-          <p class="text-muted" id="syncStatus">로그인 후 자동 동기화됩니다</p>
-          <button class="btn btn-sm" id="btnManualSync" onclick="window.loadFromCloud && window.loadFromCloud()">수동 동기화</button>
+          <div class="custom-preset-list" id="customPresetList"></div>
+          <button class="btn btn-sm" id="btnAddCustomPreset" data-i18n="settings.add_custom_preset">+ New preset</button>
         </section>
       </div>
 
@@ -870,34 +772,6 @@
           </button>
         </div>
         <div class="minutes-preview-content" id="minutesPreviewContent"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Minutes Model Selection Modal -->
-  <div class="modal-overlay" id="minutesModelModal" hidden>
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3 data-i18n="minutes_model.title">Select AI Model</h3>
-        <button class="btn btn-icon modal-close" data-close="minutesModelModal">&times;</button>
-      </div>
-      <div class="modal-body modal-body-compact">
-        <button class="minutes-model-card" data-model="gemini-3.5-flash">
-          <span class="minutes-model-card-icon">&#x26A1;</span>
-          <div class="minutes-model-card-info">
-            <span class="minutes-model-card-name">Flash</span>
-            <span class="minutes-model-card-desc" data-i18n="end_meeting.flash_desc">Fast and lightweight</span>
-          </div>
-        </button>
-        <button class="minutes-model-card" data-model="gemini-3.1-pro-preview">
-          <span class="minutes-model-card-icon">&#x2726;</span>
-          <div class="minutes-model-card-info">
-            <span class="minutes-model-card-name">Pro</span>
-            <span class="minutes-model-card-desc" data-i18n="end_meeting.pro_desc">Detailed and precise</span>
-          </div>
-          <span class="minutes-model-card-usage" id="modelModalProUsage" hidden></span>
-        </button>
-        <div class="settings-hint" data-i18n="settings.model_tiers_hint">Light tasks (correction, titles, chat) use the light model; live analysis uses the standard model; only meeting minutes and documents use the model you pick here.</div>
       </div>
     </div>
   </div>
@@ -1513,30 +1387,66 @@
         <span class="launcher-record-dot" aria-hidden="true"></span>
         <span data-i18n="meeting.launcher_record">Start recording now</span>
       </button>
-      <p class="launcher-setup-label" data-i18n="meeting.setup_options_title">Or set up first</p>
-      <!-- 3 secondary setup cards -->
-      <div class="launcher-actions-grid">
-        <button class="launcher-card launcher-card-ai-setup" id="btnLauncherQuickStart">
-          <span class="launcher-card-badge">1</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.quick_start">Quick Start</span>
-          <span class="launcher-card-desc" data-i18n="meeting.quick_start_desc">Chat with AI to set your meeting goal</span>
+      <p class="launcher-current-style" id="launcherCurrentStyle" hidden></p>
+      <!-- Quick Start: built-in + saved presets. Tap → confirm sheet (#quickPresetModal) → start. -->
+      <div class="launcher-presets-head">
+        <p class="launcher-setup-label" data-i18n="launcher.presets_title">Start with a preset</p>
+        <span class="launcher-presets-hint" data-i18n="launcher.presets_hint">Tap, check, start</span>
+      </div>
+      <div class="qp-grid" id="launcherPresetGrid"></div>
+      <!-- Slower, deeper setup paths -->
+      <p class="launcher-more-label" data-i18n="launcher.more_title">More ways to set up</p>
+      <div class="launcher-more-row">
+        <button class="launcher-more-btn" id="btnLauncherQuickStart" type="button">
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+          <span data-i18n="launcher.ai_custom">Custom setup with AI</span>
         </button>
-        <button class="launcher-card" id="btnLauncherDeepSetup">
-          <span class="launcher-card-badge">2</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.deep_setup">Meeting Prep</span>
-          <span class="launcher-card-desc" data-i18n="meeting.deep_setup_desc">Enter attendees, materials and agenda ahead of time</span>
+        <button class="launcher-more-btn" id="btnLauncherDeepSetup" type="button">
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H4a1 1 0 0 1-1-1v-4a9 9 0 1 1 18 0v4a1 1 0 0 1-1 1h-2a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3"/></svg>
+          <span data-i18n="meeting.deep_setup">Meeting Prep</span>
         </button>
-        <button class="launcher-card" id="btnLauncherPreset">
-          <span class="launcher-card-badge">3</span>
-          <span class="launcher-card-icon"><svg class="icon-24" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg></span>
-          <span class="launcher-card-label" data-i18n="meeting.preset_start">Preset</span>
-          <span class="launcher-card-desc" data-i18n="meeting.preset_start_desc">Start from saved preset</span>
-          <span class="launcher-card-hint" data-i18n="meeting.no_presets" hidden>No presets saved yet</span>
+        <button class="launcher-more-btn" id="btnLauncherPreset" type="button" hidden>
+          <svg class="icon-16" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+          <span data-i18n="launcher.saved_prep">Saved meeting prep</span>
         </button>
       </div>
       <button class="launcher-close-btn" id="launcherCloseBtn" data-i18n="launcher.close">Close</button>
+    </div>
+  </div>
+
+  <!-- Quick preset confirm sheet: prefilled + editable, one tap to start -->
+  <div class="modal-overlay" id="quickPresetModal" hidden>
+    <div class="modal qp-sheet">
+      <div class="qp-sheet-head">
+        <span class="qp-sheet-icon" id="qpIcon" aria-hidden="true"></span>
+        <div class="qp-sheet-titles">
+          <h2 class="qp-sheet-title" id="qpTitle" data-dialog-title></h2>
+          <p class="qp-sheet-desc" id="qpDesc"></p>
+        </div>
+        <button class="btn btn-icon modal-close" id="qpCloseBtn" type="button" data-i18n-aria="qp.close" aria-label="Close">&times;</button>
+      </div>
+      <div class="qp-sheet-body">
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.subject">Title / topic</span> <span class="qp-label-sub" data-i18n="qp.subject_optional">(optional)</span></span>
+          <input type="text" class="qp-input" id="qpSubject" maxlength="120" autocomplete="off">
+        </label>
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.focus">What the AI should watch for</span> <span class="qp-label-sub" data-i18n="qp.one_per_line">One per line</span></span>
+          <textarea class="qp-textarea" id="qpFocus" rows="3"></textarea>
+        </label>
+        <label class="qp-field">
+          <span class="qp-label"><span data-i18n="qp.questions">Suggested questions</span> <span class="qp-label-sub" data-i18n="qp.one_per_line">One per line</span></span>
+          <textarea class="qp-textarea" id="qpQuestions" rows="3"></textarea>
+        </label>
+        <button class="qp-reset" id="qpReset" type="button" hidden data-i18n="qp.reset">Reset to defaults</button>
+      </div>
+      <div class="qp-sheet-actions">
+        <button class="btn btn-outline qp-ai-btn" id="qpAiCustom" type="button" data-i18n="qp.ai_custom">Customize with AI</button>
+        <button class="btn btn-primary qp-start-btn" id="qpStart" type="button">
+          <span class="launcher-record-dot" aria-hidden="true"></span>
+          <span data-i18n="qp.start">Start now</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -2030,32 +1940,6 @@
       </button>
     </div>
   </template>
-
-  <!-- Regenerate Modal -->
-  <div class="modal-overlay" id="regenModal" hidden>
-    <div class="modal modal-sm">
-      <div class="modal-header">
-        <h3 data-i18n="minutes_preview.regen_title">Regenerate Minutes</h3>
-        <button class="btn btn-icon modal-close" data-close="regenModal">&times;</button>
-      </div>
-      <div class="modal-body modal-body-compact">
-        <button class="minutes-model-card regen-model-card" data-regen-model="gemini-3.5-flash">
-          <span class="minutes-model-card-icon">&#x26A1;</span>
-          <div class="minutes-model-card-info">
-            <span class="minutes-model-card-name">Flash</span>
-            <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_flash_desc">Fast and lightweight</span>
-          </div>
-        </button>
-        <button class="minutes-model-card regen-model-card" data-regen-model="gemini-3.1-pro-preview">
-          <span class="minutes-model-card-icon">&#x2726;</span>
-          <div class="minutes-model-card-info">
-            <span class="minutes-model-card-name">Pro</span>
-            <span class="minutes-model-card-desc" data-i18n="minutes_preview.regen_pro_desc">Detailed and precise</span>
-          </div>
-        </button>
-      </div>
-    </div>
-  </div>
 
   <template id="tmplPromptEditModal">
     <div class="prompt-edit-overlay">

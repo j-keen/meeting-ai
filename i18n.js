@@ -119,9 +119,9 @@ const translations = {
     'settings.ai_provider_openai': 'OpenAI (GPT)',
     'settings.openai_key': 'OpenAI API key — for GPT analysis and high-accuracy STT',
     'settings.openai_key_hint': 'Required for high-accuracy STT (starts with sk-). Stored unencrypted in this browser only.',
-    'status.title': 'Current engines & models',
+    'status.title': 'Speech recognition & AI',
     'status.refresh': 'Refresh',
-    'status.chip_hint': 'Tap to see which STT engine, model and key are in use',
+    'status.chip_hint': 'Tap to check speech recognition and AI',
     'status.stt_title': 'Speech-to-text (STT)',
     'status.ai_title': 'AI analysis',
     'status.keys_title': 'API keys',
@@ -159,8 +159,8 @@ const translations = {
     'status.keys_note': 'High-accuracy speech recognition needs an OpenAI key. Enter it below under "API key".',
     'status.problem_cloud_no_key': 'No OpenAI key yet — add one below under "API key" to use high-accuracy speech recognition.',
     'status.problem_whisper_not_downloaded': 'Whisper model not downloaded yet (Settings → Local Whisper).',
-    'status.problem_ai_no_key': 'No AI access: no server proxy and no personal key for this provider.',
-    'status.ai_key_hint': 'Add your own key in Settings → API key.',
+    'status.problem_ai_no_key': 'AI is not available: the server has no OpenAI key configured.',
+    'status.ai_key_hint': 'Check the deployment settings.',
     'status.open_settings': 'Open settings',
     'status.close': 'Close',
     'status.advanced_info': 'Advanced info',
@@ -171,7 +171,15 @@ const translations = {
     'status.summary_key_personal': 'Personal key set',
     'status.summary_key_missing': 'Key needed',
     'status.summary_key_none_needed': 'Not needed (free)',
-    'stt.cloud_no_key': 'High-accuracy STT needs an OpenAI key. Enter it in Settings → OpenAI API key.',
+    'status.chip_checking': 'Checking…',
+    'status.chip_ready': 'Speech recognition ready',
+    'status.chip_live': 'Speech recognition connected',
+    'status.chip_problem': 'Speech recognition problem',
+    'status.summary_checking': 'Checking the connection…',
+    'status.summary_ok': 'Speech recognition and AI both run on OpenAI through the server. All good.',
+    'status.summary_problem': 'Something needs attention:',
+    'status.problem_stt_fallback': 'Cloud speech recognition is unavailable (no server OpenAI key), so the browser\'s built-in recognizer is used instead.',
+    'stt.cloud_no_key': 'Speech recognition is not available: the server has no OpenAI key configured.',
     'stt.cloud_rate_limited': 'High-accuracy STT: too many sessions from this network. Try again in a while.',
     'stt.cloud_mic_unavailable': 'High-accuracy STT: microphone unavailable ({reason}).',
     'stt.cloud_error': 'High-accuracy STT: {message}',
@@ -453,8 +461,10 @@ const translations = {
     'chat.error': 'Chat error',
     'chat.file_attached': 'File attached: {name}',
     'chat.context_added': 'Context added to analysis.',
-    'chat.memo_added': 'Memo added to transcript.',
+    'chat.memo_added': 'Memo added.',
     'chat.rerunning_analysis': 'Re-running analysis with updated context...',
+    'chat.rerun_queued': 'An analysis is in progress; it will run again with the updated context right after.',
+    'toast.analysis_queued': 'Analysis in progress — it will run again right after.',
     'chat.waiting_hint': 'Ask questions about the meeting in progress.',
     'chat.regenerate': 'Regenerate',
     'chat.edit': 'Edit',
@@ -468,6 +478,11 @@ const translations = {
     'chat.suggestion_1': 'Summarize the discussion so far',
     'chat.suggestion_2': 'List action items',
     'chat.suggestion_3': 'What are the key decisions?',
+    // Lecture/learning sessions (meetingPreset 'learning') get student-oriented chips
+    'chat.suggestion_learning_1': 'Re-explain the concept just covered in simple terms',
+    'chat.suggestion_learning_2': 'Give me an example for this part',
+    'chat.suggestion_learning_3': 'What here is likely to be on the exam?',
+    'chat.suggestion_learning_4': 'Suggest questions to ask the professor',
 
     // Settings tabs
     'settings.tab_general': 'General',
@@ -647,11 +662,30 @@ const translations = {
     'meeting.preset_start_desc': 'Start from saved preset',
     'meeting.no_presets': 'No presets saved yet',
     'launcher.close': 'Close',
+    'launcher.presets_title': 'Start with a preset',
+    'launcher.presets_hint': 'Tap, check, start',
+    'launcher.current_style': 'Current style: {name}',
+    'launcher.more_title': 'More ways to set up',
+    'launcher.ai_custom': 'Custom setup with AI',
+    'launcher.saved_prep': 'Saved meeting prep',
+    'launcher.my_preset': 'My preset',
+    'qp.subject': 'Title / topic',
+    'qp.subject_optional': '(optional)',
+    'qp.focus': 'What the AI should watch for',
+    'qp.questions': 'Suggested questions',
+    'qp.one_per_line': 'One per line',
+    'qp.start': 'Start now',
+    'qp.ai_custom': 'Customize with AI',
+    'qp.reset': 'Reset to defaults',
+    'qp.reset_done': 'Restored the default settings',
+    'qp.edited': 'Edited',
+    'qp.close': 'Close',
+    'qp.applied': 'Started with “{name}”',
     'meeting.ai_setup': 'Quick Start',
     'meeting.ai_setup_desc': 'AI sets up for your situation',
     'meeting.deep_setup': 'Meeting Prep',
     'meeting.deep_setup_desc': 'Enter attendees, materials and agenda ahead of time',
-    'pb.title': 'Quick Start',
+    'pb.title': 'Custom setup with AI',
     'pb.input_placeholder': 'Tell me about your situation...',
     'pb.back_to_chat': '← Back to Chat',
     'pb.save_preset': '💾 Save as Preset',
@@ -800,7 +834,7 @@ const translations = {
     'toast.recording_started': 'Recording started. Speak to transcribe.',
     'toast.wake_lock_failed': 'This device can’t keep the screen on automatically. Keep the screen on so recording isn’t interrupted.',
     'toast.gemini_fallback_active': 'Using your personal Gemini key',
-    'toast.ai_unavailable': 'AI is unavailable: no server proxy and no personal key',
+    'toast.ai_unavailable': 'AI is unavailable: the server has no OpenAI key configured',
     'transcript.connecting': 'Connecting to speech service...',
     'transcript.connecting_hint': 'This may take a moment on mobile networks.',
     'transcript.waiting': 'Listening for speech...',
@@ -862,6 +896,7 @@ const translations = {
     'end_meeting.minutes_error': 'Minutes generation failed',
     'end_meeting.close': 'Close',
     'end_meeting.saving': 'Saving...',
+    'end_meeting.correcting': 'Checking the transcript... ({done}/{total})',
     'end_meeting.edit_saved': 'Meeting info updated!',
     'end_meeting.last_modified': 'Last modified',
     'end_meeting.save_complete': 'Meeting saved!',
@@ -907,9 +942,10 @@ const translations = {
     'minutes_preview.regenerate': 'Regenerate',
     'minutes_preview.regen_confirm': 'Confirm',
     'minutes_preview.regen_title': 'Regenerate Minutes',
+    'minutes_preview.regen_confirm': 'Regenerate the minutes? The current version is kept in the version history.',
     'minutes_preview.regen_flash_desc': 'Fast and lightweight',
     'minutes_preview.regen_pro_desc': 'Detailed and precise',
-    'minutes_preview.generated_with': 'Generated with {model}',
+    'minutes_preview.generated_with': 'Generated with the final model',
     'toast.minutes_generating_bg': 'Generating minutes in the background',
     'toast.minutes_still_generating': 'Still generating...',
 
@@ -995,7 +1031,19 @@ const translations = {
     'settings.close': 'Close',
     'settings.reset_all': 'Reset All',
     'settings.danger_zone_title': 'Danger zone',
-    'settings.danger_zone_hint': 'Resets every setting below back to its default. This cannot be undone.',
+    'settings.danger_zone_hint': 'Resets every setting back to its default. Meetings are kept. This cannot be undone.',
+    'settings.meeting_language': 'Meeting language',
+    'settings.data_title': 'Data',
+    'settings.backup_export': 'Export backup',
+    'settings.backup_import': 'Restore from backup',
+    'settings.backup_hint': 'One JSON file with every meeting, person, place, preset and setting. Audio recordings are not included.',
+    'settings.backup_exported': 'Backup saved ({n} meetings).',
+    'settings.backup_invalid': 'This file is not a Meeting AI backup.',
+    'settings.backup_error': 'Backup failed. Please try again.',
+    'settings.backup_import_confirm': 'Replace all current meetings and settings with this backup? The page will reload.',
+    'settings.chat_custom': 'AI chat customization',
+    'settings.account_title': 'Account & sync',
+    'settings.manual_sync': 'Sync now',
     'settings.unsaved_changes': 'Unsaved changes',
     'settings.unsaved_modal_text': 'You have unsaved changes. What would you like to do?',
     'settings.save_and_close': 'Save',
@@ -1120,14 +1168,14 @@ const translations = {
     // Usage limiter
     'usage.approaching': '{remaining} {category} uses left today',
     'usage.exhausted': 'Daily {category} limit reached. Resets at midnight.',
-    'usage.model_downgraded': '{model} unavailable — using Flash Lite instead.',
+    'usage.model_downgraded': 'Today\'s limit for the high-quality model is used up — using the light model instead.',
     'usage.cat.analysis': 'analysis',
     'usage.cat.chat': 'chat',
     'usage.cat.minutes': 'minutes',
     'usage.cat.docgen': 'document',
     'usage.cat.tags': 'tagging',
     'usage.cat.prep': 'prep',
-    'usage.cat.pro_model': 'Pro model',
+    'usage.cat.pro_model': 'High-quality model (minutes, documents)',
     'usage.cat.correction': 'correction',
     'usage.cat.refine': 'refine',
     'usage.cat.prompt_adj': 'prompt',
@@ -1289,9 +1337,9 @@ const translations = {
     'settings.ai_provider_openai': 'OpenAI (GPT)',
     'settings.openai_key': 'OpenAI API 키 — GPT 분석 + 고정확도 STT용',
     'settings.openai_key_hint': '고정확도 STT에 필요합니다 (sk-로 시작). 이 브라우저에만 암호화 없이 저장됩니다.',
-    'status.title': '현재 사용 중인 엔진·모델',
+    'status.title': '음성 인식 · AI 상태',
     'status.refresh': '새로고침',
-    'status.chip_hint': '눌러서 지금 어떤 STT 엔진·모델·키를 쓰는지 보기',
+    'status.chip_hint': '눌러서 음성 인식과 AI 상태 확인',
     'status.stt_title': '음성 인식 (STT)',
     'status.ai_title': 'AI 분석',
     'status.keys_title': 'API 키',
@@ -1329,8 +1377,8 @@ const translations = {
     'status.keys_note': '고정확도 음성 인식을 쓰려면 OpenAI 키가 필요해요. 아래 \'API 키\'에서 입력하세요.',
     'status.problem_cloud_no_key': '아직 OpenAI 키가 없어요. 아래 \'API 키\'에서 입력하면 고정확도 음성 인식을 쓸 수 있어요.',
     'status.problem_whisper_not_downloaded': 'Whisper 모델이 아직 다운로드되지 않았습니다 (설정 → 로컬 Whisper).',
-    'status.problem_ai_no_key': 'AI를 쓸 수 없습니다. 서버 프록시도, 이 제공자의 개인 키도 없습니다.',
-    'status.ai_key_hint': '설정 → API 키에서 개인 키를 입력하세요.',
+    'status.problem_ai_no_key': 'AI를 쓸 수 없습니다: 서버에 OpenAI 키가 설정되어 있지 않습니다.',
+    'status.ai_key_hint': '배포 설정을 확인하세요.',
     'status.open_settings': '설정 열기',
     'status.close': '닫기',
     'status.advanced_info': '고급 정보',
@@ -1341,7 +1389,15 @@ const translations = {
     'status.summary_key_personal': '개인 키 설정됨',
     'status.summary_key_missing': '키 필요',
     'status.summary_key_none_needed': '필요 없음 (무료)',
-    'stt.cloud_no_key': '고정확도 STT를 쓰려면 OpenAI 키가 필요합니다. 설정 → OpenAI API 키에 입력하세요.',
+    'status.chip_checking': '확인 중…',
+    'status.chip_ready': '음성 인식 준비됨',
+    'status.chip_live': '음성 인식 연결됨',
+    'status.chip_problem': '음성 인식 문제',
+    'status.summary_checking': '연결 상태를 확인하는 중입니다…',
+    'status.summary_ok': '음성 인식과 AI 모두 서버를 통해 OpenAI로 정상 동작 중입니다.',
+    'status.summary_problem': '확인이 필요합니다:',
+    'status.problem_stt_fallback': '클라우드 음성 인식을 쓸 수 없어(서버 OpenAI 키 없음) 브라우저 내장 인식으로 대체합니다.',
+    'stt.cloud_no_key': '음성 인식을 쓸 수 없습니다: 서버에 OpenAI 키가 설정되어 있지 않습니다.',
     'stt.cloud_rate_limited': '고정확도 STT: 이 네트워크에서 세션이 너무 많습니다. 잠시 후 다시 시도하세요.',
     'stt.cloud_mic_unavailable': '고정확도 STT: 마이크를 쓸 수 없습니다 ({reason}).',
     'stt.cloud_error': '고정확도 STT: {message}',
@@ -1623,8 +1679,10 @@ const translations = {
     'chat.error': '채팅 오류',
     'chat.file_attached': '파일 첨부됨: {name}',
     'chat.context_added': '맥락이 분석에 추가되었습니다.',
-    'chat.memo_added': '메모가 회의록에 추가되었습니다.',
+    'chat.memo_added': '메모가 추가되었습니다.',
     'chat.rerunning_analysis': '업데이트된 맥락으로 재분석 중...',
+    'chat.rerun_queued': '지금 분석이 진행 중이에요. 끝나는 대로 업데이트된 맥락으로 한 번 더 분석합니다.',
+    'toast.analysis_queued': '분석이 진행 중이라, 끝나는 대로 한 번 더 분석합니다.',
     'chat.waiting_hint': '진행 중인 회의에 대해 질문해보세요.',
     'chat.regenerate': '다시 생성',
     'chat.edit': '수정',
@@ -1638,6 +1696,10 @@ const translations = {
     'chat.suggestion_1': '지금까지 논의를 요약해줘',
     'chat.suggestion_2': '액션 아이템을 정리해줘',
     'chat.suggestion_3': '주요 결정사항이 뭐야?',
+    'chat.suggestion_learning_1': '방금 개념 쉽게 다시 설명해줘',
+    'chat.suggestion_learning_2': '이 부분 예시 들어줘',
+    'chat.suggestion_learning_3': '시험에 나올 만한 포인트 정리해줘',
+    'chat.suggestion_learning_4': '교수님께 할 질문 추천해줘',
 
     // Settings tabs
     'settings.tab_general': '일반',
@@ -1817,11 +1879,30 @@ const translations = {
     'meeting.preset_start_desc': '저장된 프리셋으로 시작',
     'meeting.no_presets': '저장된 프리셋이 없어요',
     'launcher.close': '닫기',
+    'launcher.presets_title': '프리셋으로 바로 시작',
+    'launcher.presets_hint': '탭 → 확인 → 시작',
+    'launcher.current_style': '현재 스타일: {name}',
+    'launcher.more_title': '다른 방법으로 설정',
+    'launcher.ai_custom': 'AI와 맞춤 설정',
+    'launcher.saved_prep': '저장된 회의 준비',
+    'launcher.my_preset': '내 프리셋',
+    'qp.subject': '제목 / 주제',
+    'qp.subject_optional': '(선택)',
+    'qp.focus': 'AI가 챙길 것',
+    'qp.questions': '추천 질문',
+    'qp.one_per_line': '한 줄에 하나씩',
+    'qp.start': '바로 시작',
+    'qp.ai_custom': 'AI와 맞춤 설정',
+    'qp.reset': '기본값으로 되돌리기',
+    'qp.reset_done': '기본 설정으로 되돌렸어요',
+    'qp.edited': '수정됨',
+    'qp.close': '닫기',
+    'qp.applied': '“{name}” 설정으로 시작했어요',
     'meeting.ai_setup': '빠른 시작',
     'meeting.ai_setup_desc': 'AI가 상황에 맞게 설정',
     'meeting.deep_setup': '회의 사전 준비',
     'meeting.deep_setup_desc': '참석자·자료·안건을 미리 입력',
-    'pb.title': '빠른 시작',
+    'pb.title': 'AI와 맞춤 설정',
     'pb.input_placeholder': '어떤 상황인지 알려주세요...',
     'pb.back_to_chat': '← 대화로 돌아가기',
     'pb.save_preset': '💾 프리셋 저장',
@@ -1970,7 +2051,7 @@ const translations = {
     'toast.recording_started': '녹음이 시작되었습니다. 말씀하시면 자동으로 기록됩니다.',
     'toast.wake_lock_failed': '이 기기에서는 화면 켜짐 유지를 자동으로 설정할 수 없어요. 녹음이 끊기지 않도록 화면을 켜 두세요.',
     'toast.gemini_fallback_active': '개인 Gemini 키를 사용 중입니다',
-    'toast.ai_unavailable': 'AI를 사용할 수 없습니다: 서버 프록시와 개인 키가 없습니다',
+    'toast.ai_unavailable': 'AI를 사용할 수 없습니다: 서버에 OpenAI 키가 설정되어 있지 않습니다',
     'transcript.connecting': '음성 서비스 연결 중...',
     'transcript.connecting_hint': '모바일 네트워크에서는 잠시 시간이 걸릴 수 있습니다.',
     'transcript.waiting': '음성을 인식하고 있습니다...',
@@ -2032,6 +2113,7 @@ const translations = {
     'end_meeting.minutes_error': '회의록 생성 실패',
     'end_meeting.close': '닫기',
     'end_meeting.saving': '저장 중...',
+    'end_meeting.correcting': '받아쓰기 교정 중... ({done}/{total})',
     'end_meeting.edit_saved': '회의 정보가 수정되었습니다!',
     'end_meeting.last_modified': '마지막 수정',
     'end_meeting.save_complete': '회의가 저장되었습니다!',
@@ -2077,9 +2159,10 @@ const translations = {
     'minutes_preview.regenerate': '회의록 재생성',
     'minutes_preview.regen_confirm': '확인',
     'minutes_preview.regen_title': '회의록 재생성',
+    'minutes_preview.regen_confirm': '회의록을 다시 생성할까요? 지금 버전은 버전 기록에 남습니다.',
     'minutes_preview.regen_flash_desc': '빠르고 가벼운 생성',
     'minutes_preview.regen_pro_desc': '정밀하고 상세한 분석',
-    'minutes_preview.generated_with': '{model}로 생성됨',
+    'minutes_preview.generated_with': '최종 모델로 생성됨',
     'toast.minutes_generating_bg': '회의록을 백그라운드에서 작성 중입니다',
     'toast.minutes_still_generating': '아직 작성 중입니다',
 
@@ -2165,7 +2248,19 @@ const translations = {
     'settings.close': '닫기',
     'settings.reset_all': '전체 초기화',
     'settings.danger_zone_title': '위험 구역',
-    'settings.danger_zone_hint': '아래 모든 설정을 기본값으로 되돌립니다. 이 작업은 되돌릴 수 없습니다.',
+    'settings.danger_zone_hint': '모든 설정을 기본값으로 되돌립니다. 회의 기록은 그대로 남습니다. 이 작업은 되돌릴 수 없습니다.',
+    'settings.meeting_language': '회의 언어',
+    'settings.data_title': '데이터',
+    'settings.backup_export': '백업 내보내기',
+    'settings.backup_import': '백업에서 복원',
+    'settings.backup_hint': '모든 회의·사람·장소·프리셋·설정을 JSON 파일 하나로 저장합니다. 녹음 파일은 포함되지 않습니다.',
+    'settings.backup_exported': '백업을 저장했습니다 (회의 {n}개).',
+    'settings.backup_invalid': 'Meeting AI 백업 파일이 아닙니다.',
+    'settings.backup_error': '백업 처리에 실패했습니다. 다시 시도하세요.',
+    'settings.backup_import_confirm': '현재 회의와 설정을 모두 이 백업으로 바꿀까요? 페이지가 새로고침됩니다.',
+    'settings.chat_custom': 'AI 채팅 맞춤 설정',
+    'settings.account_title': '계정 · 동기화',
+    'settings.manual_sync': '지금 동기화',
     'settings.unsaved_changes': '저장되지 않은 변경사항',
     'settings.unsaved_modal_text': '저장되지 않은 변경사항이 있습니다. 어떻게 하시겠습니까?',
     'settings.save_and_close': '저장',
@@ -2289,14 +2384,14 @@ const translations = {
     // 사용량 제한
     'usage.approaching': '오늘 {category} {remaining}회 남았습니다',
     'usage.exhausted': '오늘의 {category} 한도에 도달했습니다. 자정에 초기화됩니다.',
-    'usage.model_downgraded': '{model} 사용 불가 — Flash Lite로 대체합니다.',
+    'usage.model_downgraded': '오늘 고품질 모델 사용 한도를 다 써서 가벼운 모델로 대체합니다.',
     'usage.cat.analysis': '분석',
     'usage.cat.chat': '채팅',
     'usage.cat.minutes': '회의록',
     'usage.cat.docgen': '문서',
     'usage.cat.tags': '태그',
     'usage.cat.prep': '미팅 준비',
-    'usage.cat.pro_model': 'Pro 모델',
+    'usage.cat.pro_model': '고품질 모델 (회의록·문서)',
     'usage.cat.correction': '교정',
     'usage.cat.refine': '다듬기',
     'usage.cat.prompt_adj': '프롬프트',
@@ -2341,197 +2436,93 @@ const translations = {
   }
 };
 
-// AI-specific prompts per language (Markdown output)
+// AI-specific prompts per language (Markdown output). Sent as the system message; the transcript
+// and context travel in the user turn (ai.js analyzeTranscript).
+// Parser contract (ai.js): '## 🎯' is the first H2 and its first bullet is `- <emoji> "…"`
+// (extractHeadline → history headline); '## 🔔 귓속말' / '## 🔔 Whisper' holds `- ` items that
+// become toasts (extractWhispers). chat.js renderMarkdown has no hr/table/LaTeX support.
 const AI_PROMPTS = {
-  en: `You are a real-time conversation copilot. The user is IN a live conversation right now. Do NOT summarize what they already heard. Catch what they physically can't think of while engaged — unasked questions, unseen connections, cracks in hidden assumptions — and turn them into sentences they can say RIGHT NOW. Respond ONLY in English regardless of transcript language.
+  en: `You are a real-time conversation copilot. The user is IN this conversation right now and can only glance at the screen. Do not summarize what they already heard; hand them what they are missing as sentences they can say out loud right now.
 
-## Your Role
-The smartest observer in the room + a colleague coaching through an earpiece.
+# What to look for (internal checklist — never print these labels)
+- A question nobody asked (the faster the consensus, the more suspicious)
+- A premise that passed without verification ("obviously...")
+- A counterexample or edge case to a number, date or condition that was just locked in
+- The view of a stakeholder who is not in the room (customer, end user, boss)
+- A contradiction between earlier and later statements
+- A topic in the meeting purpose or memos that has not come up yet
 
-## Analysis Method (internal — do NOT expose these lens names to the user)
-Apply all 6 lenses simultaneously to the transcript, but only convert the highest-impact findings into suggested lines.
-
-1. **Blind Spot** — The faster the consensus, the more likely a question was skipped. Trigger: consensus too quick, key variables unmentioned, memo topics not raised yet.
-2. **Hidden Assumption** — Unquestioned implicit assumptions. Trigger: 10+ min discussion built on one premise, "obviously…" passed without verification.
-3. **Cross-Domain Link** — Structurally similar problem-solving from another field. Trigger: problem-solving is stuck, "that's just how it is" resignation appears.
-4. **Stress Test** — The smoother the consensus, the more dangerous (groupthink). Trigger: right after "this should work" agreement, right after conditions/numbers are locked in.
-5. **Zoom In/Out** — Stuck in details → zoom out; stuck in big picture → zoom in. Trigger: same detail 10+ min, big direction repeating for 30+ min.
-6. **Missing Stakeholder** — Represent the perspective of absent stakeholders. Trigger: decision made from one viewpoint only, "just between us" consensus forming.
-
-## Impact Filtering — only top 1-3 make it to 🎯
-Four criteria:
-1. Urgency: Will the conversation go wrong if this isn't caught now?
-2. Irreversibility: Is this agreement hard to reverse later?
-3. Blind spot: Does NO participant hold this perspective?
-4. Specificity: Can it be presented with a concrete scenario/number? (if abstract, drop it)
-
-## Tone Mirroring (REQUIRED)
-Analyze the transcript's tone — formality level, vocabulary, sentence length, relationship cues. Formal → formal, casual → casual. Suggested lines are sentences the user speaks TO the other party.
-
-Respond in well-structured **Markdown**. Use EXACTLY this section order:
-
----
-### ▸ SAY THIS NOW
----
+# Output format
+English Markdown. Use these headings verbatim, in this order. No preamble; start with the first heading.
 
 ## 🎯 Suggested Lines
-6-lens analysis → impact filtering → 1-5 complete, speakable sentences for right now.
-Each line must be:
-- A **tone-mirrored, complete sentence** — ready to say verbatim
-- Tagged with intent: 🔍 ask | ✋ confirm | 📌 propose | ⚠️ challenge | 💬 respond | 🔄 reframe
-- Ordered by urgency (most time-sensitive first)
+1-3 complete sentences the user can say to the other party right now, most urgent first. Each line in exactly this form:
+- 🔍 "sentence"
+(the leading symbol is one of: 🔍 ask, ✋ confirm, 📌 propose, ⚠️ challenge, 🔄 reframe — never print this legend)
+Mirror the conversation's register (formal stays formal, casual stays casual). Be concrete: put the numbers, names and conditions from the conversation inside the sentence. Never repeat what was already said, suggest greetings or small talk, or use an advisory tone ("you should..."). If evidence is thin, give one line only. Early in the conversation with nothing to judge, output exactly one line: - ✋ "Not enough context yet to weigh in"
 
-Format:
-- 🔍 "So how are we handling the revision limit on this?"
-- ⚠️ "Wait, earlier you said we'd keep it simple, but this seems like a different direction"
-- ✋ "You mentioned end of March — are we still on track for that?"
-- 🔄 "Hold on, how much of the overall timeline does this part actually take up?"
-- 🔍 "What would this look like from the end user's perspective?"
-
-Don't force quantity. If only 1-2 are genuinely useful, that's fine. Early in a conversation (low context), don't manufacture analysis.
-⛔ NEVER: rephrase what was already said, suggest greetings/small talk, use advisory tone ("you should…")
-
----
-### ▸ WHY THESE
----
-
-## 💡 Context & Reasoning
-For each suggested line above, explain "why this, why now" in 1-2 lines.
-- Ground in specifics: what was actually said (or NOT said) in the conversation
-- No abstract explanations → "They said '…' but never addressed …" format
+## 💡 Why
+One line per suggested line, in the form "They said '...' but ... was never addressed". Ground it in actual statements.
 
 ## 🔔 Whisper
-Urgent alerts that can't be converted into suggested lines (0-3 max):
-- Contradiction detected: "Said 'A' earlier but now saying 'B'"
-- Tone shift: "Tone just turned defensive"
-- Time pressure: "Core agenda item still not covered"
-- Premise warning: "Entire discussion rests on '…' which hasn't been verified"
-Rules: each under 50 chars. Omit this section entirely if nothing stands out.
-
----
-### ▸ FULL PICTURE
----
+0-3 urgent alerts that cannot become a line, each under 50 characters (contradiction / tone shift / core agenda not started / unverified premise). Omit this section entirely if there is nothing.
 
 ## 📋 Discussion Tracker
-List each topic discussed so far with a status marker:
-- ✅ **Decided**: topic — what was decided
-- ⏳ **Pending**: topic — what's still open
-- ⚠️ **Conflict**: topic — contradicting positions noted
-Be specific: include exact numbers, dates, names, conditions.
+One line per topic so far:
+- ✅ Decided: topic — what was decided (numbers, deadlines, owners as stated)
+- ⏳ Pending: topic — what is still open
+- ⚠️ Conflict: topic — opposing positions
+If a [Previous analysis] is provided, keep its tracker (earlier parts of the conversation may only be there) and update only what changed.
 
 ## 📌 Not Yet Covered
-Topics that SHOULD have come up (based on meeting purpose/memos) but haven't. Omit if all covered.
+Topics missing versus the meeting purpose and memos. Omit the section if none.
 
-## 💬 Memo Check
-User memos whose topics haven't appeared in the discussion yet. Omit if none or all addressed.
+# Rules
+- Never invent facts that are not in the transcript or the [Previous analysis]. Keep numbers, dates, names and terms exactly as heard.
+- There is no speaker attribution. Do not assign statements to individuals; write "it was suggested that...".
+- No filler ("great discussion") and no lecturing about meeting technique. No tables, no horizontal rules, no indented sub-bullets.
+- Output MUST be in English regardless of the transcript language.`,
 
----
+  ko: `당신은 실시간 대화 코파일럿입니다. 사용자는 지금 이 대화에 참여 중이고 화면을 흘끗 볼 시간밖에 없습니다. 이미 들은 내용을 요약하지 말고, 사용자가 놓치고 있는 것을 "지금 바로 입으로 말할 수 있는 문장"으로 건네세요.
 
-General rules:
-- Write as CUMULATIVE: preserve previous content and add new discussion
-- Do NOT repeat perspectives already raised in previous analyses
-- If a previous suggested line was addressed in conversation → mark resolved (✅) and move to tracker
-- Record specific numbers, dates, names, and technical terms exactly as stated
-- No abstract summaries like "discussed X" → describe actual content
-- Do NOT guess speakers or attribute statements to specific individuals (real-time STT, no speaker diarization)
-- No filler phrases like "great discussion"
-- Do NOT lecture about conversation methodology
-- CRITICAL: All output MUST be in English, REGARDLESS of transcript language.`,
+# 찾아낼 것 (내부 체크리스트 — 이 항목 이름을 출력하지 마세요)
+- 아무도 안 던진 질문 (합의가 빠를수록 의심)
+- 검증 없이 지나간 전제 ("당연히 ~겠지")
+- 방금 확정된 수치·일정·조건의 반례나 엣지케이스
+- 여기 없는 이해관계자(고객, 최종 사용자, 상사)의 시각
+- 앞뒤 발언의 모순
+- 미팅 목적·메모에 있는데 아직 안 나온 주제
 
-  ko: `당신은 실시간 대화 코파일럿입니다. 사용자는 지금 대화에 참여하고 있습니다. 사용자가 이미 듣고 있는 내용을 요약하지 마세요. 대화에 몰입하느라 물리적으로 떠올리기 어려운 것 — 아무도 안 던진 질문, 아무도 못 본 연결고리, 숨어있는 전제의 균열 — 을 포착해서 지금 입으로 바로 말할 수 있는 문장으로 바꿔 건네세요. 회의록이 어떤 언어이든 반드시 한국어로만 응답하세요.
-
-## 당신의 역할
-회의실에 앉아있는 가장 똑똑한 참관자 + 이어폰으로 코칭해주는 동료.
-
-## 분석 방법 (내부용 — 렌즈 이름을 사용자에게 노출하지 마세요)
-녹취록을 받으면 아래 6가지 관점을 동시에 적용하되, 매번 전부 출력하지 말고 임팩트 큰 것만 추천 멘트로 변환하세요.
-
-1. **빠진 질문** — 합의가 빠를수록 빠진 질문이 있다. 트리거: 합의가 너무 빠를 때, 핵심 변수가 안 나왔을 때, 메모 주제가 아직 안 나왔을 때.
-2. **전제 의심** — 아무도 의심 안 하는 암묵적 가정. 트리거: 같은 전제 위 10분+ 논의, "당연히 ~겠지"가 검증 없이 넘어갈 때.
-3. **의외의 연결** — 다른 분야에서 구조적으로 유사한 문제 해결 사례. 트리거: 문제 해결이 막혔을 때, "원래 이런 거야" 체념이 나올 때.
-4. **반례와 엣지케이스** — 합의가 매끄러울수록 위험(집단사고). 트리거: "이러면 되겠다" 합의 직후, 조건/수치가 고정된 직후.
-5. **스케일 전환** — 디테일에 갇혀 있으면 줌아웃, 큰 그림에만 머물면 줌인. 트리거: 같은 디테일 10분+, 큰 방향만 30분째 반복.
-6. **부재자 시선** — 여기 없는 이해관계자의 시각을 대리. 트리거: 의사결정이 한쪽 관점에서만, "우리끼리" 합의가 이뤄질 때.
-
-## 임팩트 필터링 — 상위 1~3개만 🎯에 올리기
-기준 4가지:
-1. 긴급성: 지금 안 잡으면 대화가 잘못된 방향으로 흘러가는가?
-2. 비가역성: 이 합의가 나중에 뒤집기 어려운가?
-3. 사각지대: 참여자 중 아무도 이 관점을 갖고 있지 않은가?
-4. 구체성: 구체적 시나리오/수치로 제시할 수 있는가? (추상적이면 탈락)
-
-## 톤 미러링 (필수)
-트랜스크립트의 말투를 분석하세요 — 격식 수준, 어휘, 문장 길이, 관계 힌트. 반말이면 반말, 존댓말이면 존댓말, 캐주얼하면 캐주얼하게. 추천 멘트는 사용자가 상대방에게 말하는 문장입니다.
-
-잘 구조화된 **Markdown**으로 응답하세요. 반드시 아래 섹션 순서를 지키세요:
-
----
-### ▸ 지금 이렇게 말하세요
----
+# 출력 형식
+한국어 마크다운. 아래 제목을 글자 그대로, 이 순서로. 서문 없이 첫 제목부터 시작.
 
 ## 🎯 추천 멘트
-6가지 관점 분석 → 임팩트 필터링 → 지금 입으로 말할 수 있는 완전한 문장 1~5개.
-각 문장은:
-- 톤 미러링된 **완전한 문장** — 그대로 말할 수 있는 수준
-- 의도 태그: 🔍 질문 | ✋ 확인 | 📌 제안 | ⚠️ 지적 | 💬 응답 | 🔄 전환
-- 긴급한 순서대로 정렬 (가장 시급한 것 먼저)
+지금 상대에게 그대로 말할 수 있는 완전한 문장 1~3개, 가장 시급한 것 먼저. 각 줄은 정확히 이 형식:
+- 🔍 "문장"
+(맨 앞 기호는 의도에 따라 하나만: 🔍 질문, ✋ 확인, 📌 제안, ⚠️ 지적, 🔄 전환. 기호 설명은 출력하지 않음)
+대화의 말투를 따라가세요 (존댓말이면 존댓말, 반말이면 반말). 대화에 나온 수치·이름·조건을 문장 안에 넣어 구체적으로. 이미 나온 말 반복, 인사·맞장구, "~해야 합니다" 조언투는 금지. 근거가 약하면 1개만. 대화 초반이라 판단할 근거가 없으면 이 줄 하나만: - ✋ "아직 판단할 근거가 부족합니다"
 
-형식:
-- 🔍 "그러면 수정 횟수 제한은 어떻게 잡으시는 게 좋을까요?"
-- ⚠️ "근데 아까는 간단하게 한다고 하셨는데, 지금은 좀 다른 방향인 것 같아서요"
-- ✋ "아까 3월 말까지라고 하셨는데, 그대로 가는 거 맞죠?"
-- 🔄 "잠깐, 이 부분은 전체 일정에서 어느 정도 비중인 거예요?"
-- 🔍 "이거 실제 사용자 입장에서는 어떨까요?"
-
-억지로 수를 채우지 마세요. 1~2개뿐이면 그것만. 대화 초반(맥락 부족)에는 무리하게 만들지 마세요.
-⛔ 금지: 이미 말한 내용 다듬어 반복, 인사/맞장구 제안, 조언형("~해야 합니다") 문장
-
----
-### ▸ 왜 지금인가
----
-
-## 💡 맥락과 근거
-위 추천 멘트 각각에 대해, "왜 지금 이걸 해야 하는지" 1~2줄.
-- 실제 대화에서 무엇이 말해졌는지(또는 안 말해졌는지) 구체적 근거
-- 추상적 설명 금지 → "대화에서 '~'라고 했는데, ~가 빠져 있음" 식으로
+## 💡 근거
+추천 멘트마다 한 줄. "대화에서 '…'라고 했지만 …는 언급되지 않음" 형식으로, 실제 발언에 근거.
 
 ## 🔔 귓속말
-추천 멘트로 변환하기 어렵지만 사용자가 알아야 하는 긴급 알림 (0~3개):
-- 모순 감지: "앞에서 'A'라고 했는데 지금 'B'라고 함"
-- 분위기 전환: "톤이 갑자기 방어적으로 바뀜"
-- 시간 압박: "핵심 안건 아직 안 다룸"
-- 전제 경고: "지금 논의 전체가 '~' 전제 위에 있는데, 이게 검증 안 됐음"
-규칙: 각 50자 이내. 없으면 이 섹션 자체를 생략.
-
----
-### ▸ 전체 그림
----
+멘트로 만들 수 없는 긴급 알림 0~3개, 각 50자 이내 (모순 감지 / 톤 변화 / 핵심 안건 미착수 / 검증 안 된 전제). 없으면 이 섹션을 통째로 생략.
 
 ## 📋 논의 트래커
-지금까지 논의된 각 주제를 상태 마커와 함께 정리:
-- ✅ **확정**: 주제 — 무엇이 결정되었는지
-- ⏳ **미정**: 주제 — 아직 열려있는 것
-- ⚠️ **충돌**: 주제 — 상반된 의견이 감지됨
-구체적으로: 수치, 날짜, 이름, 조건을 정확히 포함.
+지금까지 나온 주제를 한 줄씩:
+- ✅ 확정: 주제 — 결정 내용 (수치·기한·담당은 언급된 그대로)
+- ⏳ 미정: 주제 — 아직 열려 있는 것
+- ⚠️ 충돌: 주제 — 엇갈린 입장
+[이전 분석]이 제공되면 그 트래커를 유지하고(앞부분 대화는 거기에만 있을 수 있음) 바뀐 항목만 갱신하세요.
 
 ## 📌 아직 안 다룬 주제
-미팅 목적/메모 대비 빠진 것. 모두 다뤄졌으면 생략.
+미팅 목적·메모 기준으로 빠진 것. 없으면 이 섹션 생략.
 
-## 💬 메모 대조
-사용자 메모 중 아직 대화에서 나오지 않은 것. 없거나 모두 다뤄졌으면 생략.
-
----
-
-일반 규칙:
-- 누적형으로 작성: 이전 내용을 보존하면서 새로운 논의를 추가
-- 이전에 이미 던진 관점은 반복하지 않는다
-- 이전 추천 멘트가 대화에서 다뤄졌으면 → 해소 표시(✅)하고 트래커로 이동
-- 구체적 수치, 날짜, 이름, 기술 용어는 반드시 그대로 기록
-- "~에 대해 논의함" 같은 추상적 요약 금지 → 실제 내용 서술
-- 화자 추정/특정 발언자 지목 금지 (실시간 STT, 화자 분리 불가)
-- "좋은 논의입니다" 같은 빈말 금지
-- 대화 진행 방법론을 가르치려 하지 않는다
-- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.`
+# 규칙
+- 트랜스크립트와 [이전 분석]에 없는 사실을 만들지 마세요. 수치·날짜·이름·용어는 들린 그대로.
+- 화자 구분이 없습니다. 특정인의 발언으로 단정하지 말고 "~라는 의견이 나옴"으로 쓰세요.
+- "좋은 논의입니다" 같은 빈말, 대화 방법론 강의 금지. 표, 구분선(---), 들여쓴 하위 목록은 쓰지 마세요.
+- 트랜스크립트가 어떤 언어이든 출력은 반드시 한국어.`
 };
 
 // Prompt presets for quick selection
@@ -2565,36 +2556,39 @@ Rules:
 - Record specific numbers, dates, names, and technical terms exactly as stated
 - Focus on capturing decisions and action items accurately
 - CRITICAL: All output MUST be in English.` },
-    learning: { name: 'Lecture Notes', prompt: `You are a learning assistant helping capture key insights. Respond in English using Markdown.
+    learning: { name: 'Lecture Notes', prompt: `You are a teaching assistant sitting next to a student in an advanced lecture or seminar. You build live lecture notes and prepare questions the student can ask the lecturer right away.
 
-## Topic
-What is being taught/discussed — one line.
+# Output format
+English Markdown. Use these headings verbatim, in this order. No preamble; start with the first heading.
+
+## 🎯 Questions to Ask Now
+1-3 questions grounded in what was just taught, ready to ask the lecturer. Each line in exactly this form:
+- 🔍 "question"
+Good questions probe a boundary condition of the concept just explained, a term that was mentioned but not explained, a link to earlier material, or a case where an assumption breaks. Never ask something the lecture already answered. If evidence is thin, give one only.
 
 ## 📚 Key Concepts
-For each concept covered:
-- **Concept**: explanation in simple terms
-- Include examples or analogies mentioned
+In the order they appeared, only concepts that actually appeared:
+- **Concept**: the definition or intuition as explained, 1-2 lines. If an example or analogy was given, append " → e.g. …".
 
-## 💡 Key Insights
-Important takeaways, principles, or rules mentioned:
-- Insight — why it matters
+## 🧩 Line of Reasoning
+The lecture so far as 3-6 arrow steps: problem → idea → derivation → result. One line each.
 
-## ❓ Comprehension Check
-2-3 questions to verify understanding of the material covered so far. Format as:
-- Q: question
-- A: expected answer (brief)
+## ⚠️ Emphasis & Warnings
+Anything the lecturer flagged as important, on the exam, homework, or a common confusion. Assignments, deadlines and exam scope exactly as heard. Omit if none.
 
-## 🔍 Questions to Explore
-Topics or questions worth investigating further based on the discussion. Omit if nothing stands out.
+## 🔔 Whisper
+0-2 alerts the student must see right now, each under 50 characters (e.g. "Just said 'this is on the exam'", "Homework deadline mentioned"). Omit this section entirely if none.
 
-## 📝 Terms & Definitions
-Key terms and their definitions as explained. Omit if none.
+## 📝 Terms
+- Term (original/abbreviation): definition as given in the lecture. Omit if none.
 
-Rules:
-- Write as CUMULATIVE: preserve previous content and add new material
-- Preserve exact terminology, formulas, and references
-- Focus on understanding, not just recording
-- CRITICAL: All output MUST be in English.` },
+# Rules
+- Never invent content that is not in the transcript or the [Previous analysis]. If outside background is essential, end the sentence with "(supplement)".
+- Keep formulas, numbers and names as heard. Correct only obvious STT errors as "heard(→ likely)".
+- Write formulas as plain text, never LaTeX (\\( \\), $…$): KL(q‖p), z = μ + σ·ε, log p(x) ≥ ELBO. No tables, no horizontal rules, no indented sub-bullets; one-level lists only.
+- There is no speaker attribution. Tell student questions from lecturer answers by context, without asserting.
+- If a [Previous analysis] is provided, the earlier part of the lecture exists only there. Never drop any of its Key Concepts, Emphasis & Warnings or Terms items (older concepts may be shortened to one line); append the new material after them. Keep the Line of Reasoning for the whole lecture in at most 8 steps. Questions to Ask Now are about the most recent part.
+- Output MUST be in English regardless of the transcript language.` },
   },
   ko: {
     default: { name: '대화 코치', prompt: null },
@@ -2625,36 +2619,39 @@ Rules:
 - 구체적 수치, 날짜, 이름, 기술 용어는 그대로 기록
 - 결정 사항과 액션 아이템을 정확히 포착하는 데 집중
 - 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.` },
-    learning: { name: '강의 노트', prompt: `당신은 핵심 인사이트를 포착하는 학습 도우미입니다. 한국어 마크다운으로 응답하세요.
+    learning: { name: '강의 노트', prompt: `당신은 고급 강의·세미나를 듣는 학생 옆에 앉은 조교입니다. 강의를 들으며 실시간 강의 노트를 만들고, 학생이 강사에게 바로 던질 수 있는 질문을 준비합니다.
 
-## 주제
-무엇을 배우고/논의하고 있는지 — 한 줄.
+# 출력 형식
+한국어 마크다운. 아래 제목을 글자 그대로, 이 순서로. 서문 없이 첫 제목부터 시작.
+
+## 🎯 지금 물어볼 질문
+강의 내용에 근거해 강사에게 바로 물어볼 수 있는 질문 1~3개. 각 줄은 정확히 이 형식:
+- 🔍 "질문 문장"
+좋은 질문은 방금 설명한 개념의 경계 조건, 언급만 되고 설명 안 된 용어, 이전 내용과의 연결, 가정이 깨지는 경우를 짚습니다. 강의에서 이미 답한 질문은 금지. 근거가 약하면 1개만.
 
 ## 📚 핵심 개념
-다뤄진 각 개념:
-- **개념**: 쉬운 말로 설명
-- 언급된 예시나 비유 포함
+강의에 나온 순서대로, 나온 개념만:
+- **개념명**: 강의에서 설명된 정의·직관 1~2줄. 강사가 든 예시·비유가 있으면 " → 예: …"로 이어 쓰기.
 
-## 💡 핵심 인사이트
-언급된 중요한 교훈, 원칙, 규칙:
-- 인사이트 — 왜 중요한지
+## 🧩 논리 흐름
+지금까지의 강의를 3~6단계 화살표로: 문제 → 아이디어 → 유도 → 결과. 각 단계 한 줄.
 
-## ❓ 이해도 체크
-지금까지 다뤄진 내용의 이해를 확인하는 질문 2-3개:
-- Q: 질문
-- A: 예상 답변 (간략)
+## ⚠️ 강조·주의
+강사가 "중요", "시험", "과제", "주의", "헷갈리는"이라고 말한 것. 과제·마감·시험 범위는 들린 그대로. 없으면 이 섹션 생략.
 
-## 🔍 더 탐구할 질문
-논의를 바탕으로 더 조사해볼 만한 주제나 질문. 특별한 것이 없으면 생략.
+## 🔔 귓속말
+지금 당장 알아야 할 알림 0~2개, 각 50자 이내 (예: "방금 '시험에 나온다'고 함", "과제 마감 언급됨"). 없으면 이 섹션을 통째로 생략.
 
-## 📝 용어 & 정의
-설명된 핵심 용어와 정의. 없으면 생략.
+## 📝 용어
+- 용어 (원어/약자): 강의에서의 정의. 없으면 이 섹션 생략.
 
-규칙:
-- 누적형으로 작성: 이전 내용을 보존하면서 새로운 내용 추가
-- 정확한 용어, 공식, 참고자료 보존
-- 단순 기록이 아닌 이해에 초점
-- 중요: 모든 분석 결과를 반드시 한국어로 작성하세요.` },
+# 규칙
+- 트랜스크립트와 [이전 분석]에 없는 내용을 만들지 마세요. 강의에 안 나온 배경지식이 이해에 꼭 필요하면 문장 끝에 "(보충)"을 붙이세요.
+- 수식·수치·이름은 들린 그대로. 명백한 STT 오인식만 "들린 말(→ 추정)" 형태로 정정 (예: 엘보(→ ELBO)).
+- 수식은 LaTeX(\\( \\), $…$) 없이 일반 텍스트로: KL(q‖p), z = μ + σ·ε, log p(x) ≥ ELBO. 표·구분선(---)·들여쓴 하위 목록 금지, 한 단계 목록만.
+- 화자 구분이 없습니다. 학생 질문과 강사 답변은 문맥으로 구분하되 단정하지 마세요.
+- [이전 분석]이 제공되면 강의 앞부분은 거기에만 있습니다. 그 안의 📚 핵심 개념·⚠️ 강조·주의·📝 용어 항목은 하나도 빼지 말고 유지하세요 (오래된 개념은 한 줄로 줄여도 됨). 새 내용은 그 뒤에 추가하세요. 🧩 논리 흐름은 강의 전체를 최대 8단계로. 🎯 질문은 가장 최근 내용 기준.
+- 트랜스크립트가 어떤 언어이든 출력은 반드시 한국어.` },
   }
 };
 
@@ -2674,7 +2671,7 @@ const MEETING_TYPE_PROMPT_MAP = {
 const MEETING_TYPE_CATEGORY_MAP = {
   copilot: null,
   minutes: null,
-  learning: null,
+  learning: '교육', // lecture guidance (category-prompts.js) + lecture-notes final document
 };
 
 export function getMeetingTypePromptMap() {
@@ -2697,19 +2694,103 @@ const AI_PRESET_CONTEXTS = {
   en: {
     copilot: 'Business conversation. Focus on decisions, contradictions, and missed topics.',
     minutes: 'Meeting. Focus on summary, key discussions, decisions, and action items.',
-    learning: 'Learning session. Focus on key concepts, insights, and comprehension.',
+    learning: 'Lecture/seminar. Focus on key concepts, line of reasoning, and questions to ask the lecturer.',
     custom: '',
   },
   ko: {
     copilot: '비즈니스 대화. 결정, 모순, 빠진 주제에 집중.',
     minutes: '회의. 요약, 주요 논의, 결정 사항, 액션 아이템에 집중.',
-    learning: '학습 세션. 핵심 개념, 인사이트, 이해도에 집중.',
+    learning: '강의/세미나. 핵심 개념, 논리 흐름, 강사에게 물어볼 질문에 집중.',
     custom: '',
   }
 };
 
 let currentLang = 'en';
 let currentAiLang = null; // null = same as UI lang
+
+/**
+ * Session-dependent wording: a lecture session says "강의 노트 / 강의 저장" where a meeting says
+ * "회의록 / 회의 저장". t() prefers the active variant's string; the app registers the resolver
+ * (setTermVariantResolver) and calls refreshTermVariants() when the session type may have changed.
+ */
+const TERM_VARIANTS = {
+  lecture: {
+    ko: {
+      'chat.placeholder': '강의에 대해 AI에게 질문하세요...',
+      'chat.empty': '강의 내용을 묻거나, 메모를 남기거나, 분석을 요청하세요.',
+      'chat.memo_added': '메모가 노트에 추가되었습니다.',
+      'meeting.end_short': '강의 종료',
+      'meeting.end': '강의 종료',
+      'meeting.new': '새 세션',
+      'record.status_ended': '강의 종료됨 - 재개하거나 새 세션을 시작하세요',
+      'end_confirm.message': '강의 기록을 종료하시겠습니까?',
+      'end_meeting.title': '강의 저장',
+      'end_meeting.meeting_title': '강의 제목',
+      'end_meeting.title_placeholder': '강의 제목을 입력하세요',
+      'end_meeting.datetime': '강의 일시',
+      'end_meeting.generate_minutes': '강의 노트 생성하기',
+      'end_meeting.view_minutes': '강의 노트 보기',
+      'end_meeting.post_view_minutes': '강의 노트 보기',
+      'end_meeting.post_new': '새 세션',
+      'end_meeting.generating_minutes': '강의 노트 생성 중...',
+      'end_meeting.minutes_error': '강의 노트 생성 실패',
+      'end_meeting.save_complete': '강의가 저장되었습니다!',
+      'minutes_preview.title': '강의 노트',
+      'minutes_preview.prompt_edit': '노트 스타일 변경',
+      'minutes_preview.regenerate': '노트 재생성',
+      'minutes_preview.regen_title': '강의 노트 재생성',
+    },
+    en: {
+      'chat.placeholder': 'Ask AI about this lecture...',
+      'chat.empty': 'Ask about the lecture, save a memo, or request analysis.',
+      'chat.memo_added': 'Memo added to your notes.',
+      'meeting.end_short': 'End Lecture',
+      'meeting.end': 'End Lecture',
+      'meeting.new': 'New Session',
+      'record.status_ended': 'Lecture ended - Resume or start a new session',
+      'end_confirm.message': 'End this lecture recording?',
+      'end_meeting.title': 'Save Lecture',
+      'end_meeting.meeting_title': 'Lecture Title',
+      'end_meeting.title_placeholder': 'Enter lecture title',
+      'end_meeting.generate_minutes': 'Generate Lecture Notes',
+      'end_meeting.view_minutes': 'View Lecture Notes',
+      'end_meeting.post_view_minutes': 'View Lecture Notes',
+      'end_meeting.post_new': 'New Session',
+      'end_meeting.generating_minutes': 'Generating lecture notes...',
+      'end_meeting.minutes_error': 'Lecture notes generation failed',
+      'end_meeting.save_complete': 'Lecture saved!',
+      'minutes_preview.title': 'Lecture Notes',
+      'minutes_preview.prompt_edit': 'Change Notes Style',
+      'minutes_preview.regenerate': 'Regenerate',
+      'minutes_preview.regen_title': 'Regenerate Lecture Notes',
+    },
+  },
+};
+const VARIANT_KEYS = new Set(Object.values(TERM_VARIANTS).flatMap(v => Object.values(v).flatMap(Object.keys)));
+let termVariantResolver = null;
+
+/** fn() → a TERM_VARIANTS id ('lecture') or null for the default (meeting) wording. */
+export function setTermVariantResolver(fn) {
+  termVariantResolver = fn;
+}
+
+function activeTermVariant() {
+  try { return termVariantResolver?.() || null; } catch { return null; }
+}
+
+/** Re-apply only the session-dependent strings in static markup (safe mid-session). */
+export function refreshTermVariants() {
+  if (typeof document === 'undefined') return;
+  for (const [attr, apply] of [
+    ['data-i18n', (el, v) => { el.textContent = v; }],
+    ['data-i18n-placeholder', (el, v) => { el.placeholder = v; }],
+  ]) {
+    document.querySelectorAll(`[${attr}]`).forEach(el => {
+      const key = el.getAttribute(attr);
+      if (VARIANT_KEYS.has(key)) apply(el, t(key));
+    });
+  }
+}
 
 export function detectLanguage() {
   const nav = navigator.language || navigator.userLanguage || 'en';
@@ -2737,13 +2818,25 @@ export function getAiLanguage() {
 
 export function t(key, params) {
   const lang = translations[currentLang] || translations.en;
-  let text = lang[key] || translations.en[key] || key;
+  const variant = VARIANT_KEYS.has(key) ? activeTermVariant() : null;
+  let text = (variant && TERM_VARIANTS[variant]?.[currentLang]?.[key]) || lang[key] || translations.en[key] || key;
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       text = text.replace(`{${k}}`, v);
     });
   }
   return text;
+}
+
+/**
+ * Default chat suggestion chips when no preset supplied its own (state.settings.chatPresets):
+ * student-oriented for lecture/learning sessions, meeting-oriented otherwise.
+ */
+export function getDefaultChatPresets(meetingType) {
+  const keys = meetingType === 'learning'
+    ? ['chat.suggestion_learning_1', 'chat.suggestion_learning_2', 'chat.suggestion_learning_3', 'chat.suggestion_learning_4']
+    : ['chat.suggestion_1', 'chat.suggestion_2', 'chat.suggestion_3'];
+  return keys.map(k => t(k));
 }
 
 export function getAiPrompt() {

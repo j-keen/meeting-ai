@@ -3,7 +3,7 @@
 // from the application's own analysis engine, matching the original ui.js implementation.
 
 import { state, emit } from '../event-bus.js';
-import { t, getDateLocale } from '../i18n.js';
+import { t, getDateLocale, getDefaultChatPresets } from '../i18n.js';
 import { renderMarkdown } from '../chat.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -54,10 +54,17 @@ export function parseMarkdownBlocks(markdown) {
       continue;
     }
 
-    // Heading
-    if (/^#{2,4}\s/.test(line)) {
+    // Heading (a document title '# …' is its own block too, e.g. "# 강의 노트: …")
+    if (/^#{1,4}\s/.test(line)) {
       flushBlock();
       blocks.push({ type: 'heading', raw: line });
+      continue;
+    }
+
+    // Indented (nested) list item: keep it, indent included, in the current list block so
+    // renderMarkdown shows it as a sub-item (li.md-sub) instead of starting a paragraph.
+    if (/^\s{1,8}(?:[-*]|\d+\.)\s/.test(line) && currentBlock && (currentBlock.type === 'ul' || currentBlock.type === 'ol')) {
+      currentBlock.raw += '\n' + line;
       continue;
     }
 
@@ -294,8 +301,24 @@ function startBlockMemo(blockEl, block, index, analysis, containerDiv, existingT
   });
 }
 
-// Extract headline from markdown (mirror of ai.js logic)
+// Stored flows from before the ai.js extractHeadline fix can be a lone UTF-16 surrogate or a bare
+// variation selector ("\udd0d", "\ufe0f"): treat those as missing so the row recomputes a headline.
+function usableFlow(flow) {
+  const cleaned = String(flow || '')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
+    .replace(/^[\s\uFE0F"“”]+/, '')
+    .replace(/[\s"“”]+$/, '')
+    .trim();
+  return cleaned.length >= 2 ? cleaned : '';
+}
+
+// Extract headline from markdown (mirror of ai.js extractHeadline — keep the two in sync)
 function extractHeadlineFromMarkdown(markdown) {
+  const suggestedMatch = markdown.match(/^##\s+🎯[^\n]*\n+[-*]\s*(?:[\p{Extended_Pictographic}\u{FE0F}\u{200D}]+\s*)?["“]?([^"”\n]+)/mu);
+  if (suggestedMatch) {
+    const line = suggestedMatch[1].replace(/["”]\s*$/, '').trim();
+    if (line) return line.slice(0, 80);
+  }
   const headlineMatch = markdown.match(/^##\s+(?:Headline|한줄\s*요약)[^\n]*\n+(.+)/m);
   if (headlineMatch) return headlineMatch[1].trim().slice(0, 80);
   const firstH2 = markdown.match(/^##\s+(.+)/m);
@@ -413,7 +436,9 @@ export function renderAnalysisHistory() {
     const item = document.createElement('div');
     item.className = 'analysis-history-item' + (analysis.bookmarked ? ' bookmarked' : '');
     const time = new Date(analysis.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-    const flowText = analysis.flow || (analysis.summary || '').slice(0, 60) + ((analysis.summary || '').length > 60 ? '...' : '');
+    const flowText = usableFlow(analysis.flow)
+      || (analysis.markdown ? extractHeadlineFromMarkdown(analysis.markdown) : '')
+      || (analysis.summary || '').slice(0, 60) + ((analysis.summary || '').length > 60 ? '...' : '');
 
     // Build the row
     const row = document.createElement('div');
@@ -599,12 +624,7 @@ export function showChatWaiting() {
   const container = $('#chatSuggestions');
   if (container) {
     container.innerHTML = '';
-    const defaultPresets = [
-      t('chat.suggestion_1'),
-      t('chat.suggestion_2'),
-      t('chat.suggestion_3'),
-    ];
-    const suggestions = state.settings.chatPresets || defaultPresets;
+    const suggestions = state.settings.chatPresets || getDefaultChatPresets(state.settings.meetingPreset);
     suggestions.forEach(text => {
       const chip = document.createElement('button');
       chip.className = 'chat-suggestion-chip';

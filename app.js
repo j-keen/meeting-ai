@@ -4,13 +4,14 @@ import { state, on, emit } from './event-bus.js';
 export { state, on, emit }; // re-export for backward compatibility
 
 import { checkProxyAvailable } from './gemini-api.js';
+import { modelFor } from './models.js';
 import {
   getMeeting, deleteMeeting, softDeleteMeeting, restoreMeeting,
   updateMeetingTags,
   loadSettings, saveSettings, getStorageUsage,
   addContact,
   addCorrectionEntry,
-  getProUsageCount, incrementProUsage, addLocation,
+  getProUsageCount, addLocation,
 } from './storage.js';
 import {
   initDragResizer, initPanelTabs, initBottomBarOverflow, initHeaderOverflow, addTranscriptLine,
@@ -25,7 +26,7 @@ import { refreshHistoryGrid, refreshHistoryGridDebounced, resetHistorySort } fro
 import { initSettings, closeSettings, tryCloseSettings } from './settings.js';
 import { initChat, loadChatHistory, renderMarkdown, initFaq } from './chat.js';
 import { initMeetingPrepForm, openMeetingPrepForm, isMeetingPrepActive } from './meeting-prep.js';
-import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage } from './i18n.js';
+import { t, setLanguage, setAiLanguage, getDateLocale, getAiLanguage, setTermVariantResolver, refreshTermVariants } from './i18n.js';
 import { confirmDialog, promptDialog } from './ui/dialogs.js';
 import { refineSectionContent, getDefaultMinutesPrompt, getPromptForType } from './ai.js';
 import { parseMarkdownBlocks, blocksToMarkdown } from './ui/analysis.js';
@@ -34,6 +35,7 @@ import { exportPDF, exportWord } from './export-doc.js';
 import { showLauncherModal } from './launcher.js';
 import { openCompareModal, runCompareAnalysis, applyComparePromptAsDefault } from './compare.js';
 import { initPromptBuilder } from './prompt-builder.js';
+import { initQuickStart } from './quick-start.js';
 import { initDocGenerator, openDocGenerator } from './doc-generator.js';
 import { initDeepSetup } from './deep-setup.js';
 import { initPromptAdjuster } from './prompt-adjuster.js';
@@ -44,7 +46,7 @@ import {
   runAnalysis, autoSave, finalizeEndMeeting, cancelEndMeeting, showEndMeetingModal,
   updateStarRating, renderEndMeetingTags, renderEndMeetingParticipants,
   updateParticipantDropdown, updateTagDropdown, updateLocationDropdown,
-  runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes,
+  runCorrection, resetMeeting, getElapsedTimeStr, regenerateMinutes, isAnalysisRunning,
   checkDraftRecovery, generateFinalMeetingMinutes, showSaveFooterWithMinutesReady,
   clearDraftRecovery, saveActiveSession, loadMeeting, adoptImport, markEnded,
 } from './recording.js';
@@ -76,6 +78,12 @@ function updateInboxBadge() {
 // ===== Init =====
 function init() {
   const savedSettings = loadSettings();
+  // Lecture sessions say "강의 노트 / 강의 저장" instead of "회의록 / 회의 저장" (i18n TERM_VARIANTS).
+  // The save modal in edit mode follows the edited meeting's type.
+  setTermVariantResolver(() => {
+    const preset = state._editMode ? state._editPreset : state.settings?.meetingPreset;
+    return preset === 'learning' ? 'lecture' : null;
+  });
   setLanguage(savedSettings.uiLanguage || 'auto');
   setAiLanguage(savedSettings.aiLanguage || 'auto');
 
@@ -92,6 +100,7 @@ function init() {
   initFaq();
   initMeetingPrepForm();
   initPromptBuilder();
+  initQuickStart();
   initDocGenerator();
   initDeepSetup();
   initPromptAdjuster();
@@ -183,6 +192,7 @@ function init() {
         btnAnalyzeNowLabel.textContent = `${remaining}s`;
       }
     }, 1000);
+    if (isAnalysisRunning()) showToast(t('toast.analysis_queued'), 'info');
     runAnalysis();
   });
 
@@ -819,6 +829,45 @@ function init() {
     await startRecording();
   });
 
+  // Quick preset (launcher card / builder chip → confirm sheet) — same config shape
+  // as the builder, but every channel is applied (also clearing a previous preset's
+  // chat persona/questions) so no earlier style leaks into this session.
+  let sessionScopedContext = null; // { live, base } while a quick-preset subject is in the context
+  on('session:transition', () => refreshTermVariants());
+  on('session:transition', ({ to }) => {
+    if (to !== 'idle' || !sessionScopedContext) return;
+    if (state.settings.meetingContext === sessionScopedContext.live) {
+      state.settings.meetingContext = sessionScopedContext.base;
+    }
+    sessionScopedContext = null;
+  });
+  on('quickPreset:start', async (config) => {
+    pushStyleHistory(state.settings.meetingPreset, state.settings.customPrompt, 'builder');
+    state.settings.meetingPreset = config.meetingType;
+    state.settings.customPrompt = config.analysisPrompt;
+    state.settings.chatSystemPrompt = config.chatSystemPrompt || '';
+    state.settings.chatPresets = config.chatPresets?.length ? config.chatPresets : null;
+    // The per-session subject goes into the live context only; the persisted
+    // context stays generic so the next "바로 녹음 시작" doesn't inherit a topic.
+    state.settings.meetingContext = config.context || '';
+    state.settings.activeQuickPreset = { id: config.presetId, name: config.name, prompt: config.analysisPrompt };
+    saveSettings({
+      meetingPreset: config.meetingType,
+      customPrompt: config.analysisPrompt,
+      chatSystemPrompt: state.settings.chatSystemPrompt,
+      chatPresets: state.settings.chatPresets,
+      meetingContext: config.baseContext || '',
+      activeQuickPreset: state.settings.activeQuickPreset,
+    });
+    sessionScopedContext = config.context !== (config.baseContext || '')
+      ? { live: config.context, base: config.baseContext || '' } : null;
+    const ph = $('#memoPlaceholder');
+    if (ph && config.memoHint) ph.textContent = config.memoHint;
+    if (state.phase === 'idle' && config.title) state.meetingTitle = config.title;
+    await startRecording();
+    if (state.phase === 'recording') showToast(t('qp.applied', { name: config.name }), 'success');
+  });
+
   // Deep Setup complete — merge prompt-builder + meeting-prep config and start
   on('deepSetup:complete', async (config) => {
     // Save current style to history before deep setup overwrites it
@@ -878,10 +927,12 @@ function init() {
   });
 
   // beforeunload auto-save + crash recovery (skip in loaded mode to avoid overwriting)
+  // An ended (saved) meeting is not a crash-recovery candidate: writing the active-session
+  // record there made the next load offer "중단된 회의가 있습니다" for a meeting already saved.
   window.addEventListener('beforeunload', () => {
     if (state.meetingId && !state.loadedMeetingId) {
       autoSave();
-      saveActiveSession();
+      if (state.phase !== 'ended') saveActiveSession();
     }
   });
 
@@ -927,6 +978,15 @@ function demoUpdateTimer() {
 }
 
 function loadDemoData() {
+  // The demo is a team meeting: run it with the meeting-minutes style for this page session
+  // only (not saved), so a lecture preset chosen earlier does not turn it into lecture notes.
+  state.settings.meetingPreset = 'minutes';
+  state.settings.customPrompt = getPromptForType('minutes');
+  state.settings.chatSystemPrompt = '';
+  state.settings.chatPresets = null;
+  state.settings.activeQuickPreset = null;
+  state.settings.meetingContext = '';
+  refreshTermVariants();
   const now = Date.now();
   state.meetingStartTime = now - 55 * 60000;
   state.meetingId = generateId();
@@ -1372,7 +1432,7 @@ function startMinutesBlockEdit(blockEl, block, index, blocks, containerDiv) {
 function saveMinutesVersion() {
   const markdown = state.currentAnalysis?.markdown;
   if (!markdown) return;
-  const model = state.settings.geminiModel || 'gemini-3.5-flash';
+  const model = modelFor('minutes');
   state.minutesVersions.push({ markdown, timestamp: Date.now(), model });
   if (state.minutesVersions.length > 10) state.minutesVersions.shift();
 }
@@ -1396,8 +1456,7 @@ function openMinutesPreview({ highlightBadge = false } = {}) {
   const badge = $('#minutesGeneratedBadge');
   const genModel = state.currentAnalysis?.generatedModel;
   if (genModel) {
-    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
-    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.textContent = t('minutes_preview.generated_with');
     badge.hidden = false;
     if (highlightBadge) {
       badge.classList.remove('highlight');
@@ -1462,8 +1521,7 @@ function renderMinutesInViewer() {
   const badge = $('#minutesGeneratedBadge');
   const genModel = state.currentAnalysis?.generatedModel;
   if (genModel) {
-    const modelLabel = genModel.includes('pro') ? 'Pro' : 'Flash';
-    badge.textContent = t('minutes_preview.generated_with', { model: modelLabel });
+    badge.textContent = t('minutes_preview.generated_with');
     badge.hidden = false;
   } else {
     badge.hidden = true;
@@ -1476,86 +1534,67 @@ function renderMinutesInViewer() {
   updateVersionBadge();
 }
 
+// Final minutes always run on the heavy tier (models.js) — no model picker. The save modal's
+// "Generate minutes" button (recording.js) emits 'minutes:generate'.
 function initMinutesModelModal() {
-  const modelModal = $('#minutesModelModal');
-  if (!modelModal) return;
+  on('minutes:generate', () => { startMinutesGeneration(); });
+}
 
-  // Close button
-  modelModal.querySelector('[data-close]').onclick = () => {
-    modelModal.hidden = true;
-  };
+async function startMinutesGeneration() {
+  // 1. Collect metadata from save modal
+  state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
+  state.meetingLocation = ($('#endMeetingLocation')?.value || '').trim();
+  if (state.meetingLocation) addLocation(state.meetingLocation);
+  const dtVal = $('#endMeetingDatetime')?.value;
+  if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
 
-  // Overlay click closes
-  modelModal.addEventListener('click', (e) => {
-    if (e.target === modelModal) modelModal.hidden = true;
+  // 2. Check content
+  const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
+  if (!hasContent) {
+    $('#endMeetingModal').hidden = true;
+    showToast(t('toast.empty_meeting'), 'warning');
+    resetMeeting();
+    return;
+  }
+
+  // 3. Open viewer with loading (early, before async ops)
+  openMinutesPreviewWithLoading();
+
+  // 4. Correction pass over lines no earlier pass reviewed (parallel batches, with progress)
+  const progressLabel = $('#minutesPreviewContent .minutes-preview-progress span');
+  await runCorrection(true, {
+    onProgress: (done, total) => {
+      if (progressLabel && total > 1) progressLabel.textContent = t('end_meeting.correcting', { done, total });
+    },
   });
+  if (progressLabel) progressLabel.textContent = t('end_meeting.generating_minutes');
 
-  // Model card click handlers
-  modelModal.querySelectorAll('.minutes-model-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      const model = card.dataset.model;
+  // 5. Save state
+  markEnded();
+  try { autoSave(); } catch { /* ignore save error */ }
+  clearDraftRecovery();
 
-      // 1. Close model modal
-      modelModal.hidden = true;
+  // 6. Disable save modal form
+  const body = $('#endMeetingModal .modal-body');
+  if (body) body.classList.add('disabled-form');
 
-      // 2. Set model
-      state._selectedMinutesModel = model;
-      state.settings.geminiModel = model;
-      try { if (model.includes('pro')) incrementProUsage(); } catch { /* ignore */ }
-
-      // 3. Collect metadata from save modal
-      state.meetingTitle = ($('#endMeetingTitle')?.value || '').trim();
-      state.meetingLocation = ($('#endMeetingLocation')?.value || '').trim();
-      if (state.meetingLocation) addLocation(state.meetingLocation);
-      const dtVal = $('#endMeetingDatetime')?.value;
-      if (dtVal) state.meetingStartTime = new Date(dtVal).getTime();
-
-      // 4. Check content
-      const hasContent = state.transcript.length > 0 || state.memos.length > 0 || state.chatHistory.length > 0;
-      if (!hasContent) {
-        $('#endMeetingModal').hidden = true;
-        showToast(t('toast.empty_meeting'), 'warning');
-        resetMeeting();
-        return;
-      }
-
-      // 5. Open viewer with loading (early, before async ops)
-      openMinutesPreviewWithLoading();
-
-      // 6. Run correction if needed
-      const hasUncorrected = state.transcript.some(l => !l.originalText);
-      if (hasUncorrected && state.transcript.length > 0) {
-        await runCorrection(false);
-      }
-
-      // 7. Save state
-      markEnded();
-      try { autoSave(); } catch { /* ignore save error */ }
-      clearDraftRecovery();
-
-      // 8. Disable save modal form
-      const body = $('#endMeetingModal .modal-body');
-      if (body) body.classList.add('disabled-form');
-
-      // 9. Generate minutes
-      try {
-        await generateFinalMeetingMinutes('', state.minutesPromptConfig || {});
-        renderMinutesInViewer();
-      } catch (err) {
-        // Show error in viewer
-        const content = $('#minutesPreviewContent');
-        content.innerHTML = `
-          <div style="padding:24px;text-align:center;color:var(--danger);">
-            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
-          </div>
-        `;
-        // Re-enable toolbar
-        const toolbar = $('#minutesPreviewModal .minutes-preview-toolbar');
-        if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
-      }
-    });
-  });
+  // 7. Generate minutes (heavy tier)
+  try {
+    await generateFinalMeetingMinutes('', state.minutesPromptConfig || {});
+    renderMinutesInViewer();
+  } catch (err) {
+    // Show error in viewer
+    const content = $('#minutesPreviewContent');
+    content.innerHTML = `
+      <div style="padding:24px;text-align:center;color:var(--danger);">
+        <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+        <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
+      </div>
+    `;
+    // Re-enable toolbar
+    const toolbar = $('#minutesPreviewModal .minutes-preview-toolbar');
+    if (toolbar) toolbar.querySelectorAll('button').forEach(btn => btn.disabled = false);
+  }
 }
 
 function onMinutesPreviewClose() {
@@ -1592,76 +1631,48 @@ function initMinutesPreview() {
     }
   });
 
-  // ── Regenerate button (opens modal) ──
+  // ── Regenerate button: confirm, keep the current version, regenerate on the heavy tier ──
   const regenBtn = $('#btnMinutesRegenerate');
-  const regenModal = $('#regenModal');
 
-  regenBtn.addEventListener('click', () => {
+  regenBtn.addEventListener('click', async () => {
     // Close export popover if open
     const existingExport = modal.querySelector('.export-popover');
     if (existingExport) { existingExport.remove(); }
 
-    // Apply i18n
-    regenModal.querySelectorAll('[data-i18n]').forEach(el => {
-      el.textContent = t(el.getAttribute('data-i18n'));
-    });
+    if (!(await confirmDialog({ message: t('minutes_preview.regen_confirm'), confirmText: t('minutes_preview.regen_title') }))) return;
 
-    // Pre-select current model
-    const currentModel = state.settings.geminiModel || 'gemini-3.5-flash';
-    regenModal.querySelectorAll('.regen-model-card').forEach(card => {
-      card.classList.toggle('active', card.dataset.regenModel === currentModel);
-    });
+    saveMinutesVersion();
 
-    regenModal.hidden = false;
-  });
+    // Show loading skeleton inline in viewer
+    content.innerHTML = `
+      <div class="minutes-preview-loading">
+        <div class="minutes-preview-progress">
+          <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
+          <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
+        </div>
+        <div class="minutes-skeleton-line heading"></div>
+        <div class="minutes-skeleton-line wide"></div>
+        <div class="minutes-skeleton-line medium"></div>
+        <div class="minutes-skeleton-line short"></div>
+        <div class="minutes-skeleton-line wide"></div>
+      </div>
+    `;
+    modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = true);
 
-  // Model card click → execute regeneration
-  regenModal.querySelectorAll('.regen-model-card').forEach(card => {
-    card.addEventListener('click', async () => {
-      const model = card.dataset.regenModel || 'gemini-3.5-flash';
-      regenModal.hidden = true;
-
-      saveMinutesVersion();
-
-      // Show loading skeleton inline in viewer
+    try {
+      await regenerateMinutes(modelFor('minutes'), '', state.minutesPromptConfig);
+      renderMinutesInViewer();
+      showToast(t('toast.final_minutes_done'), 'success');
+    } catch (err) {
       content.innerHTML = `
-        <div class="minutes-preview-loading">
-          <div class="minutes-preview-progress">
-            <div class="minutes-preview-progress-bar"><div class="minutes-preview-progress-bar-inner"></div></div>
-            <span style="font-size:12px;color:var(--text-secondary)">${t('end_meeting.generating_minutes')}</span>
-          </div>
-          <div class="minutes-skeleton-line heading"></div>
-          <div class="minutes-skeleton-line wide"></div>
-          <div class="minutes-skeleton-line medium"></div>
-          <div class="minutes-skeleton-line short"></div>
-          <div class="minutes-skeleton-line wide"></div>
+        <div style="padding:24px;text-align:center;color:var(--danger);">
+          <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
+          <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
         </div>
       `;
-      modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = true);
-
-      try {
-        await regenerateMinutes(model, '', state.minutesPromptConfig);
-        renderMinutesInViewer();
-        showToast(t('toast.final_minutes_done'), 'success');
-      } catch (err) {
-        content.innerHTML = `
-          <div style="padding:24px;text-align:center;color:var(--danger);">
-            <p style="font-size:14px;font-weight:600;">${t('end_meeting.minutes_error')}</p>
-            <p style="font-size:12px;color:var(--text-secondary);margin-top:8px;">${err.message}</p>
-          </div>
-        `;
-        modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = false);
-        showToast(t('toast.final_minutes_fail') + err.message, 'error');
-      }
-    });
-  });
-
-  // Close regen modal on overlay click or close button
-  regenModal.addEventListener('click', (e) => {
-    if (e.target === regenModal) regenModal.hidden = true;
-  });
-  regenModal.querySelector('[data-close="regenModal"]').addEventListener('click', () => {
-    regenModal.hidden = true;
+      modal.querySelector('.minutes-preview-toolbar').querySelectorAll('button').forEach(btn => btn.disabled = false);
+      showToast(t('toast.final_minutes_fail') + err.message, 'error');
+    }
   });
 
   // ── Export button ──
@@ -1669,9 +1680,6 @@ function initMinutesPreview() {
   let currentExportPopover = null;
   exportBtn.addEventListener('click', () => {
     if (currentExportPopover) { currentExportPopover.remove(); currentExportPopover = null; return; }
-
-    // Close regen modal if open
-    regenModal.hidden = true;
 
     const tmpl = document.getElementById('tmplExportPopover');
     const popover = tmpl.content.cloneNode(true).firstElementChild;
@@ -1854,8 +1862,7 @@ function initMinutesPreview() {
       const item = document.createElement('div');
       item.className = 'version-item';
       const time = new Date(ver.timestamp).toLocaleTimeString(getDateLocale(), { hour: '2-digit', minute: '2-digit' });
-      const modelLabel = ver.model.includes('pro') ? 'Pro' : 'Flash';
-      item.innerHTML = `<span>${time} — ${modelLabel}</span>`;
+      item.innerHTML = `<span>${time}</span>`;
       const restoreBtn = document.createElement('button');
       restoreBtn.className = 'btn btn-xs';
       restoreBtn.textContent = t('minutes_preview.version_restore');

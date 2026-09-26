@@ -41,8 +41,14 @@ describe('toOpenAIRequest', () => {
     expect(req.messages.some(m => /json/i.test(JSON.stringify(m.content)))).toBe(true);
   });
 
-  it('uses medium reasoning for the heavy tier', () => {
-    expect(toOpenAIRequest('gpt-5.5', { contents: [] }, { tier: 'heavy' }).reasoning_effort).toBe('medium');
+  it('maps thinkingBudget 0 (STT correction) to reasoning_effort none', () => {
+    const req = toOpenAIRequest('gpt-5.6-luna', { contents: [], generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }, { tier: 'light' });
+    expect(req.reasoning_effort).toBe('none');
+  });
+
+  it('keeps reasoning low on every tier (heavy uses HEAVY_EFFORT)', () => {
+    expect(toOpenAIRequest('gpt-5.6-sol', { contents: [] }, { tier: 'heavy' }).reasoning_effort).toBe('low');
+    expect(toOpenAIRequest('gpt-5.6-luna', { contents: [] }, { tier: 'light' }).reasoning_effort).toBe('low');
   });
 });
 
@@ -80,12 +86,25 @@ describe('parseOpenAISSE', () => {
 });
 
 describe('models: tiers and provider mapping', () => {
-  it('routes light tasks to light models and minutes to the user model', () => {
+  it('routes frequent tasks (incl. live analysis) light, setup standard, minutes/docs heavy', () => {
     expect(modelFor('correction')).toBe(GEMINI.light);
-    expect(modelFor('analysis')).toBe(GEMINI.standard);
-    expect(modelFor('minutes', { userModel: GEMINI.heavy })).toBe(GEMINI.heavy);
-    expect(modelFor('minutes', { userModel: GEMINI.heavy, provider: 'openai' })).toBe(OPENAI.heavy);
-    expect(modelFor('chat', { provider: 'openai' })).toBe(OPENAI.light);
+    expect(modelFor('analysis', { provider: 'openai' })).toBe('gpt-5.6-luna');
+    expect(modelFor('chat', { provider: 'openai' })).toBe('gpt-5.6-luna');
+    expect(modelFor('prompt_builder', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('deep_setup', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('compare', { provider: 'openai' })).toBe('gpt-5.4-mini');
+    expect(modelFor('minutes', { provider: 'openai' })).toBe('gpt-5.6-sol');
+    // No user choice anymore: a stored flash pick no longer downgrades minutes.
+    expect(modelFor('minutes', { userModel: GEMINI.standard, provider: 'openai' })).toBe(OPENAI.heavy);
+    expect(modelFor('docs', { provider: 'openai' })).toBe('gpt-5.6-sol');
+  });
+
+  it('maps previous OpenAI ids onto the new tiers', () => {
+    expect(resolveModel('gpt-5.4-nano')).toBe('gpt-5.6-luna');
+    expect(resolveModel('gpt-5.5')).toBe('gpt-5.6-sol');
+    expect(toProviderModel('gemini-3.5-flash-lite', 'openai')).toBe('gpt-5.6-luna');
+    expect(toProviderModel('gemini-3.1-pro-preview', 'openai')).toBe('gpt-5.6-sol');
+    expect(tierOf('gpt-5.6-sol')).toBe('heavy');
   });
 
   it('converts between providers by tier and keeps same-provider ids', () => {
@@ -97,5 +116,82 @@ describe('models: tiers and provider mapping', () => {
     expect(providerOf('gemini-2.5-pro')).toBe('gemini');
     expect(tierOf('gemini-2.5-pro')).toBe('heavy');
     expect(resolveModel(undefined)).toBe(GEMINI.standard);
+  });
+});
+
+describe('function calling', () => {
+  const tools = [{ function_declarations: [
+    { name: 'add_memo', description: 'memo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } },
+    { name: 'rerun_analysis', description: 'rerun', parameters: { type: 'object', properties: {} } },
+  ] }];
+
+  it('maps Gemini function_declarations to OpenAI tools', () => {
+    const req = toOpenAIRequest('gpt-5.6-luna', { contents: [{ role: 'user', parts: [{ text: 'hi' }] }], tools });
+    expect(req.tools).toEqual([
+      { type: 'function', function: { name: 'add_memo', description: 'memo', parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] } } },
+      { type: 'function', function: { name: 'rerun_analysis', description: 'rerun', parameters: { type: 'object', properties: {} } } },
+    ]);
+    expect(req).not.toHaveProperty('tool_choice');
+    // luna rejects function tools + reasoning on Chat Completions
+    expect(req.reasoning_effort).toBe('none');
+    expect(toOpenAIRequest('gpt-5.6-luna', { contents: [] })).not.toHaveProperty('tools');
+  });
+
+  it('maps functionCall / functionResponse turns to tool_calls / tool messages and NONE to tool_choice none', () => {
+    const req = toOpenAIRequest('gpt-5.6-luna', {
+      contents: [
+        { role: 'user', parts: [{ text: 'memo this' }] },
+        { role: 'model', parts: [{ functionCall: { name: 'add_memo', args: { text: 'x' }, id: 'call_abc' } }] },
+        { role: 'user', parts: [{ functionResponse: { name: 'add_memo', id: 'call_abc', response: { result: 'ok' } } }, { text: 'now answer' }] },
+      ],
+      tools,
+      toolConfig: { functionCallingConfig: { mode: 'NONE' } },
+    });
+    expect(req.messages).toEqual([
+      { role: 'user', content: 'memo this' },
+      { role: 'assistant', content: null, tool_calls: [{ id: 'call_abc', type: 'function', function: { name: 'add_memo', arguments: '{"text":"x"}' } }] },
+      { role: 'tool', tool_call_id: 'call_abc', content: '{"result":"ok"}' },
+      { role: 'user', content: 'now answer' },
+    ]);
+    expect(req.tool_choice).toBe('none');
+  });
+
+  it('synthesizes ids for id-less (Gemini) calls and pairs responses by name', () => {
+    const req = toOpenAIRequest('gpt-5.6-luna', {
+      contents: [
+        { role: 'model', parts: [{ functionCall: { name: 'add_memo', args: {} } }, { functionCall: { name: 'rerun_analysis', args: {} } }] },
+        { role: 'user', parts: [{ functionResponse: { name: 'rerun_analysis', response: {} } }, { functionResponse: { name: 'add_memo', response: {} } }] },
+      ],
+    });
+    const ids = req.messages[0].tool_calls.map(c => c.id);
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(req.messages[1].tool_call_id).toBe(ids[1]);
+    expect(req.messages[2].tool_call_id).toBe(ids[0]);
+  });
+
+  it('returns tool_calls as functionCall parts (non-stream)', () => {
+    const out = fromOpenAIResponse({
+      choices: [{ message: { content: null, tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'add_memo', arguments: '{"text":"ELBO"}' } }] }, finish_reason: 'tool_calls' }],
+    });
+    expect(out.candidates[0].content.parts).toEqual([{ text: '' }, { functionCall: { name: 'add_memo', args: { text: 'ELBO' }, id: 'call_1' } }]);
+  });
+
+  it('assembles streamed tool_call fragments into functionCall parts', async () => {
+    const frames = [
+      'data: {"choices":[{"delta":{"role":"assistant","content":null,"tool_calls":[{"index":0,"id":"call_9","type":"function","function":{"name":"add_memo","arguments":""}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\\"te"}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"xt\\":\\"hi\\"}"}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":1,"id":"call_10","type":"function","function":{"name":"rerun_analysis","arguments":"{}"}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}\n\ndata: [DONE]\n\n',
+    ];
+    const enc = new TextEncoder();
+    const body = new ReadableStream({ start(c) { frames.forEach(f => c.enqueue(enc.encode(f))); c.close(); } });
+    const out = await parseOpenAISSE({ body });
+    expect(out.text).toBe('');
+    expect(out.parts).toEqual([
+      { text: '' },
+      { functionCall: { name: 'add_memo', args: { text: 'hi' }, id: 'call_9' } },
+      { functionCall: { name: 'rerun_analysis', args: {}, id: 'call_10' } },
+    ]);
   });
 });

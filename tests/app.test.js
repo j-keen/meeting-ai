@@ -6,9 +6,8 @@ vi.mock('../ai.js', () => ({
   analyzeTranscript: vi.fn(),
   getDefaultPrompt: vi.fn(),
   getPromptForType: vi.fn(() => 'default prompt'),
-  generateTags: vi.fn(),
   correctSentences: vi.fn(),
-  generateMeetingTitle: vi.fn(),
+  suggestTitleAndMetadata: vi.fn(),
   generateFinalMinutes: vi.fn(),
   refineSectionContent: vi.fn(),
   getDefaultMinutesPrompt: vi.fn(),
@@ -25,6 +24,7 @@ vi.mock('../recording.js', () => ({
   stopRecording: vi.fn(),
   endMeeting: vi.fn(),
   runAnalysis: vi.fn(),
+  isAnalysisRunning: vi.fn(() => false),
   autoSave: vi.fn(),
   finalizeEndMeeting: vi.fn(),
   cancelEndMeeting: vi.fn(),
@@ -134,6 +134,8 @@ vi.mock('../i18n.js', () => ({
   getDateLocale: vi.fn(),
   getAiLanguage: vi.fn(),
   getPromptPresets: vi.fn(() => ({})),
+  setTermVariantResolver: vi.fn(),
+  refreshTermVariants: vi.fn(),
 }));
 vi.mock('../utils.js', () => ({
   escapeHtml: vi.fn((s) => s),
